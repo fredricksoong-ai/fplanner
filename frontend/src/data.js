@@ -126,6 +126,7 @@ export function enrichPlayerData(fplPlayers) {
         if (githubPlayer) {
             return {
                 ...player,
+                github_data: githubPlayer,
                 // Add GitHub-specific stats
                 expected_goal_involvements: githubPlayer.xGI || player.expected_goal_involvements || 0,
                 expected_goal_involvements_per_90: githubPlayer.xGI_per_90 || 0,
