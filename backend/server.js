@@ -19,6 +19,7 @@ const __dirname = path.dirname(__filename);
 // ============================================================================
 
 const PORT = process.env.PORT || 3001;
+const HOST = '0.0.0.0';
 const CACHE_BACKUP_PATH = path.join(__dirname, 'cache-backup.json');
 
 // FPL API Endpoints
@@ -588,11 +589,10 @@ app.get('*', (req, res) => {
 // Load cache from disk before starting server
 loadCacheFromDisk();
 
-app.listen(PORT, () => {
+app.listen(PORT, HOST, () => { 
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log('🚀 FPLanner Backend Server');
-  console.log(`📡 Listening on port ${PORT}`);
-  console.log(`🌍 http://localhost:${PORT}`);
+  console.log(`📡 Listening on host ${HOST} and port ${PORT}`); // Update console log
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log('');
   console.log('Available endpoints:');
