@@ -331,9 +331,9 @@ function renderTeamTable(players, gameweek) {
                         ${gwOpp.name}${gwOpp.isHome ? ' (H)' : ' (A)'}
                     </span>
                 </td>
-                <td style="padding: 0.75rem 1rem; text-align: center;">${player.gw_minutes || 0}</td>
+                <td style="padding: 0.75rem 1rem; text-align: center;">${parseFloat(player.gw_minutes || 0)}</td>
                 <td style="padding: 0.75rem 1rem; text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 600;">
-                    ${player.gw_total_points || 0}
+                    ${parseFloat(player.gw_total_points || 0)}
                 </td>
                 <td style="padding: 0.75rem 1rem; text-align: center; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 600;">
                     ${formatDecimal(player.form)}
