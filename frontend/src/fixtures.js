@@ -12,21 +12,14 @@ import { getTeamByCode } from './utils.js';
 
 /**
  * Get fixtures for a team
- * @param {number} teamCode - Team code
+ * @param {number} teamId - Team ID
  * @param {number} count - Number of fixtures to return
  * @param {boolean} isPast - Get past fixtures (true) or future (false)
  * @returns {Array} Array of fixture objects
  */
-export function getFixtures(teamCode, count = 3, isPast = false) {
+export function getFixtures(teamId, count = 3, isPast = false) {
     // Return real fixtures if we have the data
     if (fplFixtures && fplFixtures.length > 0 && fplBootstrap && currentGW) {
-        // Find the team ID from the team code
-        const team = fplBootstrap.teams.find(t => t.code === teamCode);
-        if (!team) {
-            return getFallbackFixtures(count);
-        }
-        
-        const teamId = team.id;
         const fixtures = [];
         
         // Filter fixtures for this team using team ID
@@ -86,31 +79,25 @@ function getFallbackFixtures(count) {
 
 /**
  * Get opponent for a specific gameweek
- * @param {number} teamCode - Team code
+ * @param {number} teamId - Team ID
  * @param {number} gameweek - Gameweek number
  * @returns {Object} Opponent info {name, difficulty, isHome}
  */
-export function getGWOpponent(teamCode, gameweek) {
-    if (!fplFixtures || !fplBootstrap || !teamCode || !gameweek) {
-        return { name: 'TBD', difficulty: 3, isHome: false };
-    }
-    
-    // Find team by code
-    const team = fplBootstrap.teams.find(t => t.code === teamCode);
-    if (!team) {
+export function getGWOpponent(teamId, gameweek) {
+    if (!fplFixtures || !fplBootstrap || !teamId || !gameweek) {
         return { name: 'TBD', difficulty: 3, isHome: false };
     }
     
     // Find fixture for this team in this gameweek
     const fixture = fplFixtures.find(f => 
-        f.event === gameweek && (f.team_h === team.id || f.team_a === team.id)
+        f.event === gameweek && (f.team_h === teamId || f.team_a === teamId)
     );
     
     if (!fixture) {
         return { name: 'TBD', difficulty: 3, isHome: false };
     }
     
-    const isHome = fixture.team_h === team.id;
+    const isHome = fixture.team_h === teamId;
     const opponentId = isHome ? fixture.team_a : fixture.team_h;
     const opponent = fplBootstrap.teams.find(t => t.id === opponentId);
     const difficulty = isHome ? fixture.team_h_difficulty : fixture.team_a_difficulty;
@@ -128,12 +115,12 @@ export function getGWOpponent(teamCode, gameweek) {
 
 /**
  * Calculate average fixture difficulty over next N gameweeks
- * @param {number} teamCode - Team code
+ * @param {number} teamId - Team ID
  * @param {number} count - Number of gameweeks to analyze
  * @returns {number} Average difficulty (1-5)
  */
-export function calculateFixtureDifficulty(teamCode, count = 5) {
-    const fixtures = getFixtures(teamCode, count, false);
+export function calculateFixtureDifficulty(teamId, count = 5) {
+    const fixtures = getFixtures(teamId, count, false);
     
     if (fixtures.length === 0) return 3;
     
@@ -156,14 +143,14 @@ export function getFDRClass(avgDifficulty) {
 
 /**
  * Analyze fixture swing (improvement/deterioration)
- * @param {number} teamCode - Team code
+ * @param {number} teamId - Team ID
  * @param {number} nextCount - Fixtures to analyze next
  * @param {number} afterCount - Fixtures to analyze after that
  * @returns {Object} Swing analysis
  */
-export function analyzeFixtureSwing(teamCode, nextCount = 3, afterCount = 3) {
-    const next = getFixtures(teamCode, nextCount, false);
-    const after = getFixtures(teamCode, afterCount, false).slice(nextCount);
+export function analyzeFixtureSwing(teamId, nextCount = 3, afterCount = 3) {
+    const next = getFixtures(teamId, nextCount, false);
+    const after = getFixtures(teamId, afterCount, false).slice(nextCount);
     
     const nextAvg = next.reduce((sum, f) => sum + f.difficulty, 0) / next.length;
     const afterAvg = after.reduce((sum, f) => sum + f.difficulty, 0) / after.length;
@@ -185,17 +172,17 @@ export function analyzeFixtureSwing(teamCode, nextCount = 3, afterCount = 3) {
 
 /**
  * Compare fixtures between two teams
- * @param {number} teamCode1 - First team code
- * @param {number} teamCode2 - Second team code
+ * @param {number} teamId1 - First team ID
+ * @param {number} teamId2 - Second team ID
  * @param {number} count - Number of fixtures to compare
  * @returns {Object} Comparison result
  */
-export function compareFixtures(teamCode1, teamCode2, count = 5) {
-    const team1Fixtures = getFixtures(teamCode1, count, false);
-    const team2Fixtures = getFixtures(teamCode2, count, false);
+export function compareFixtures(teamId1, teamId2, count = 5) {
+    const team1Fixtures = getFixtures(teamId1, count, false);
+    const team2Fixtures = getFixtures(teamId2, count, false);
     
-    const team1Avg = calculateFixtureDifficulty(teamCode1, count);
-    const team2Avg = calculateFixtureDifficulty(teamCode2, count);
+    const team1Avg = calculateFixtureDifficulty(teamId1, count);
+    const team2Avg = calculateFixtureDifficulty(teamId2, count);
     
     return {
         team1: {
@@ -267,21 +254,18 @@ export function getTeamsWithWorstFixtures(count = 5, fixtureCount = 5) {
 
 /**
  * Check if team has a blank (no fixture) in upcoming gameweeks
- * @param {number} teamCode - Team code
+ * @param {number} teamId - Team ID
  * @param {number} lookAhead - Number of gameweeks to check
  * @returns {Array} Array of blank gameweeks
  */
-export function getBlankGameweeks(teamCode, lookAhead = 10) {
-    if (!fplFixtures || !fplBootstrap || !teamCode) return [];
-    
-    const team = fplBootstrap.teams.find(t => t.code === teamCode);
-    if (!team) return [];
+export function getBlankGameweeks(teamId, lookAhead = 10) {
+    if (!fplFixtures || !fplBootstrap || !teamId) return [];
     
     const blanks = [];
     
     for (let gw = currentGW + 1; gw <= currentGW + lookAhead && gw <= 38; gw++) {
         const hasFixture = fplFixtures.some(f => 
-            f.event === gw && (f.team_h === team.id || f.team_a === team.id)
+            f.event === gw && (f.team_h === teamId || f.team_a === teamId)
         );
         
         if (!hasFixture) {
@@ -294,21 +278,18 @@ export function getBlankGameweeks(teamCode, lookAhead = 10) {
 
 /**
  * Check if team has a double gameweek upcoming
- * @param {number} teamCode - Team code
+ * @param {number} teamId - Team ID
  * @param {number} lookAhead - Number of gameweeks to check
  * @returns {Array} Array of double gameweeks
  */
-export function getDoubleGameweeks(teamCode, lookAhead = 10) {
-    if (!fplFixtures || !fplBootstrap || !teamCode) return [];
-    
-    const team = fplBootstrap.teams.find(t => t.code === teamCode);
-    if (!team) return [];
+export function getDoubleGameweeks(teamId, lookAhead = 10) {
+    if (!fplFixtures || !fplBootstrap || !teamId) return [];
     
     const doubles = [];
     
     for (let gw = currentGW + 1; gw <= currentGW + lookAhead && gw <= 38; gw++) {
         const fixturesInGW = fplFixtures.filter(f => 
-            f.event === gw && (f.team_h === team.id || f.team_a === team.id)
+            f.event === gw && (f.team_h === teamId || f.team_a === teamId)
         );
         
         if (fixturesInGW.length > 1) {

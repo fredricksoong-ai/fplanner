@@ -294,8 +294,8 @@ function renderTeamTable(players, gameweek) {
         if (isCaptain) captainBadge = ' <span style="color: var(--primary-color); font-weight: 700;">(C)</span>';
         if (isVice) captainBadge = ' <span style="color: var(--text-secondary); font-weight: 700;">(VC)</span>';
         
-        const gwOpp = getGWOpponent(player.team_code, gameweek);
-        const next5 = getFixtures(player.team_code, 10, false).filter(f => f.event > gameweek).slice(0, 5);
+        const gwOpp = getGWOpponent(player.team, gameweek);
+        const next5 = getFixtures(player.team, 10, false).filter(f => f.event > gameweek).slice(0, 5);
         
         const posType = getPositionType(player);
         const risks = analyzePlayerRisks(player);
@@ -331,9 +331,9 @@ function renderTeamTable(players, gameweek) {
                         ${gwOpp.name}${gwOpp.isHome ? ' (H)' : ' (A)'}
                     </span>
                 </td>
-                <td style="padding: 0.75rem 1rem; text-align: center;">${player.minutes || 0}</td>
+                <td style="padding: 0.75rem 1rem; text-align: center;">${player.gw_minutes || 0}</td>
                 <td style="padding: 0.75rem 1rem; text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 600;">
-                    ${player.total_points || 0}
+                    ${player.gw_total_points || 0}
                 </td>
                 <td style="padding: 0.75rem 1rem; text-align: center; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 600;">
                     ${formatDecimal(player.form)}
