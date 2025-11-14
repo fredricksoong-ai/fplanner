@@ -1,0 +1,89 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+    /* Light Mode Colors */
+    --bg-primary: #f6f4f6;
+    --bg-secondary: #edeaed;
+    --bg-tertiary: #e4e1e4;
+    --text-primary: #110d12;
+    --text-secondary: #52505a;
+    --text-tertiary: #7a7882;
+    --border-color: #d4d1d4;
+    --border-dark: #bfbcc0;
+    --primary-color: #37003c;
+    --primary-hover: #2a002e;
+    --secondary-color: #00ff88;
+    --secondary-hover: #00d970;
+    --accent-color: #6b1970;
+    --shadow: rgba(17, 13, 18, 0.08);
+    
+    /* Success/Alert Colors */
+    --success-color: #00ff88;
+    --danger-color: #dc2626;
+    --warning-color: #f59e0b;
+    
+    /* Soft Heatmap Colors - Light Mode */
+    --heat-red-bg: #fee2e2;
+    --heat-red-text: #991b1b;
+    --heat-yellow-bg: #fef9c3;
+    --heat-yellow-text: #854d0e;
+    --heat-light-green-bg: #dcfce7;
+    --heat-light-green-text: #166534;
+    --heat-dark-green-bg: #bbf7d0;
+    --heat-dark-green-text: #14532d;
+    --heat-gray-bg: #edeaed;
+    --heat-gray-text: #52505a;
+}
+
+[data-theme="dark"] {
+    /* Dark Mode Colors */
+    --bg-primary: #0b090b;
+    --bg-secondary: #1a181a;
+    --bg-tertiary: #252325;
+    --text-primary: #f1edf2;
+    --text-secondary: #b5b1b6;
+    --text-tertiary: #89858a;
+    --border-color: #2e2c2e;
+    --border-dark: #3f3d3f;
+    --primary-color: #37003c;
+    --primary-hover: #4a004f;
+    --secondary-color: #00ff88;
+    --secondary-hover: #00d970;
+    --accent-color: #8b2a92;
+    --shadow: rgba(0, 0, 0, 0.4);
+    
+    /* Success/Alert Colors */
+    --success-color: #00ff88;
+    --danger-color: #ef4444;
+    --warning-color: #fbbf24;
+    
+    /* Soft Heatmap Colors - Dark Mode */
+    --heat-red-bg: #5c1f1f;
+    --heat-red-text: #fca5a5;
+    --heat-yellow-bg: #5c4a1f;
+    --heat-yellow-text: #fcd34d;
+    --heat-light-green-bg: #1f4d2e;
+    --heat-light-green-text: #86efac;
+    --heat-dark-green-bg: #235c3a;
+    --heat-dark-green-text: #bbf7d0;
+    --heat-gray-bg: #1a181a;
+    --heat-gray-text: #b5b1b6;
+}
+
+/* Base styles */
+body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    margin: 0;
+    padding: 0;
+}
+
+/* Fixture difficulty classes */
+.fixture-diff-1 { background-color: #14532d; color: white; }
+.fixture-diff-2 { background-color: #bbf7d0; color: #14532d; }
+.fixture-diff-3 { background-color: #d1d5db; color: #374151; }
+.fixture-diff-4 { background-color: #fca5a5; color: #991b1b; }
+.fixture-diff-5 { background-color: #991b1b; color: white; }

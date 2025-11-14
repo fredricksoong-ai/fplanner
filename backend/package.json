@@ -1,0 +1,23 @@
+{
+  "name": "fplanner-backend",
+  "version": "1.0.0",
+  "description": "FPLanner Backend Service - Data aggregation and caching for FPL analysis",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": ["fpl", "fantasy-premier-league", "api", "cache"],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "axios": "^1.6.2",
+    "papaparse": "^5.4.1",
+    "cors": "^2.8.5"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

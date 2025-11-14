@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FPLanner - Fantasy Premier League Analysis</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="app">
+        <!-- Navigation -->
+        <nav style="background: var(--primary-color); color: white; padding: 1rem 2rem; box-shadow: 0 2px 8px var(--shadow);">
+            <div style="max-width: 1400px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 2rem;">
+                    <h1 style="font-size: 1.5rem; font-weight: 800; margin: 0;">
+                        <i class="fas fa-chart-line" style="margin-right: 0.5rem;"></i>FPLanner
+                    </h1>
+                    <div id="nav-links" style="display: flex; gap: 1rem;">
+                        <!-- Navigation links will be inserted here -->
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <!-- Countdown Timer -->
+                    <div id="gw-countdown" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: rgba(255,255,255,0.1); border-radius: 0.5rem; font-size: 0.875rem;">
+                        <i class="fas fa-clock"></i>
+                        <span id="countdown-text">Loading...</span>
+                    </div>
+                    <!-- Theme Toggle -->
+                    <button 
+                        id="theme-toggle"
+                        style="
+                            background: rgba(255,255,255,0.2); 
+                            border: none; 
+                            padding: 0.5rem 1rem; 
+                            border-radius: 0.5rem; 
+                            color: white; 
+                            cursor: pointer; 
+                            font-weight: 600;
+                            transition: all 0.2s;
+                        "
+                        onmouseover="this.style.background='rgba(255,255,255,0.3)'"
+                        onmouseout="this.style.background='rgba(255,255,255,0.2)'"
+                    >
+                        <i class="fas fa-moon"></i>
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main id="app-container" style="max-width: 1400px; margin: 2rem auto; padding: 0 2rem;">
+            <div style="text-align: center; padding: 4rem 2rem; color: var(--text-secondary);">
+                <i class="fas fa-spinner fa-spin" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+                <p>Loading FPLanner...</p>
+            </div>
+        </main>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+</body>
+</html>
