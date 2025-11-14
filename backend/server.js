@@ -318,7 +318,7 @@ async function fetchTeamPicks(teamId, gameweek) {
 /**
  * Load cache from disk on startup
  */
-async function loadCacheFromDisk() {
+function loadCacheFromDisk() {
   if (fs.existsSync(CACHE_BACKUP_PATH)) {
     try {
       const backup = JSON.parse(fs.readFileSync(CACHE_BACKUP_PATH, 'utf8'));
@@ -583,34 +583,23 @@ app.get('*', (req, res) => {
 });
 
 // ============================================================================
-// SERVER STARTUP (NEW ASYNCHRONOUS STRUCTURE)
+// SERVER STARTUP
 // ============================================================================
 
-const startServer = async () => {
-    // 1. Start the server LISTENING right away. 
-    // This allows the health check to pass immediately.
-    app.listen(PORT, HOST, () => {
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log('🚀 FPLanner Backend Server');
-        console.log(`📡 Listening on host ${HOST} and port ${PORT}`);
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log('Starting cache warm-up (this may take a while)...');
-        console.log('');
-        // NOTE: The server is now fully running and responsive!
-    });
-    
-    // 2. Load the Cache ASYNCHRONOUSLY after the server is running.
-    // The server is now running, but the API endpoints might return a "loading" 
-    // status or old data until this completes.
-    try {
-        await loadCacheFromDisk(); 
-        console.log('✅ Cache warm-up complete! Server is fully operational.');
-    } catch (error) {
-        console.error('❌ FATAL ERROR: Failed to load cache during startup:', error);
-        // You may want to exit the process here if the cache is mandatory
-        // process.exit(1);
-    }
-}
+// Load cache from disk before starting server
+loadCacheFromDisk();
 
-// Call the main async function to start the process
-startServer();
+app.listen(PORT, HOST, () => { 
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('🚀 FPLanner Backend Server');
+  console.log(`📡 Listening on host ${HOST} and port ${PORT}`); // Update console log
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('');
+  console.log('Available endpoints:');
+  console.log(`  GET  /api/fpl-data       - Combined FPL data`);
+  console.log(`  GET  /api/fpl-data?refresh=true - Force refresh`);
+  console.log(`  GET  /api/team/:teamId   - User team data`);
+  console.log(`  GET  /api/stats          - Cache statistics`);
+  console.log(`  GET  /health             - Health check`);
+  console.log('');
+});
