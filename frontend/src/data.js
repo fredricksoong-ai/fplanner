@@ -104,46 +104,65 @@ function detectCurrentGW() {
 }
 
 /**
- * Enrich FPL player data with GitHub stats
- * @param {Array} fplPlayers - Players from bootstrap
- * @returns {Array} Enriched players
+ * Enrich FPL player data with GitHub CSV data (3-source enrichment)
  */
-export function enrichPlayerData(fplPlayers) {
+function enrichPlayerWithGithubData(player, githubData) {
     if (!githubData) {
-        console.warn('⚠️ GitHub data not available for enrichment');
-        return fplPlayers;
+        return;
     }
     
-    console.log(`🔄 Enriching ${fplPlayers.length} players with GitHub data...`);
-    
-    const enriched = fplPlayers.map(player => {
-        // Find matching player in GitHub data by name
-        const githubPlayer = githubData.find(gp => 
-            gp.name === player.web_name || 
-            gp.name === `${player.first_name} ${player.second_name}`
-        );
-        
-        if (githubPlayer) {
-            return {
-                ...player,
-                github_data: githubPlayer,
-                // Add GitHub-specific stats
-                expected_goal_involvements: githubPlayer.xGI || player.expected_goal_involvements || 0,
-                expected_goal_involvements_per_90: githubPlayer.xGI_per_90 || 0,
-                expected_goals_conceded: githubPlayer.xGC || 0,
-                expected_goals_conceded_per_90: githubPlayer.xGC_per_90 || 0,
-                defensive_contribution: githubPlayer.defensive_contribution || 0,
-                defensive_contribution_per_90: githubPlayer.defensive_contribution_per_90 || 0
+    // 1. Enrich with SEASON stats (always available)
+    if (githubData.seasonStats && githubData.seasonStats.length > 0) {
+        const seasonPlayer = githubData.seasonStats.find(g => g.id === player.id);
+        if (seasonPlayer) {
+            player.github_season = {
+                form: seasonPlayer.form,
+                value_form: seasonPlayer.value_form,
+                value_season: seasonPlayer.value_season,
+                ict_index: seasonPlayer.ict_index,
+                defensive_contribution: seasonPlayer.defensive_contribution,
+                defensive_contribution_per_90: seasonPlayer.defensive_contribution_per_90,
+                dreamteam_count: seasonPlayer.dreamteam_count,
+                saves_per_90: seasonPlayer.saves_per_90,
+                clean_sheets_per_90: seasonPlayer.clean_sheets_per_90
             };
         }
-        
-        return player;
-    });
+    }
     
-    const enrichedCount = enriched.filter(p => p.expected_goal_involvements_per_90).length;
-    console.log(`✅ Enriched ${enrichedCount}/${fplPlayers.length} players with GitHub stats`);
+    // 2. Enrich with CURRENT GW stats (if finished)
+    if (githubData.isFinished && githubData.currentGWStats && githubData.currentGWStats.length > 0) {
+        const gwPlayer = githubData.currentGWStats.find(g => g.id === player.id);
+        if (gwPlayer) {
+            player.github_gw = {
+                gw: githubData.currentGW,
+                minutes: gwPlayer.minutes,
+                total_points: gwPlayer.total_points,
+                goals_scored: gwPlayer.goals_scored,
+                assists: gwPlayer.assists,
+                clean_sheets: gwPlayer.clean_sheets,
+                goals_conceded: gwPlayer.goals_conceded,
+                bonus: gwPlayer.bonus,
+                bps: gwPlayer.bps,
+                saves: gwPlayer.saves,
+                expected_goals: gwPlayer.expected_goals,
+                expected_assists: gwPlayer.expected_assists,
+                expected_goal_involvements: gwPlayer.expected_goal_involvements,
+                defensive_contribution: gwPlayer.defensive_contribution
+            };
+        }
+    }
     
-    return enriched;
+    // 3. Enrich with NEXT GW stats (for latest transfers)
+    if (githubData.nextGWStats && githubData.nextGWStats.length > 0) {
+        const nextGWPlayer = githubData.nextGWStats.find(g => g.id === player.id);
+        if (nextGWPlayer) {
+            player.github_transfers = {
+                gw: githubData.currentGW + 1,
+                transfers_in: nextGWPlayer.transfers_in_event,
+                transfers_out: nextGWPlayer.transfers_out_event
+            };
+        }
+    }
 }
 
 /**
