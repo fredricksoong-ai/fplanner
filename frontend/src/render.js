@@ -324,9 +324,9 @@ function renderTeamTable(players, gameweek) {
             metricValue = formatDecimal(xGI);
         }
         
-        // Get GW-specific stats from pick.stats
-        const gwMinutes = pick.stats?.minutes || 0;
-        const gwPoints = pick.stats?.total_points || 0;
+        // Get GW-specific stats from GitHub data (if available for current GW)
+        const gwMinutes = player.github_data?.minutes || player.minutes || 0;
+        const gwPoints = player.github_data?.total_points || player.event_points || 0;
         
         html += `
             <tr style="background: ${hasHighSeverity ? 'rgba(220, 38, 38, 0.05)' : rowBg};">
