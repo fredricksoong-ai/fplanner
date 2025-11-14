@@ -286,6 +286,12 @@ function renderTeamTable(players, gameweek) {
         const player = getPlayerById(pick.element);
         if (!player) return;
         
+        // Debug: Log pick object structure
+        if (index === 0) {
+            console.log('🔍 Pick object structure:', pick);
+            console.log('🔍 Player object structure:', player);
+        }
+        
         const rowBg = index % 2 === 0 ? 'var(--bg-secondary)' : 'var(--bg-primary)';
         const isCaptain = pick.is_captain;
         const isVice = pick.is_vice_captain;
@@ -302,7 +308,7 @@ function renderTeamTable(players, gameweek) {
         const riskTooltip = renderRiskTooltip(risks);
         const hasHighSeverity = hasHighRisk(risks);
         
-        const ptsHeatmap = getPtsHeatmap(player.event_points, 'pts');
+        const ptsHeatmap = getPtsHeatmap(player.total_points, 'pts');
         const ptsStyle = getHeatmapStyle(ptsHeatmap);
         
         const formHeatmap = getFormHeatmap(player.form);
@@ -318,6 +324,10 @@ function renderTeamTable(players, gameweek) {
             metricValue = formatDecimal(xGI);
         }
         
+        // Get GW-specific stats from pick.stats
+        const gwMinutes = pick.stats?.minutes || 0;
+        const gwPoints = pick.stats?.total_points || 0;
+        
         html += `
             <tr style="background: ${hasHighSeverity ? 'rgba(220, 38, 38, 0.05)' : rowBg};">
                 <td style="padding: 0.75rem 1rem; font-weight: 600;">${getPositionShort(player)}</td>
@@ -331,9 +341,9 @@ function renderTeamTable(players, gameweek) {
                         ${gwOpp.name}${gwOpp.isHome ? ' (H)' : ' (A)'}
                     </span>
                 </td>
-                <td style="padding: 0.75rem 1rem; text-align: center;">${player.github_data?.minutes || player.minutes || 0}</td>
+                <td style="padding: 0.75rem 1rem; text-align: center;">${gwMinutes}</td>
                 <td style="padding: 0.75rem 1rem; text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 600;">
-                    ${player.event_points || 0}
+                    ${gwPoints}
                 </td>
                 <td style="padding: 0.75rem 1rem; text-align: center; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 600;">
                     ${formatDecimal(player.form)}
@@ -465,10 +475,10 @@ function renderPlayerTable(players, fixtureMode = 'next5') {
         
         let fixtures = [];
         if (fixtureMode === 'next5') {
-            fixtures = getFixtures(player.team, 10, false).filter(f => f.event > getCurrentGW()).slice(0, 5);
+            fixtures = getFixtures(player.team_code, 10, false).filter(f => f.event > getCurrentGW()).slice(0, 5);
         } else if (fixtureMode === 'past3next3') {
-            const past3 = getFixtures(player.team, 3, true);
-            const next3 = getFixtures(player.team, 10, false).filter(f => f.event > getCurrentGW()).slice(0, 3);
+            const past3 = getFixtures(player.team_code, 3, true);
+            const next3 = getFixtures(player.team_code, 10, false).filter(f => f.event > getCurrentGW()).slice(0, 3);
             fixtures = [...past3, ...next3];
         }
         
