@@ -24,7 +24,26 @@ const CACHE_BACKUP_PATH = path.join(__dirname, 'cache-backup.json');
 
 // FPL API Endpoints
 const FPL_BASE_URL = 'https://fantasy.premierleague.com/api';
-const GITHUB_CSV_URL = 'https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data/2024-25/gws/merged_gw.csv';
+// GitHub CSV Base URL (FPL-Elo-Insights)
+const GITHUB_BASE_URL = 'https://raw.githubusercontent.com/ncklr/FPL-Elo-Insights/main/data/2024-25';
+
+/**
+ * Get GitHub CSV URLs for current context
+ */
+function getGithubUrls(currentGW, isFinished) {
+  return {
+    // Season stats (always available)
+    seasonStats: `${GITHUB_BASE_URL}/playerstats.csv`,
+    
+    // Current GW stats (only if GW finished)
+    currentGWStats: isFinished ? 
+      `${GITHUB_BASE_URL}/By Gameweek/GW${currentGW}/player_gameweek_stats.csv` : 
+      null,
+    
+    // Next GW stats (for transfer data)
+    nextGWStats: `${GITHUB_BASE_URL}/By Gameweek/GW${currentGW + 1}/player_gameweek_stats.csv`
+  };
+}
 
 // Cache TTL Configuration
 const TTL = {
@@ -220,44 +239,119 @@ async function fetchFixtures() {
 }
 
 /**
- * Fetch GitHub CSV data
+ * Fetch GitHub CSV data (3-source strategy)
+ * - Season stats (always)
+ * - Current GW stats (if finished)
+ * - Next GW stats (for transfers)
  */
 async function fetchGithubCSV() {
-  console.log('📡 Fetching GitHub CSV...');
+  console.log('📡 Fetching GitHub CSV data...');
   
   try {
-    const response = await axios.get(GITHUB_CSV_URL, {
-      timeout: 15000,
-      headers: {
-        'User-Agent': 'FPLanner/1.0'
-      }
-    });
-    
-    console.log(`✅ GitHub CSV fetched (${Math.round(response.data.length / 1024)}KB)`);
-    
-    // Parse CSV
-    const parsed = Papa.parse(response.data, {
-      header: true,
-      dynamicTyping: true,
-      skipEmptyLines: true
-    });
-    
-    if (parsed.errors.length > 0) {
-      console.warn('⚠️ CSV parsing warnings:', parsed.errors.length);
+    // Get current GW from bootstrap
+    if (!cache.bootstrap.data) {
+      await fetchBootstrap();
     }
     
-    console.log(`✅ Parsed ${parsed.data.length} player records`);
+    const currentEvent = cache.bootstrap.data.events.find(e => e.is_current);
+    const currentGW = currentEvent ? currentEvent.id : 11;
+    const isFinished = currentEvent ? currentEvent.finished : false;
     
-    cache.github.data = parsed.data;
+    console.log(`📊 Current GW: ${currentGW}, Finished: ${isFinished}`);
+    
+    const urls = getGithubUrls(currentGW, isFinished);
+    
+    // Fetch all available sources in parallel
+    const fetchPromises = [];
+    
+    // 1. Season stats (always fetch)
+    console.log(`📡 Fetching season stats...`);
+    fetchPromises.push(
+      axios.get(urls.seasonStats, {
+        timeout: 15000,
+        headers: { 'User-Agent': 'FPLanner/1.0' }
+      })
+      .then(res => ({ type: 'season', data: res.data }))
+      .catch(err => {
+        console.error(`❌ Failed to fetch season stats:`, err.message);
+        return null;
+      })
+    );
+    
+    // 2. Current GW stats (if finished)
+    if (urls.currentGWStats) {
+      console.log(`📡 Fetching GW${currentGW} stats...`);
+      fetchPromises.push(
+        axios.get(urls.currentGWStats, {
+          timeout: 15000,
+          headers: { 'User-Agent': 'FPLanner/1.0' }
+        })
+        .then(res => ({ type: 'currentGW', data: res.data }))
+        .catch(err => {
+          console.warn(`⚠️ GW${currentGW} stats not available yet:`, err.message);
+          return null;
+        })
+      );
+    }
+    
+    // 3. Next GW stats (for transfers)
+    console.log(`📡 Fetching GW${currentGW + 1} stats for transfers...`);
+    fetchPromises.push(
+      axios.get(urls.nextGWStats, {
+        timeout: 15000,
+        headers: { 'User-Agent': 'FPLanner/1.0' }
+      })
+      .then(res => ({ type: 'nextGW', data: res.data }))
+      .catch(err => {
+        console.warn(`⚠️ GW${currentGW + 1} stats not available yet:`, err.message);
+        return null;
+      })
+    );
+    
+    const results = await Promise.all(fetchPromises);
+    
+    // Parse CSVs
+    const parsedData = {};
+    
+    for (const result of results.filter(r => r !== null)) {
+      const parsed = Papa.parse(result.data, {
+        header: true,
+        dynamicTyping: true,
+        skipEmptyLines: true
+      });
+      
+      if (parsed.errors.length > 0) {
+        console.warn(`⚠️ CSV parsing warnings for ${result.type}:`, parsed.errors.length);
+      }
+      
+      parsedData[result.type] = parsed.data;
+      console.log(`✅ Parsed ${result.type}: ${parsed.data.length} players`);
+    }
+    
+    // Store in cache
+    cache.github.data = {
+      currentGW: currentGW,
+      isFinished: isFinished,
+      seasonStats: parsedData.season || [],
+      currentGWStats: parsedData.currentGW || [],
+      nextGWStats: parsedData.nextGW || []
+    };
+    
     cache.github.timestamp = Date.now();
     cache.github.era = getCurrentEra();
+    cache.github.currentGW = currentGW;
     cache.stats.totalFetches++;
     
-    return parsed.data;
+    console.log(`✅ GitHub data loaded:`);
+    console.log(`   Season stats: ${parsedData.season?.length || 0} players`);
+    console.log(`   GW${currentGW} stats: ${parsedData.currentGW?.length || 0} players`);
+    console.log(`   GW${currentGW + 1} stats: ${parsedData.nextGW?.length || 0} players`);
+    
+    return cache.github.data;
+    
   } catch (err) {
     console.error('❌ Failed to fetch GitHub CSV:', err.message);
     
-    // Return cached data if available
     if (cache.github.data) {
       console.log('⚠️ Using stale GitHub cache as fallback');
       return cache.github.data;
@@ -266,7 +360,6 @@ async function fetchGithubCSV() {
     throw new Error('GitHub data unavailable');
   }
 }
-
 /**
  * Fetch user team data
  */
@@ -548,7 +641,11 @@ app.get('/api/stats', (req, res) => {
         exists: !!cache.github.data,
         age_ms: cache.github.timestamp ? now - cache.github.timestamp : null,
         era: cache.github.era,
-        current_era: getCurrentEra()
+        current_era: getCurrentEra(),
+        current_gw: cache.github.currentGW,
+        season_stats: cache.github.data?.seasonStats?.length || 0,
+        current_gw_stats: cache.github.data?.currentGWStats?.length || 0,
+        next_gw_stats: cache.github.data?.nextGWStats?.length || 0
       }
     },
     stats: cache.stats,
