@@ -286,6 +286,12 @@ function renderTeamTable(players, gameweek) {
         const player = getPlayerById(pick.element);
         if (!player) return;
         
+        // Debug: Log pick object structure
+        if (index === 0) {
+            console.log('🔍 Pick object structure:', pick);
+            console.log('🔍 Player object structure:', player);
+        }
+        
         const rowBg = index % 2 === 0 ? 'var(--bg-secondary)' : 'var(--bg-primary)';
         const isCaptain = pick.is_captain;
         const isVice = pick.is_vice_captain;
