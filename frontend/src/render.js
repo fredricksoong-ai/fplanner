@@ -324,9 +324,14 @@ function renderTeamTable(players, gameweek) {
             metricValue = formatDecimal(xGI);
         }
         
-        // Get GW-specific stats from GitHub data (if available for current GW)
-        const gwMinutes = player.github_data?.minutes || player.minutes || 0;
-        const gwPoints = player.github_data?.total_points || player.event_points || 0;
+        // Get GW-specific stats from GitHub (only if matches current GW)
+        const hasGWStats = player.github_gw && player.github_gw.gw === gameweek;
+        
+        const gwMinutes = hasGWStats ? player.github_gw.minutes : player.minutes;
+        const gwPoints = hasGWStats ? player.github_gw.total_points : player.event_points;
+        
+        // Label to show data source
+        const statsLabel = hasGWStats ? `GW${gameweek}` : 'Season';
         
         html += `
             <tr style="background: ${hasHighSeverity ? 'rgba(220, 38, 38, 0.05)' : rowBg};">
@@ -341,7 +346,12 @@ function renderTeamTable(players, gameweek) {
                         ${gwOpp.name}${gwOpp.isHome ? ' (H)' : ' (A)'}
                     </span>
                 </td>
-                <td style="padding: 0.75rem 1rem; text-align: center;">${gwMinutes}</td>
+                <td style="padding: 0.75rem 1rem; text-align: center;">
+                    ${gwMinutes}
+                    <div style="font-size: 0.65rem; color: var(--text-secondary); margin-top: 2px;">
+                        ${statsLabel}
+                    </div>
+                </td>                
                 <td style="padding: 0.75rem 1rem; text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 600;">
                     ${gwPoints}
                 </td>
