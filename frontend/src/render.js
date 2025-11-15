@@ -166,6 +166,9 @@ export function renderMyTeam(teamData) {
     // Sort players by position order
     const allPlayers = picks.picks.sort((a, b) => a.position - b.position);
 
+    // Find problem players for Transfer Committee integration
+    const problemPlayersSection = renderProblemPlayersSection(allPlayers, picks, gameweek);
+
     const html = `
         <div class="mb-6">
             ${renderManagerInfo(teamData)}
@@ -174,6 +177,8 @@ export function renderMyTeam(teamData) {
         <div class="mb-8">
             ${renderTeamSummary(allPlayers, gameweek, picks.entry_history)}
         </div>
+
+        ${problemPlayersSection}
 
         <div class="mb-8">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
@@ -203,6 +208,131 @@ export function renderMyTeam(teamData) {
     container.innerHTML = html;
     attachRiskTooltipListeners();
 }
+
+/**
+ * Render Problem Players section (Transfer Committee integration)
+ */
+function renderProblemPlayersSection(allPlayers, picks, gameweek) {
+    // Find problem players
+    const problemPlayers = [];
+    allPlayers.forEach(pick => {
+        const player = getPlayerById(pick.element);
+        if (!player) return;
+
+        const risks = analyzePlayerRisks(player);
+        if (hasHighRisk(risks) || risks.some(r => r.severity === 'medium')) {
+            problemPlayers.push({
+                pick: pick,
+                player: player,
+                risks: risks
+            });
+        }
+    });
+
+    // If no problem players, don't show the section
+    if (problemPlayers.length === 0) {
+        return '';
+    }
+
+    // Next 5 gameweeks for fixture columns
+    const next5GWs = [gameweek + 1, gameweek + 2, gameweek + 3, gameweek + 4, gameweek + 5];
+
+    let html = `
+        <div class="mb-8" style="
+            background: var(--bg-primary);
+            border-radius: 12px;
+            box-shadow: 0 2px 8px var(--shadow);
+            border: 2px solid #fb923c;
+        ">
+            <div style="
+                padding: 1rem 1.5rem;
+                border-bottom: 1px solid var(--border-color);
+                cursor: pointer;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            " onclick="window.toggleProblemPlayers()">
+                <div>
+                    <h3 style="font-size: 1.125rem; font-weight: 700; color: #fb923c; margin-bottom: 0.25rem;">
+                        <i class="fas fa-exclamation-triangle" style="margin-right: 0.5rem;"></i>Problem Players
+                    </h3>
+                    <p style="font-size: 0.875rem; color: var(--text-secondary); margin: 0;">
+                        ${problemPlayers.length} player${problemPlayers.length !== 1 ? 's' : ''} flagged for review. Click to view replacement suggestions.
+                    </p>
+                </div>
+                <div>
+                    <i id="problem-players-icon" class="fas fa-chevron-down" style="color: var(--text-secondary); font-size: 1.25rem;"></i>
+                </div>
+            </div>
+
+            <div id="problem-players-content" style="display: none; padding: 1.5rem; overflow-x: auto;">
+                <table style="width: 100%; font-size: 0.875rem; border-collapse: collapse;">
+                    <thead style="background: var(--primary-color); color: white;">
+                        <tr>
+                            <th style="text-align: center; padding: 0.75rem 0.5rem;">Pos</th>
+                            <th style="text-align: left; padding: 0.75rem 0.75rem;">Player</th>
+                            <th style="text-align: center; padding: 0.75rem 0.5rem;">Team</th>
+                            <th style="text-align: center; padding: 0.75rem 0.5rem;">Price</th>
+                            <th style="text-align: center; padding: 0.75rem 0.5rem;">Diff</th>
+                            <th style="text-align: center; padding: 0.75rem 0.5rem;">Form</th>
+                            <th style="text-align: center; padding: 0.75rem 0.5rem;">PPM</th>
+                            <th style="text-align: center; padding: 0.75rem 0.5rem;">xGI/xGC</th>
+                            <th style="text-align: center; padding: 0.75rem 0.5rem;">DefCon/90</th>
+                            <th style="text-align: center; padding: 0.75rem 0.5rem;">Own%</th>
+                            <th style="text-align: center; padding: 0.75rem 0.5rem;">Net Δ</th>
+                            <th style="text-align: center; padding: 0.75rem 0.5rem;">GW${next5GWs[0]}</th>
+                            <th style="text-align: center; padding: 0.75rem 0.5rem;">GW${next5GWs[1]}</th>
+                            <th style="text-align: center; padding: 0.75rem 0.5rem;">GW${next5GWs[2]}</th>
+                            <th style="text-align: center; padding: 0.75rem 0.5rem;">GW${next5GWs[3]}</th>
+                            <th style="text-align: center; padding: 0.75rem 0.5rem;">GW${next5GWs[4]}</th>
+                            <th style="text-align: center; padding: 0.75rem 0.5rem;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+    `;
+
+    // Render problem players with replacements
+    problemPlayers.forEach((problem, idx) => {
+        const { player, risks } = problem;
+        const replacements = findReplacements(player, picks, gameweek);
+
+        html += renderProblemPlayerRow(player, risks, idx, next5GWs, gameweek);
+
+        replacements.forEach((rep, repIdx) => {
+            html += renderReplacementRow(rep, player, idx, repIdx, next5GWs, gameweek);
+        });
+    });
+
+    html += `
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+
+    return html;
+}
+
+/**
+ * Toggle Problem Players section visibility
+ */
+window.toggleProblemPlayers = function() {
+    const content = document.getElementById('problem-players-content');
+    const icon = document.getElementById('problem-players-icon');
+
+    if (!content || !icon) return;
+
+    const isHidden = content.style.display === 'none';
+    content.style.display = isHidden ? 'block' : 'none';
+
+    if (isHidden) {
+        icon.classList.remove('fa-chevron-down');
+        icon.classList.add('fa-chevron-up');
+    } else {
+        icon.classList.remove('fa-chevron-up');
+        icon.classList.add('fa-chevron-down');
+    }
+};
 
 /**
  * Render team summary cards
@@ -456,6 +586,9 @@ function renderTeamTable(players, gameweek) {
                         <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">DefCon/90</th>
                         <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">xGI/xGC</th>
                         <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">Price</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">PPM</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">Own%</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">ΔT</th>
                         <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">GW${next5GWs[0]}</th>
                         <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">GW${next5GWs[1]}</th>
                         <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">GW${next5GWs[2]}</th>
@@ -467,11 +600,12 @@ function renderTeamTable(players, gameweek) {
     `;
 
     // Render starting 11
-    html += `<tr><td colspan="15" style="background: var(--bg-secondary); padding: 0.5rem 1rem; font-weight: 700; color: var(--primary-color);">Starting XI</td></tr>`;
     html += renderTeamRows(starters, gameweek, next5GWs);
 
+    // Dark purple separator line between starters and bench
+    html += `<tr><td colspan="18" style="padding: 0; background: linear-gradient(90deg, #37003c, #2a002e); height: 3px;"></td></tr>`;
+
     // Render bench
-    html += `<tr><td colspan="15" style="background: var(--bg-secondary); padding: 0.5rem 1rem; font-weight: 700; color: var(--text-secondary);">Bench</td></tr>`;
     html += renderTeamRows(bench, gameweek, next5GWs);
 
     html += `
@@ -539,6 +673,25 @@ function renderTeamRows(players, gameweek, next5GWs) {
         const defCon = player.github_season?.defensive_contribution_per_90 || 0;
         const defConFormatted = formatDecimal(defCon);
 
+        // Calculate additional metrics
+        const ppm = calculatePPM(player);
+        const ownership = parseFloat(player.selected_by_percent) || 0;
+
+        // Transfer momentum: Use GitHub or FPL API data
+        let transferNet = '—';
+        let transferColor = 'inherit';
+        if (player.github_transfers) {
+            const netTransfers = player.github_transfers.transfers_in - player.github_transfers.transfers_out;
+            const prefix = netTransfers > 0 ? '+' : '';
+            transferNet = `${prefix}${(netTransfers / 1000).toFixed(0)}k`;
+            transferColor = netTransfers > 0 ? '#22c55e' : netTransfers < 0 ? '#ef4444' : 'inherit';
+        } else if (player.transfers_in_event !== undefined && player.transfers_out_event !== undefined) {
+            const netTransfers = player.transfers_in_event - player.transfers_out_event;
+            const prefix = netTransfers > 0 ? '+' : '';
+            transferNet = `${prefix}${(netTransfers / 1000).toFixed(0)}k`;
+            transferColor = netTransfers > 0 ? '#22c55e' : netTransfers < 0 ? '#ef4444' : 'inherit';
+        }
+
         html += `
             <tr style="background: ${hasHighSeverity ? 'rgba(220, 38, 38, 0.05)' : rowBg};">
                 <td style="padding: 0.75rem 0.5rem; font-weight: 600;">${getPositionShort(player)}</td>
@@ -553,7 +706,7 @@ function renderTeamRows(players, gameweek, next5GWs) {
                     </span>
                 </td>
                 <td style="padding: 0.75rem 0.5rem; text-align: center; font-size: 0.8rem;">
-                    ${gwMinutes}${hasGWStats ? '<div style="font-size: 0.6rem; color: var(--text-secondary);">GW' + gameweek + '</div>' : ''}
+                    ${gwMinutes}
                 </td>
                 <td style="padding: 0.75rem 0.5rem; text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 600;">
                     ${gwPoints}
@@ -564,6 +717,9 @@ function renderTeamRows(players, gameweek, next5GWs) {
                 <td style="padding: 0.75rem 0.5rem; text-align: center; font-weight: 600;">${defConFormatted}</td>
                 <td style="padding: 0.75rem 0.5rem; text-align: center;">${metricValue}</td>
                 <td style="padding: 0.75rem 0.5rem; text-align: center;">${formatCurrency(player.now_cost)}</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center; font-weight: 600;">${formatDecimal(ppm)}</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center; font-size: 0.8rem;">${ownership.toFixed(1)}%</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center; font-size: 0.8rem; color: ${transferColor};">${transferNet}</td>
                 ${next5Fixtures.map((fix, idx) => {
                     const fdrClass = getDifficultyClass(fix.difficulty);
                     return `
@@ -1456,6 +1612,23 @@ function renderPositionSpecificTable(players, position = 'all') {
 
     const currentGW = getCurrentGW();
 
+    // Get my team's player IDs from cache
+    let myPlayerIds = new Set();
+    const cachedTeamId = localStorage.getItem('fplanner_team_id');
+    if (cachedTeamId) {
+        const cachedTeamData = localStorage.getItem(`fplanner_team_${cachedTeamId}`);
+        if (cachedTeamData) {
+            try {
+                const teamData = JSON.parse(cachedTeamData);
+                if (teamData && teamData.picks && teamData.picks.picks) {
+                    myPlayerIds = new Set(teamData.picks.picks.map(p => p.element));
+                }
+            } catch (e) {
+                console.log('Could not parse cached team data for highlighting');
+            }
+        }
+    }
+
     // Get next 5 fixtures headers
     const fixtureHeaders = getFixtureHeaders(5, 1);
 
@@ -1553,7 +1726,11 @@ function renderPositionSpecificTable(players, position = 'all') {
 
     // Render rows
     players.forEach((player, index) => {
-        const rowBg = index % 2 === 0 ? 'var(--bg-secondary)' : 'var(--bg-primary)';
+        // Check if player is in my team
+        const isMyPlayer = myPlayerIds.has(player.id);
+
+        // Highlight my players with soft purple background
+        const rowBg = isMyPlayer ? 'rgba(137, 80, 252, 0.08)' : (index % 2 === 0 ? 'var(--bg-secondary)' : 'var(--bg-primary)');
 
         // Calculate common metrics
         const ppm = calculatePPM(player);
@@ -1672,9 +1849,13 @@ function renderPositionSpecificTable(players, position = 'all') {
         }
 
         // Add fixtures
-        next5.forEach(f => {
+        next5.forEach((f, fixIdx) => {
+            // Highlight first fixture (next GW) with soft purple if this is my player
+            const isNextGW = fixIdx === 0;
+            const fixtureHighlight = (isMyPlayer && isNextGW) ? 'background: rgba(137, 80, 252, 0.08);' : '';
+
             html += `
-                <td style="padding: 0.5rem; text-align: center;">
+                <td style="padding: 0.5rem; text-align: center; ${fixtureHighlight}">
                     <span class="${getDifficultyClass(f.difficulty)}" style="padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.75rem; display: inline-block;">
                         ${f.opponent}
                     </span>
