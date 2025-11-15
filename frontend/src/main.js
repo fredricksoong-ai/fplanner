@@ -80,6 +80,9 @@ function renderPage() {
         case 'data-analysis':
             renderDataAnalysis();
             break;
+        case 'charts':
+            renderCharts();
+            break;
         case 'search':
             renderSearch();
             break;
@@ -100,6 +103,11 @@ async function renderMyTeamPage() {
 async function renderDataAnalysis() {
     const { renderDataAnalysis: render } = await import('./renderDataAnalysis.js');
     render(currentSubTab);
+}
+
+async function renderCharts() {
+    const { renderCharts: render } = await import('./renderCharts.js');
+    render();
 }
 
 async function renderSearch() {
@@ -321,6 +329,7 @@ function setupNavigation() {
     const pages = [
         { id: 'my-team', label: 'My Team', icon: 'fa-users' },
         { id: 'data-analysis', label: 'Data Analysis', icon: 'fa-chart-bar' },
+        { id: 'charts', label: 'Charts', icon: 'fa-chart-line' },
         { id: 'search', label: 'Search', icon: 'fa-search' }
     ];
     
