@@ -96,22 +96,22 @@ function renderPage() {
 // ============================================================================
 
 async function renderMyTeamPage() {
-    const { renderMyTeamForm } = await import('./render.js');
+    const { renderMyTeamForm } = await import('./renderMyTeam.js');
     renderMyTeamForm();
 }
 
 async function renderTransferCommittee() {
-    const { renderTransferCommittee: render } = await import('./render.js');
+    const { renderTransferCommittee: render } = await import('./renderTransferCommittee.js');
     render();
 }
 
 async function renderDataAnalysis() {
-    const { renderDataAnalysis: render } = await import('./render.js');
+    const { renderDataAnalysis: render } = await import('./renderDataAnalysis.js');
     render(currentSubTab);
 }
 
 async function renderSearch() {
-    const { renderSearch: render } = await import('./render.js');
+    const { renderSearch: render } = await import('./renderSearch.js');
     render();
 }
 
@@ -398,10 +398,14 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Import and expose render functions
-import('./render.js').then(renderModule => {
-    window.renderTransferCommittee = renderModule.renderTransferCommittee;
-    window.renderDataAnalysis = renderModule.renderDataAnalysis;
-    window.renderSearch = renderModule.renderSearch;
+Promise.all([
+    import('./renderTransferCommittee.js'),
+    import('./renderDataAnalysis.js'),
+    import('./renderSearch.js')
+]).then(([tcModule, daModule, searchModule]) => {
+    window.renderTransferCommittee = tcModule.renderTransferCommittee;
+    window.renderDataAnalysis = daModule.renderDataAnalysis;
+    window.renderSearch = searchModule.renderSearch;
 });
 
 // ============================================================================
