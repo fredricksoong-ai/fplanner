@@ -34,8 +34,7 @@ import {
 import {
     getFixtures,
     getGWOpponent,
-    calculateFixtureDifficulty,
-    getFDRClass
+    calculateFixtureDifficulty
 } from './fixtures.js';
 
 import {
@@ -247,12 +246,12 @@ function renderTeamSummary(players, gameweek, entryHistory) {
     const avgOwnership = totalOwnership / players.length;
     const avgMinPercent = totalMinPercent / players.length;
 
-    // Calculate fixture difficulty for next 3 GWs
+    // Calculate fixture difficulty for next 5 GWs
     let totalFDR = 0;
     players.forEach(pick => {
         const player = getPlayerById(pick.element);
         if (player) {
-            totalFDR += calculateFixtureDifficulty(player.team, 3, false, gameweek + 1);
+            totalFDR += calculateFixtureDifficulty(player.team, 5);
         }
     });
     const avgFDR = totalFDR / players.length;
@@ -330,7 +329,7 @@ function renderTeamSummary(players, gameweek, entryHistory) {
                     box-shadow: 0 2px 8px var(--shadow);
                 ">
                     <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">
-                        Next 3 GWs FDR
+                        Next 5 GWs FDR
                     </div>
                     <div style="font-size: 2rem; font-weight: 700; color: var(--text-primary);">
                         ${avgFDR.toFixed(2)}
@@ -461,7 +460,7 @@ function renderTeamTable(players, gameweek) {
                         <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">Form</th>
                         <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">xGI</th>
                         <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">ΔT</th>
-                        <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">FDR(3)</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">FDR(5)</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -537,8 +536,8 @@ function renderTeamRows(players, gameweek, next3GWs) {
         }
 
         // Fixture difficulty for next 5
-        const fdrNext5 = calculateFixtureDifficulty(player.team, 5, false, gameweek + 1);
-        const fdrClass = getFDRClass(fdrNext5);
+        const fdrNext5 = calculateFixtureDifficulty(player.team, 5);
+        const fdrClass = getDifficultyClass(Math.round(fdrNext5));
 
         // Position-specific xGI/xGC
         let metricValue = '';
@@ -1137,7 +1136,7 @@ function renderPositionSpecificTable(players, position = 'all') {
         const minPercentage = calculateMinutesPercentage(player, currentGW);
         const ownership = parseFloat(player.selected_by_percent) || 0;
         const fdr5 = calculateFixtureDifficulty(player.team, 5);
-        const fdrClass = getFDRClass(fdr5);
+        const fdrClass = getDifficultyClass(Math.round(fdr5));
 
         // Transfer momentum
         let transferNet = '—';
