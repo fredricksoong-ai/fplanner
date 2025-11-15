@@ -47,16 +47,15 @@ export function renderSearch() {
                         background: var(--bg-secondary);
                         color: var(--text-primary);
                     "
-                    oninput="window.performPlayerSearch()"
                 >
             </div>
 
             <div style="display: flex; gap: 0.5rem; margin-bottom: 2rem;">
-                <button onclick="window.filterByPosition('all')" class="position-filter-btn" data-position="all" style="padding: 0.5rem 1rem; background: var(--primary-color); color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 600;">All</button>
-                <button onclick="window.filterByPosition(1)" class="position-filter-btn" data-position="1" style="padding: 0.5rem 1rem; background: var(--bg-secondary); color: var(--text-primary); border: none; border-radius: 0.5rem; cursor: pointer;">GKP</button>
-                <button onclick="window.filterByPosition(2)" class="position-filter-btn" data-position="2" style="padding: 0.5rem 1rem; background: var(--bg-secondary); color: var(--text-primary); border: none; border-radius: 0.5rem; cursor: pointer;">DEF</button>
-                <button onclick="window.filterByPosition(3)" class="position-filter-btn" data-position="3" style="padding: 0.5rem 1rem; background: var(--bg-secondary); color: var(--text-primary); border: none; border-radius: 0.5rem; cursor: pointer;">MID</button>
-                <button onclick="window.filterByPosition(4)" class="position-filter-btn" data-position="4" style="padding: 0.5rem 1rem; background: var(--bg-secondary); color: var(--text-primary); border: none; border-radius: 0.5rem; cursor: pointer;">FWD</button>
+                <button class="position-filter-btn" data-position="all" style="padding: 0.5rem 1rem; background: var(--primary-color); color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 600; transition: all 0.2s;">All</button>
+                <button class="position-filter-btn" data-position="1" style="padding: 0.5rem 1rem; background: var(--bg-secondary); color: var(--text-primary); border: none; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s;">GKP</button>
+                <button class="position-filter-btn" data-position="2" style="padding: 0.5rem 1rem; background: var(--bg-secondary); color: var(--text-primary); border: none; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s;">DEF</button>
+                <button class="position-filter-btn" data-position="3" style="padding: 0.5rem 1rem; background: var(--bg-secondary); color: var(--text-primary); border: none; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s;">MID</button>
+                <button class="position-filter-btn" data-position="4" style="padding: 0.5rem 1rem; background: var(--bg-secondary); color: var(--text-primary); border: none; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s;">FWD</button>
             </div>
 
             <div id="search-results">
@@ -64,6 +63,20 @@ export function renderSearch() {
             </div>
         </div>
     `;
+
+    // Add event listeners
+    const searchInput = document.getElementById('player-search-input');
+    if (searchInput) {
+        searchInput.addEventListener('input', () => window.performPlayerSearch());
+    }
+
+    const positionButtons = document.querySelectorAll('.position-filter-btn');
+    positionButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const position = btn.dataset.position;
+            window.filterByPosition(position === 'all' ? 'all' : parseInt(position));
+        });
+    });
 }
 
 // ============================================================================

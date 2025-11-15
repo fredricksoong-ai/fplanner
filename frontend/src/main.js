@@ -295,8 +295,8 @@ async function initializeApp() {
                 <p style="color: var(--text-secondary); margin-bottom: 2rem;">
                     ${escapeHtml(err.message)}
                 </p>
-                <button 
-                    onclick="location.reload()"
+                <button
+                    id="retry-button"
                     style="
                         padding: 1rem 2rem;
                         background: var(--primary-color);
@@ -311,6 +311,12 @@ async function initializeApp() {
                 </button>
             </div>
         `;
+
+        // Add event listener to retry button
+        const retryButton = document.getElementById('retry-button');
+        if (retryButton) {
+            retryButton.addEventListener('click', () => location.reload());
+        }
     }
 }
 
@@ -328,11 +334,10 @@ function setupNavigation() {
     ];
     
     navContainer.innerHTML = pages.map(page => `
-        <a 
-            href="#${page.id}" 
-            class="nav-link" 
+        <a
+            href="#${page.id}"
+            class="nav-link"
             data-page="${page.id}"
-            onclick="window.navigateToPage('${page.id}')"
             style="
                 color: white;
                 padding: 0.5rem 1rem;
@@ -342,13 +347,35 @@ function setupNavigation() {
                 transition: all 0.2s;
                 cursor: pointer;
             "
-            onmouseover="this.style.background='rgba(255,255,255,0.1)'"
-            onmouseout="if(this.dataset.page !== '${currentPage}') this.style.background='transparent'"
         >
             <i class="fas ${page.icon}"></i> ${page.label}
         </a>
     `).join('');
-    
+
+    // Add event listeners to navigation links
+    const navLinks = navContainer.querySelectorAll('.nav-link');
+    navLinks.forEach(link => {
+        // Click handler
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const page = link.dataset.page;
+            navigate(page);
+        });
+
+        // Hover effects
+        link.addEventListener('mouseenter', () => {
+            if (link.dataset.page !== currentPage) {
+                link.style.background = 'rgba(255,255,255,0.1)';
+            }
+        });
+
+        link.addEventListener('mouseleave', () => {
+            if (link.dataset.page !== currentPage) {
+                link.style.background = 'transparent';
+            }
+        });
+    });
+
     updateNavLinks();
 }
 
@@ -389,11 +416,19 @@ window.loadTeam = async () => {
 
 window.toggleTheme = toggleTheme;
 
-// Setup theme toggle click handler
+// Setup theme toggle click handler and hover effects
 document.addEventListener('DOMContentLoaded', () => {
     const themeButton = document.getElementById('theme-toggle');
     if (themeButton) {
         themeButton.addEventListener('click', toggleTheme);
+
+        // Add hover effects
+        themeButton.addEventListener('mouseenter', () => {
+            themeButton.style.background = 'rgba(255,255,255,0.3)';
+        });
+        themeButton.addEventListener('mouseleave', () => {
+            themeButton.style.background = 'rgba(255,255,255,0.2)';
+        });
     }
 });
 

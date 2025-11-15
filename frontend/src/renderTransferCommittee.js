@@ -28,6 +28,28 @@ import {
 } from './transferHelpers.js';
 
 // ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+/**
+ * Attach event listeners to "Go to My Team" buttons
+ */
+function attachGoToMyTeamListeners() {
+    const buttons = document.querySelectorAll('.go-to-my-team-btn');
+    buttons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            window.location.hash = 'my-team';
+        });
+        btn.addEventListener('mouseenter', (e) => {
+            e.target.style.opacity = '0.9';
+        });
+        btn.addEventListener('mouseleave', (e) => {
+            e.target.style.opacity = '1';
+        });
+    });
+}
+
+// ============================================================================
 // TRANSFER COMMITTEE PAGE
 // ============================================================================
 
@@ -52,7 +74,7 @@ export function renderTransferCommittee() {
                         Transfer Committee requires your team data. Please go to My Team and load your squad first.
                     </p>
                     <button
-                        onclick="window.location.hash = 'my-team'"
+                        class="go-to-my-team-btn"
                         style="
                             padding: 12px 24px;
                             background: var(--primary-color);
@@ -62,15 +84,15 @@ export function renderTransferCommittee() {
                             font-weight: 600;
                             cursor: pointer;
                             font-size: 1rem;
+                            transition: opacity 0.2s;
                         "
-                        onmouseover="this.style.opacity='0.9'"
-                        onmouseout="this.style.opacity='1'"
                     >
                         <i class="fas fa-users" style="margin-right: 0.5rem;"></i>Go to My Team
                     </button>
                 </div>
             </div>
         `;
+        attachGoToMyTeamListeners();
         return;
     }
 
@@ -92,7 +114,7 @@ export function renderTransferCommittee() {
                             ${escapeHtml(err.message)}
                         </p>
                         <button
-                            onclick="window.location.hash = 'my-team'"
+                            class="go-to-my-team-btn"
                             style="
                                 padding: 12px 24px;
                                 background: var(--primary-color);
@@ -101,6 +123,7 @@ export function renderTransferCommittee() {
                                 border-radius: 8px;
                                 font-weight: 600;
                                 cursor: pointer;
+                                transition: opacity 0.2s;
                             "
                         >
                             Go to My Team
@@ -108,6 +131,7 @@ export function renderTransferCommittee() {
                     </div>
                 </div>
             `;
+            attachGoToMyTeamListeners();
         });
 }
 
@@ -152,7 +176,7 @@ function renderTransferCommitteeWithTeam(teamData) {
                         Your squad looks good. No urgent transfer recommendations at this time.
                     </p>
                     <button
-                        onclick="window.location.hash = 'my-team'"
+                        class="go-to-my-team-btn"
                         style="
                             padding: 12px 24px;
                             background: var(--primary-color);
@@ -161,6 +185,7 @@ function renderTransferCommitteeWithTeam(teamData) {
                             border-radius: 8px;
                             font-weight: 600;
                             cursor: pointer;
+                            transition: opacity 0.2s;
                         "
                     >
                         <i class="fas fa-arrow-left" style="margin-right: 0.5rem;"></i>Back to My Team
@@ -168,6 +193,7 @@ function renderTransferCommitteeWithTeam(teamData) {
                 </div>
             </div>
         `;
+        attachGoToMyTeamListeners();
         return;
     }
 
@@ -237,6 +263,7 @@ function renderTransferCommitteeWithTeam(teamData) {
 
     container.innerHTML = html;
     attachRiskTooltipListeners();
+    attachGoToMyTeamListeners();
 
     console.log('   ✅ Transfer Committee rendered');
 }
