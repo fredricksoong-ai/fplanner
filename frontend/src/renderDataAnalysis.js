@@ -33,6 +33,10 @@ import {
     attachRiskTooltipListeners
 } from './renderHelpers.js';
 
+import {
+    loadAndRenderInsights
+} from './renderInsightBanner.js';
+
 // ============================================================================
 // DATA ANALYSIS PAGE
 // ============================================================================
@@ -142,9 +146,16 @@ export function renderDataAnalysis(subTab = 'overview', position = 'all') {
     container.innerHTML = `
         <div style="padding: 2rem;">
             ${tabHTML}
+
+            <!-- AI Insights Container -->
+            <div id="ai-insights-container"></div>
+
             ${contentHTML}
         </div>
     `;
+
+    // Load AI insights for current tab
+    loadAIInsightsForTab(subTab, position);
 
     // Add event listeners for tab buttons
     const tabButtons = container.querySelectorAll('.analysis-tab-btn');
@@ -639,4 +650,103 @@ function renderPositionSpecificTable(players, position = 'all') {
     `;
 
     return html;
+}
+
+/**
+ * Load AI insights for current tab
+ */
+async function loadAIInsightsForTab(tab, position) {
+    const currentGW = getCurrentGW();
+    const players = getAllPlayers();
+
+    // Prepare context data based on tab
+    let contextData = {};
+
+    if (tab === 'overview') {
+        // Filter players by position if needed
+        let filteredPlayers = players;
+        if (position !== 'all') {
+            const posMap = { 'GKP': 1, 'DEF': 2, 'MID': 3, 'FWD': 4 };
+            filteredPlayers = players.filter(p => p.element_type === posMap[position]);
+        }
+
+        // Get top performers for context
+        const topPerformers = sortPlayers(filteredPlayers, 'total_points', false)
+            .slice(0, 10)
+            .map(p => ({
+                name: p.web_name,
+                position: getPositionShort(p),
+                points: p.total_points,
+                form: parseFloat(p.form) || 0,
+                ppm: calculatePPM(p),
+                ownership: parseFloat(p.selected_by_percent) || 0,
+                price: p.now_cost / 10
+            }));
+
+        // Get best value players
+        const bestValue = filteredPlayers.filter(p => calculateMinutesPercentage(p, currentGW) > 30);
+        const topValue = sortPlayers(bestValue, 'ppm', false)
+            .slice(0, 10)
+            .map(p => ({
+                name: p.web_name,
+                position: getPositionShort(p),
+                ppm: calculatePPM(p),
+                form: parseFloat(p.form) || 0,
+                ownership: parseFloat(p.selected_by_percent) || 0,
+                price: p.now_cost / 10
+            }));
+
+        contextData = {
+            topPerformers,
+            topValue,
+            positionFilter: position,
+            totalPlayers: filteredPlayers.length
+        };
+    }
+
+    if (tab === 'differentials') {
+        // Get current differentials based on filters
+        let filteredPlayers = players;
+        if (position !== 'all') {
+            const posMap = { 'GKP': 1, 'DEF': 2, 'MID': 3, 'FWD': 4 };
+            filteredPlayers = players.filter(p => p.element_type === posMap[position]);
+        }
+
+        const differentials = filteredPlayers
+            .filter(p => {
+                const ownership = parseFloat(p.selected_by_percent) || 0;
+                return ownership < analysisState.ownershipThreshold;
+            })
+            .slice(0, 15)
+            .map(p => ({
+                name: p.web_name,
+                position: getPositionShort(p),
+                ownership: parseFloat(p.selected_by_percent) || 0,
+                form: parseFloat(p.form) || 0,
+                ppm: calculatePPM(p),
+                price: p.now_cost / 10,
+                fdr: calculateFixtureDifficulty(p.team, 5),
+                transfersNet: p.github_transfers ?
+                    (p.github_transfers.transfers_in - p.github_transfers.transfers_out) / 1000 : 0
+            }));
+
+        contextData = {
+            ownershipThreshold: analysisState.ownershipThreshold,
+            differentials,
+            positionFilter: position,
+            totalFound: differentials.length
+        };
+    }
+
+    // Build context for AI
+    const context = {
+        page: 'data-analysis',
+        tab: tab,
+        position: position,
+        gameweek: currentGW,
+        data: contextData
+    };
+
+    // Load and render insights
+    await loadAndRenderInsights(context, 'ai-insights-container');
 }

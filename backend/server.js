@@ -24,6 +24,10 @@ const PORT = process.env.PORT || 3001;
 const HOST = '0.0.0.0';
 const CACHE_BACKUP_PATH = path.join(__dirname, 'cache-backup.json');
 
+// Gemini API Configuration
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+
 // FPL API Endpoints
 const FPL_BASE_URL = 'https://fantasy.premierleague.com/api';
 // GitHub CSV Base URL (FPL-Elo-Insights)
@@ -720,6 +724,218 @@ app.get('/api/team/:teamId', async (req, res) => {
 });
 
 /**
+ * POST /api/ai-insights
+ * Generate AI insights using Gemini API
+ * Request body:
+ *   - page: string (data-analysis, my-team, etc)
+ *   - tab: string (overview, differentials, etc)
+ *   - position: string (all, GKP, DEF, MID, FWD)
+ *   - gameweek: number
+ *   - data: object (page-specific context data)
+ */
+app.post('/api/ai-insights', async (req, res) => {
+  const { page, tab, position, gameweek, data } = req.body;
+
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log(`📥 POST /api/ai-insights [${page}/${tab}/${position}]`);
+
+  // Validate required fields
+  if (!page || !tab || !gameweek) {
+    console.warn('⚠️ Missing required fields');
+    return res.status(400).json({
+      error: 'Missing required fields',
+      message: 'page, tab, and gameweek are required'
+    });
+  }
+
+  // Check if Gemini API key is configured
+  if (!GEMINI_API_KEY) {
+    console.error('❌ Gemini API key not configured');
+    return res.status(500).json({
+      error: 'AI service not configured',
+      message: 'Gemini API key is missing. Please configure GEMINI_API_KEY environment variable.'
+    });
+  }
+
+  try {
+    // Build prompt based on page/tab
+    const prompt = buildAIPrompt(page, tab, position, gameweek, data);
+
+    console.log(`🤖 Calling Gemini API...`);
+
+    // Call Gemini API
+    const geminiResponse = await axios.post(
+      `${GEMINI_API_URL}?key=${GEMINI_API_KEY}`,
+      {
+        contents: [{
+          parts: [{ text: prompt }]
+        }],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 1024,
+          topP: 0.8,
+          topK: 40
+        }
+      },
+      {
+        timeout: 30000,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    // Parse Gemini response
+    const insights = parseGeminiResponse(geminiResponse.data, gameweek);
+
+    console.log(`✅ AI Insights generated (${insights.items.length} items)`);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+    res.json(insights);
+
+  } catch (error) {
+    console.error('❌ Error generating AI insights:', error.message);
+
+    // Don't expose detailed error messages in production
+    const isProduction = process.env.NODE_ENV === 'production';
+    res.status(500).json({
+      error: 'Failed to generate insights',
+      message: isProduction ? 'AI service temporarily unavailable' : error.message
+    });
+  }
+});
+
+/**
+ * Build AI prompt based on context
+ */
+function buildAIPrompt(page, tab, position, gameweek, data) {
+  const positionText = position === 'all' ? 'all positions' : position;
+
+  if (page === 'data-analysis' && tab === 'overview') {
+    return `You are an expert Fantasy Premier League analyst. Analyze the following market data for Gameweek ${gameweek} and provide 3-4 actionable insights.
+
+Context:
+- Viewing: ${positionText} overview
+- Market Data: ${JSON.stringify(data, null, 2)}
+
+Provide insights as a JSON array with this exact structure:
+[
+  {
+    "type": "opportunity|warning|action|insight",
+    "title": "Short headline (max 60 chars)",
+    "description": "1-2 sentence explanation with specific stats and player names",
+    "priority": "high|medium|low"
+  }
+]
+
+Focus on:
+1. Best value players (high PPM, good form)
+2. Emerging differentials (low ownership, strong performance)
+3. Position-specific trends and comparisons
+4. Form vs price analysis
+
+Be concise, data-driven, and actionable. Use actual player names from the data provided.`;
+  }
+
+  if (page === 'data-analysis' && tab === 'differentials') {
+    return `You are an expert Fantasy Premier League analyst. Analyze the following differential players data for Gameweek ${gameweek} and provide 3-4 actionable insights.
+
+Context:
+- Viewing: ${positionText} differentials
+- Ownership Threshold: ${data.ownershipThreshold}%
+- Players Data: ${JSON.stringify(data, null, 2)}
+
+Provide insights as a JSON array with this exact structure:
+[
+  {
+    "type": "opportunity|warning|action|insight",
+    "title": "Short headline (max 60 chars)",
+    "description": "1-2 sentence explanation with specific stats and player names",
+    "priority": "high|medium|low"
+  }
+]
+
+Focus on:
+1. Transfer momentum alerts (players rising/falling)
+2. Price prediction insights
+3. Fixture window analysis (next 3-5 gameweeks)
+4. Contrarian advantage opportunities
+
+Be concise, data-driven, and actionable. Use actual player names from the data provided.`;
+  }
+
+  // Default generic prompt
+  return `You are an expert Fantasy Premier League analyst. Provide 3-4 helpful insights for Gameweek ${gameweek} as a JSON array.`;
+}
+
+/**
+ * Parse Gemini API response into insights structure
+ */
+function parseGeminiResponse(geminiData, gameweek) {
+  try {
+    // Extract text from Gemini response
+    const text = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+    if (!text) {
+      throw new Error('No text content in Gemini response');
+    }
+
+    // Try to extract JSON from response (handles markdown code blocks)
+    let jsonText = text;
+
+    // Remove markdown code blocks if present
+    const jsonMatch = text.match(/```(?:json)?\s*(\[[\s\S]*?\])\s*```/);
+    if (jsonMatch) {
+      jsonText = jsonMatch[1];
+    } else {
+      // Try to find JSON array directly
+      const arrayMatch = text.match(/\[[\s\S]*\]/);
+      if (arrayMatch) {
+        jsonText = arrayMatch[0];
+      }
+    }
+
+    // Parse JSON
+    const items = JSON.parse(jsonText);
+
+    // Validate structure
+    if (!Array.isArray(items)) {
+      throw new Error('Parsed response is not an array');
+    }
+
+    // Validate and sanitize each item
+    const validatedItems = items.map(item => ({
+      type: ['opportunity', 'warning', 'action', 'insight'].includes(item.type) ? item.type : 'insight',
+      title: String(item.title || 'Insight').substring(0, 80),
+      description: String(item.description || '').substring(0, 500),
+      priority: ['high', 'medium', 'low'].includes(item.priority) ? item.priority : 'medium'
+    }));
+
+    return {
+      gameweek: gameweek,
+      items: validatedItems,
+      timestamp: Date.now()
+    };
+
+  } catch (error) {
+    console.error('❌ Failed to parse Gemini response:', error);
+
+    // Return fallback insights
+    return {
+      gameweek: gameweek,
+      items: [{
+        type: 'insight',
+        title: 'AI Analysis Available',
+        description: 'AI insights are being generated. Please refresh in a moment.',
+        priority: 'low'
+      }],
+      timestamp: Date.now(),
+      parseError: true
+    };
+  }
+}
+
+/**
  * GET /api/stats
  * Returns cache statistics and health info
  */
@@ -805,6 +1021,7 @@ app.listen(PORT, HOST, () => {
   console.log(`  GET  /api/fpl-data       - Combined FPL data`);
   console.log(`  GET  /api/fpl-data?refresh=true - Force refresh`);
   console.log(`  GET  /api/team/:teamId   - User team data`);
+  console.log(`  POST /api/ai-insights    - AI insights (Gemini)`);
   console.log(`  GET  /api/stats          - Cache statistics`);
   console.log(`  GET  /health             - Health check`);
   console.log('');
