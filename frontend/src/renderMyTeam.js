@@ -115,10 +115,9 @@ function renderMyTeamFormContent() {
                         background: var(--bg-secondary);
                         color: var(--text-primary);
                     "
-                    onkeypress="if(event.key==='Enter') window.loadAndRenderTeam()"
                 >
                 <button
-                    onclick="window.loadAndRenderTeam()"
+                    id="load-team-btn"
                     style="
                         width: 100%;
                         padding: 1rem;
@@ -131,8 +130,6 @@ function renderMyTeamFormContent() {
                         cursor: pointer;
                         transition: all 0.2s;
                     "
-                    onmouseover="this.style.background='var(--primary-hover)'"
-                    onmouseout="this.style.background='var(--primary-color)'"
                 >
                     <i class="fas fa-search"></i> Load My Team
                 </button>
@@ -151,6 +148,26 @@ function renderMyTeamFormContent() {
             </div>
         </div>
     `;
+
+    // Add event listeners
+    const loadBtn = document.getElementById('load-team-btn');
+    const teamInput = document.getElementById('team-id-input');
+
+    if (loadBtn) {
+        loadBtn.addEventListener('click', () => window.loadAndRenderTeam());
+        loadBtn.addEventListener('mouseenter', (e) => {
+            e.target.style.background = 'var(--primary-hover)';
+        });
+        loadBtn.addEventListener('mouseleave', (e) => {
+            e.target.style.background = 'var(--primary-color)';
+        });
+    }
+
+    if (teamInput) {
+        teamInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') window.loadAndRenderTeam();
+        });
+    }
 }
 
 /**
@@ -182,7 +199,7 @@ export function renderMyTeam(teamData) {
         <div class="mb-8">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                 <button
-                    onclick="window.resetMyTeam()"
+                    id="change-team-btn"
                     style="
                         padding: 8px 16px;
                         border-radius: 20px;
@@ -194,8 +211,6 @@ export function renderMyTeam(teamData) {
                         cursor: pointer;
                         transition: all 0.2s ease;
                     "
-                    onmouseover="this.style.background='var(--bg-tertiary)'; this.style.color='var(--primary-color)'; this.style.borderColor='var(--primary-color)';"
-                    onmouseout="this.style.background='var(--bg-secondary)'; this.style.color='var(--text-secondary)'; this.style.borderColor='var(--border-color)';"
                 >
                     <i class="fas fa-arrow-left" style="margin-right: 6px;"></i>Change Team
                 </button>
@@ -206,6 +221,37 @@ export function renderMyTeam(teamData) {
 
     container.innerHTML = html;
     attachRiskTooltipListeners();
+
+    // Add event listener for Change Team button
+    const changeTeamBtn = document.getElementById('change-team-btn');
+    if (changeTeamBtn) {
+        changeTeamBtn.addEventListener('click', () => window.resetMyTeam());
+        changeTeamBtn.addEventListener('mouseenter', (e) => {
+            e.target.style.background = 'var(--bg-tertiary)';
+            e.target.style.color = 'var(--primary-color)';
+            e.target.style.borderColor = 'var(--primary-color)';
+        });
+        changeTeamBtn.addEventListener('mouseleave', (e) => {
+            e.target.style.background = 'var(--bg-secondary)';
+            e.target.style.color = 'var(--text-secondary)';
+            e.target.style.borderColor = 'var(--border-color)';
+        });
+    }
+
+    // Add event listener for Problem Players toggle
+    const problemPlayersHeader = document.getElementById('problem-players-header');
+    if (problemPlayersHeader) {
+        problemPlayersHeader.addEventListener('click', () => window.toggleProblemPlayers());
+    }
+
+    // Add event delegation for toggle replacement buttons
+    container.addEventListener('click', (e) => {
+        const btn = e.target.closest('.toggle-replacements-btn');
+        if (btn) {
+            const idx = parseInt(btn.dataset.idx);
+            window.toggleReplacements(idx);
+        }
+    });
 }
 
 /**
@@ -243,14 +289,16 @@ function renderProblemPlayersSection(allPlayers, picks, gameweek) {
             box-shadow: 0 2px 8px var(--shadow);
             border: 2px solid #fb923c;
         ">
-            <div style="
+            <div
+                id="problem-players-header"
+                style="
                 padding: 1rem 1.5rem;
                 border-bottom: 1px solid var(--border-color);
                 cursor: pointer;
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-            " onclick="window.toggleProblemPlayers()">
+            ">
                 <div>
                     <h3 style="font-size: 1.125rem; font-weight: 700; color: #fb923c; margin-bottom: 0.25rem;">
                         <i class="fas fa-exclamation-triangle" style="margin-right: 0.5rem;"></i>Problem Players

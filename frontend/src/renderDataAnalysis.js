@@ -58,7 +58,9 @@ export function renderDataAnalysis(subTab = 'overview', position = 'all') {
             <!-- Main Tabs -->
             <div style="display: flex; gap: 0.5rem; border-bottom: 2px solid var(--border-color); margin-bottom: 1rem;">
                 <button
-                    onclick="window.switchAnalysisTab('overview', '${position}')"
+                    class="analysis-tab-btn"
+                    data-tab="overview"
+                    data-position="${position}"
                     style="
                         padding: 0.75rem 1.5rem;
                         background: ${subTab === 'overview' ? 'var(--primary-color)' : 'transparent'};
@@ -73,7 +75,9 @@ export function renderDataAnalysis(subTab = 'overview', position = 'all') {
                     Overview
                 </button>
                 <button
-                    onclick="window.switchAnalysisTab('differentials', '${position}')"
+                    class="analysis-tab-btn"
+                    data-tab="differentials"
+                    data-position="${position}"
                     style="
                         padding: 0.75rem 1.5rem;
                         background: ${subTab === 'differentials' ? 'var(--primary-color)' : 'transparent'};
@@ -93,7 +97,9 @@ export function renderDataAnalysis(subTab = 'overview', position = 'all') {
             <div style="display: flex; gap: 0.5rem; margin-bottom: 2rem;">
                 ${['all', 'GKP', 'DEF', 'MID', 'FWD'].map(pos => `
                     <button
-                        onclick="window.switchAnalysisTab('${subTab}', '${pos}')"
+                        class="position-filter-btn"
+                        data-tab="${subTab}"
+                        data-position="${pos}"
                         style="
                             padding: 0.5rem 1rem;
                             background: ${position === pos ? 'var(--accent-color)' : 'var(--bg-secondary)'};
@@ -126,6 +132,49 @@ export function renderDataAnalysis(subTab = 'overview', position = 'all') {
             ${contentHTML}
         </div>
     `;
+
+    // Add event listeners for tab buttons
+    const tabButtons = container.querySelectorAll('.analysis-tab-btn');
+    tabButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tab = btn.dataset.tab;
+            const pos = btn.dataset.position;
+            window.switchAnalysisTab(tab, pos);
+        });
+    });
+
+    // Add event listeners for position filter buttons
+    const positionButtons = container.querySelectorAll('.position-filter-btn');
+    positionButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tab = btn.dataset.tab;
+            const pos = btn.dataset.position;
+            window.switchAnalysisTab(tab, pos);
+        });
+    });
+
+    // Add event listener for ownership threshold slider
+    const ownershipSlider = document.getElementById('ownership-threshold-slider');
+    if (ownershipSlider) {
+        ownershipSlider.addEventListener('input', (e) => {
+            window.updateOwnershipThreshold(e.target.value);
+        });
+    }
+
+    // Add event listeners for filter checkboxes
+    const fixtureCheckbox = document.getElementById('fixture-filter-checkbox');
+    if (fixtureCheckbox) {
+        fixtureCheckbox.addEventListener('change', (e) => {
+            window.toggleFixtureFilter(e.target.checked);
+        });
+    }
+
+    const momentumCheckbox = document.getElementById('momentum-filter-checkbox');
+    if (momentumCheckbox) {
+        momentumCheckbox.addEventListener('change', (e) => {
+            window.toggleMomentumFilter(e.target.checked);
+        });
+    }
 
     attachRiskTooltipListeners();
 }
@@ -262,11 +311,11 @@ function renderDifferentials(position = 'all') {
                     </label>
                     <input
                         type="range"
+                        id="ownership-threshold-slider"
                         min="1"
                         max="10"
                         value="${analysisState.ownershipThreshold}"
                         style="width: 100%; max-width: 300px;"
-                        oninput="window.updateOwnershipThreshold(this.value)"
                     />
                 </div>
 
@@ -275,8 +324,8 @@ function renderDifferentials(position = 'all') {
                     <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
                         <input
                             type="checkbox"
+                            id="fixture-filter-checkbox"
                             ${analysisState.fixtureFilter ? 'checked' : ''}
-                            onchange="window.toggleFixtureFilter(this.checked)"
                         />
                         <span>Only good fixtures (FDR ≤ 3.0)</span>
                     </label>
@@ -284,8 +333,8 @@ function renderDifferentials(position = 'all') {
                     <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
                         <input
                             type="checkbox"
+                            id="momentum-filter-checkbox"
                             ${analysisState.momentumFilter ? 'checked' : ''}
-                            onchange="window.toggleMomentumFilter(this.checked)"
                         />
                         <span>Only positive momentum (ΔT > 0)</span>
                     </label>

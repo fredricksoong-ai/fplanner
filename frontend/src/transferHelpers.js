@@ -106,7 +106,8 @@ export function renderProblemPlayerRow(player, risks, idx, next5GWs, gameweek) {
             ${next5Fixtures.length < 5 ? Array(5 - next5Fixtures.length).fill('<td style="padding: 0.75rem 0.5rem; text-align: center;">—</td>').join('') : ''}
             <td style="padding: 0.75rem 0.5rem; text-align: center;">
                 <button
-                    onclick="window.toggleReplacements(${idx})"
+                    class="toggle-replacements-btn"
+                    data-idx="${idx}"
                     style="
                         background: none;
                         border: none;
