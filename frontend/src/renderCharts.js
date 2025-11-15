@@ -300,6 +300,11 @@ async function renderPointsPriceChart() {
         currentChart.dispose();
     }
 
+    // Define theme colors FIRST before any closures to avoid hoisting issues
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const textColor = isDark ? '#e5e7eb' : '#374151';
+    const gridColor = isDark ? '#374151' : '#e5e7eb';
+
     // Get data
     let players = getAllPlayers();
 
@@ -475,11 +480,6 @@ async function renderPointsPriceChart() {
         console.error('Failed to initialize chart');
         return;
     }
-
-    // Get theme colors
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    const textColor = isDark ? '#e5e7eb' : '#374151';
-    const gridColor = isDark ? '#374151' : '#e5e7eb';
 
     const option = {
         backgroundColor: 'transparent',
