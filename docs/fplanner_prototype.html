@@ -1,0 +1,2907 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FPLanner Prototype - GitHub Data</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'fpl-purple': '#37003c',
+                        'fpl-dark': '#2a002e',
+                        'fpl-accent': '#00ff87',
+                        'fpl-success': '#008744',
+                        'fpl-danger': '#dc3545',
+                        'fpl-text': '#1f2937',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* CSS Variables for Light/Dark Mode */
+        :root {
+            /* Light Mode Colors */
+            --bg-primary: #ffffff;
+            --bg-secondary: #f9fafb;
+            --bg-tertiary: #f3f4f6;
+            --text-primary: #374151;
+            --text-secondary: #6b7280;
+            --text-tertiary: #9ca3af;
+            --border-color: #e5e7eb;
+            --border-dark: #d1d5db;
+            --primary-color: #37003c;
+            --primary-hover: #2a0029;
+            --shadow: rgba(0, 0, 0, 0.1);
+            
+            /* Soft Heatmap Colors - Light Mode */
+            --heat-red-bg: #fee2e2;
+            --heat-red-text: #991b1b;
+            --heat-yellow-bg: #fef9c3;
+            --heat-yellow-text: #854d0e;
+            --heat-light-green-bg: #dcfce7;
+            --heat-light-green-text: #166534;
+            --heat-dark-green-bg: #bbf7d0;
+            --heat-dark-green-text: #14532d;
+            --heat-gray-bg: #f3f4f6;
+            --heat-gray-text: #6b7280;
+        }
+
+        [data-theme="dark"] {
+            /* Dark Mode Colors - Softer & Warmer */
+            --bg-primary: #0f1419;
+            --bg-secondary: #1a1f2e;
+            --bg-tertiary: #252d3d;
+            --text-primary: #d4d4d8;
+            --text-secondary: #a1a1aa;
+            --text-tertiary: #71717a;
+            --border-color: #2e3648;
+            --border-dark: #3f4756;
+            --primary-color: #a78bfa;
+            --primary-hover: #8b5cf6;
+            --shadow: rgba(0, 0, 0, 0.4);
+            
+            /* Soft Heatmap Colors - Dark Mode (More Muted) */
+            --heat-red-bg: #5c1f1f;
+            --heat-red-text: #fca5a5;
+            --heat-yellow-bg: #5c4a1f;
+            --heat-yellow-text: #fcd34d;
+            --heat-light-green-bg: #1f4d2e;
+            --heat-light-green-text: #86efac;
+            --heat-dark-green-bg: #235c3a;
+            --heat-dark-green-text: #bbf7d0;
+            --heat-gray-bg: #2a2e3a;
+            --heat-gray-text: #9ca3af;
+        }
+
+        /* Base styles */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        
+        /* Night Mode Toggle Button - Smaller, inline */
+        .theme-toggle {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            border-radius: 6px;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-left: 12px;
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+        }
+
+        .theme-toggle-icon {
+            font-size: 18px;
+        }
+        
+        /* Heatmap Classes */
+        .heat-red {
+            background-color: var(--heat-red-bg) !important;
+            color: var(--heat-red-text) !important;
+        }
+        
+        .heat-yellow {
+            background-color: var(--heat-yellow-bg) !important;
+            color: var(--heat-yellow-text) !important;
+        }
+        
+        .heat-light-green {
+            background-color: var(--heat-light-green-bg) !important;
+            color: var(--heat-light-green-text) !important;
+        }
+        
+        .heat-dark-green {
+            background-color: var(--heat-dark-green-bg) !important;
+            color: var(--heat-dark-green-text) !important;
+        }
+        
+        .heat-gray {
+            background-color: var(--heat-gray-bg) !important;
+            color: var(--heat-gray-text) !important;
+        }
+        
+        /* Custom Fixture Pill Colors */
+        .fixture-diff-1 { background-color: #16a34a; color: white; }       /* Dark Green - Easiest */
+        .fixture-diff-2 { background-color: #4ade80; color: #37003c; }   /* Light Green - Easy */
+        .fixture-diff-3 { background-color: #9ca3af; color: white; }     /* Grey - Moderate */
+        .fixture-diff-4 { background-color: #f87171; color: white; }     /* Light Red - Hard */
+        .fixture-diff-5 { background-color: #dc2626; color: white; }     /* Dark Red - Hardest */
+
+        /* Risk Indicator & Tooltip Styles */
+        .risk-indicator {
+            position: relative;
+            display: inline-block;
+            margin-left: 4px;
+            cursor: help;
+            font-size: 1rem;
+            line-height: 1;
+        }
+
+        .risk-tooltip {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+            display: none;
+            min-width: 220px;
+            margin-bottom: 4px;
+        }
+
+        .risk-indicator:hover .risk-tooltip {
+            display: block;
+            animation: fadeIn 0.2s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateX(-50%) translateY(-4px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+
+        .risk-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 8px;
+            margin: 2px 0;
+            border-left: 3px solid;
+            border-radius: 4px;
+            font-size: 12px;
+            background: #f9fafb;
+        }
+
+        .risk-item:first-child {
+            margin-top: 0;
+        }
+
+        .risk-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .risk-item.urgent {
+            border-color: #dc2626;
+            background: #fef2f2;
+        }
+
+        .risk-item.warning {
+            border-color: #f59e0b;
+            background: #fffbeb;
+        }
+
+        .risk-item.info {
+            border-color: #3b82f6;
+            background: #eff6ff;
+        }
+
+        .risk-emoji {
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .risk-text {
+            color: #374151;
+            font-weight: 500;
+        }
+
+        /* Player Table Header Style */
+        .player-table-header th {
+            background: linear-gradient(90deg, #37003c, #2a002e) !important;
+            color: white !important;
+            padding-top: 10px;
+            padding-bottom: 10px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            border: 3px solid #f3f4f6;
+            border-top: 3px solid #37003c;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Heatmap styles */
+        .heatmap-cell {
+            transition: background-color 0.2s ease;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen">
+
+    <!-- Header & Navigation -->
+    <header class="bg-fpl-purple text-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center py-4">
+            <a href="#analysis" class="text-2xl font-extrabold tracking-tight" onclick="navigate('analysis')">FPLanner Prototype</a>
+            <nav class="flex items-center space-x-4">
+                <a href="#my-team" id="nav-my-team" class="nav-link text-white hover:bg-fpl-accent hover:text-fpl-purple px-3 py-2 rounded-lg font-medium" onclick="navigate('my-team')">My Team</a>
+                <a href="#suggestions" id="nav-suggestions" class="nav-link text-white hover:bg-fpl-accent hover:text-fpl-purple px-3 py-2 rounded-lg font-medium" onclick="navigate('suggestions')">Transfer Committee</a>
+                <a href="#analysis" id="nav-analysis" class="nav-link text-white hover:bg-fpl-accent hover:text-fpl-purple px-3 py-2 rounded-lg font-medium" onclick="navigate('analysis')">Data Analysis</a>
+                <a href="#differentials" id="nav-differentials" class="nav-link text-white hover:bg-fpl-accent hover:text-fpl-purple px-3 py-2 rounded-lg font-medium" onclick="navigate('differentials')">Differentials</a>
+                <div class="flex items-center">
+                    <div class="bg-gray-200 text-fpl-purple px-3 py-1.5 rounded-full text-sm font-semibold">
+                        <span id="data-status">Loading...</span>
+                    </div>
+                    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle Dark Mode">
+                        <span class="theme-toggle-icon">🌙</span>
+                    </button>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+
+    <main id="app-container" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"></main>
+
+    <script>
+    // ==================
+    // GLOBAL STATE
+    // ==================
+    
+    let currentRoute = 'analysis';
+    let githubData = null;
+    let fixtureData = null;
+    let fplBootstrap = null;
+    let fplFixtures = null;
+    let myTeamData = null;
+    let currentTeamId = null;
+    let isLoading = true;
+    let currentGW = null;
+    let lastFinishedGW = null;
+    let deadlineTimestamp = null;
+    let deadlineGWId = null; // 🌟 ADDED: New variable to store the GW ID for the deadline
+    
+    const GITHUB_BASE = "https://raw.githubusercontent.com/olbauday/FPL-Elo-Insights/main/data/2025-2026";
+    const FPL_API_BASE = "https://fantasy.premierleague.com/api";
+    
+    // CORS proxy for FPL API (needed for browser requests)
+    const CORS_PROXY = "https://corsproxy.io/?";
+    
+    // ==================
+    // THEME TOGGLE
+    // ==================
+    
+    function initTheme() {
+        console.log('🎨 Initializing theme...');
+        const savedTheme = localStorage.getItem('fpl-theme') || 'light';
+        console.log(`   📋 Saved theme: ${savedTheme}`);
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        updateThemeIcon(savedTheme);
+    }
+    
+    function toggleTheme() {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        console.log(`🎨 Toggling theme: ${currentTheme} → ${newTheme}`);
+        
+        document.documentElement.setAttribute('data-theme', newTheme);
+        localStorage.setItem('fpl-theme', newTheme);
+        updateThemeIcon(newTheme);
+    }
+    
+    function updateThemeIcon(theme) {
+        const icon = document.querySelector('.theme-toggle-icon');
+        if (icon) {
+            icon.textContent = theme === 'dark' ? '☀️' : '🌙';
+            console.log(`   ✅ Theme icon updated: ${icon.textContent}`);
+        }
+    }
+    
+    // ==================
+    // DATA FETCHING
+    // ==================
+
+    async function checkGWFileExists(gw) {
+        if (gw < 1 || gw > 38) return false;
+        
+        const url = `${GITHUB_BASE}/By%20Gameweek/GW${gw}/playerstats.csv`;
+        try {
+            const response = await fetch(url, { method: 'HEAD' });
+            if (response.ok) {
+                const contentLength = response.headers.get('content-length');
+                if (contentLength && parseInt(contentLength) > 1000) {
+                    console.log(`✓ Found valid GW${gw} file (Size: ${contentLength} bytes)`);
+                    return true;
+                }
+            }
+            return false;
+        } catch (error) {
+            console.warn(`Network error checking GW${gw}:`, error);
+            return false;
+        }
+    }
+
+    async function findLatestGWFile() {
+        console.log('📍 Searching for latest gameweek file...');
+        
+        // Estimate current GW based on season start (Aug 16, 2025)
+        const seasonStart = new Date(2025, 7, 16); // Month is 0-indexed
+        const now = new Date();
+        const weeksSinceStart = Math.floor((now - seasonStart) / (7 * 24 * 60 * 60 * 1000));
+        const estimatedGW = Math.max(1, Math.min(weeksSinceStart + 1, 38));
+        
+        console.log(`📍 Estimated GW: ${estimatedGW}. Starting search...`);
+        
+        // Search strategy: Check estimated GW, then search outwards
+        const searchOrder = [estimatedGW];
+        for (let offset = 1; offset <= 10; offset++) {
+            if (estimatedGW + offset <= 38) searchOrder.push(estimatedGW + offset);
+            if (estimatedGW - offset >= 1) searchOrder.push(estimatedGW - offset);
+        }
+        
+        let latestFoundGW = 0;
+        for (const gw of searchOrder) {
+            if (await checkGWFileExists(gw)) {
+                latestFoundGW = Math.max(latestFoundGW, gw);
+            }
+        }
+        
+        if (latestFoundGW > 0) {
+            console.log(`✅ Found latest available GW file: ${latestFoundGW}`);
+            return latestFoundGW;
+        }
+        
+        // Fallback: reverse scan
+        console.warn('Smart search failed, starting full reverse scan...');
+        for (let gw = 38; gw >= 1; gw--) {
+            if (await checkGWFileExists(gw)) {
+                console.log(`✅ Found latest available GW file: ${gw} (full scan)`);
+                return gw;
+            }
+        }
+        
+        console.error('Could not detect any gameweek data. Defaulting to GW1.');
+        return 1;
+    }
+
+    async function fetchGitHubPlayerData() {
+        console.log('📥 Fetching GitHub player data...');
+        try {
+            // 1. Find latest gameweek
+            const latestGW = await findLatestGWFile();
+            const statsGW = Math.max(1, latestGW - 1);
+            const transfersGW = latestGW;
+            
+            console.log(`📊 Using GW${statsGW} for player stats`);
+            console.log(`📈 Using GW${transfersGW} for transfer data`);
+            
+            // 2. Load base data
+            console.log('📥 Loading base data (players.csv, teams.csv)...');
+            const [playersResponse, teamsResponse] = await Promise.all([
+                fetch(`${GITHUB_BASE}/players.csv`),
+                fetch(`${GITHUB_BASE}/teams.csv`)
+            ]);
+            
+            if (!playersResponse.ok || !teamsResponse.ok) {
+                throw new Error('Failed to load base data');
+            }
+            
+            const playersMaster = parseCSV(await playersResponse.text());
+            const teamsData = parseCSV(await teamsResponse.text());
+            
+            // 3. Load player stats from stats GW
+            console.log(`📥 Loading player stats from GW${statsGW}...`);
+            const statsResponse = await fetch(`${GITHUB_BASE}/By%20Gameweek/GW${statsGW}/playerstats.csv`);
+            if (!statsResponse.ok) throw new Error(`Failed to load GW${statsGW} stats`);
+            
+            let currentPlayers = parseCSV(await statsResponse.text());
+            
+            // 4. Load transfer data from transfers GW (if different)
+            if (transfersGW !== statsGW) {
+                try {
+                    console.log(`📥 Loading transfer data from GW${transfersGW}...`);
+                    const transfersResponse = await fetch(`${GITHUB_BASE}/By%20Gameweek/GW${transfersGW}/playerstats.csv`);
+                    if (transfersResponse.ok) {
+                        const transferData = parseCSV(await transfersResponse.text());
+                        
+                        // Create transfer map for efficient lookup
+                        const transferMap = {};
+                        transferData.forEach(row => {
+                            transferMap[row.id] = row;
+                        });
+                        
+                        // Update transfer columns
+                        const transferCols = ['transfers_in', 'transfers_out', 'transfers_balance', 'selected_by_percent', 'now_cost'];
+                        currentPlayers = currentPlayers.map(player => {
+                            const transferInfo = transferMap[player.id];
+                            if (transferInfo) {
+                                transferCols.forEach(col => {
+                                    if (transferInfo[col] !== undefined) {
+                                        player[col] = transferInfo[col];
+                                    }
+                                });
+                            }
+                            return player;
+                        });
+                        
+                        console.log(`✅ Updated transfer/price data from GW${transfersGW}`);
+                    }
+                } catch (error) {
+                    console.warn(`⚠️ Could not load transfer data from GW${transfersGW}:`, error);
+                }
+            }
+            
+            // 5. Create team mapping
+            const teamMap = {};
+            teamsData.forEach(team => {
+                teamMap[team.code] = {
+                    name: team.name,
+                    short_name: team.short_name,
+                    elo: team.elo
+                };
+            });
+            
+            // 6. Create player mapping for merging
+            const playerMap = {};
+            playersMaster.forEach(p => {
+                playerMap[p.player_id] = {
+                    team_code: p.team_code,
+                    position: p.position,
+                    element_type: p.element_type
+                };
+            });
+            
+            // 7. Enrich current players with master data and team info
+            const enrichedPlayers = currentPlayers.map(player => {
+                const masterData = playerMap[player.id] || {};
+                const teamData = teamMap[masterData.team_code] || {};
+                
+                return {
+                    ...player,
+                    team_code: masterData.team_code,
+                    position: masterData.position,
+                    element_type: masterData.element_type || player.element_type,
+                    team_name: teamData.name || 'Unknown',
+                    team_short_name: teamData.short_name || 'UNK',
+                    team_elo: teamData.elo,
+                    current_gw: latestGW,
+                    stats_gw: statsGW
+                };
+            });
+            
+            console.log(`✅ Data loaded and merged successfully`);
+            console.log(`   Current GW: ${latestGW}`);
+            console.log(`   Stats from: GW${statsGW}`);
+            console.log(`   Transfers from: GW${transfersGW}`);
+            console.log(`   Total players: ${enrichedPlayers.length}`);
+            
+            return enrichedPlayers;
+            
+        } catch (error) {
+            console.error('❌ Error fetching GitHub player data:', error);
+            return [];
+        }
+    }
+
+    async function fetchGitHubFixtureData() {
+        console.log('📥 Fetching GitHub fixture data...');
+        try {
+            const response = await fetch(`${GITHUB_BASE}/fixtures.csv`);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            
+            const csvText = await response.text();
+            const data = parseCSV(csvText);
+            
+            console.log(`✅ Loaded ${data.length} fixtures from GitHub`);
+            return data;
+        } catch (error) {
+            console.error('❌ Error fetching GitHub fixture data:', error);
+            return [];
+        }
+    }
+
+    async function fetchFPLBootstrap() {
+        console.log('📥 Fetching FPL Bootstrap data...');
+        try {
+            const response = await fetch(`${CORS_PROXY}${FPL_API_BASE}/bootstrap-static/`);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            
+            const data = await response.json();
+            console.log(`✅ Loaded FPL Bootstrap data`);
+            
+            // Extract gameweek info
+            const events = data.events || [];
+            
+            // Find the current gameweek (the one marked as is_current)
+            let currentEvent = events.find(e => e.is_current);
+            
+            // Track the last finished gameweek for team picks
+            const finishedEvents = events.filter(e => e.finished);
+            if (finishedEvents.length > 0) {
+                lastFinishedGW = Math.max(...finishedEvents.map(e => e.id));
+                console.log(`📊 Last finished GW: ${lastFinishedGW}`);
+            }
+            
+            // Store the actual current/most recent GW (even if finished)
+            if (currentEvent) {
+                currentGW = currentEvent.id;
+                console.log(`📊 Current/Most Recent GW: ${currentGW}${currentEvent.finished ? ' (Finished)' : ''}`);
+            }
+            
+            // If current gameweek is finished, find the next one for deadline countdown
+            let nextUnfinishedEvent = currentEvent;
+            if (currentEvent && currentEvent.finished) {
+                console.log(`⚠️ GW${currentEvent.id} has finished, looking for next GW for countdown...`);
+                const nextEvent = events.find(e => e.id === currentEvent.id + 1);
+                if (nextEvent) {
+                    nextUnfinishedEvent = nextEvent;
+                    console.log(`✅ Next unfinished GW for countdown: GW${nextEvent.id}`);
+                }
+            }
+            
+            // Set deadline from next unfinished event
+            if (nextUnfinishedEvent) {
+                deadlineTimestamp = new Date(nextUnfinishedEvent.deadline_time).getTime();
+                deadlineGWId = nextUnfinishedEvent.id; // 🌟 ADDED: Set the global deadline GW ID
+                console.log(`⏰ Deadline: ${nextUnfinishedEvent.deadline_time} (GW${nextUnfinishedEvent.id})`);
+            }
+            
+            return data;
+        } catch (error) {
+            console.error('❌ Error fetching FPL Bootstrap:', error);
+            return null;
+        }
+    }
+
+    async function fetchFPLFixtures() {
+        console.log('📥 Fetching FPL Fixtures...');
+        try {
+            const response = await fetch(`${CORS_PROXY}${FPL_API_BASE}/fixtures/`);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            
+            const data = await response.json();
+            console.log(`✅ Loaded ${data.length} FPL fixtures`);
+            return data;
+        } catch (error) {
+            console.error('❌ Error fetching FPL fixtures:', error);
+            return [];
+        }
+    }
+
+    async function fetchMyTeam(teamId) {
+        console.log(`📥 Fetching team ${teamId}...`);
+        
+        try {
+            // Determine which GW to fetch picks for:
+            // - If a GW is currently live (is_current and not finished), use that
+            // - Otherwise, use the last finished GW
+            let gwForPicks;
+            
+            if (fplBootstrap && fplBootstrap.events) {
+                const currentEvent = fplBootstrap.events.find(e => e.is_current);
+                
+                if (currentEvent && !currentEvent.finished) {
+                    // GW is live or upcoming - use it
+                    gwForPicks = currentEvent.id;
+                    console.log(`📊 Fetching picks for live/upcoming GW${gwForPicks}`);
+                } else {
+                    // GW is finished - use last finished GW
+                    gwForPicks = lastFinishedGW || currentGW || 1;
+                    console.log(`📊 Fetching picks for completed GW${gwForPicks}`);
+                }
+            } else {
+                // Fallback
+                gwForPicks = lastFinishedGW || currentGW || 1;
+                console.log(`📊 Fetching picks for GW${gwForPicks} (fallback)`);
+            }
+            
+            // ========================================
+            // 1. FETCH MANAGER BASIC INFO
+            // ========================================
+            console.log(`📥 Fetching manager info for team ${teamId}...`);
+            const entryUrl = `${CORS_PROXY}${FPL_API_BASE}/entry/${teamId}/`;
+            const entryResponse = await fetch(entryUrl);
+            
+            if (!entryResponse.ok) {
+                throw new Error(`Failed to fetch manager info: ${entryResponse.status}`);
+            }
+            
+            const entryData = await entryResponse.json();
+            console.log(`✅ Manager info loaded:`, {
+                name: `${entryData.player_first_name} ${entryData.player_last_name}`,
+                team_name: entryData.name,
+                overall_rank: entryData.summary_overall_rank,
+                total_points: entryData.summary_overall_points
+            });
+            
+            // ========================================
+            // 2. FETCH TEAM HISTORY (for seasons, chips, prev rank)
+            // ========================================
+            console.log(`📥 Fetching team history...`);
+            const historyUrl = `${CORS_PROXY}${FPL_API_BASE}/entry/${teamId}/history/`;
+            const historyResponse = await fetch(historyUrl);
+            let historyData = null;
+            let previousGWRank = null;
+            
+            if (historyResponse.ok) {
+                historyData = await historyResponse.json();
+                console.log(`✅ Team history loaded`);
+                console.log(`   📊 Past seasons:`, historyData.past?.length || 0);
+                console.log(`   🎮 Chips used:`, historyData.chips?.length || 0);
+                
+                // Get previous GW rank for comparison
+                if (historyData.current && historyData.current.length > 0) {
+                    const prevGW = historyData.current.find(gw => gw.event === gwForPicks - 1);
+                    if (prevGW) {
+                        previousGWRank = prevGW.overall_rank;
+                        console.log(`   ⬅️ Previous GW rank: ${previousGWRank.toLocaleString()}`);
+                    }
+                }
+            } else {
+                console.warn(`⚠️ Could not fetch team history`);
+            }
+            
+            // ========================================
+            // 3. FETCH TEAM PICKS
+            // ========================================
+            const picksUrl = `${CORS_PROXY}${FPL_API_BASE}/entry/${teamId}/event/${gwForPicks}/picks/`;
+            const picksResponse = await fetch(picksUrl);
+            
+            if (picksResponse.status === 404) {
+                throw new Error('Team not found');
+            }
+            
+            if (!picksResponse.ok) {
+                throw new Error(`HTTP ${picksResponse.status}`);
+            }
+            
+            const teamData = await picksResponse.json();
+            console.log(`✅ Team picks loaded for GW${gwForPicks}`);
+            console.log(`   👥 Players: ${teamData.picks?.length || 0}`);
+            
+            // ========================================
+            // 4. FETCH LIVE GAMEWEEK DATA
+            // ========================================
+            console.log(`📥 Fetching live data for GW${gwForPicks}...`);
+            const liveUrl = `${CORS_PROXY}${FPL_API_BASE}/event/${gwForPicks}/live/`;
+            const liveResponse = await fetch(liveUrl);
+            let liveData = null;
+            
+            if (liveResponse.ok) {
+                liveData = await liveResponse.json();
+                console.log(`✅ Loaded live data for GW${gwForPicks}`);
+            } else {
+                console.warn(`⚠️ Could not fetch live data for GW${gwForPicks}`);
+            }
+            
+            // Create a map of live player data
+            const livePlayerMap = {};
+            if (liveData && liveData.elements) {
+                liveData.elements.forEach(el => {
+                    livePlayerMap[el.id] = el.stats;
+                });
+                console.log(`   📊 Live stats available for ${Object.keys(livePlayerMap).length} players`);
+            }
+            
+            // Enrich picks with our player data AND live GW data
+            console.log(`🔄 Enriching ${teamData.picks.length} picks with player data...`);
+            if (githubData && githubData.length > 0) {
+                const playerMap = {};
+                githubData.forEach(p => {
+                    playerMap[p.id] = p;
+                });
+                
+                teamData.picks = teamData.picks.map(pick => {
+                    const playerInfo = playerMap[pick.element] || {};
+                    const liveStats = livePlayerMap[pick.element] || {};
+                    
+                    return {
+                        ...pick,
+                        ...playerInfo,
+                        position_order: pick.position,
+                        multiplier: pick.multiplier,
+                        is_captain: pick.is_captain,
+                        is_vice_captain: pick.is_vice_captain,
+                        // Add live GW data
+                        gw_minutes: liveStats.minutes || 0,
+                        gw_total_points: liveStats.total_points || 0,
+                        gw_goals_scored: liveStats.goals_scored || 0,
+                        gw_assists: liveStats.assists || 0,
+                        gw_bonus: liveStats.bonus || 0
+                    };
+                });
+                console.log(`✅ Picks enriched with player data and live stats`);
+            }
+            
+            // ========================================
+            // 5. PROCESS MANAGER DATA
+            // ========================================
+            console.log(`🔄 Processing manager data...`);
+            
+            // Calculate season history stats
+            let totalSeasons = 0;
+            let last3AvgRank = null;
+            
+            if (historyData && historyData.past) {
+                totalSeasons = historyData.past.length + 1; // +1 for current season
+                
+                if (historyData.past.length >= 3) {
+                    const last3 = historyData.past.slice(-3);
+                    const sumRank = last3.reduce((sum, season) => sum + season.rank, 0);
+                    last3AvgRank = Math.round(sumRank / 3);
+                    console.log(`   📊 Last 3 seasons avg rank: ${last3AvgRank.toLocaleString()}`);
+                }
+            }
+            
+            // Process chips
+            const chipsUsed = {
+                bboost: false,
+                freehit: false,
+                wildcard: false,
+                '3xc': false
+            };
+            
+            if (historyData && historyData.chips) {
+                historyData.chips.forEach(chip => {
+                    if (chip.name === 'bboost') chipsUsed.bboost = true;
+                    if (chip.name === 'freehit') chipsUsed.freehit = true;
+                    if (chip.name === 'wildcard') chipsUsed.wildcard = true;
+                    if (chip.name === '3xc') chipsUsed['3xc'] = true;
+                });
+                console.log(`   🎮 Chips status:`, chipsUsed);
+            }
+            
+            // Get current GW data
+            const entryInfo = teamData.entry_history || {};
+            const gwPoints = entryInfo.points || 0;
+            const gwTransfers = entryInfo.event_transfers || 0;
+            const gwTransferCost = entryInfo.event_transfers_cost || 0;
+            const gwRank = entryInfo.overall_rank || entryData.summary_overall_rank;
+            
+            // Calculate rank change
+            let rankChange = null;
+            let rankDirection = null;
+            if (previousGWRank && gwRank) {
+                rankChange = previousGWRank - gwRank;
+                rankDirection = rankChange > 0 ? 'up' : (rankChange < 0 ? 'down' : 'same');
+                console.log(`   📈 Rank change: ${rankChange > 0 ? '+' : ''}${rankChange.toLocaleString()} (${rankDirection})`);
+            }
+            
+            // Add metadata
+            const result = {
+                team_id: teamId,
+                gameweek: gwForPicks,
+                picks: teamData.picks,
+                active_chip: teamData.active_chip,
+                
+                // Manager info
+                manager: {
+                    first_name: entryData.player_first_name,
+                    last_name: entryData.player_last_name,
+                    full_name: `${entryData.player_first_name} ${entryData.player_last_name}`,
+                    team_name: entryData.name,
+                    started_event: entryData.started_event,
+                    total_seasons: totalSeasons,
+                    last_3_avg_rank: last3AvgRank
+                },
+                
+                // Current season stats
+                entry_history: entryInfo,
+                team_value: (entryInfo.value || 0) / 10,
+                bank: (entryInfo.bank || 0) / 10,
+                total_transfers: gwTransfers,
+                transfer_cost: gwTransferCost,
+                points: gwPoints,
+                total_points: entryData.summary_overall_points,
+                overall_rank: entryData.summary_overall_rank,
+                gw_rank: gwRank,
+                previous_gw_rank: previousGWRank,
+                rank_change: rankChange,
+                rank_direction: rankDirection,
+                
+                // Chips
+                chips_used: chipsUsed,
+                
+                // Full history for reference
+                history: historyData
+            };
+            
+            console.log(`✅ Loaded and enriched team ${teamId}`);
+            console.log(`   📊 Manager: ${result.manager.full_name}`);
+            console.log(`   🏆 Team: ${result.manager.team_name}`);
+            console.log(`   📈 GW${gwForPicks} Points: ${gwPoints}`);
+            console.log(`   💰 Value: £${result.team_value}m (£${result.bank}m bank)`);
+            return result;
+            
+        } catch (error) {
+            console.error(`❌ Error fetching team ${teamId}:`, error);
+            throw error;
+        }
+    }
+
+    function parseCSV(csvText) {
+        const lines = csvText.trim().split('\n');
+        if (lines.length < 2) return [];
+        
+        const headers = lines[0].split(',').map(h => h.trim());
+        const data = [];
+        
+        for (let i = 1; i < lines.length; i++) {
+            const values = lines[i].split(',');
+            const row = {};
+            
+            headers.forEach((header, index) => {
+                let value = values[index]?.trim() || '';
+                
+                // Convert numeric fields
+                if (!isNaN(value) && value !== '') {
+                    value = parseFloat(value);
+                }
+                
+                row[header] = value;
+            });
+            
+            data.push(row);
+        }
+        
+        return data;
+    }
+
+    async function loadAllData() {
+        isLoading = true;
+        updateDataStatus('Loading data...');
+        
+        // Fetch GitHub data (historical stats) and FPL API data (live prices/ownership) in parallel
+        const [players, fixtures, bootstrap, fplFixturesData] = await Promise.all([
+            fetchGitHubPlayerData(),
+            fetchGitHubFixtureData(),
+            fetchFPLBootstrap(),
+            fetchFPLFixtures()
+        ]);
+        
+        githubData = players;
+        fixtureData = fixtures;
+        fplBootstrap = bootstrap;
+        fplFixtures = fplFixturesData;
+        
+        // Merge FPL API data into GitHub data if available
+        if (fplBootstrap && fplBootstrap.elements && githubData.length > 0) {
+            console.log('🔄 Merging FPL API data with GitHub data...');
+            
+            // Create a map of FPL elements by ID
+            const fplElementsMap = {};
+            fplBootstrap.elements.forEach(el => {
+                fplElementsMap[el.id] = el;
+            });
+            
+            // Update each player with live FPL data
+            githubData = githubData.map(player => {
+                const fplData = fplElementsMap[player.id];
+                if (fplData) {
+                    return {
+                        ...player,
+                        // Override with live data from FPL API
+                        now_cost: fplData.now_cost / 10, // FPL API returns cost * 10
+                        selected_by_percent: parseFloat(fplData.selected_by_percent),
+                        form: parseFloat(fplData.form),
+                        chance_of_playing_next_round: fplData.chance_of_playing_next_round,
+                        news: fplData.news,
+                        status: fplData.status
+                    };
+                }
+                return player;
+            });
+            
+            console.log('✅ Merged FPL API data (live prices, ownership, form)');
+        }
+        
+        isLoading = false;
+        
+        if (githubData.length > 0) {
+            const dataSource = fplBootstrap ? 'GitHub + FPL API' : 'GitHub only';
+            updateDataStatus(`${githubData.length} players (${dataSource})`);
+        } else {
+            updateDataStatus('No data loaded');
+        }
+        
+        // Start countdown timer if we have a deadline
+        if (deadlineTimestamp) {
+            updateCountdown();
+            setInterval(updateCountdown, 60000); // Update every minute
+        }
+        
+        // Render the current page
+        renderPage();
+    }
+
+    function updateDataStatus(message) {
+        const statusEl = document.getElementById('data-status');
+        if (statusEl) statusEl.textContent = message;
+    }
+
+    function updateCountdown() {
+        const badgeElement = document.getElementById('data-status');
+        // 🌟 MODIFIED: Added check for deadlineGWId
+        if (!badgeElement || !deadlineTimestamp || !deadlineGWId) return; 
+        
+        // 🌟 MODIFIED: Use deadlineGWId instead of currentGW
+        console.log(`⏰ Updating countdown timer for GW${deadlineGWId}...`);
+        
+        const now = new Date().getTime();
+        const distance = deadlineTimestamp - now;
+        
+        if (distance < 0) {
+            // 🌟 MODIFIED: Use deadlineGWId instead of currentGW
+            badgeElement.innerHTML = `<i class="fas fa-check-circle"></i> GW${deadlineGWId} Live`;
+            return;
+        }
+        
+        const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+        
+        let countdownText = '';
+        if (days > 0) { countdownText += days + 'd '; }
+        countdownText += String(hours).padStart(2, '0') + 'h ' + String(minutes).padStart(2, '0') + 'm';
+        
+        // Show which GW is starting
+        // 🌟 MODIFIED: Use deadlineGWId instead of currentGW
+        badgeElement.innerHTML = `<i class="fas fa-clock"></i> GW${deadlineGWId} starts in ${countdownText}`;
+    }
+
+    // ==================
+    // UTILITY FUNCTIONS
+    // ==================
+// ... (rest of your script continues here)
+
+        // ==================
+        // UTILITY FUNCTIONS
+        // ==================
+
+        function getPosition(elementType) {
+            const typeNum = typeof elementType === 'string' ? parseInt(elementType) : elementType;
+            switch (typeNum) {
+                case 1: return 'Goalkeeper';
+                case 2: return 'Defender';
+                case 3: return 'Midfielder';
+                case 4: return 'Forward';
+                default: return 'Unknown';
+            }
+        }
+
+        function getPositionShort(elementType) {
+            // Handle string positions from GitHub data
+            if (typeof elementType === 'string') {
+                const pos = elementType.toLowerCase();
+                if (pos.includes('goalkeeper') || pos === 'gkp') return 'GKP';
+                if (pos.includes('defender') || pos === 'def') return 'DEF';
+                if (pos.includes('midfielder') || pos === 'mid') return 'MID';
+                if (pos.includes('forward') || pos === 'fwd') return 'FWD';
+            }
+            
+            // Handle numeric element_type
+            const typeNum = typeof elementType === 'string' ? parseInt(elementType) : elementType;
+            if (!isNaN(typeNum)) {
+                switch (typeNum) {
+                    case 1: return 'GKP';
+                    case 2: return 'DEF';
+                    case 3: return 'MID';
+                    case 4: return 'FWD';
+                }
+            }
+            
+            return 'UNK';
+        }
+
+        function getDifficultyClass(difficulty) {
+            const diff = typeof difficulty === 'string' ? parseInt(difficulty) : difficulty;
+            if (diff === 1) return 'fixture-diff-1';  // Dark Green
+            if (diff === 2) return 'fixture-diff-2';  // Light Green
+            if (diff === 3) return 'fixture-diff-3';  // Grey
+            if (diff === 4) return 'fixture-diff-4';  // Light Red
+            return 'fixture-diff-5';                   // Dark Red
+        }
+
+        function getHeatmapColor(value, maxValue, isDifferential = false) {
+            if (!value || !maxValue || maxValue === 0) return '';
+            
+            const ratio = value / maxValue;
+            let opacity;
+            
+            if (isDifferential) {
+                opacity = Math.min(0.1 + (ratio * 0.5), 0.6);
+            } else {
+                opacity = Math.min(0.1 + (ratio * 0.6), 0.7);
+            }
+            
+            return `background-color: rgba(55, 0, 60, ${opacity});`;
+        }
+
+        function formatCurrency(value) {
+            return `£${parseFloat(value).toFixed(1)}m`;
+        }
+
+        function formatPercent(value) {
+            return `${parseFloat(value).toFixed(1)}%`;
+        }
+
+        function formatNumber(value, decimals = 1) {
+            return parseFloat(value).toFixed(decimals);
+        }
+
+        // ==================
+        // DATA PROCESSING
+        // ==================
+
+        function getPlayersByPosition(position) {
+            if (!githubData) return [];
+            
+            return githubData.filter(p => {
+                // Try position field first (from GitHub), then element_type
+                const pos = getPositionShort(p.position || p.element_type);
+                return pos === position;
+            });
+        }
+
+        function getDifferentialsByPosition() {
+            if (!githubData) return { GKP: [], DEF: [], MID: [], FWD: [] };
+            
+            const differentials = { GKP: [], DEF: [], MID: [], FWD: [] };
+            const OWNERSHIP_THRESHOLD = 15.0;
+            
+            githubData.forEach(player => {
+                const ownership = parseFloat(player.selected_by_percent || 0);
+                if (ownership < OWNERSHIP_THRESHOLD) {
+                    const pos = getPositionShort(player.position || player.element_type);
+                    if (differentials[pos]) {
+                        differentials[pos].push(player);
+                    }
+                }
+            });
+            
+            // Sort each position by points per million
+            Object.keys(differentials).forEach(pos => {
+                differentials[pos].sort((a, b) => {
+                    const ppmA = parseFloat(a.points_per_game || 0) / parseFloat(a.now_cost || 1);
+                    const ppmB = parseFloat(b.points_per_game || 0) / parseFloat(b.now_cost || 1);
+                    return ppmB - ppmA;
+                });
+                // Take top 15 for each position
+                differentials[pos] = differentials[pos].slice(0, 15);
+            });
+            
+            return differentials;
+        }
+
+        function calculateMaxValues(players) {
+            const max = {
+                total_points: 0,
+                xGI: 0,
+                xGC: 0,
+                ppm: 0,  // Calculate on the fly
+                form: 0
+            };
+            
+            players.forEach(p => {
+                max.total_points = Math.max(max.total_points, parseFloat(p.total_points || 0));
+                max.xGI = Math.max(max.xGI, parseFloat(p.expected_goal_involvements || 0));
+                max.xGC = Math.max(max.xGC, parseFloat(p.expected_goals_conceded || 0));
+                
+                // Calculate PPM on the fly
+                const ppm = parseFloat(p.total_points || 0) / parseFloat(p.now_cost || 1);
+                max.ppm = Math.max(max.ppm, ppm);
+                
+                max.form = Math.max(max.form, parseFloat(p.form || 0));
+            });
+            
+            return max;
+        }
+
+        function getFixtures(teamCode, count = 3, isPast = false) {
+            // Return real fixtures if we have the data
+            if (fplFixtures && fplFixtures.length > 0 && fplBootstrap && currentGW) {
+                // First, find the team ID from the team code
+                const team = fplBootstrap.teams.find(t => t.code === teamCode);
+                if (!team) {
+                    return getFallbackFixtures(count);
+                }
+                
+                const teamId = team.id;
+                const fixtures = [];
+                
+                // Filter fixtures for this team using team ID
+                const teamFixtures = fplFixtures.filter(f => 
+                    f.team_h === teamId || f.team_a === teamId
+                );
+                
+                // Sort by gameweek
+                teamFixtures.sort((a, b) => a.event - b.event);
+                
+                // Get past or future fixtures
+                const relevantFixtures = isPast ? 
+                    teamFixtures.filter(f => f.event < currentGW).slice(-count) :
+                    teamFixtures.filter(f => f.event > currentGW).slice(0, count);
+                
+                relevantFixtures.forEach(f => {
+                    const isHome = f.team_h === teamId;
+                    const opponentId = isHome ? f.team_a : f.team_h;
+                    const difficulty = isHome ? f.team_h_difficulty : f.team_a_difficulty;
+                    
+                    // Get opponent short name
+                    const opponent = fplBootstrap.teams.find(t => t.id === opponentId);
+                    const opponentName = opponent ? 
+                        (isHome ? `${opponent.short_name} (H)` : `${opponent.short_name} (A)`) : 
+                        'TBD';
+                    
+                    fixtures.push({
+                        opponent: opponentName,
+                        difficulty: difficulty || 3,
+                        event: f.event
+                    });
+                });
+                
+                return fixtures;
+            }
+            
+            return getFallbackFixtures(count);
+        }
+
+        function getFallbackFixtures(count) {
+            // Fallback to mock data if fixtures not available
+            const mockFixtures = [];
+            for (let i = 0; i < count; i++) {
+                mockFixtures.push({
+                    opponent: 'TBD',
+                    difficulty: 3
+                });
+            }
+            return mockFixtures;
+        }
+
+        function getFixtureHeaders(count = 5, startOffset = 0) {
+            // Generate fixture column headers with GW numbers
+            // startOffset: 0 = start from currentGW, 1 = start from currentGW+1, etc.
+            const headers = [];
+            const startGW = (currentGW || 1) + startOffset;
+            
+            for (let i = 0; i < count; i++) {
+                headers.push(`GW${startGW + i}`);
+            }
+            
+            return headers;
+        }
+
+        function analyzePlayerRisks(player) {
+            // Analyze player for various risk factors
+            const risks = [];
+            const gw = currentGW || 1;
+            
+            // Calculate minutes percentage
+            const minutesPct = gw > 0 ? ((player.minutes || 0) / (gw * 90)) * 100 : 0;
+            
+            // Calculate PPM
+            const ppm = player.now_cost > 0 ? (player.total_points || 0) / player.now_cost : 0;
+            
+            // Calculate median PPM for value comparison (simplified - use 2.0 as baseline)
+            const medianPPM = 2.0;
+            
+            // 1. INJURY RISK (highest priority)
+            if (player.chance_of_playing_next_round !== null && player.chance_of_playing_next_round !== undefined) {
+                if (player.chance_of_playing_next_round < 75) {
+                    risks.push({
+                        type: 'injury',
+                        severity: 'urgent',
+                        emoji: '🤕',
+                        text: `Injury Risk (${player.chance_of_playing_next_round}% chance)`
+                    });
+                } else if (player.chance_of_playing_next_round < 100) {
+                    risks.push({
+                        type: 'injury',
+                        severity: 'warning',
+                        emoji: '🤕',
+                        text: `Injury Risk (${player.chance_of_playing_next_round}% chance)`
+                    });
+                }
+            }
+            
+            // 2. ROTATION RISK
+            if (minutesPct > 0) {
+                if (minutesPct < 40) {
+                    risks.push({
+                        type: 'rotation',
+                        severity: 'urgent',
+                        emoji: '🔄',
+                        text: `Rotation Risk (${minutesPct.toFixed(0)}% minutes)`
+                    });
+                } else if (minutesPct < 60) {
+                    risks.push({
+                        type: 'rotation',
+                        severity: 'warning',
+                        emoji: '🔄',
+                        text: `Rotation Risk (${minutesPct.toFixed(0)}% minutes)`
+                    });
+                }
+            }
+            
+            // 3. DEAD WOOD
+            const ppg = parseFloat(player.points_per_game || 0);
+            if (ppg < 3 && minutesPct > 0 && minutesPct < 60) {
+                risks.push({
+                    type: 'deadwood',
+                    severity: 'urgent',
+                    emoji: '💀',
+                    text: `Dead Wood (${ppg.toFixed(1)} PPG, ${minutesPct.toFixed(0)}% mins)`
+                });
+            }
+            
+            // 4. FORM CONCERN
+            const form = parseFloat(player.form || 0);
+            if (form < 3 && form > 0) {
+                risks.push({
+                    type: 'form',
+                    severity: 'warning',
+                    emoji: '📉',
+                    text: `Form Concern (${form.toFixed(1)} form)`
+                });
+            }
+            
+            // 5. FIXTURE SWING
+            const next5 = getFixtures(player.team_code, 5, false);
+            if (next5.length > 0) {
+                const avgDifficulty = next5.reduce((sum, f) => sum + f.difficulty, 0) / next5.length;
+                if (avgDifficulty > 3) {
+                    risks.push({
+                        type: 'fixtures',
+                        severity: 'warning',
+                        emoji: '‼️',
+                        text: `Fixture Swing (${avgDifficulty.toFixed(1)} avg difficulty)`
+                    });
+                }
+            }
+            
+            // 6. VALUE CONCERN
+            if (player.now_cost > 8.0 && ppm < medianPPM) {
+                risks.push({
+                    type: 'value',
+                    severity: 'warning',
+                    emoji: '💰',
+                    text: `Value Concern (£${player.now_cost.toFixed(1)}m, ${ppm.toFixed(2)} PPM)`
+                });
+            }
+            
+            // 7. DIFFERENTIAL
+            const ownership = parseFloat(player.selected_by_percent || 0);
+            if (ownership < 10 && ppg > 3) {
+                risks.push({
+                    type: 'differential',
+                    severity: 'info',
+                    emoji: '✨',
+                    text: `Differential (${ownership.toFixed(1)}% owned, ${ppg.toFixed(1)} PPG)`
+                });
+            }
+            
+            // 8. TEMPLATE
+            if (ownership > 50) {
+                risks.push({
+                    type: 'template',
+                    severity: 'info',
+                    emoji: '🤡',
+                    text: `Template Player (${ownership.toFixed(1)}% owned)`
+                });
+            }
+            
+            return risks;
+        }
+
+        function getRiskIndicatorIcon(risks) {
+            // Determine which single icon to show based on priority
+            if (risks.length === 0) return null;
+            
+            // Priority: urgent > warning > info
+            const urgent = risks.find(r => r.severity === 'urgent');
+            if (urgent) return '🔴';
+            
+            const warning = risks.find(r => r.severity === 'warning');
+            if (warning) return '⚠️';
+            
+            const info = risks.find(r => r.severity === 'info');
+            if (info) return info.emoji; // Use specific emoji for differential/template
+            
+            return null;
+        }
+
+        function renderRiskTooltip(risks) {
+            // Render the tooltip HTML for a player's risks
+            if (risks.length === 0) return '';
+            
+            const icon = getRiskIndicatorIcon(risks);
+            if (!icon) return '';
+            
+            let tooltipHTML = `
+                <span class="risk-indicator">${icon}
+                    <div class="risk-tooltip">
+            `;
+            
+            risks.forEach(risk => {
+                tooltipHTML += `
+                    <div class="risk-item ${risk.severity}">
+                        <span class="risk-emoji">${risk.emoji}</span>
+                        <span class="risk-text">${risk.text}</span>
+                    </div>
+                `;
+            });
+            
+            tooltipHTML += `
+                    </div>
+                </span>
+            `;
+            
+            return tooltipHTML;
+        }
+
+        function getPositionType(player) {
+            // Map position to GKP, DEF, MID, FWD
+            console.log(`   🔍 Getting position for player: ${player.web_name}, element_type: ${player.element_type}, position: ${player.position}`);
+            
+            if (player.element_type === 1 || player.position === 'Goalkeeper') return 'GKP';
+            if (player.element_type === 2 || player.position === 'Defender') return 'DEF';
+            if (player.element_type === 3 || player.position === 'Midfielder') return 'MID';
+            if (player.element_type === 4 || player.position === 'Forward') return 'FWD';
+            
+            return 'UNK';
+        }
+
+        function getMinutesClass(minutes, isFinished) {
+            // Return heatmap class for minutes cell
+            if (!isFinished || minutes === undefined || minutes === null) {
+                return ''; // No color for upcoming/unknown
+            }
+            
+            if (minutes === 0) return 'heat-red';
+            if (minutes < 60) return 'heat-yellow';
+            return 'heat-light-green';
+        }
+
+        function getFormHeatmap(form) {
+            // Form heatmap: <2 red, 2-4 yellow, 4-6 light green, 6+ dark green
+            const f = parseFloat(form || 0);
+            if (f < 2) return 'heat-red';
+            if (f < 4) return 'heat-yellow';
+            if (f < 6) return 'heat-light-green';
+            return 'heat-dark-green';
+        }
+
+        function getXStatHeatmap(value, isGKP) {
+            // xGI/xGC heatmap
+            // For GKP (xGC): lower is better
+            // For others (xGI): higher is better
+            const v = parseFloat(value || 0);
+            
+            if (isGKP) {
+                // xGC - lower is better
+                if (v >= 1.5) return 'heat-red';
+                if (v >= 1.0) return 'heat-yellow';
+                if (v >= 0.5) return 'heat-light-green';
+                return 'heat-dark-green';
+            } else {
+                // xGI - higher is better
+                if (v < 0.3) return 'heat-red';
+                if (v < 0.5) return 'heat-yellow';
+                if (v < 0.7) return 'heat-light-green';
+                return 'heat-dark-green';
+            }
+        }
+
+        function getDefConHeatmap(defcon) {
+            // DefCon/90 heatmap: <5 gray, 5-8 yellow, 8+ green
+            const d = parseFloat(defcon || 0);
+            if (d === 0) return 'heat-gray';
+            if (d < 5) return 'heat-gray';
+            if (d < 8) return 'heat-yellow';
+            return 'heat-light-green';
+        }
+
+        function getPtsHeatmap(pts) {
+            // Points heatmap: 0-2 red, 3-5 yellow, 6-9 light green, 10+ dark green
+            const p = parseFloat(pts || 0);
+            if (p <= 2) return 'heat-red';
+            if (p <= 5) return 'heat-yellow';
+            if (p <= 9) return 'heat-light-green';
+            return 'heat-dark-green';
+        }
+
+        function getGWOpponent(teamCode, gameweek) {
+            // Get opponent for a specific gameweek
+            if (fplFixtures && fplFixtures.length > 0 && fplBootstrap) {
+                // First, find the team ID from the team code
+                const team = fplBootstrap.teams.find(t => t.code === teamCode);
+                if (!team) {
+                    return { opponent: '-', difficulty: 3 };
+                }
+                
+                const teamId = team.id;
+                
+                const fixture = fplFixtures.find(f => 
+                    f.event === gameweek && (f.team_h === teamId || f.team_a === teamId)
+                );
+                
+                if (fixture) {
+                    const isHome = fixture.team_h === teamId;
+                    const opponentId = isHome ? fixture.team_a : fixture.team_h;
+                    const difficulty = isHome ? fixture.team_h_difficulty : fixture.team_a_difficulty;
+                    
+                    // Get opponent short name
+                    const opponent = fplBootstrap.teams.find(t => t.id === opponentId);
+                    if (opponent) {
+                        const opponentName = opponent.short_name;
+                        return {
+                            opponent: isHome ? `${opponentName} (H)` : `${opponentName} (A)`,
+                            difficulty: difficulty || 3
+                        };
+                    }
+                }
+            }
+            
+            return { opponent: '-', difficulty: 3 };
+        }
+
+        // ==================
+        // RENDERING FUNCTIONS
+        // ==================
+
+        function renderLoadingState() {
+            return `
+                <div class="flex flex-col items-center justify-center py-20">
+                    <div class="spinner mb-4"></div>
+                    <p class="text-gray-600 text-lg">Loading FPL data...</p>
+                </div>
+            `;
+        }
+
+        function renderNoData() {
+            return `
+                <div class="max-w-xl mx-auto mt-10 p-8 bg-white rounded-xl shadow-2xl border-t-4 border-fpl-danger text-center">
+                    <i class="fas fa-exclamation-triangle text-6xl text-fpl-danger mb-4"></i>
+                    <h1 class="text-2xl font-bold text-fpl-danger mb-4">No Data Available</h1>
+                    <p class="text-gray-700 mb-6">Unable to load player data from GitHub. Please check your connection and try again.</p>
+                    <button onclick="loadAllData()" class="px-6 py-3 bg-fpl-purple text-white font-bold rounded-lg shadow-md hover:bg-fpl-dark transition-colors">
+                        Retry
+                    </button>
+                </div>
+            `;
+        }
+
+        function renderFixturePills(fixtures) {
+            return fixtures.map(f => 
+                `<span class="px-2 py-1 rounded text-xs font-semibold ${getDifficultyClass(f.difficulty)}">${f.opponent}</span>`
+            ).join(' ');
+        }
+
+        function renderPlayerTable(title, players, maxValues, isDifferential = false) {
+            if (!players || players.length === 0) {
+                return `<div class="text-gray-500 text-center py-4">No players found</div>`;
+            }
+
+            console.log(`📊 Rendering ${title} table with ${players.length} players...`);
+            const isDefensive = title.includes('Goalkeeper') || title.includes('Defender');
+            
+            // Get individual GW headers
+            // Past 3: GW-2, GW-1, GW (current) - the last 3 gameweeks including current
+            // Next 3: GW+1, GW+2, GW+3 - the upcoming gameweeks
+            const past3GWs = [];
+            const next3GWs = [];
+            
+            if (currentGW) {
+                // Past 3: includes current GW
+                for (let i = 2; i >= 0; i--) {
+                    const gw = currentGW - i;
+                    if (gw > 0) past3GWs.push(gw);
+                }
+                
+                // Next 3: starts from next GW
+                for (let i = 1; i <= 3; i++) {
+                    const gw = currentGW + i;
+                    if (gw <= 38) next3GWs.push(gw);
+                }
+            }
+            
+            const upcomingGW = currentGW + 1; // The next gameweek to highlight
+            console.log(`   📅 Past GWs: ${past3GWs.join(', ')}, Next GWs: ${next3GWs.join(', ')}, Upcoming: GW${upcomingGW}`);
+            
+            // Get my team player IDs for highlighting
+            const myPlayerIds = new Set();
+            if (myTeamData && myTeamData.picks) {
+                myTeamData.picks.forEach(pick => myPlayerIds.add(pick.element || pick.id));
+                console.log(`   👥 My team has ${myPlayerIds.size} players`);
+            }
+            
+            let html = `
+                <div class="mb-8">
+                    <h2 class="text-2xl font-bold text-fpl-purple mb-4">${title}</h2>
+                    <div class="overflow-x-auto" style="background: var(--bg-primary); border-radius: 12px; box-shadow: 0 2px 8px var(--shadow);">
+                        <table class="w-full text-sm">
+                            <thead style="background: var(--primary-color); color: white;">
+                                <tr>
+                                    <th class="text-left px-4 py-3">Player</th>
+                                    <th class="text-left px-4 py-3">Team</th>
+                                    <th class="text-center px-4 py-3">Price</th>
+                                    <th class="text-center px-4 py-3">Own%</th>
+                                    <th class="text-center px-4 py-3">Pts</th>
+                                    ${isDefensive ? 
+                                        '<th class="text-center px-4 py-3">xGC</th>' : 
+                                        '<th class="text-center px-4 py-3">xGI</th>'
+                                    }
+                                    <th class="text-center px-4 py-3">PPM</th>
+                                    <th class="text-center px-4 py-3">Form</th>
+                                    ${past3GWs.map(gw => `<th class="text-center px-2 py-3">GW${gw}</th>`).join('')}
+                                    ${next3GWs.map(gw => {
+                                        const isUpcoming = gw === upcomingGW;
+                                        return `<th class="text-center px-2 py-3" style="${isUpcoming ? 'background-color: #9333ea; font-weight: 700;' : ''}">GW${gw}</th>`;
+                                    }).join('')}
+                                </tr>
+                            </thead>
+                            <tbody>
+            `;
+
+            players.forEach((player, index) => {
+                const pts = parseFloat(player.total_points || 0);
+                const xStat = isDefensive ? parseFloat(player.expected_goals_conceded || 0) : parseFloat(player.expected_goal_involvements || 0);
+                const cost = parseFloat(player.now_cost || 1);
+                const ppm = pts / cost;
+                const form = parseFloat(player.form || 0);
+                const ownership = parseFloat(player.selected_by_percent || 0);
+                
+                // Check if this is my player
+                const isMyPlayer = myPlayerIds.has(player.id || player.element);
+                
+                // Get individual fixtures
+                const past3 = getFixtures(player.team_code, 3, true);
+                const next3 = getFixtures(player.team_code, 3, false);
+
+                // Apply new heatmap classes (consistent with My Team)
+                const ptsClass = getPtsHeatmap(pts);
+                const formClass = getFormHeatmap(form);
+                
+                // Row background - highlight my players in soft purple
+                let rowBg;
+                if (isMyPlayer) {
+                    rowBg = 'rgba(147, 51, 234, 0.15)'; // Soft purple for my players
+                } else {
+                    rowBg = index % 2 === 0 ? 'var(--bg-secondary)' : 'var(--bg-primary)';
+                }
+                
+                if (isMyPlayer) {
+                    console.log(`     🎯 My player: ${player.web_name}`);
+                }
+                
+                html += `
+                    <tr style="background: ${rowBg}; transition: background 0.2s;">
+                        <td class="px-4 py-3 font-semibold" style="color: var(--primary-color);">${player.web_name || player.name || 'Unknown'}</td>
+                        <td class="px-4 py-3" style="color: var(--text-primary);">${player.team_short_name || player.team || 'UNK'}</td>
+                        <td class="px-4 py-3 text-center" style="color: var(--text-primary);">${formatCurrency(cost)}</td>
+                        <td class="px-4 py-3 text-center" style="color: var(--text-primary);">${formatPercent(ownership)}</td>
+                        <td class="px-4 py-3 text-center font-bold ${ptsClass}">${pts.toFixed(0)}</td>
+                        <td class="px-4 py-3 text-center" style="color: var(--text-primary);">${xStat.toFixed(1)}</td>
+                        <td class="px-4 py-3 text-center" style="color: var(--text-primary);">${ppm.toFixed(2)}</td>
+                        <td class="px-4 py-3 text-center ${formClass}">${form.toFixed(1)}</td>
+                        ${past3.map((fix, idx) => {
+                            const gwNum = past3GWs[idx];
+                            return `
+                                <td class="px-2 py-3 text-center">
+                                    <span class="px-2 py-1 rounded text-xs font-semibold ${getDifficultyClass(fix.difficulty)}">
+                                        ${fix.opponent}
+                                    </span>
+                                </td>
+                            `;
+                        }).join('')}
+                        ${next3.map((fix, idx) => {
+                            const gwNum = next3GWs[idx];
+                            const isUpcomingGW = gwNum === upcomingGW;
+                            const cellBg = isUpcomingGW ? 'background-color: rgba(147, 51, 234, 0.1);' : '';
+                            return `
+                                <td class="px-2 py-3 text-center" style="${cellBg}">
+                                    <span class="px-2 py-1 rounded text-xs font-semibold ${getDifficultyClass(fix.difficulty)}">
+                                        ${fix.opponent}
+                                    </span>
+                                </td>
+                            `;
+                        }).join('')}
+                    </tr>
+                `;
+            });
+
+            html += `
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+
+            console.log(`   ✅ ${title} table rendered`);
+            return html;
+        }
+
+        function renderAnalysisOverview() {
+            const container = document.getElementById('app-container');
+            
+            if (isLoading) {
+                container.innerHTML = renderLoadingState();
+                return;
+            }
+            
+            if (!githubData || githubData.length === 0) {
+                container.innerHTML = renderNoData();
+                return;
+            }
+
+            let html = `
+                <div class="mb-8">
+                    <h1 class="text-3xl font-extrabold text-fpl-purple mb-2">FPL Analysis Overview</h1>
+                    <p class="text-gray-600 mb-6">
+                        Player rankings by position with fixture analysis and underlying stats from GitHub historical data.
+                    </p>
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                        <p class="text-sm text-gray-700">
+                            <i class="fas fa-info-circle text-blue-600 mr-2"></i>
+                            <strong>Data Sources:</strong> 
+                            ${fplBootstrap ? 
+                                `Historical stats from GitHub + Live prices/ownership from FPL API (GW${currentGW})` : 
+                                `Historical data from GitHub only`
+                            }
+                        </p>
+                        ${fplBootstrap ? 
+                            `<p class="text-sm text-gray-600 mt-2">
+                                <i class="fas fa-sync-alt text-green-600 mr-2"></i>
+                                Live data includes: Latest prices, ownership %, form, injury status
+                            </p>` : 
+                            `<p class="text-sm text-gray-600 mt-2">
+                                <strong>Next Phase:</strong> FPL API integration will add live prices and ownership
+                            </p>`
+                        }
+                    </div>
+                </div>
+            `;
+
+            // Render each position
+            const positions = ['GKP', 'DEF', 'MID', 'FWD'];
+            
+            positions.forEach(pos => {
+                const players = getPlayersByPosition(pos);
+                
+                if (players.length > 0) {
+                    // Sort by total points and take top 20
+                    const topPlayers = players
+                        .sort((a, b) => parseFloat(b.total_points || 0) - parseFloat(a.total_points || 0))
+                        .slice(0, 20);
+                    
+                    const maxValues = calculateMaxValues(topPlayers);
+                    html += renderPlayerTable(getPosition(positions.indexOf(pos) + 1) + 's', topPlayers, maxValues);
+                }
+            });
+
+            container.innerHTML = html;
+        }
+
+        function renderDifferentials() {
+            const container = document.getElementById('app-container');
+            
+            if (isLoading) {
+                container.innerHTML = renderLoadingState();
+                return;
+            }
+            
+            if (!githubData || githubData.length === 0) {
+                container.innerHTML = renderNoData();
+                return;
+            }
+
+            const differentials = getDifferentialsByPosition();
+            
+            let html = `
+                <div class="mb-8">
+                    <h1 class="text-3xl font-extrabold text-fpl-purple mb-2">Differential Picks</h1>
+                    <p class="text-gray-600 mb-6">
+                        Low-ownership players (&lt;15%) with strong underlying stats. Purple highlights show value metrics.
+                    </p>
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                        <p class="text-sm text-gray-700">
+                            <i class="fas fa-chart-line text-green-600 mr-2"></i>
+                            <strong>Strategy:</strong> Differentials can provide template advantage in mini-leagues
+                        </p>
+                    </div>
+                </div>
+            `;
+
+            // Render each position
+            Object.keys(differentials).forEach(pos => {
+                const players = differentials[pos];
+                if (players.length > 0) {
+                    const maxValues = calculateMaxValues(players);
+                    const positionName = getPosition(['GKP', 'DEF', 'MID', 'FWD'].indexOf(pos) + 1);
+                    html += renderPlayerTable(`${positionName} Differentials`, players, maxValues, true);
+                }
+            });
+
+            container.innerHTML = html;
+        }
+
+        function renderNotFound() {
+            document.getElementById('app-container').innerHTML = `
+                <div class="max-w-xl mx-auto mt-10 p-8 bg-white rounded-xl shadow-2xl border-t-4 border-fpl-danger text-center">
+                    <h1 class="text-4xl font-extrabold text-fpl-danger mb-4">404 - Page Not Found</h1>
+                    <p class="text-lg text-gray-700 mb-6">The page you requested does not exist.</p>
+                    <a href="#analysis" onclick="navigate('analysis')" class="px-6 py-3 bg-fpl-purple text-white font-bold rounded-lg shadow-md hover:bg-fpl-dark transition-colors">
+                        Go to Analysis
+                    </a>
+                </div>
+            `;
+        }
+
+        function renderMyTeamForm() {
+            const container = document.getElementById('app-container');
+            
+            container.innerHTML = `
+                <div class="max-w-2xl mx-auto">
+                    <h1 class="text-3xl font-extrabold text-fpl-purple mb-6">My Team Analysis</h1>
+                    
+                    <div class="bg-white rounded-lg shadow-md p-8">
+                        <p class="text-gray-700 mb-6">
+                            Enter your FPL Team ID to analyze your squad with underlying stats, fixture difficulty, and performance metrics.
+                        </p>
+                        
+                        <form onsubmit="handleTeamSubmit(event)" class="space-y-4">
+                            <div>
+                                <label for="team_id" class="block text-sm font-medium text-gray-700 mb-2">
+                                    Team ID
+                                </label>
+                                <input 
+                                    type="number" 
+                                    id="team_id" 
+                                    name="team_id" 
+                                    required
+                                    placeholder="e.g., 123456"
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-fpl-purple focus:border-transparent"
+                                />
+                                <p class="text-sm text-gray-500 mt-2">
+                                    Find your Team ID in your FPL profile URL: fantasy.premierleague.com/entry/<strong>YOUR_ID</strong>/
+                                </p>
+                            </div>
+                            
+                            <button 
+                                type="submit" 
+                                class="w-full bg-fpl-purple text-white font-bold py-3 px-6 rounded-lg hover:bg-fpl-dark transition-colors"
+                            >
+                                <i class="fas fa-search mr-2"></i>Load My Team
+                            </button>
+                        </form>
+                        
+                        ${currentTeamId ? `
+                            <div class="mt-6 pt-6 border-t border-gray-200">
+                                <p class="text-sm text-gray-600 mb-3">Recently viewed:</p>
+                                <button 
+                                    onclick="loadTeam(${currentTeamId})"
+                                    class="text-fpl-purple hover:text-fpl-dark font-semibold"
+                                >
+                                    <i class="fas fa-history mr-2"></i>Team ${currentTeamId} →
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>
+                    
+                    <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <p class="text-sm text-gray-700">
+                            <i class="fas fa-info-circle text-blue-600 mr-2"></i>
+                            <strong>Privacy Note:</strong> Your team data is fetched directly from FPL's public API and not stored.
+                        </p>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderManagerInfo(teamData) {
+            console.log(`🎨 Rendering manager info (clean cards)...`);
+            const manager = teamData.manager;
+            const gw = teamData.gameweek;
+            
+            // Format rank change arrow
+            let rankArrow = '─';
+            let rankArrowColor = 'var(--text-tertiary)';
+            if (teamData.rank_direction === 'up') {
+                rankArrow = '↑';
+                rankArrowColor = '#10b981'; // green
+            } else if (teamData.rank_direction === 'down') {
+                rankArrow = '↓';
+                rankArrowColor = '#ef4444'; // red
+            }
+            
+            // Format rank change text
+            let rankChangeText = '';
+            if (teamData.rank_change !== null) {
+                const absChange = Math.abs(teamData.rank_change);
+                rankChangeText = `(${absChange.toLocaleString()})`;
+            }
+            
+            // Format season history
+            let seasonHistory = `${manager.total_seasons} Season${manager.total_seasons > 1 ? 's' : ''}`;
+            if (manager.last_3_avg_rank) {
+                const avgRankM = (manager.last_3_avg_rank / 1000000).toFixed(2);
+                seasonHistory += ` (Last 3 Avg: ${avgRankM}m)`;
+            }
+            
+            // Format chips - Check which half of season
+            // First half: GW1-18, Second half: GW19-38
+            const isSecondHalf = gw >= 19;
+            
+            // Chips are stored as: bboost, freehit, wildcard, 3xc
+            // Each can be used twice (once per half)
+            // We need to track which "version" was used
+            
+            // For now, simplified logic:
+            // If chip used and we're in first half, show as "X1 ✓"
+            // If chip used and we're in second half, could be X1 or X2
+            // Without detailed history, we'll show used chips as ✓
+            
+            const chips = [];
+            
+            // Wildcard
+            if (teamData.chips_used.wildcard) {
+                chips.push('<span style="color: var(--text-primary);">WC1 ✓</span>');
+                chips.push('<span style="color: var(--text-tertiary);">WC2</span>');
+            } else {
+                chips.push('<span style="color: var(--text-tertiary);">WC1</span>');
+                chips.push('<span style="color: var(--text-tertiary);">WC2</span>');
+            }
+            
+            // Bench Boost
+            if (teamData.chips_used.bboost) {
+                chips.push('<span style="color: var(--text-primary);">BB1 ✓</span>');
+                chips.push('<span style="color: var(--text-tertiary);">BB2</span>');
+            } else {
+                chips.push('<span style="color: var(--text-tertiary);">BB1</span>');
+                chips.push('<span style="color: var(--text-tertiary);">BB2</span>');
+            }
+            
+            // Free Hit
+            if (teamData.chips_used.freehit) {
+                chips.push('<span style="color: var(--text-primary);">FH1 ✓</span>');
+                chips.push('<span style="color: var(--text-tertiary);">FH2</span>');
+            } else {
+                chips.push('<span style="color: var(--text-tertiary);">FH1</span>');
+                chips.push('<span style="color: var(--text-tertiary);">FH2</span>');
+            }
+            
+            // Triple Captain
+            if (teamData.chips_used['3xc']) {
+                chips.push('<span style="color: var(--text-primary);">TC1 ✓</span>');
+                chips.push('<span style="color: var(--text-tertiary);">TC2</span>');
+            } else {
+                chips.push('<span style="color: var(--text-tertiary);">TC1</span>');
+                chips.push('<span style="color: var(--text-tertiary);">TC2</span>');
+            }
+            
+            const chipsText = chips.join(' &nbsp;•&nbsp; ');
+            
+            // Format free transfers
+            const freeTransfers = teamData.total_transfers || 0;
+            const transferCost = teamData.transfer_cost || 0;
+            
+            console.log(`   ✅ Manager info formatted (clean cards)`);
+            
+            return `
+                <div style="margin-bottom: 24px;">
+                    <!-- Stats Cards Row -->
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 12px;">
+                        <!-- GW Points Card -->
+                        <div style="background: var(--bg-primary); border-radius: 12px; padding: 16px; box-shadow: 0 2px 6px var(--shadow); text-align: center;">
+                            <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">GW${gw} Points</div>
+                            <div style="font-size: 32px; font-weight: 700; color: var(--text-primary);">${teamData.points}</div>
+                        </div>
+                        
+                        <!-- Total Points Card -->
+                        <div style="background: var(--bg-primary); border-radius: 12px; padding: 16px; box-shadow: 0 2px 6px var(--shadow); text-align: center;">
+                            <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Total Points</div>
+                            <div style="font-size: 32px; font-weight: 700; color: var(--text-primary);">${teamData.total_points}</div>
+                        </div>
+                        
+                        <!-- Overall Rank Card -->
+                        <div style="background: var(--bg-primary); border-radius: 12px; padding: 16px; box-shadow: 0 2px 6px var(--shadow); text-align: center;">
+                            <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Overall Rank</div>
+                            <div style="font-size: 28px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; justify-content: center; gap: 6px;">
+                                ${teamData.overall_rank.toLocaleString()}
+                                <span style="color: ${rankArrowColor}; font-size: 24px;">${rankArrow}</span>
+                            </div>
+                            ${rankChangeText ? `<div style="font-size: 11px; color: var(--text-tertiary); margin-top: 2px;">${rankChangeText}</div>` : ''}
+                        </div>
+                        
+                        <!-- Team Value Card -->
+                        <div style="background: var(--bg-primary); border-radius: 12px; padding: 16px; box-shadow: 0 2px 6px var(--shadow); text-align: center;">
+                            <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Team Value</div>
+                            <div style="font-size: 28px; font-weight: 700; color: var(--primary-color);">£${teamData.team_value.toFixed(1)}m</div>
+                            <div style="font-size: 11px; color: var(--text-tertiary); margin-top: 2px;">£${teamData.bank.toFixed(1)}m ITB</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Fixture Difficulty Chart -->
+                    ${renderFixtureDifficultyChart(teamData)}
+                    
+                    <!-- Info Bar -->
+                    <div style="background: var(--bg-primary); border-radius: 12px; padding: 12px 20px; box-shadow: 0 2px 6px var(--shadow);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                            <div style="font-size: 14px; color: var(--text-secondary);">
+                                <span style="font-weight: 600; color: var(--text-primary);">${manager.team_name} (${teamData.team_id})</span>
+                                &nbsp;•&nbsp;
+                                ${seasonHistory}
+                                &nbsp;•&nbsp;
+                                ${freeTransfers} FT${transferCost > 0 ? ` (-${transferCost}pts)` : ''}
+                            </div>
+                            <div style="font-size: 13px; color: var(--text-secondary);">
+                                ${chipsText}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderFixtureDifficultyChart(teamData) {
+            console.log(`📊 Calculating team fixture difficulty for next 5 GWs...`);
+            const { picks, gameweek } = teamData;
+            
+            // Calculate average FDR for each of next 5 gameweeks
+            const next5GWs = [];
+            for (let i = 1; i <= 5; i++) {
+                const gw = gameweek + i;
+                if (gw <= 38) next5GWs.push(gw);
+            }
+            
+            if (next5GWs.length === 0) {
+                console.log(`   ⚠️ No future gameweeks to analyze`);
+                return '';
+            }
+            
+            console.log(`   🎯 Analyzing GWs: ${next5GWs.join(', ')}`);
+            
+            // For each GW, get all players' fixture difficulties and average them
+            const gwData = next5GWs.map(gwNum => {
+                const gwOffset = gwNum - gameweek; // 1, 2, 3, 4, 5
+                let totalDifficulty = 0;
+                let playerCount = 0;
+                
+                picks.forEach(pick => {
+                    const player = pick;
+                    const teamCode = player.team_code;
+                    
+                    // Get fixture for this specific GW offset
+                    const fixtures = getFixtures(teamCode, gwOffset, false);
+                    if (fixtures && fixtures[gwOffset - 1]) {
+                        const difficulty = fixtures[gwOffset - 1].difficulty;
+                        totalDifficulty += difficulty;
+                        playerCount++;
+                    }
+                });
+                
+                const avgDifficulty = playerCount > 0 ? totalDifficulty / playerCount : 0;
+                console.log(`   GW${gwNum}: avg difficulty = ${avgDifficulty.toFixed(2)} (${playerCount} players)`);
+                
+                return {
+                    gw: gwNum,
+                    avgDifficulty: avgDifficulty,
+                    playerCount: playerCount
+                };
+            });
+            
+            // Calculate overall average
+            const overallAvg = gwData.reduce((sum, d) => sum + d.avgDifficulty, 0) / gwData.length;
+            console.log(`   📈 Overall average difficulty: ${overallAvg.toFixed(2)}`);
+            
+            // Helper function to get difficulty label and color
+            function getDifficultyRating(avg) {
+                if (avg <= 1.5) return { label: 'Very Easy', dots: '●●●●●', color: '#10b981' };
+                if (avg <= 2.5) return { label: 'Easy', dots: '●●●●○', color: '#84cc16' };
+                if (avg <= 3.0) return { label: 'Moderate', dots: '●●●○○', color: '#eab308' };
+                if (avg <= 3.5) return { label: 'Hard', dots: '●●○○○', color: '#f97316' };
+                return { label: 'Very Hard', dots: '●○○○○', color: '#ef4444' };
+            }
+            
+            // Helper to get bar height percentage (scaled 0-100%)
+            function getBarHeight(difficulty) {
+                // Scale: 1.0 = 20%, 5.0 = 100%
+                return Math.min(100, Math.max(20, ((difficulty - 1) / 4) * 80 + 20));
+            }
+            
+            // Helper to get bar color based on difficulty
+            function getBarColor(difficulty) {
+                if (difficulty <= 1.5) return '#10b981'; // green
+                if (difficulty <= 2.5) return '#84cc16'; // lime
+                if (difficulty <= 3.0) return '#eab308'; // yellow
+                if (difficulty <= 3.5) return '#f97316'; // orange
+                return '#ef4444'; // red
+            }
+            
+            const overallRating = getDifficultyRating(overallAvg);
+            
+            return `
+                <!-- Fixture Difficulty Chart -->
+                <div style="background: var(--bg-primary); border-radius: 12px; padding: 16px; box-shadow: 0 2px 6px var(--shadow); margin-bottom: 12px;">
+                    <div style="margin-bottom: 12px;">
+                        <div style="font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px;">
+                            <i class="fas fa-chart-bar" style="color: var(--primary-color); margin-right: 6px;"></i>
+                            Team Fixture Difficulty (Next ${gwData.length} GWs)
+                        </div>
+                    </div>
+                    
+                    <!-- Chart Container -->
+                    <div style="display: flex; justify-content: space-between; align-items: flex-end; gap: 8px; height: 80px; padding: 0 8px;">
+                        ${gwData.map(d => {
+                            const height = getBarHeight(d.avgDifficulty);
+                            const color = getBarColor(d.avgDifficulty);
+                            const rating = getDifficultyRating(d.avgDifficulty);
+                            
+                            return `
+                                <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                                    <!-- Bar with value inside -->
+                                    <div style="width: 100%; height: 50px; display: flex; align-items: flex-end;">
+                                        <div style="
+                                            width: 100%; 
+                                            height: ${height}%; 
+                                            background: ${color}; 
+                                            border-radius: 4px 4px 0 0;
+                                            transition: all 0.3s ease;
+                                            display: flex;
+                                            align-items: center;
+                                            justify-content: center;
+                                            font-size: 11px;
+                                            font-weight: 700;
+                                            color: white;
+                                            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+                                        ">${d.avgDifficulty.toFixed(1)}</div>
+                                    </div>
+                                    
+                                    <!-- GW label -->
+                                    <div style="font-size: 10px; font-weight: 600; color: var(--text-secondary);">
+                                        GW${d.gw}
+                                    </div>
+                                    
+                                    <!-- Difficulty label -->
+                                    <div style="font-size: 9px; color: var(--text-tertiary);">
+                                        ${rating.label}
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                    
+                    <!-- Overall Rating -->
+                    <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-color); display: flex; justify-content: center; align-items: center; gap: 12px;">
+                        <div style="font-size: 13px; color: var(--text-secondary);">
+                            Average:
+                        </div>
+                        <div style="font-size: 15px; font-weight: 700; color: ${overallRating.color};">
+                            ${overallAvg.toFixed(1)}
+                        </div>
+                        <div style="font-size: 13px; color: ${overallRating.color}; letter-spacing: 2px;">
+                            ${overallRating.dots}
+                        </div>
+                        <div style="font-size: 12px; color: var(--text-secondary);">
+                            ${overallRating.label}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderMyTeam() {
+            console.log(`🎨 Rendering My Team page...`);
+            const container = document.getElementById('app-container');
+            
+            if (!myTeamData) {
+                renderMyTeamForm();
+                return;
+            }
+            
+            const { picks, gameweek } = myTeamData;
+            console.log(`   📊 Rendering ${picks.length} players for GW${gameweek}`);
+            
+            // Combine starters and bench into single array (already sorted by position_order)
+            const allPlayers = picks.sort((a, b) => a.position_order - b.position_order);
+            
+            let html = `
+                <div class="mb-6">
+                    <!-- Manager Info Header -->
+                    ${renderManagerInfo(myTeamData)}
+                </div>
+                
+                <!-- My Team Table (Merged) -->
+                <div class="mb-8">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <h2 class="text-2xl font-bold text-fpl-purple">
+                            <i class="fas fa-users mr-2"></i>My Team - GW${gameweek}
+                        </h2>
+                        <button 
+                            onclick="navigate('my-team'); currentTeamId = null; myTeamData = null;"
+                            style="
+                                padding: 8px 16px;
+                                border-radius: 20px;
+                                background: var(--bg-secondary);
+                                color: var(--text-secondary);
+                                border: 1px solid var(--border-color);
+                                font-size: 14px;
+                                font-weight: 500;
+                                cursor: pointer;
+                                transition: all 0.2s ease;
+                            "
+                            onmouseover="this.style.background='var(--bg-tertiary)'; this.style.color='var(--primary-color)'; this.style.borderColor='var(--primary-color)';"
+                            onmouseout="this.style.background='var(--bg-secondary)'; this.style.color='var(--text-secondary)'; this.style.borderColor='var(--border-color)';"
+                        >
+                            <i class="fas fa-arrow-left" style="margin-right: 6px;"></i>Change Team
+                        </button>
+                    </div>
+                    ${renderTeamTable(allPlayers, false)}
+                </div>
+            `;
+            
+            console.log(`   ✅ My Team page rendered`);
+            container.innerHTML = html;
+        }
+
+        function renderTeamTable(players, isBench) {
+            if (!players || players.length === 0) {
+                return `<div class="text-gray-500 text-center py-4">No players</div>`;
+            }
+            
+            console.log(`   🎨 Rendering team table for ${players.length} players...`);
+            
+            // Get the gameweek we're displaying
+            const displayGW = myTeamData ? myTeamData.gameweek : currentGW;
+            
+            // Get next 5 fixture headers (starting from NEXT gameweek, not current)
+            const fixtureHeaders = getFixtureHeaders(5, 1);
+            
+            let html = `
+                <div class="overflow-x-auto" style="background: var(--bg-primary); border-radius: 12px; box-shadow: 0 2px 8px var(--shadow);">
+                    <table class="w-full text-sm">
+                        <thead style="background: var(--primary-color); color: white;">
+                            <tr>
+                                <th class="text-left px-4 py-3">Pos</th>
+                                <th class="text-left px-4 py-3">Player</th>
+                                <th class="text-left px-4 py-3">Team</th>
+                                <th class="text-center px-4 py-3">Opp</th>
+                                <th class="text-center px-4 py-3">Mins</th>
+                                <th class="text-center px-4 py-3">Pts</th>
+                                <th class="text-center px-4 py-3">Form</th>
+                                <th class="text-center px-4 py-3">DefCon/90</th>
+                                <th class="text-center px-4 py-3">xGI/xGC</th>
+                                <th class="text-center px-4 py-3">Price</th>
+                                <th class="text-center px-2 py-3">${fixtureHeaders[0]}</th>
+                                <th class="text-center px-2 py-3">${fixtureHeaders[1]}</th>
+                                <th class="text-center px-2 py-3">${fixtureHeaders[2]}</th>
+                                <th class="text-center px-2 py-3">${fixtureHeaders[3]}</th>
+                                <th class="text-center px-2 py-3">${fixtureHeaders[4]}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            players.forEach((player, index) => {
+                const rowClass = index % 2 === 0 ? 'bg-gray-50' : 'bg-white';
+                const isCaptain = player.is_captain;
+                const isVice = player.is_vice_captain;
+                
+                let captainBadge = '';
+                if (isCaptain) captainBadge = ' <span class="text-xs font-bold text-fpl-purple">(C)</span>';
+                if (isVice) captainBadge = ' <span class="text-xs font-bold text-gray-600">(VC)</span>';
+                
+                // Get opponent for the gameweek being displayed
+                const gwOpp = getGWOpponent(player.team_code, displayGW);
+                
+                // Get next 5 fixtures (starting from NEXT gameweek, not current)
+                // We need to get fixtures where event > currentGW (not >=)
+                const allFutureFixtures = getFixtures(player.team_code, 10, false); // Get more than we need
+                const next5 = allFutureFixtures.filter(f => f.event > (myTeamData.gameweek || currentGW)).slice(0, 5);
+                
+                // Get position type (GKP, DEF, MID, FWD)
+                const posType = getPositionType(player);
+                console.log(`     🎯 Player: ${player.web_name}, Position: ${posType}`);
+                
+                // Analyze player risks
+                const risks = analyzePlayerRisks(player);
+                const riskTooltip = renderRiskTooltip(risks);
+                
+                // Check if player has high-severity risks (🔴 or ⚠️) for row highlighting
+                const hasHighRisk = risks.some(risk => 
+                    risk.emoji === '🔴' || risk.emoji === '⚠️'
+                );
+                
+                if (hasHighRisk) {
+                    console.log(`     ⚠️ High risk player: ${player.web_name}`);
+                }
+
+                // Minutes formatting with color coding
+                const hasGWData = player.gw_minutes !== undefined && player.gw_minutes !== null;
+                const minutesText = hasGWData ? player.gw_minutes.toString() : '-';
+                const minutesClass = hasGWData ? getMinutesClass(player.gw_minutes, true) : '';
+                console.log(`     ⏱️ Minutes: ${minutesText}, Class: ${minutesClass}`);
+                
+                // Position-aware xGI/xGC
+                const isGKP = posType === 'GKP';
+                const xStat = isGKP ? 
+                    parseFloat(player.expected_goals_conceded || 0).toFixed(1) :
+                    parseFloat(player.expected_goal_involvements || 0).toFixed(1);
+                
+                // Apply heatmaps (NO heatmap for xGI/xGC)
+                const formValue = parseFloat(player.form || 0);
+                const formClass = getFormHeatmap(formValue);
+                
+                const defCon90 = parseFloat(player.defensive_contribution_per_90 || 0);
+                const defConText = defCon90 > 0 ? defCon90.toFixed(1) : '-';
+                const defConClass = defCon90 > 0 ? getDefConHeatmap(defCon90) : '';
+                
+                const gwPoints = parseFloat(player.gw_total_points || 0);
+                const ptsClass = hasGWData ? getPtsHeatmap(gwPoints) : '';
+                
+                console.log(`     🎨 Heatmaps - Mins: ${minutesClass}, Pts: ${ptsClass}, Form: ${formClass}, DefCon: ${defConClass}`);
+                
+                // Row background - highlight high-risk players in soft yellow
+                let rowBg;
+                if (hasHighRisk) {
+                    rowBg = 'rgba(251, 191, 36, 0.15)'; // Soft yellow for risk warning
+                } else {
+                    rowBg = index % 2 === 0 ? 'var(--bg-secondary)' : 'var(--bg-primary)';
+                }
+                
+                // Add bench separator row after position 11
+                if (player.position_order === 12) {
+                    html += `
+                        <tr class="bench-separator">
+                            <td colspan="15" class="p-0">
+                                <div style="background-color: var(--primary-color); height: 4px;"></div>
+                            </td>
+                        </tr>
+                    `;
+                }
+                
+                html += `
+                    <tr style="background: ${rowBg}; transition: background 0.2s;">
+                        <td class="px-4 py-3 text-center font-semibold" style="color: var(--text-primary);">${posType}</td>
+                        <td class="px-4 py-3 font-semibold" style="color: var(--primary-color);">
+                            ${player.web_name || 'Unknown'}${captainBadge}${riskTooltip}
+                        </td>
+                        <td class="px-4 py-3" style="color: var(--text-primary);">${player.team_short_name || 'UNK'}</td>
+                        <td class="px-4 py-3 text-center" style="white-space: nowrap;">
+                            <span class="px-2 py-1 rounded text-xs font-semibold ${getDifficultyClass(gwOpp.difficulty)}">
+                                ${gwOpp.opponent}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 text-center font-semibold ${minutesClass}">${minutesText}</td>
+                        <td class="px-4 py-3 text-center font-bold ${ptsClass}">${gwPoints.toFixed(0)}</td>
+                        <td class="px-4 py-3 text-center ${formClass}">${formValue.toFixed(1)}</td>
+                        <td class="px-4 py-3 text-center ${defConClass}">${defConText}</td>
+                        <td class="px-4 py-3 text-center" style="color: var(--text-primary);">${xStat}</td>
+                        <td class="px-4 py-3 text-center" style="color: var(--text-primary);">£${parseFloat(player.now_cost || 0).toFixed(1)}m</td>
+                        <td class="px-2 py-3 text-center" style="white-space: nowrap;">
+                            ${next5[0] ? `<span class="px-2 py-1 rounded text-xs font-semibold ${getDifficultyClass(next5[0].difficulty)}">${next5[0].opponent}</span>` : '-'}
+                        </td>
+                        <td class="px-2 py-3 text-center" style="white-space: nowrap;">
+                            ${next5[1] ? `<span class="px-2 py-1 rounded text-xs font-semibold ${getDifficultyClass(next5[1].difficulty)}">${next5[1].opponent}</span>` : '-'}
+                        </td>
+                        <td class="px-2 py-3 text-center" style="white-space: nowrap;">
+                            ${next5[2] ? `<span class="px-2 py-1 rounded text-xs font-semibold ${getDifficultyClass(next5[2].difficulty)}">${next5[2].opponent}</span>` : '-'}
+                        </td>
+                        <td class="px-2 py-3 text-center" style="white-space: nowrap;">
+                            ${next5[3] ? `<span class="px-2 py-1 rounded text-xs font-semibold ${getDifficultyClass(next5[3].difficulty)}">${next5[3].opponent}</span>` : '-'}
+                        </td>
+                        <td class="px-2 py-3 text-center" style="white-space: nowrap;">
+                            ${next5[4] ? `<span class="px-2 py-1 rounded text-xs font-semibold ${getDifficultyClass(next5[4].difficulty)}">${next5[4].opponent}</span>` : '-'}
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            console.log(`   ✅ Team table rendered`);
+            return html;
+        }
+
+        async function handleTeamSubmit(event) {
+            event.preventDefault();
+            const teamId = document.getElementById('team_id').value;
+            if (teamId) {
+                await loadTeam(parseInt(teamId));
+            }
+        }
+
+// ==================
+        // TRANSFER SUGGESTIONS
+        // ==================
+
+        function renderTransferSuggestions() {
+            console.log('🔄 Rendering Transfer Committee...');
+            const container = document.getElementById('app-container');
+            
+            if (!myTeamData || !githubData) {
+                container.innerHTML = `
+                    <div class="max-w-2xl mx-auto mt-10 p-8" style="background: var(--bg-primary); border-radius: 12px; box-shadow: 0 2px 8px var(--shadow); text-align: center;">
+                        <i class="fas fa-exchange-alt" style="font-size: 4rem; color: var(--text-tertiary); margin-bottom: 1rem;"></i>
+                        <h2 class="text-2xl font-bold" style="color: var(--text-primary); margin-bottom: 1rem;">Load Your Team First</h2>
+                        <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">Transfer Committee requires your team data. Please go to My Team and load your squad first.</p>
+                        <button onclick="navigate('my-team')" style="padding: 12px 24px; background: var(--primary-color); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                            Go to My Team
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Find problem players
+            const problemPlayers = myTeamData.picks.filter(pick => {
+                const risks = analyzePlayerRisks(pick);
+                const icon = getRiskIndicatorIcon(risks);
+                return icon === '🔴' || icon === '⚠️';
+            });
+            
+            console.log(`   🚨 Found ${problemPlayers.length} problem players`);
+            
+            if (problemPlayers.length === 0) {
+                container.innerHTML = `
+                    <div class="max-w-2xl mx-auto mt-10 p-8" style="background: var(--bg-primary); border-radius: 12px; box-shadow: 0 2px 8px var(--shadow); text-align: center;">
+                        <i class="fas fa-check-circle" style="font-size: 4rem; color: #10b981; margin-bottom: 1rem;"></i>
+                        <h2 class="text-2xl font-bold" style="color: var(--text-primary); margin-bottom: 1rem;">No Issues Detected!</h2>
+                        <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">Your squad looks good. No urgent transfer recommendations at this time.</p>
+                        <button onclick="navigate('my-team')" style="padding: 12px 24px; background: var(--primary-color); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                            Back to My Team
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Build single expandable table
+            let html = `
+                <div style="margin-bottom: 2rem;">
+                    <h1 class="text-3xl font-extrabold" style="color: var(--primary-color); margin-bottom: 1.5rem;">
+                        <i class="fas fa-exchange-alt" style="margin-right: 0.5rem;"></i>Transfer Committee
+                    </h1>
+                    
+                    <div style="background: var(--bg-primary); border-radius: 12px; box-shadow: 0 2px 8px var(--shadow); overflow: visible;">
+                        <div style="overflow-x: auto;">
+                            <table class="w-full text-sm">
+                                <thead style="background: var(--primary-color); color: white;">
+                                    <tr>
+                                        <th class="text-center px-2 py-3">Pos</th>
+                                        <th class="text-left px-3 py-3">Player</th>
+                                        <th class="text-center px-2 py-3">Team</th>
+                                        <th class="text-center px-2 py-3">Price</th>
+                                        <th class="text-center px-2 py-3">Diff</th>
+                                        <th class="text-center px-2 py-3">Form</th>
+                                        <th class="text-center px-2 py-3">PPM</th>
+                                        <th class="text-center px-2 py-3">xGI/xGC</th>
+                                        <th class="text-center px-2 py-3">DefCon/90</th>
+                                        <th class="text-center px-2 py-3">Own%</th>
+                                        <th class="text-center px-2 py-3">Net Δ</th>
+                                        <th class="text-center px-2 py-3">GW12</th>
+                                        <th class="text-center px-2 py-3">GW13</th>
+                                        <th class="text-center px-2 py-3">GW14</th>
+                                        <th class="text-center px-2 py-3">GW15</th>
+                                        <th class="text-center px-2 py-3">GW16</th>
+                                        <th class="text-center px-2 py-3"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+            `;
+            
+            problemPlayers.forEach((player, idx) => {
+                const replacements = findReplacements(player, myTeamData, githubData);
+                const risks = analyzePlayerRisks(player);
+                const icon = getRiskIndicatorIcon(risks);
+                
+                // Render problem player row
+                html += renderProblemPlayerRow(player, risks, icon, idx);
+                
+                // Render replacement rows (hidden by default)
+                replacements.forEach((rep, repIdx) => {
+                    html += renderReplacementRowInline(rep, player, idx, repIdx);
+                });
+            });
+            
+            html += `
+                            </tbody>
+                        </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            container.innerHTML = html;
+            console.log('   ✅ Transfer Committee rendered');
+        }
+
+        function renderProblemPlayerRow(player, risks, icon, idx) {
+            const form = parseFloat(player.form || 0);
+            const ppm = player.now_cost > 0 ? (player.total_points / player.now_cost) : 0;
+            const ownership = parseFloat(player.selected_by_percent || 0);
+            
+            // Net Transfers
+            const transfersIn = parseFloat(player.transfers_in_event || 0);
+            const transfersOut = parseFloat(player.transfers_out_event || 0);
+            const netTransfers = transfersIn - transfersOut;
+            const netTransfersStr = netTransfers >= 0 ? `+${(netTransfers / 1000).toFixed(0)}k` : `${(netTransfers / 1000).toFixed(0)}k`;
+            
+            // Position-aware stats
+            const posType = getPositionType(player);
+            let xgiXgc = '-';
+            let defCon = '-';
+            
+            if (posType === 'GKP') {
+                // GKP: xGC only, no DefCon
+                const xgc = parseFloat(player.expected_goals_conceded || 0);
+                xgiXgc = xgc.toFixed(2);
+                defCon = '-';
+            } else if (posType === 'DEF') {
+                // DEF: xGC + DefCon
+                const xgc = parseFloat(player.expected_goals_conceded || 0);
+                xgiXgc = xgc.toFixed(2);
+                const defCon90 = parseFloat(player.defensive_contribution_per_90 || 0);
+                defCon = defCon90 > 0 ? defCon90.toFixed(1) : '-';
+            } else {
+                // MID/FWD: xGI + DefCon
+                const xgi = parseFloat(player.expected_goal_involvements || 0);
+                xgiXgc = xgi.toFixed(2);
+                const defCon90 = parseFloat(player.defensive_contribution_per_90 || 0);
+                defCon = defCon90 > 0 ? defCon90.toFixed(1) : '-';
+            }
+            
+            // Get next 5 fixtures
+            const next5Fixtures = getFixtures(player.team_code, 5, false);
+            
+            const formClass = getFormHeatmap(form);
+            
+            const rowBg = idx % 2 === 0 ? 'var(--bg-secondary)' : 'var(--bg-primary)';
+            const riskTooltip = renderRiskTooltip(risks);
+            
+            return `
+                <tr style="background: ${rowBg};">
+                    <td class="px-2 py-3 text-center" style="color: var(--text-secondary); font-weight: 600;">${posType}</td>
+                    <td class="px-3 py-3 font-semibold" style="color: var(--primary-color);">
+                        ${player.web_name}${riskTooltip}
+                    </td>
+                    <td class="px-2 py-3 text-center" style="color: var(--text-primary);">${player.team_short_name || 'UNK'}</td>
+                    <td class="px-2 py-3 text-center" style="color: var(--text-primary);">£${player.now_cost.toFixed(1)}m</td>
+                    <td class="px-2 py-3 text-center" style="color: var(--text-tertiary);">±£0.0</td>
+                    <td class="px-2 py-3 text-center ${formClass}">${form.toFixed(1)}</td>
+                    <td class="px-2 py-3 text-center" style="color: var(--text-primary);">${ppm.toFixed(2)}</td>
+                    <td class="px-2 py-3 text-center" style="color: var(--text-primary);">${xgiXgc}</td>
+                    <td class="px-2 py-3 text-center" style="color: var(--text-primary);">${defCon}</td>
+                    <td class="px-2 py-3 text-center" style="color: var(--text-primary);">${ownership.toFixed(1)}%</td>
+                    <td class="px-2 py-3 text-center" style="color: ${netTransfers >= 0 ? '#10b981' : '#ef4444'}; font-weight: 600;">${netTransfersStr}</td>
+                    <td class="px-2 py-3 text-center" style="white-space: nowrap;">
+                        ${next5Fixtures[0] ? `<span class="px-2 py-1 rounded text-xs font-semibold ${getDifficultyClass(next5Fixtures[0].difficulty)}">${next5Fixtures[0].opponent}</span>` : '-'}
+                    </td>
+                    <td class="px-2 py-3 text-center" style="white-space: nowrap;">
+                        ${next5Fixtures[1] ? `<span class="px-2 py-1 rounded text-xs font-semibold ${getDifficultyClass(next5Fixtures[1].difficulty)}">${next5Fixtures[1].opponent}</span>` : '-'}
+                    </td>
+                    <td class="px-2 py-3 text-center" style="white-space: nowrap;">
+                        ${next5Fixtures[2] ? `<span class="px-2 py-1 rounded text-xs font-semibold ${getDifficultyClass(next5Fixtures[2].difficulty)}">${next5Fixtures[2].opponent}</span>` : '-'}
+                    </td>
+                    <td class="px-2 py-3 text-center" style="white-space: nowrap;">
+                        ${next5Fixtures[3] ? `<span class="px-2 py-1 rounded text-xs font-semibold ${getDifficultyClass(next5Fixtures[3].difficulty)}">${next5Fixtures[3].opponent}</span>` : '-'}
+                    </td>
+                    <td class="px-2 py-3 text-center" style="white-space: nowrap;">
+                        ${next5Fixtures[4] ? `<span class="px-2 py-1 rounded text-xs font-semibold ${getDifficultyClass(next5Fixtures[4].difficulty)}">${next5Fixtures[4].opponent}</span>` : '-'}
+                    </td>
+                    <td class="px-2 py-3 text-center">
+                        <button onclick="toggleReplacements(${idx})" style="background: none; border: none; cursor: pointer; color: var(--primary-color); font-size: 1rem;">
+                            <i id="expand-icon-${idx}" class="fas fa-chevron-down"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }
+
+        function renderReplacementRowInline(rep, originalPlayer, problemIdx, repIdx) {
+            const player = rep.player;
+            const form = parseFloat(player.form || 0);
+            const ppm = player.now_cost > 0 ? (player.total_points / player.now_cost) : 0;
+            const ownership = parseFloat(player.selected_by_percent || 0);
+            
+            // Net Transfers
+            const transfersIn = parseFloat(player.transfers_in_event || 0);
+            const transfersOut = parseFloat(player.transfers_out_event || 0);
+            const netTransfers = transfersIn - transfersOut;
+            const netTransfersStr = netTransfers >= 0 ? `+${(netTransfers / 1000).toFixed(0)}k` : `${(netTransfers / 1000).toFixed(0)}k`;
+            
+            // Position-aware stats
+            const posType = getPositionType(player);
+            let xgiXgc = '-';
+            let defCon = '-';
+            
+            if (posType === 'GKP') {
+                // GKP: xGC only, no DefCon
+                const xgc = parseFloat(player.expected_goals_conceded || 0);
+                xgiXgc = xgc.toFixed(2);
+                defCon = '-';
+            } else if (posType === 'DEF') {
+                // DEF: xGC + DefCon
+                const xgc = parseFloat(player.expected_goals_conceded || 0);
+                xgiXgc = xgc.toFixed(2);
+                const defCon90 = parseFloat(player.defensive_contribution_per_90 || 0);
+                defCon = defCon90 > 0 ? defCon90.toFixed(1) : '-';
+            } else {
+                // MID/FWD: xGI + DefCon
+                const xgi = parseFloat(player.expected_goal_involvements || 0);
+                xgiXgc = xgi.toFixed(2);
+                const defCon90 = parseFloat(player.defensive_contribution_per_90 || 0);
+                defCon = defCon90 > 0 ? defCon90.toFixed(1) : '-';
+            }
+            
+            // Get next 5 fixtures
+            const next5Fixtures = getFixtures(player.team_code, 5, false);
+            
+            const formClass = getFormHeatmap(form);
+            
+            const diffColor = rep.priceDiff >= 0 ? '#ef4444' : '#10b981';
+            const diffSign = rep.priceDiff >= 0 ? '+' : '';
+            
+            // DARKER GREY BACKGROUND FOR RECOMMENDATIONS
+            const rowBg = 'rgba(229, 231, 235, 0.8)'; // Darker grey (gray-200 at 80% opacity)
+            
+            return `
+                <tr id="rep-${problemIdx}-${repIdx}" class="replacement-row" data-problem="${problemIdx}" style="display: none; background: ${rowBg};">
+                    <td class="px-2 py-3 text-center" style="color: var(--text-secondary); font-weight: 600;">${posType}</td>
+                    <td class="px-3 py-3" style="color: var(--text-primary); padding-left: 2rem;">
+                        <span style="color: var(--text-tertiary); font-size: 0.875rem; margin-right: 0.5rem;">${repIdx + 1}.</span>
+                        ${player.web_name}
+                    </td>
+                    <td class="px-2 py-3 text-center" style="color: var(--text-primary);">${player.team_short_name || 'UNK'}</td>
+                    <td class="px-2 py-3 text-center" style="color: var(--text-primary);">£${player.now_cost.toFixed(1)}m</td>
+                    <td class="px-2 py-3 text-center" style="color: ${diffColor}; font-weight: 600;">${diffSign}£${Math.abs(rep.priceDiff).toFixed(1)}</td>
+                    <td class="px-2 py-3 text-center ${formClass}">${form.toFixed(1)}</td>
+                    <td class="px-2 py-3 text-center" style="color: var(--text-primary);">${ppm.toFixed(2)}</td>
+                    <td class="px-2 py-3 text-center" style="color: var(--text-primary);">${xgiXgc}</td>
+                    <td class="px-2 py-3 text-center" style="color: var(--text-primary);">${defCon}</td>
+                    <td class="px-2 py-3 text-center" style="color: var(--text-primary);">${ownership.toFixed(1)}%</td>
+                    <td class="px-2 py-3 text-center" style="color: ${netTransfers >= 0 ? '#10b981' : '#ef4444'}; font-weight: 600;">${netTransfersStr}</td>
+                    <td class="px-2 py-3 text-center" style="white-space: nowrap;">
+                        ${next5Fixtures[0] ? `<span class="px-2 py-1 rounded text-xs font-semibold ${getDifficultyClass(next5Fixtures[0].difficulty)}">${next5Fixtures[0].opponent}</span>` : '-'}
+                    </td>
+                    <td class="px-2 py-3 text-center" style="white-space: nowrap;">
+                        ${next5Fixtures[1] ? `<span class="px-2 py-1 rounded text-xs font-semibold ${getDifficultyClass(next5Fixtures[1].difficulty)}">${next5Fixtures[1].opponent}</span>` : '-'}
+                    </td>
+                    <td class="px-2 py-3 text-center" style="white-space: nowrap;">
+                        ${next5Fixtures[2] ? `<span class="px-2 py-1 rounded text-xs font-semibold ${getDifficultyClass(next5Fixtures[2].difficulty)}">${next5Fixtures[2].opponent}</span>` : '-'}
+                    </td>
+                    <td class="px-2 py-3 text-center" style="white-space: nowrap;">
+                        ${next5Fixtures[3] ? `<span class="px-2 py-1 rounded text-xs font-semibold ${getDifficultyClass(next5Fixtures[3].difficulty)}">${next5Fixtures[3].opponent}</span>` : '-'}
+                    </td>
+                    <td class="px-2 py-3 text-center" style="white-space: nowrap;">
+                        ${next5Fixtures[4] ? `<span class="px-2 py-1 rounded text-xs font-semibold ${getDifficultyClass(next5Fixtures[4].difficulty)}">${next5Fixtures[4].opponent}</span>` : '-'}
+                    </td>
+                    <td class="px-2 py-3 text-center"></td>
+                </tr>
+            `;
+        }
+
+        function toggleReplacements(idx) {
+            const rows = document.querySelectorAll(`.replacement-row[data-problem="${idx}"]`);
+            const icon = document.getElementById(`expand-icon-${idx}`);
+            
+            // Safety check - if no rows, do nothing
+            if (rows.length === 0) {
+                console.log(`   ⚠️ No replacement rows found for problem ${idx}`);
+                return;
+            }
+            
+            const isHidden = rows[0].style.display === 'none';
+            rows.forEach(row => {
+                row.style.display = isHidden ? 'table-row' : 'none';
+            });
+            
+            if (icon) {
+                icon.classList.toggle('fa-chevron-down', !isHidden);
+                icon.classList.toggle('fa-chevron-up', isHidden);
+            }
+        }
+
+        function getAdaptivePPMHeatmap(ppm) {
+            // Better scaling: 0-1.5 red, 1.5-2.0 yellow, 2.0-2.5 light green, 2.5+ dark green
+            if (ppm < 1.5) return 'heat-red';
+            if (ppm < 2.0) return 'heat-yellow';
+            if (ppm < 2.5) return 'heat-light-green';
+            return 'heat-dark-green';
+        }
+
+        function getFDRHeatmap(fdr) {
+            if (fdr < 2.5) return 'heat-dark-green';
+            if (fdr < 3.0) return 'heat-light-green';
+            if (fdr < 3.5) return 'heat-yellow';
+            return 'heat-red';
+        }
+
+        function getXGIHeatmap(xgi) {
+            // xGI heatmap for MID/FWD: <0.2 red, 0.2-0.4 yellow, 0.4-0.6 light green, 0.6+ dark green
+            if (xgi < 0.2) return 'heat-red';
+            if (xgi < 0.4) return 'heat-yellow';
+            if (xgi < 0.6) return 'heat-light-green';
+            return 'heat-dark-green';
+        }
+
+        function getXGCHeatmap(xgc) {
+            // xGC heatmap for DEF/GKP (inverted - lower is better): <0.8 dark green, 0.8-1.0 light green, 1.0-1.2 yellow, 1.2+ red
+            if (xgc < 0.8) return 'heat-dark-green';
+            if (xgc < 1.0) return 'heat-light-green';
+            if (xgc < 1.2) return 'heat-yellow';
+            return 'heat-red';
+        }
+
+        function getDefConHeatmap(defCon) {
+            // DefCon/90 heatmap: <2.0 red, 2.0-3.0 yellow, 3.0-4.0 light green, 4.0+ dark green
+            if (defCon === '-' || defCon < 2.0) return '';
+            if (defCon < 3.0) return 'heat-yellow';
+            if (defCon < 4.0) return 'heat-light-green';
+            return 'heat-dark-green';
+        }
+
+        function findReplacements(problemPlayer, teamData, allPlayers) {
+            console.log(`   🔍 Finding replacements for ${problemPlayer.web_name}...`);
+            
+            const maxBudget = problemPlayer.now_cost + teamData.bank;
+            
+            // Map position to element_type if undefined
+            let targetPosition = problemPlayer.element_type;
+            if (!targetPosition) {
+                const positionMap = {
+                    'Goalkeeper': 1,
+                    'Defender': 2,
+                    'Midfielder': 3,
+                    'Forward': 4
+                };
+                targetPosition = positionMap[problemPlayer.position] || 0;
+                console.log(`      🔄 Mapped "${problemPlayer.position}" to element_type: ${targetPosition}`);
+            }
+            
+            const myPlayerIds = new Set(teamData.picks.map(p => p.element || p.id));
+            
+            // Filter candidates - MAP EACH CANDIDATE'S POSITION TOO!
+            const candidates = allPlayers.filter(p => {
+                // Get candidate's position (map from string if needed)
+                let candidatePosition = p.element_type;
+                if (!candidatePosition) {
+                    const positionMap = {
+                        'Goalkeeper': 1,
+                        'Defender': 2,
+                        'Midfielder': 3,
+                        'Forward': 4
+                    };
+                    candidatePosition = positionMap[p.position] || 0;
+                }
+                
+                return candidatePosition === targetPosition &&
+                       p.id !== problemPlayer.id &&
+                       p.now_cost <= maxBudget &&
+                       !myPlayerIds.has(p.id);
+            });
+            
+            console.log(`   📊 Found ${candidates.length} candidates for position ${targetPosition}`);
+            
+            // Score each candidate
+            const scored = candidates.map(c => {
+                const score = scoreReplacement(c, problemPlayer);
+                return {
+                    player: c,
+                    score: score,
+                    priceDiff: c.now_cost - problemPlayer.now_cost
+                };
+            });
+            
+            // Sort by score
+            scored.sort((a, b) => b.score - a.score);
+            
+            const top5 = scored.slice(0, 5);
+            console.log(`   ⭐ Top 5 replacements:`, top5.map(r => `${r.player.web_name} (${r.score.toFixed(0)})`));
+            
+            return top5;
+        }
+
+        function scoreReplacement(candidate, problemPlayer) {
+            let score = 0;
+            
+            // 1. Form (0-30 points)
+            const form = parseFloat(candidate.form || 0);
+            score += Math.min(30, form * 5);
+            
+            // 2. Fixture Difficulty (0-25 points)
+            const avgFDR = calculateAvgFixtureDifficulty(candidate);
+            score += Math.max(0, (5 - avgFDR) * 5); // Inverted: lower FDR = higher score
+            
+            // 3. Points Per Million (0-20 points)
+            const ppm = candidate.now_cost > 0 ? candidate.total_points / candidate.now_cost : 0;
+            score += Math.min(20, ppm * 10);
+            
+            // 4. Minutes Played (0-15 points)
+            const minutesPct = currentGW > 0 ? (candidate.minutes / (currentGW * 90)) * 100 : 0;
+            score += Math.min(15, minutesPct / 6.67);
+            
+            // 5. Transfer Trends (0-10 points) - if available
+            const netTransfers = (candidate.transfers_in_event || 0) - (candidate.transfers_out_event || 0);
+            score += Math.min(10, Math.max(0, netTransfers / 10000));
+            
+            return score;
+        }
+
+        function calculateAvgFixtureDifficulty(player) {
+            const fixtures = getFixtures(player.team_code, 5, false);
+            if (fixtures.length === 0) return 3;
+            
+            const avgDiff = fixtures.reduce((sum, f) => sum + f.difficulty, 0) / fixtures.length;
+            return avgDiff;
+        }
+
+        function getStarRating(score) {
+            if (score >= 80) return '★★★★★';
+            if (score >= 70) return '★★★★☆';
+            if (score >= 60) return '★★★☆☆';
+            if (score >= 50) return '★★☆☆☆';
+            return '★☆☆☆☆';
+        }
+
+        function toggleExpand(id) {
+            const element = document.getElementById(id);
+            const icon = document.getElementById(`${id}-icon`);
+            
+            if (element.style.display === 'none') {
+                element.style.display = 'block';
+                icon.classList.remove('fa-chevron-down');
+                icon.classList.add('fa-chevron-up');
+            } else {
+                element.style.display = 'none';
+                icon.classList.remove('fa-chevron-up');
+                icon.classList.add('fa-chevron-down');
+            }
+        }
+
+        // ==================
+        // END TRANSFER SUGGESTIONS
+        // ==================
+
+        async function loadTeam(teamId) {
+            const container = document.getElementById('app-container');
+            container.innerHTML = renderLoadingState();
+            
+            try {
+                myTeamData = await fetchMyTeam(teamId);
+                currentTeamId = teamId;
+                renderMyTeam();
+            } catch (error) {
+                container.innerHTML = `
+                    <div class="max-w-xl mx-auto mt-10 p-8 bg-white rounded-xl shadow-2xl border-t-4 border-fpl-danger text-center">
+                        <i class="fas fa-exclamation-triangle text-6xl text-fpl-danger mb-4"></i>
+                        <h1 class="text-2xl font-bold text-fpl-danger mb-4">Error Loading Team</h1>
+                        <p class="text-gray-700 mb-6">${error.message === 'Team not found' ? 'Team ID not found. Please check the ID and try again.' : 'Unable to load team data. Please try again.'}</p>
+                        <button onclick="navigate('my-team'); currentTeamId = null; myTeamData = null;" class="px-6 py-3 bg-fpl-purple text-white font-bold rounded-lg shadow-md hover:bg-fpl-dark transition-colors">
+                            <i class="fas fa-redo mr-2"></i>Try Again
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        // ==================
+        // ROUTING
+        // ==================
+
+        const routes = {
+            'my-team': renderMyTeam,
+            'analysis': renderAnalysisOverview,
+            'differentials': renderDifferentials,
+            'suggestions': renderTransferSuggestions,
+        };
+
+        function navigate(route) {
+            currentRoute = route;
+            window.location.hash = route;
+            renderPage();
+        }
+
+        function renderPage() {
+            // Update active navigation
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('bg-fpl-accent', 'text-fpl-purple');
+                link.classList.add('text-white', 'hover:bg-fpl-accent', 'hover:text-fpl-purple');
+            });
+            
+            const activeLink = document.getElementById(`nav-${currentRoute}`);
+            if (activeLink) {
+                activeLink.classList.add('bg-fpl-accent', 'text-fpl-purple');
+                activeLink.classList.remove('text-white', 'hover:bg-fpl-accent', 'hover:text-fpl-purple');
+            }
+
+            // Render content
+            const renderer = routes[currentRoute];
+            if (renderer) {
+                renderer();
+            } else {
+                renderNotFound();
+            }
+        }
+
+        // ==================
+        // INITIALIZATION
+        // ==================
+
+        window.addEventListener('hashchange', () => {
+            currentRoute = window.location.hash.substring(1) || 'analysis';
+            renderPage();
+        });
+
+        window.onload = async () => {
+            console.log('🚀 Page loaded, initializing...');
+            
+            // Initialize theme
+            initTheme();
+            
+            // Set initial route
+            if (!window.location.hash) {
+                window.location.hash = '#analysis';
+            }
+            currentRoute = window.location.hash.substring(1) || 'analysis';
+            
+            // Load data and render
+            await loadAllData();
+        };
+
+    </script>
+</body>
+</html>
