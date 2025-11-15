@@ -45,6 +45,19 @@ let analysisState = {
     momentumFilter: false
 };
 
+// Export functions to update state
+export function updateOwnershipThreshold(value) {
+    analysisState.ownershipThreshold = parseInt(value);
+}
+
+export function setFixtureFilter(checked) {
+    analysisState.fixtureFilter = checked;
+}
+
+export function setMomentumFilter(checked) {
+    analysisState.momentumFilter = checked;
+}
+
 export function renderDataAnalysis(subTab = 'overview', position = 'all') {
     const container = document.getElementById('app-container');
     analysisState.position = position;
@@ -482,8 +495,8 @@ function renderPositionSpecificTable(players, position = 'all') {
         // Check if player is in my team
         const isMyPlayer = myPlayerIds.has(player.id);
 
-        // Highlight my players with soft purple background
-        const rowBg = isMyPlayer ? 'rgba(137, 80, 252, 0.08)' : (index % 2 === 0 ? 'var(--bg-secondary)' : 'var(--bg-primary)');
+        // Highlight my players with soft purple background (more visible now)
+        const rowBg = isMyPlayer ? 'rgba(139, 92, 246, 0.15)' : (index % 2 === 0 ? 'var(--bg-secondary)' : 'var(--bg-primary)');
 
         // Calculate common metrics
         const ppm = calculatePPM(player);
@@ -523,7 +536,7 @@ function renderPositionSpecificTable(players, position = 'all') {
             const cs = player.clean_sheets || 0;
 
             html += `
-                <td style="padding: 0.75rem 0.5rem;"><strong>${escapeHtml(player.web_name)}</strong></td>
+                <td style="padding: 0.75rem 0.5rem;"><strong>${escapeHtml(player.web_name)}</strong>${isMyPlayer ? ' <span style="color: #8b5cf6; font-size: 0.75rem;">⭐</span>' : ''}</td>
                 <td style="padding: 0.75rem 0.5rem;">${getTeamShortName(player.team)}</td>
                 <td style="padding: 0.75rem 0.5rem; text-align: center;">${formatCurrency(player.now_cost)}</td>
                 <td style="padding: 0.75rem 0.5rem; text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 600;">${player.total_points}</td>
@@ -545,7 +558,7 @@ function renderPositionSpecificTable(players, position = 'all') {
             const ga = (player.goals_scored || 0) + (player.assists || 0);
 
             html += `
-                <td style="padding: 0.75rem 0.5rem;"><strong>${escapeHtml(player.web_name)}</strong></td>
+                <td style="padding: 0.75rem 0.5rem;"><strong>${escapeHtml(player.web_name)}</strong>${isMyPlayer ? ' <span style="color: #8b5cf6; font-size: 0.75rem;">⭐</span>' : ''}</td>
                 <td style="padding: 0.75rem 0.5rem;">${getTeamShortName(player.team)}</td>
                 <td style="padding: 0.75rem 0.5rem; text-align: center;">${formatCurrency(player.now_cost)}</td>
                 <td style="padding: 0.75rem 0.5rem; text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 600;">${player.total_points}</td>
@@ -568,7 +581,7 @@ function renderPositionSpecificTable(players, position = 'all') {
             const pk = player.penalties_order === 1 ? '⚽' : '—';
 
             html += `
-                <td style="padding: 0.75rem 0.5rem;"><strong>${escapeHtml(player.web_name)}</strong></td>
+                <td style="padding: 0.75rem 0.5rem;"><strong>${escapeHtml(player.web_name)}</strong>${isMyPlayer ? ' <span style="color: #8b5cf6; font-size: 0.75rem;">⭐</span>' : ''}</td>
                 <td style="padding: 0.75rem 0.5rem;">${getTeamShortName(player.team)}</td>
                 <td style="padding: 0.75rem 0.5rem; text-align: center;">${formatCurrency(player.now_cost)}</td>
                 <td style="padding: 0.75rem 0.5rem; text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 600;">${player.total_points}</td>
@@ -588,7 +601,7 @@ function renderPositionSpecificTable(players, position = 'all') {
             // ALL positions - simplified view
             html += `
                 <td style="padding: 0.75rem 0.5rem; font-weight: 600;">${getPositionShort(player)}</td>
-                <td style="padding: 0.75rem 0.5rem;"><strong>${escapeHtml(player.web_name)}</strong></td>
+                <td style="padding: 0.75rem 0.5rem;"><strong>${escapeHtml(player.web_name)}</strong>${isMyPlayer ? ' <span style="color: #8b5cf6; font-size: 0.75rem;">⭐</span>' : ''}</td>
                 <td style="padding: 0.75rem 0.5rem;">${getTeamShortName(player.team)}</td>
                 <td style="padding: 0.75rem 0.5rem; text-align: center;">${formatCurrency(player.now_cost)}</td>
                 <td style="padding: 0.75rem 0.5rem; text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 600;">${player.total_points}</td>

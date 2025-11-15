@@ -6,6 +6,11 @@
 import './styles.css';
 import { loadFPLData, loadMyTeam, refreshData, currentGW } from './data.js';
 import { escapeHtml } from './utils.js';
+import {
+    updateOwnershipThreshold as updateAnalysisOwnership,
+    setFixtureFilter,
+    setMomentumFilter
+} from './renderDataAnalysis.js';
 
 // ============================================================================
 // STATE MANAGEMENT
@@ -458,13 +463,17 @@ window.switchAnalysisTab = (tab, position = 'all') => {
  */
 window.updateOwnershipThreshold = (value) => {
     document.getElementById('ownership-value').textContent = `${value}%`;
+
+    // Update state in renderDataAnalysis module
+    updateAnalysisOwnership(value);
+
     // Get current hash
     const hash = window.location.hash.slice(1);
     const parts = hash.split('/');
     const tab = parts[1] || 'differentials';
     const position = parts[2] || 'all';
 
-    // Re-render with new ownership value
+    // Re-render with updated state
     setTimeout(() => {
         window.renderDataAnalysis(tab, position);
     }, 100);
@@ -474,6 +483,9 @@ window.updateOwnershipThreshold = (value) => {
  * Toggle fixture quality filter
  */
 window.toggleFixtureFilter = (checked) => {
+    // Update state in renderDataAnalysis module
+    setFixtureFilter(checked);
+
     // Re-render differentials
     const hash = window.location.hash.slice(1);
     const parts = hash.split('/');
@@ -487,6 +499,9 @@ window.toggleFixtureFilter = (checked) => {
  * Toggle momentum filter
  */
 window.toggleMomentumFilter = (checked) => {
+    // Update state in renderDataAnalysis module
+    setMomentumFilter(checked);
+
     // Re-render differentials
     const hash = window.location.hash.slice(1);
     const parts = hash.split('/');

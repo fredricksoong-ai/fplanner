@@ -65,7 +65,7 @@ export async function renderCharts() {
                     💰 Points vs Price
                 </h2>
                 <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.875rem;">
-                    Find value picks and premium performers. Bubble size = ownership %, Your team = ⭐
+                    Find value picks and premium performers. Bubble size = ownership %, Your team = ⭐ (star shape with purple border)
                 </p>
 
                 <!-- Chart Container -->
@@ -157,6 +157,10 @@ async function renderPointsPriceChart() {
         players = players.filter(p => p.element_type === posMap[currentPositionFilter]);
     }
 
+    // Filter out very low-point players (less than 10 points)
+    // This removes bench fodder and makes the chart cleaner
+    players = players.filter(p => (p.total_points || 0) >= 10);
+
     // Get user's team player IDs
     let myTeamPlayerIds = new Set();
     const cachedTeamId = localStorage.getItem('fplanner_team_id');
@@ -206,17 +210,26 @@ async function renderPointsPriceChart() {
         name: positions[pos].name,
         type: 'scatter',
         symbolSize: (data) => {
-            // Size based on ownership, min 8, max 40
+            // Improved ownership-based sizing using square root for better differentiation
+            // Low ownership (1%) = size ~6, High ownership (50%) = size ~42
             const ownership = data[2];
-            const size = Math.max(8, Math.min(40, ownership * 2));
+            const size = Math.max(6, Math.min(50, Math.sqrt(ownership) * 6));
             return size;
         },
+        symbol: (value, params) => {
+            // Use star symbol for my team players
+            return params.data.isMyPlayer ? 'star' : 'circle';
+        },
         itemStyle: {
-            color: (params) => {
-                // Highlight my team players with purple star
-                return params.data.isMyPlayer ? '#8b5cf6' : positions[pos].color;
+            color: positions[pos].color, // Keep position color for legend consistency
+            opacity: 0.7,
+            borderColor: (params) => {
+                // Add purple border for my team players
+                return params.data.isMyPlayer ? '#8b5cf6' : 'transparent';
             },
-            opacity: 0.7
+            borderWidth: (params) => {
+                return params.data.isMyPlayer ? 3 : 0;
+            }
         },
         emphasis: {
             itemStyle: {
@@ -256,16 +269,25 @@ async function renderPointsPriceChart() {
                 const ownership = data.value[2];
                 const ppm = data.ppm;
                 const myTeamBadge = data.isMyPlayer ? ' ⭐' : '';
+                const position = getPositionShort(player);
+
+                // Get DefCon for non-GKP players
+                let defConLine = '';
+                if (position !== 'GKP' && player.github_season?.defensive_contribution_per_90) {
+                    const defCon = player.github_season.defensive_contribution_per_90;
+                    defConLine = `Def Con/90: ${defCon.toFixed(1)}<br/>`;
+                }
 
                 return `
                     <div style="padding: 4px;">
                         <strong>${escapeHtml(data.name)}${myTeamBadge}</strong><br/>
-                        Position: ${getPositionShort(player)}<br/>
+                        Position: ${position}<br/>
                         Price: £${price.toFixed(1)}m<br/>
                         Points: ${points}<br/>
                         PPM: ${ppm.toFixed(1)}<br/>
                         Ownership: ${ownership.toFixed(1)}%<br/>
-                        Form: ${player.form || 0}
+                        Form: ${player.form || 0}<br/>
+                        ${defConLine}
                     </div>
                 `;
             }
@@ -279,9 +301,9 @@ async function renderPointsPriceChart() {
             left: 'center'
         },
         grid: {
-            left: '3%',
-            right: '4%',
-            bottom: '3%',
+            left: '8%',
+            right: '5%',
+            bottom: '12%',
             top: '15%',
             containLabel: true
         },
