@@ -601,17 +601,6 @@ function renderTeamRows(players, gameweek, next3GWs) {
     return html;
 }
 
-/**
- * Get FDR difficulty class
- */
-function getFDRClass(fdr) {
-    if (fdr <= 2) return 'fdr-1';
-    if (fdr <= 2.5) return 'fdr-2';
-    if (fdr <= 3.5) return 'fdr-3';
-    if (fdr <= 4) return 'fdr-4';
-    return 'fdr-5';
-}
-
 // ============================================================================
 // TRANSFER COMMITTEE PAGE
 // ============================================================================
