@@ -12,6 +12,7 @@ import {
     formatPercent,
     getCurrentGW
 } from './utils.js';
+import { calculateFixtureDifficulty } from './fixtures.js';
 
 // ============================================================================
 // STATE
@@ -853,7 +854,292 @@ async function renderMinutesEfficiencyChart() {
         chartId: 'minutes-efficiency-chart'
     });
 
-    contentContainer.innerHTML += '<div style="text-align: center; padding: 4rem; color: var(--text-secondary);"><i class="fas fa-spinner fa-spin" style="font-size: 2rem;"></i><br/><br/>Chart coming soon!</div>';
+    // Wait for DOM to update
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    const chartContainer = document.getElementById('minutes-efficiency-chart');
+    if (!chartContainer) {
+        console.error('Minutes-efficiency-chart container not found');
+        return;
+    }
+
+    // Dispose previous chart instance
+    if (currentChart) {
+        currentChart.dispose();
+    }
+
+    // Define theme colors FIRST before any closures to avoid hoisting issues
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const textColor = isDark ? '#e5e7eb' : '#374151';
+    const gridColor = isDark ? '#374151' : '#e5e7eb';
+
+    // Get data
+    let players = getAllPlayers();
+
+    // Apply position filter
+    if (currentPositionFilter !== 'all') {
+        players = players.filter(p => getPositionShort(p) === currentPositionFilter);
+    }
+
+    // Calculate minutes % and points per 90, filter out players with insufficient data
+    const chartData = players
+        .filter(p => p.minutes > 90) // At least 90 minutes played
+        .map(p => {
+            const maxMinutes = 38 * 90; // 38 gameweeks * 90 minutes
+            const minutesPercent = (p.minutes / maxMinutes) * 100;
+            const pointsPer90 = p.minutes > 0 ? (p.total_points / p.minutes) * 90 : 0;
+            const ownership = parseFloat(p.selected_by_percent) || 0;
+
+            return {
+                name: p.web_name,
+                value: [minutesPercent, pointsPer90, ownership],
+                playerData: p,
+                isMyPlayer: window.myTeamPlayerIds?.includes(p.id) || false,
+                pointsPer90: pointsPer90
+            };
+        })
+        .filter(d => d.value[0] > 0 && d.value[1] > 0); // Valid data points
+
+    // Group by position
+    const positionColors = {
+        'GKP': '#fbbf24',
+        'DEF': '#10b981',
+        'MID': '#3b82f6',
+        'FWD': '#ef4444'
+    };
+
+    const seriesByPosition = {};
+    chartData.forEach(player => {
+        const position = getPositionShort(player.playerData);
+        if (!seriesByPosition[position]) {
+            seriesByPosition[position] = [];
+        }
+        seriesByPosition[position].push(player);
+    });
+
+    const series = Object.entries(seriesByPosition).map(([position, data]) => ({
+        name: position,
+        type: 'scatter',
+        symbolSize: (data) => {
+            const ownership = data[2];
+            return Math.max(8, Math.min(60, ownership * 3));
+        },
+        emphasis: {
+            focus: 'series',
+            label: {
+                show: true,
+                formatter: (param) => param.data.name,
+                position: 'top'
+            }
+        },
+        itemStyle: {
+            color: positionColors[position],
+            opacity: 0.7,
+            borderColor: (params) => {
+                return params.data.isMyPlayer ? '#fff' : positionColors[position];
+            },
+            borderWidth: (params) => params.data.isMyPlayer ? 3 : 1
+        },
+        data: data,
+        markArea: position === 'GKP' ? {
+            silent: true,
+            itemStyle: {
+                color: 'transparent'
+            },
+            data: [
+                [
+                    {
+                        name: 'Nailed Performers',
+                        xAxis: 70,
+                        yAxis: 4.5,
+                        itemStyle: { color: 'rgba(16, 185, 129, 0.1)' }
+                    },
+                    {
+                        xAxis: 100,
+                        yAxis: 'max'
+                    }
+                ],
+                [
+                    {
+                        name: 'Rotation Risk',
+                        xAxis: 0,
+                        yAxis: 0,
+                        itemStyle: { color: 'rgba(251, 191, 36, 0.1)' }
+                    },
+                    {
+                        xAxis: 50,
+                        yAxis: 'max'
+                    }
+                ],
+                [
+                    {
+                        name: 'Bench Fodder',
+                        xAxis: 0,
+                        yAxis: 0,
+                        itemStyle: { color: 'rgba(239, 68, 68, 0.1)' }
+                    },
+                    {
+                        xAxis: 50,
+                        yAxis: 3.5
+                    }
+                ]
+            ]
+        } : undefined
+    }));
+
+    // Initialize chart
+    currentChart = echarts.init(chartContainer);
+    if (!currentChart) {
+        console.error('Failed to initialize chart');
+        return;
+    }
+
+    const option = {
+        backgroundColor: 'transparent',
+        textStyle: {
+            color: textColor
+        },
+        tooltip: {
+            trigger: 'item',
+            backgroundColor: isDark ? '#1f2937' : '#ffffff',
+            borderColor: isDark ? '#374151' : '#e5e7eb',
+            textStyle: {
+                color: textColor
+            },
+            formatter: (params) => {
+                const data = params.data;
+                const player = data.playerData;
+                const minutesPercent = data.value[0];
+                const pointsPer90 = data.value[1];
+                const ownership = data.value[2];
+                const myTeamBadge = data.isMyPlayer ? ' ⭐' : '';
+                const position = getPositionShort(player);
+
+                return `
+                    <div style="padding: 4px;">
+                        <strong>${escapeHtml(data.name)}${myTeamBadge}</strong><br/>
+                        Position: ${position}<br/>
+                        Minutes %: ${minutesPercent.toFixed(1)}%<br/>
+                        Points/90: ${pointsPer90.toFixed(1)}<br/>
+                        Total Points: ${player.total_points}<br/>
+                        Total Minutes: ${player.minutes}<br/>
+                        Ownership: ${ownership.toFixed(1)}%<br/>
+                        Price: £${(player.now_cost / 10).toFixed(1)}m
+                    </div>
+                `;
+            }
+        },
+        legend: {
+            data: ['GKP', 'DEF', 'MID', 'FWD'],
+            top: 10,
+            textStyle: {
+                color: textColor
+            }
+        },
+        grid: {
+            left: '10%',
+            right: '10%',
+            bottom: '15%',
+            top: '15%',
+            containLabel: true
+        },
+        xAxis: {
+            type: 'value',
+            name: 'Minutes Played %',
+            nameLocation: 'middle',
+            nameGap: 30,
+            nameTextStyle: {
+                color: textColor,
+                fontSize: 12
+            },
+            axisLine: {
+                lineStyle: {
+                    color: gridColor
+                }
+            },
+            axisLabel: {
+                color: textColor,
+                formatter: '{value}%'
+            },
+            splitLine: {
+                lineStyle: {
+                    color: gridColor,
+                    opacity: 0.3
+                }
+            },
+            min: 0,
+            max: 100
+        },
+        yAxis: {
+            type: 'value',
+            name: 'Points per 90 Minutes',
+            nameLocation: 'middle',
+            nameGap: 50,
+            nameTextStyle: {
+                color: textColor,
+                fontSize: 12
+            },
+            axisLine: {
+                lineStyle: {
+                    color: gridColor
+                }
+            },
+            axisLabel: {
+                color: textColor,
+                formatter: '{value}'
+            },
+            splitLine: {
+                lineStyle: {
+                    color: gridColor,
+                    opacity: 0.3
+                }
+            },
+            min: 0
+        },
+        series: series
+    };
+
+    currentChart.setOption(option);
+
+    // Handle window resize
+    const resizeObserver = new ResizeObserver(() => {
+        if (currentChart) {
+            currentChart.resize();
+        }
+    });
+    resizeObserver.observe(chartContainer);
+
+    // Export functionality
+    const exportBtn = document.getElementById('export-chart-btn');
+    if (exportBtn) {
+        // Remove any existing listeners
+        const newExportBtn = exportBtn.cloneNode(true);
+        exportBtn.parentNode.replaceChild(newExportBtn, exportBtn);
+
+        newExportBtn.addEventListener('click', () => {
+            if (currentChart) {
+                try {
+                    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                    const url = currentChart.getDataURL({
+                        type: 'png',
+                        pixelRatio: 2,
+                        backgroundColor: isDark ? '#1f2937' : '#ffffff'
+                    });
+
+                    const link = document.createElement('a');
+                    link.download = `fpl-minutes-efficiency-${new Date().toISOString().split('T')[0]}.png`;
+                    link.href = url;
+                    link.click();
+
+                    console.log('Chart exported successfully');
+                } catch (error) {
+                    console.error('Error exporting chart:', error);
+                }
+            }
+        });
+    }
+
+    console.log('Minutes vs Efficiency chart rendered successfully');
 }
 
 // ============================================================================
@@ -876,7 +1162,288 @@ async function renderXgiActualChart() {
         chartId: 'xgi-actual-chart'
     });
 
-    contentContainer.innerHTML += '<div style="text-align: center; padding: 4rem; color: var(--text-secondary);"><i class="fas fa-spinner fa-spin" style="font-size: 2rem;"></i><br/><br/>Chart coming soon!</div>';
+    // Wait for DOM to update
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    const chartContainer = document.getElementById('xgi-actual-chart');
+    if (!chartContainer) {
+        console.error('Xgi-actual-chart container not found');
+        return;
+    }
+
+    // Dispose previous chart instance
+    if (currentChart) {
+        currentChart.dispose();
+    }
+
+    // Define theme colors FIRST before any closures to avoid hoisting issues
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const textColor = isDark ? '#e5e7eb' : '#374151';
+    const gridColor = isDark ? '#374151' : '#e5e7eb';
+
+    // Get data
+    let players = getAllPlayers();
+
+    // Apply position filter (exclude GKP as they don't score/assist)
+    if (currentPositionFilter !== 'all') {
+        players = players.filter(p => getPositionShort(p) === currentPositionFilter);
+    } else {
+        players = players.filter(p => getPositionShort(p) !== 'GKP');
+    }
+
+    // Calculate xGI and actual GI
+    const chartData = players
+        .filter(p => p.minutes > 90) // At least 90 minutes played
+        .map(p => {
+            const expectedGI = (parseFloat(p.expected_goals) || 0) + (parseFloat(p.expected_assists) || 0);
+            const actualGI = (p.goals_scored || 0) + (p.assists || 0);
+            const ownership = parseFloat(p.selected_by_percent) || 0;
+
+            return {
+                name: p.web_name,
+                value: [expectedGI, actualGI, ownership],
+                playerData: p,
+                isMyPlayer: window.myTeamPlayerIds?.includes(p.id) || false,
+                expectedGI: expectedGI,
+                actualGI: actualGI,
+                variance: actualGI - expectedGI
+            };
+        })
+        .filter(d => d.expectedGI > 0 || d.actualGI > 0); // Show players with any attacking involvement
+
+    // Group by position
+    const positionColors = {
+        'DEF': '#10b981',
+        'MID': '#3b82f6',
+        'FWD': '#ef4444'
+    };
+
+    const seriesByPosition = {};
+    chartData.forEach(player => {
+        const position = getPositionShort(player.playerData);
+        if (!seriesByPosition[position]) {
+            seriesByPosition[position] = [];
+        }
+        seriesByPosition[position].push(player);
+    });
+
+    // Calculate max value for diagonal line
+    const maxXGI = Math.max(...chartData.map(d => d.expectedGI), 5);
+    const maxActual = Math.max(...chartData.map(d => d.actualGI), 5);
+    const maxValue = Math.ceil(Math.max(maxXGI, maxActual));
+
+    const series = Object.entries(seriesByPosition).map(([position, data]) => ({
+        name: position,
+        type: 'scatter',
+        symbolSize: (data) => {
+            const ownership = data[2];
+            return Math.max(8, Math.min(60, ownership * 3));
+        },
+        emphasis: {
+            focus: 'series',
+            label: {
+                show: true,
+                formatter: (param) => param.data.name,
+                position: 'top'
+            }
+        },
+        itemStyle: {
+            color: positionColors[position],
+            opacity: 0.7,
+            borderColor: (params) => {
+                return params.data.isMyPlayer ? '#fff' : positionColors[position];
+            },
+            borderWidth: (params) => params.data.isMyPlayer ? 3 : 1
+        },
+        data: data
+    }));
+
+    // Add diagonal line (expected = actual)
+    series.push({
+        name: 'Expected Line',
+        type: 'line',
+        data: [[0, 0], [maxValue, maxValue]],
+        lineStyle: {
+            color: isDark ? '#6b7280' : '#9ca3af',
+            width: 2,
+            type: 'dashed'
+        },
+        symbol: 'none',
+        silent: true,
+        z: 1
+    });
+
+    // Initialize chart
+    currentChart = echarts.init(chartContainer);
+    if (!currentChart) {
+        console.error('Failed to initialize chart');
+        return;
+    }
+
+    const option = {
+        backgroundColor: 'transparent',
+        textStyle: {
+            color: textColor
+        },
+        tooltip: {
+            trigger: 'item',
+            backgroundColor: isDark ? '#1f2937' : '#ffffff',
+            borderColor: isDark ? '#374151' : '#e5e7eb',
+            textStyle: {
+                color: textColor
+            },
+            formatter: (params) => {
+                if (params.seriesName === 'Expected Line') return '';
+
+                const data = params.data;
+                const player = data.playerData;
+                const expectedGI = data.value[0];
+                const actualGI = data.value[1];
+                const ownership = data.value[2];
+                const variance = data.variance;
+                const myTeamBadge = data.isMyPlayer ? ' ⭐' : '';
+                const position = getPositionShort(player);
+
+                let varianceLabel = '';
+                let varianceColor = '';
+                if (variance > 0.5) {
+                    varianceLabel = 'Overperforming';
+                    varianceColor = '#fbbf24';
+                } else if (variance < -0.5) {
+                    varianceLabel = 'Underperforming';
+                    varianceColor = '#10b981';
+                } else {
+                    varianceLabel = 'As Expected';
+                    varianceColor = '#3b82f6';
+                }
+
+                return `
+                    <div style="padding: 4px;">
+                        <strong>${escapeHtml(data.name)}${myTeamBadge}</strong><br/>
+                        Position: ${position}<br/>
+                        Expected GI: ${expectedGI.toFixed(1)}<br/>
+                        Actual GI: ${actualGI}<br/>
+                        Variance: <span style="color: ${varianceColor}">${variance > 0 ? '+' : ''}${variance.toFixed(1)} (${varianceLabel})</span><br/>
+                        Goals: ${player.goals_scored || 0}<br/>
+                        Assists: ${player.assists || 0}<br/>
+                        xG: ${parseFloat(player.expected_goals || 0).toFixed(1)}<br/>
+                        xA: ${parseFloat(player.expected_assists || 0).toFixed(1)}<br/>
+                        Ownership: ${ownership.toFixed(1)}%<br/>
+                        Price: £${(player.now_cost / 10).toFixed(1)}m
+                    </div>
+                `;
+            }
+        },
+        legend: {
+            data: ['DEF', 'MID', 'FWD', 'Expected Line'],
+            top: 10,
+            textStyle: {
+                color: textColor
+            }
+        },
+        grid: {
+            left: '10%',
+            right: '10%',
+            bottom: '15%',
+            top: '15%',
+            containLabel: true
+        },
+        xAxis: {
+            type: 'value',
+            name: 'Expected Goal Involvements (xG + xA)',
+            nameLocation: 'middle',
+            nameGap: 30,
+            nameTextStyle: {
+                color: textColor,
+                fontSize: 12
+            },
+            axisLine: {
+                lineStyle: {
+                    color: gridColor
+                }
+            },
+            axisLabel: {
+                color: textColor
+            },
+            splitLine: {
+                lineStyle: {
+                    color: gridColor,
+                    opacity: 0.3
+                }
+            },
+            min: 0,
+            max: maxValue
+        },
+        yAxis: {
+            type: 'value',
+            name: 'Actual Goal Involvements (Goals + Assists)',
+            nameLocation: 'middle',
+            nameGap: 50,
+            nameTextStyle: {
+                color: textColor,
+                fontSize: 12
+            },
+            axisLine: {
+                lineStyle: {
+                    color: gridColor
+                }
+            },
+            axisLabel: {
+                color: textColor
+            },
+            splitLine: {
+                lineStyle: {
+                    color: gridColor,
+                    opacity: 0.3
+                }
+            },
+            min: 0,
+            max: maxValue
+        },
+        series: series
+    };
+
+    currentChart.setOption(option);
+
+    // Handle window resize
+    const resizeObserver = new ResizeObserver(() => {
+        if (currentChart) {
+            currentChart.resize();
+        }
+    });
+    resizeObserver.observe(chartContainer);
+
+    // Export functionality
+    const exportBtn = document.getElementById('export-chart-btn');
+    if (exportBtn) {
+        // Remove any existing listeners
+        const newExportBtn = exportBtn.cloneNode(true);
+        exportBtn.parentNode.replaceChild(newExportBtn, exportBtn);
+
+        newExportBtn.addEventListener('click', () => {
+            if (currentChart) {
+                try {
+                    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                    const url = currentChart.getDataURL({
+                        type: 'png',
+                        pixelRatio: 2,
+                        backgroundColor: isDark ? '#1f2937' : '#ffffff'
+                    });
+
+                    const link = document.createElement('a');
+                    link.download = `fpl-xgi-actual-${new Date().toISOString().split('T')[0]}.png`;
+                    link.href = url;
+                    link.click();
+
+                    console.log('Chart exported successfully');
+                } catch (error) {
+                    console.error('Error exporting chart:', error);
+                }
+            }
+        });
+    }
+
+    console.log('xGI vs Actual chart rendered successfully');
 }
 
 // ============================================================================
@@ -899,7 +1466,290 @@ async function renderOwnershipFormChart() {
         chartId: 'ownership-form-chart'
     });
 
-    contentContainer.innerHTML += '<div style="text-align: center; padding: 4rem; color: var(--text-secondary);"><i class="fas fa-spinner fa-spin" style="font-size: 2rem;"></i><br/><br/>Chart coming soon!</div>';
+    // Wait for DOM to update
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    const chartContainer = document.getElementById('ownership-form-chart');
+    if (!chartContainer) {
+        console.error('Ownership-form-chart container not found');
+        return;
+    }
+
+    // Dispose previous chart instance
+    if (currentChart) {
+        currentChart.dispose();
+    }
+
+    // Define theme colors FIRST before any closures to avoid hoisting issues
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const textColor = isDark ? '#e5e7eb' : '#374151';
+    const gridColor = isDark ? '#374151' : '#e5e7eb';
+
+    // Get data
+    let players = getAllPlayers();
+
+    // Apply position filter
+    if (currentPositionFilter !== 'all') {
+        players = players.filter(p => getPositionShort(p) === currentPositionFilter);
+    }
+
+    // Calculate ownership and form
+    const chartData = players
+        .filter(p => p.minutes > 90) // At least 90 minutes played
+        .map(p => {
+            const ownership = parseFloat(p.selected_by_percent) || 0;
+            const form = parseFloat(p.form) || 0;
+            const price = p.now_cost / 10;
+
+            return {
+                name: p.web_name,
+                value: [ownership, form, price],
+                playerData: p,
+                isMyPlayer: window.myTeamPlayerIds?.includes(p.id) || false,
+                ownership: ownership,
+                form: form,
+                price: price
+            };
+        })
+        .filter(d => d.ownership > 0 || d.form > 0); // Valid data points
+
+    // Group by position
+    const positionColors = {
+        'GKP': '#fbbf24',
+        'DEF': '#10b981',
+        'MID': '#3b82f6',
+        'FWD': '#ef4444'
+    };
+
+    const seriesByPosition = {};
+    chartData.forEach(player => {
+        const position = getPositionShort(player.playerData);
+        if (!seriesByPosition[position]) {
+            seriesByPosition[position] = [];
+        }
+        seriesByPosition[position].push(player);
+    });
+
+    const series = Object.entries(seriesByPosition).map(([position, data]) => ({
+        name: position,
+        type: 'scatter',
+        symbolSize: (data) => {
+            const price = data[2];
+            return Math.max(8, Math.min(60, price * 5));
+        },
+        emphasis: {
+            focus: 'series',
+            label: {
+                show: true,
+                formatter: (param) => param.data.name,
+                position: 'top'
+            }
+        },
+        itemStyle: {
+            color: positionColors[position],
+            opacity: 0.7,
+            borderColor: (params) => {
+                return params.data.isMyPlayer ? '#fff' : positionColors[position];
+            },
+            borderWidth: (params) => params.data.isMyPlayer ? 3 : 1
+        },
+        data: data,
+        markArea: position === 'GKP' ? {
+            silent: true,
+            itemStyle: {
+                color: 'transparent'
+            },
+            data: [
+                [
+                    {
+                        name: 'Hidden Gems',
+                        xAxis: 0,
+                        yAxis: 5,
+                        itemStyle: { color: 'rgba(16, 185, 129, 0.1)' }
+                    },
+                    {
+                        xAxis: 10,
+                        yAxis: 'max'
+                    }
+                ],
+                [
+                    {
+                        name: 'Template Picks',
+                        xAxis: 30,
+                        yAxis: 5,
+                        itemStyle: { color: 'rgba(59, 130, 246, 0.1)' }
+                    },
+                    {
+                        xAxis: 'max',
+                        yAxis: 'max'
+                    }
+                ],
+                [
+                    {
+                        name: 'Avoid',
+                        xAxis: 30,
+                        yAxis: 0,
+                        itemStyle: { color: 'rgba(239, 68, 68, 0.1)' }
+                    },
+                    {
+                        xAxis: 'max',
+                        yAxis: 3
+                    }
+                ]
+            ]
+        } : undefined
+    }));
+
+    // Initialize chart
+    currentChart = echarts.init(chartContainer);
+    if (!currentChart) {
+        console.error('Failed to initialize chart');
+        return;
+    }
+
+    const option = {
+        backgroundColor: 'transparent',
+        textStyle: {
+            color: textColor
+        },
+        tooltip: {
+            trigger: 'item',
+            backgroundColor: isDark ? '#1f2937' : '#ffffff',
+            borderColor: isDark ? '#374151' : '#e5e7eb',
+            textStyle: {
+                color: textColor
+            },
+            formatter: (params) => {
+                const data = params.data;
+                const player = data.playerData;
+                const ownership = data.value[0];
+                const form = data.value[1];
+                const price = data.value[2];
+                const myTeamBadge = data.isMyPlayer ? ' ⭐' : '';
+                const position = getPositionShort(player);
+
+                return `
+                    <div style="padding: 4px;">
+                        <strong>${escapeHtml(data.name)}${myTeamBadge}</strong><br/>
+                        Position: ${position}<br/>
+                        Ownership: ${ownership.toFixed(1)}%<br/>
+                        Form: ${form.toFixed(1)}<br/>
+                        Price: £${price.toFixed(1)}m<br/>
+                        Total Points: ${player.total_points}<br/>
+                        Points/90: ${player.minutes > 0 ? ((player.total_points / player.minutes) * 90).toFixed(1) : '0'}
+                    </div>
+                `;
+            }
+        },
+        legend: {
+            data: ['GKP', 'DEF', 'MID', 'FWD'],
+            top: 10,
+            textStyle: {
+                color: textColor
+            }
+        },
+        grid: {
+            left: '10%',
+            right: '10%',
+            bottom: '15%',
+            top: '15%',
+            containLabel: true
+        },
+        xAxis: {
+            type: 'value',
+            name: 'Ownership %',
+            nameLocation: 'middle',
+            nameGap: 30,
+            nameTextStyle: {
+                color: textColor,
+                fontSize: 12
+            },
+            axisLine: {
+                lineStyle: {
+                    color: gridColor
+                }
+            },
+            axisLabel: {
+                color: textColor,
+                formatter: '{value}%'
+            },
+            splitLine: {
+                lineStyle: {
+                    color: gridColor,
+                    opacity: 0.3
+                }
+            },
+            min: 0
+        },
+        yAxis: {
+            type: 'value',
+            name: 'Form',
+            nameLocation: 'middle',
+            nameGap: 50,
+            nameTextStyle: {
+                color: textColor,
+                fontSize: 12
+            },
+            axisLine: {
+                lineStyle: {
+                    color: gridColor
+                }
+            },
+            axisLabel: {
+                color: textColor
+            },
+            splitLine: {
+                lineStyle: {
+                    color: gridColor,
+                    opacity: 0.3
+                }
+            },
+            min: 0
+        },
+        series: series
+    };
+
+    currentChart.setOption(option);
+
+    // Handle window resize
+    const resizeObserver = new ResizeObserver(() => {
+        if (currentChart) {
+            currentChart.resize();
+        }
+    });
+    resizeObserver.observe(chartContainer);
+
+    // Export functionality
+    const exportBtn = document.getElementById('export-chart-btn');
+    if (exportBtn) {
+        // Remove any existing listeners
+        const newExportBtn = exportBtn.cloneNode(true);
+        exportBtn.parentNode.replaceChild(newExportBtn, exportBtn);
+
+        newExportBtn.addEventListener('click', () => {
+            if (currentChart) {
+                try {
+                    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                    const url = currentChart.getDataURL({
+                        type: 'png',
+                        pixelRatio: 2,
+                        backgroundColor: isDark ? '#1f2937' : '#ffffff'
+                    });
+
+                    const link = document.createElement('a');
+                    link.download = `fpl-ownership-form-${new Date().toISOString().split('T')[0]}.png`;
+                    link.href = url;
+                    link.click();
+
+                    console.log('Chart exported successfully');
+                } catch (error) {
+                    console.error('Error exporting chart:', error);
+                }
+            }
+        });
+    }
+
+    console.log('Ownership vs Form chart rendered successfully');
 }
 
 // ============================================================================
@@ -922,7 +1772,310 @@ async function renderFdrFormChart() {
         chartId: 'fdr-form-chart'
     });
 
-    contentContainer.innerHTML += '<div style="text-align: center; padding: 4rem; color: var(--text-secondary);"><i class="fas fa-spinner fa-spin" style="font-size: 2rem;"></i><br/><br/>Chart coming soon!</div>';
+    // Wait for DOM to update
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    const chartContainer = document.getElementById('fdr-form-chart');
+    if (!chartContainer) {
+        console.error('Fdr-form-chart container not found');
+        return;
+    }
+
+    // Dispose previous chart instance
+    if (currentChart) {
+        currentChart.dispose();
+    }
+
+    // Define theme colors FIRST before any closures to avoid hoisting issues
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const textColor = isDark ? '#e5e7eb' : '#374151';
+    const gridColor = isDark ? '#374151' : '#e5e7eb';
+
+    // Get data
+    let players = getAllPlayers();
+
+    // Apply position filter
+    if (currentPositionFilter !== 'all') {
+        players = players.filter(p => getPositionShort(p) === currentPositionFilter);
+    }
+
+    // Calculate FDR and form
+    const chartData = players
+        .filter(p => p.minutes > 90) // At least 90 minutes played
+        .map(p => {
+            const avgFDR = calculateFixtureDifficulty(p.team, 5);
+            const form = parseFloat(p.form) || 0;
+            const ownership = parseFloat(p.selected_by_percent) || 0;
+
+            return {
+                name: p.web_name,
+                value: [avgFDR, form, ownership],
+                playerData: p,
+                isMyPlayer: window.myTeamPlayerIds?.includes(p.id) || false,
+                avgFDR: avgFDR,
+                form: form,
+                ownership: ownership
+            };
+        })
+        .filter(d => d.avgFDR > 0 || d.form > 0); // Valid data points
+
+    // Group by position
+    const positionColors = {
+        'GKP': '#fbbf24',
+        'DEF': '#10b981',
+        'MID': '#3b82f6',
+        'FWD': '#ef4444'
+    };
+
+    const seriesByPosition = {};
+    chartData.forEach(player => {
+        const position = getPositionShort(player.playerData);
+        if (!seriesByPosition[position]) {
+            seriesByPosition[position] = [];
+        }
+        seriesByPosition[position].push(player);
+    });
+
+    const series = Object.entries(seriesByPosition).map(([position, data]) => ({
+        name: position,
+        type: 'scatter',
+        symbolSize: (data) => {
+            const ownership = data[2];
+            return Math.max(8, Math.min(60, ownership * 3));
+        },
+        emphasis: {
+            focus: 'series',
+            label: {
+                show: true,
+                formatter: (param) => param.data.name,
+                position: 'top'
+            }
+        },
+        itemStyle: {
+            color: positionColors[position],
+            opacity: 0.7,
+            borderColor: (params) => {
+                return params.data.isMyPlayer ? '#fff' : positionColors[position];
+            },
+            borderWidth: (params) => params.data.isMyPlayer ? 3 : 1
+        },
+        data: data,
+        markArea: position === 'GKP' ? {
+            silent: true,
+            itemStyle: {
+                color: 'transparent'
+            },
+            data: [
+                [
+                    {
+                        name: 'Prime Targets',
+                        xAxis: 1,
+                        yAxis: 5,
+                        itemStyle: { color: 'rgba(16, 185, 129, 0.1)' }
+                    },
+                    {
+                        xAxis: 3,
+                        yAxis: 'max'
+                    }
+                ],
+                [
+                    {
+                        name: 'Fixture Swing',
+                        xAxis: 3.5,
+                        yAxis: 5,
+                        itemStyle: { color: 'rgba(251, 191, 36, 0.1)' }
+                    },
+                    {
+                        xAxis: 5,
+                        yAxis: 'max'
+                    }
+                ],
+                [
+                    {
+                        name: 'Avoid',
+                        xAxis: 3.5,
+                        yAxis: 0,
+                        itemStyle: { color: 'rgba(239, 68, 68, 0.1)' }
+                    },
+                    {
+                        xAxis: 5,
+                        yAxis: 3
+                    }
+                ]
+            ]
+        } : undefined
+    }));
+
+    // Initialize chart
+    currentChart = echarts.init(chartContainer);
+    if (!currentChart) {
+        console.error('Failed to initialize chart');
+        return;
+    }
+
+    const option = {
+        backgroundColor: 'transparent',
+        textStyle: {
+            color: textColor
+        },
+        tooltip: {
+            trigger: 'item',
+            backgroundColor: isDark ? '#1f2937' : '#ffffff',
+            borderColor: isDark ? '#374151' : '#e5e7eb',
+            textStyle: {
+                color: textColor
+            },
+            formatter: (params) => {
+                const data = params.data;
+                const player = data.playerData;
+                const avgFDR = data.value[0];
+                const form = data.value[1];
+                const ownership = data.value[2];
+                const myTeamBadge = data.isMyPlayer ? ' ⭐' : '';
+                const position = getPositionShort(player);
+
+                let fdrLabel = '';
+                let fdrColor = '';
+                if (avgFDR <= 2) {
+                    fdrLabel = 'Excellent';
+                    fdrColor = '#10b981';
+                } else if (avgFDR <= 2.5) {
+                    fdrLabel = 'Good';
+                    fdrColor = '#22c55e';
+                } else if (avgFDR <= 3.5) {
+                    fdrLabel = 'Average';
+                    fdrColor = '#fbbf24';
+                } else if (avgFDR <= 4) {
+                    fdrLabel = 'Tough';
+                    fdrColor = '#fb923c';
+                } else {
+                    fdrLabel = 'Very Tough';
+                    fdrColor = '#ef4444';
+                }
+
+                return `
+                    <div style="padding: 4px;">
+                        <strong>${escapeHtml(data.name)}${myTeamBadge}</strong><br/>
+                        Position: ${position}<br/>
+                        Avg FDR (5): <span style="color: ${fdrColor}">${avgFDR.toFixed(1)} (${fdrLabel})</span><br/>
+                        Form: ${form.toFixed(1)}<br/>
+                        Ownership: ${ownership.toFixed(1)}%<br/>
+                        Total Points: ${player.total_points}<br/>
+                        Price: £${(player.now_cost / 10).toFixed(1)}m
+                    </div>
+                `;
+            }
+        },
+        legend: {
+            data: ['GKP', 'DEF', 'MID', 'FWD'],
+            top: 10,
+            textStyle: {
+                color: textColor
+            }
+        },
+        grid: {
+            left: '10%',
+            right: '10%',
+            bottom: '15%',
+            top: '15%',
+            containLabel: true
+        },
+        xAxis: {
+            type: 'value',
+            name: 'Avg Fixture Difficulty (Next 5 GWs)',
+            nameLocation: 'middle',
+            nameGap: 30,
+            nameTextStyle: {
+                color: textColor,
+                fontSize: 12
+            },
+            axisLine: {
+                lineStyle: {
+                    color: gridColor
+                }
+            },
+            axisLabel: {
+                color: textColor
+            },
+            splitLine: {
+                lineStyle: {
+                    color: gridColor,
+                    opacity: 0.3
+                }
+            },
+            min: 1,
+            max: 5,
+            inverse: true // Lower FDR is better, so reverse the axis
+        },
+        yAxis: {
+            type: 'value',
+            name: 'Form',
+            nameLocation: 'middle',
+            nameGap: 50,
+            nameTextStyle: {
+                color: textColor,
+                fontSize: 12
+            },
+            axisLine: {
+                lineStyle: {
+                    color: gridColor
+                }
+            },
+            axisLabel: {
+                color: textColor
+            },
+            splitLine: {
+                lineStyle: {
+                    color: gridColor,
+                    opacity: 0.3
+                }
+            },
+            min: 0
+        },
+        series: series
+    };
+
+    currentChart.setOption(option);
+
+    // Handle window resize
+    const resizeObserver = new ResizeObserver(() => {
+        if (currentChart) {
+            currentChart.resize();
+        }
+    });
+    resizeObserver.observe(chartContainer);
+
+    // Export functionality
+    const exportBtn = document.getElementById('export-chart-btn');
+    if (exportBtn) {
+        // Remove any existing listeners
+        const newExportBtn = exportBtn.cloneNode(true);
+        exportBtn.parentNode.replaceChild(newExportBtn, exportBtn);
+
+        newExportBtn.addEventListener('click', () => {
+            if (currentChart) {
+                try {
+                    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                    const url = currentChart.getDataURL({
+                        type: 'png',
+                        pixelRatio: 2,
+                        backgroundColor: isDark ? '#1f2937' : '#ffffff'
+                    });
+
+                    const link = document.createElement('a');
+                    link.download = `fpl-fdr-form-${new Date().toISOString().split('T')[0]}.png`;
+                    link.href = url;
+                    link.click();
+
+                    console.log('Chart exported successfully');
+                } catch (error) {
+                    console.error('Error exporting chart:', error);
+                }
+            }
+        });
+    }
+
+    console.log('FDR vs Form chart rendered successfully');
 }
 
 // ============================================================================
