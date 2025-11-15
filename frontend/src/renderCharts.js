@@ -61,15 +61,44 @@ export async function renderCharts() {
 
             <!-- Chart Card -->
             <div style="background: var(--bg-primary); border-radius: 12px; box-shadow: 0 2px 8px var(--shadow); padding: 1.5rem; margin-bottom: 2rem;">
-                <h2 style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem;">
-                    💰 Points vs Price
-                </h2>
-                <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.875rem;">
-                    Find value picks and premium performers. Bubble size = ownership %, Your team = ⭐ (star shape with purple border)
-                </p>
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
+                    <div>
+                        <h2 style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem;">
+                            💰 Points vs Price
+                        </h2>
+                        <p style="color: var(--text-secondary); margin-bottom: 0.5rem; font-size: 0.875rem;">
+                            Find value picks and premium performers. Bubble size = ownership %, Your team = ⭐ (star shape with purple border)
+                        </p>
+                        <div style="display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.75rem; color: var(--text-secondary);">
+                            <span><span style="color: #10b981; font-weight: bold;">■</span> Value Zone (low price, high points)</span>
+                            <span><span style="color: #3b82f6; font-weight: bold;">■</span> Premium Zone (high price, high points)</span>
+                            <span><span style="color: #ef4444; font-weight: bold;">■</span> Trap Zone (high price, low points - avoid!)</span>
+                        </div>
+                    </div>
+                    <button
+                        id="export-chart-btn"
+                        style="
+                            padding: 0.5rem 1rem;
+                            background: var(--accent-color);
+                            color: white;
+                            border: none;
+                            border-radius: 6px;
+                            cursor: pointer;
+                            font-size: 0.875rem;
+                            font-weight: 600;
+                            display: flex;
+                            align-items: center;
+                            gap: 0.5rem;
+                            transition: opacity 0.2s;
+                        "
+                    >
+                        <i class="fas fa-download"></i>
+                        Export PNG
+                    </button>
+                </div>
 
                 <!-- Chart Container -->
-                <div id="points-price-chart" style="width: 100%; height: 600px; min-height: 400px;"></div>
+                <div id="points-price-chart" style="width: 100%; height: 600px; min-height: 400px; margin-top: 1rem;"></div>
             </div>
 
             <!-- Legend -->
@@ -186,6 +215,10 @@ async function renderPointsPriceChart() {
         'FWD': { data: [], color: '#ef4444', name: 'Forwards' }
     };
 
+    // Find top 12 players by points for labeling
+    const sortedByPoints = [...players].sort((a, b) => (b.total_points || 0) - (a.total_points || 0));
+    const topPlayerIds = new Set(sortedByPoints.slice(0, 12).map(p => p.id));
+
     players.forEach(player => {
         const price = player.now_cost / 10; // Convert to actual price
         const points = player.total_points || 0;
@@ -193,6 +226,7 @@ async function renderPointsPriceChart() {
         const position = getPositionShort(player);
         const ppm = calculatePPM(player);
         const isMyPlayer = myTeamPlayerIds.has(player.id);
+        const isTopPlayer = topPlayerIds.has(player.id);
 
         if (positions[position]) {
             positions[position].data.push({
@@ -200,6 +234,7 @@ async function renderPointsPriceChart() {
                 value: [price, points, ownership],
                 ppm: ppm,
                 isMyPlayer: isMyPlayer,
+                isTopPlayer: isTopPlayer,
                 playerData: player
             });
         }
@@ -238,6 +273,72 @@ async function renderPointsPriceChart() {
                 borderWidth: 2
             }
         },
+        // Add labels for top players
+        label: {
+            show: true,
+            formatter: (params) => {
+                // Only show label if this is a top player
+                if (params.data.isTopPlayer) {
+                    return params.data.name;
+                }
+                return '';
+            },
+            position: 'top',
+            fontSize: 10,
+            fontWeight: 'bold',
+            color: textColor,
+            backgroundColor: isDark ? 'rgba(0, 0, 0, 0.6)' : 'rgba(255, 255, 255, 0.8)',
+            padding: [2, 4],
+            borderRadius: 3,
+            distance: 5
+        },
+        // Add value zones as background regions
+        markArea: pos === 'GKP' ? { // Only add zones once (on first series)
+            silent: true,
+            itemStyle: {
+                opacity: 0.08
+            },
+            data: [
+                // Value Zone (top-left): low price, high points - THE SWEET SPOT
+                [{
+                    name: 'Value Zone',
+                    xAxis: 3,
+                    yAxis: 120,
+                    itemStyle: { color: '#10b981' } // green
+                }, {
+                    xAxis: 8.5,
+                    yAxis: 300
+                }],
+                // Premium Zone (top-right): high price, high points - proven performers
+                [{
+                    name: 'Premium Zone',
+                    xAxis: 8.5,
+                    yAxis: 120,
+                    itemStyle: { color: '#3b82f6' } // blue
+                }, {
+                    xAxis: 15,
+                    yAxis: 300
+                }],
+                // Trap Zone (bottom-right): high price, low points - AVOID
+                [{
+                    name: 'Trap Zone',
+                    xAxis: 8.5,
+                    yAxis: 10,
+                    itemStyle: { color: '#ef4444' } // red
+                }, {
+                    xAxis: 15,
+                    yAxis: 120
+                }]
+            ],
+            label: {
+                show: true,
+                position: 'inside',
+                fontSize: 11,
+                fontWeight: 'bold',
+                color: textColor,
+                opacity: 0.5
+            }
+        } : undefined,
         data: positions[pos].data
     }));
 
@@ -374,6 +475,26 @@ async function renderPointsPriceChart() {
 
     window.removeEventListener('resize', resizeHandler);
     window.addEventListener('resize', resizeHandler);
+
+    // Add export button functionality
+    const exportBtn = document.getElementById('export-chart-btn');
+    if (exportBtn) {
+        exportBtn.addEventListener('click', () => {
+            if (currentChart) {
+                const url = currentChart.getDataURL({
+                    type: 'png',
+                    pixelRatio: 2,
+                    backgroundColor: isDark ? '#1f2937' : '#ffffff'
+                });
+
+                // Create download link
+                const link = document.createElement('a');
+                link.download = `fpl-points-vs-price-${new Date().toISOString().split('T')[0]}.png`;
+                link.href = url;
+                link.click();
+            }
+        });
+    }
 }
 
 // ============================================================================
