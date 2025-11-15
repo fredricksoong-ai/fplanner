@@ -9,7 +9,8 @@ import { escapeHtml } from './utils.js';
 import {
     updateOwnershipThreshold as updateAnalysisOwnership,
     setFixtureFilter,
-    setMomentumFilter
+    setMomentumFilter,
+    setPriceRange
 } from './renderDataAnalysis.js';
 
 // ============================================================================
@@ -501,6 +502,22 @@ window.toggleFixtureFilter = (checked) => {
 window.toggleMomentumFilter = (checked) => {
     // Update state in renderDataAnalysis module
     setMomentumFilter(checked);
+
+    // Re-render differentials
+    const hash = window.location.hash.slice(1);
+    const parts = hash.split('/');
+    const position = parts[2] || 'all';
+    setTimeout(() => {
+        window.renderDataAnalysis('differentials', position);
+    }, 50);
+};
+
+/**
+ * Toggle price range filter
+ */
+window.togglePriceRange = (range) => {
+    // Update state in renderDataAnalysis module
+    setPriceRange(range);
 
     // Re-render differentials
     const hash = window.location.hash.slice(1);
