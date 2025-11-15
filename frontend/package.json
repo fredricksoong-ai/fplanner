@@ -20,5 +20,8 @@
     "terser": "^5.44.1",
     "vite": "^5.0.8",
     "vitest": "^4.0.9"
+  },
+  "dependencies": {
+    "echarts": "^6.0.0"
   }
 }
