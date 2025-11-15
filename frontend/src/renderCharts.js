@@ -269,7 +269,10 @@ function createChartCard(config) {
 async function renderPointsPriceChart() {
     // Create chart card HTML
     const contentContainer = document.getElementById('chart-content-container');
-    if (!contentContainer) return;
+    if (!contentContainer) {
+        console.error('Chart content container not found');
+        return;
+    }
 
     contentContainer.innerHTML = createChartCard({
         title: 'Points vs Price',
@@ -283,8 +286,14 @@ async function renderPointsPriceChart() {
         chartId: 'points-price-chart'
     });
 
+    // Wait for DOM to update
+    await new Promise(resolve => setTimeout(resolve, 0));
+
     const chartContainer = document.getElementById('points-price-chart');
-    if (!chartContainer) return;
+    if (!chartContainer) {
+        console.error('Points-price-chart container not found');
+        return;
+    }
 
     // Dispose previous chart instance
     if (currentChart) {
@@ -457,10 +466,18 @@ async function renderPointsPriceChart() {
     }));
 
     // Initialize chart
+    if (!echarts) {
+        console.error('ECharts library not loaded');
+        return;
+    }
     currentChart = echarts.init(chartContainer);
+    if (!currentChart) {
+        console.error('Failed to initialize chart');
+        return;
+    }
 
     // Get theme colors
-    const isDark = document.documentElement.classList.contains('dark-theme');
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     const textColor = isDark ? '#e5e7eb' : '#374151';
     const gridColor = isDark ? '#374151' : '#e5e7eb';
 
@@ -578,7 +595,13 @@ async function renderPointsPriceChart() {
         series: series
     };
 
-    currentChart.setOption(option);
+    try {
+        currentChart.setOption(option);
+        console.log('Chart rendered successfully with', players.length, 'players');
+    } catch (error) {
+        console.error('Error setting chart options:', error);
+        return;
+    }
 
     // Handle window resize
     const resizeHandler = () => {
@@ -595,19 +618,30 @@ async function renderPointsPriceChart() {
     if (exportBtn) {
         exportBtn.addEventListener('click', () => {
             if (currentChart) {
-                const url = currentChart.getDataURL({
-                    type: 'png',
-                    pixelRatio: 2,
-                    backgroundColor: isDark ? '#1f2937' : '#ffffff'
-                });
+                try {
+                    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                    const url = currentChart.getDataURL({
+                        type: 'png',
+                        pixelRatio: 2,
+                        backgroundColor: isDark ? '#1f2937' : '#ffffff'
+                    });
 
-                // Create download link
-                const link = document.createElement('a');
-                link.download = `fpl-points-vs-price-${new Date().toISOString().split('T')[0]}.png`;
-                link.href = url;
-                link.click();
+                    // Create download link
+                    const link = document.createElement('a');
+                    link.download = `fpl-points-vs-price-${new Date().toISOString().split('T')[0]}.png`;
+                    link.href = url;
+                    link.click();
+                    console.log('Chart exported successfully');
+                } catch (error) {
+                    console.error('Error exporting chart:', error);
+                }
+            } else {
+                console.error('No chart instance available for export');
             }
         });
+        console.log('Export button event listener attached');
+    } else {
+        console.error('Export button not found');
     }
 }
 
