@@ -7,6 +7,8 @@ import express from 'express';
 import axios from 'axios';
 import Papa from 'papaparse';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -158,12 +160,31 @@ function shouldRefreshGithub() {
 
   const currentEra = getCurrentEra();
   const shouldRefresh = cache.github.era !== currentEra;
-  
+
   if (shouldRefresh) {
     console.log(`🔄 GitHub cache stale (era changed: ${cache.github.era} → ${currentEra})`);
   }
-  
+
   return shouldRefresh;
+}
+
+/**
+ * Validate team ID input
+ * @param {string} teamId - Team ID to validate
+ * @returns {boolean} - True if valid
+ */
+function isValidTeamId(teamId) {
+  // Must be numeric and between 1-10 digits (FPL team IDs are typically 6-7 digits)
+  return /^\d{1,10}$/.test(teamId);
+}
+
+/**
+ * Validate gameweek number
+ * @param {number} gw - Gameweek number to validate
+ * @returns {boolean} - True if valid
+ */
+function isValidGameweek(gw) {
+  return Number.isInteger(gw) && gw >= 1 && gw <= 38;
 }
 
 // ============================================================================
@@ -474,13 +495,75 @@ process.on('SIGINT', () => {
 
 const app = express();
 
-// Middleware
-app.use(cors());
-app.use(express.json());
+// ============================================================================
+// SECURITY MIDDLEWARE
+// ============================================================================
+
+// Helmet - Security headers
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"], // unsafe-inline needed for Vite dev
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'"]
+    }
+  },
+  crossOriginEmbedderPolicy: false // Needed for external resources
+}));
+
+// CORS - Restrict to allowed origins
+const allowedOrigins = [
+  'http://localhost:5173',  // Vite dev server
+  'http://localhost:3001',  // Backend (for testing)
+  process.env.ALLOWED_ORIGIN // Production domain (set via env var)
+].filter(Boolean);
+
+app.use(cors({
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`⚠️ CORS blocked: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: false
+}));
+
+// Rate limiting - Prevent abuse
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per window
+  message: {
+    error: 'Too many requests from this IP, please try again later.',
+    retryAfter: '15 minutes'
+  },
+  standardHeaders: true, // Return rate limit info in `RateLimit-*` headers
+  legacyHeaders: false, // Disable `X-RateLimit-*` headers
+  handler: (req, res) => {
+    console.warn(`⚠️ Rate limit exceeded: ${req.ip}`);
+    res.status(429).json({
+      error: 'Too many requests',
+      message: 'Please wait 15 minutes before trying again'
+    });
+  }
+});
+
+// Apply rate limiting to all API routes
+app.use('/api/', limiter);
+
+// Request size limiting
+app.use(express.json({ limit: '1mb' }));
 
 // Request logging
 app.use((req, res, next) => {
-  console.log(`${req.method} ${req.path}`);
+  console.log(`${req.method} ${req.path} [${req.ip}]`);
   next();
 });
 
@@ -566,9 +649,12 @@ app.get('/api/fpl-data', async (req, res) => {
     res.json(response);
   } catch (err) {
     console.error('❌ Error in /api/fpl-data:', err.message);
+
+    // Don't expose detailed error messages in production
+    const isProduction = process.env.NODE_ENV === 'production';
     res.status(500).json({
       error: 'Failed to fetch FPL data',
-      message: err.message
+      message: isProduction ? 'Data temporarily unavailable. Please try again later.' : err.message
     });
   }
 });
@@ -579,44 +665,56 @@ app.get('/api/fpl-data', async (req, res) => {
  */
 app.get('/api/team/:teamId', async (req, res) => {
   const { teamId } = req.params;
-  
+
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log(`📥 GET /api/team/${teamId}`);
-  
+
+  // Validate team ID
+  if (!isValidTeamId(teamId)) {
+    console.warn(`⚠️ Invalid team ID format: ${teamId}`);
+    return res.status(400).json({
+      error: 'Invalid team ID',
+      message: 'Team ID must be a number between 1 and 10 digits'
+    });
+  }
+
   try {
     // Ensure we have bootstrap data to get current GW
     if (!cache.bootstrap.data || shouldRefreshBootstrap()) {
       await fetchBootstrap();
     }
-    
+
     // Find current gameweek
     const currentEvent = cache.bootstrap.data.events.find(e => e.is_current);
     const currentGW = currentEvent ? currentEvent.id : 1;
-    
+
     console.log(`   Current GW: ${currentGW}`);
-    
+
     // Fetch team info and picks in parallel
     const [teamInfo, teamPicks] = await Promise.all([
       fetchTeamData(teamId),
       fetchTeamPicks(teamId, currentGW)
     ]);
-    
+
     const response = {
       team: teamInfo,
       picks: teamPicks,
       gameweek: currentGW,
       timestamp: new Date().toISOString()
     };
-    
+
     console.log(`✅ Team data ready`);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    
+
     res.json(response);
   } catch (err) {
     console.error(`❌ Error fetching team ${teamId}:`, err.message);
-    res.status(500).json({
+
+    // Don't expose detailed error messages in production
+    const isProduction = process.env.NODE_ENV === 'production';
+    res.status(err.message.includes('unavailable') ? 404 : 500).json({
       error: 'Failed to fetch team data',
-      message: err.message
+      message: isProduction ? 'Team not found or unavailable' : err.message
     });
   }
 });
