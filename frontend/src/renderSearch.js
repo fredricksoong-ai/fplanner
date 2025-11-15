@@ -1,0 +1,147 @@
+// ============================================================================
+// SEARCH PAGE MODULE
+// Player search and filtering functionality
+// ============================================================================
+
+import { getAllPlayers } from './data.js';
+import { sortPlayers } from './utils.js';
+import { renderPlayerTable, attachRiskTooltipListeners } from './renderHelpers.js';
+
+// ============================================================================
+// STATE
+// ============================================================================
+
+let currentPositionFilter = 'all';
+let currentSearchQuery = '';
+
+// ============================================================================
+// MAIN RENDER FUNCTION
+// ============================================================================
+
+/**
+ * Render the Search page
+ */
+export function renderSearch() {
+    const container = document.getElementById('app-container');
+
+    container.innerHTML = `
+        <div style="padding: 2rem;">
+            <h1 style="font-size: 2rem; font-weight: 700; color: var(--primary-color); margin-bottom: 1rem;">
+                <i class="fas fa-search"></i> Player Search
+            </h1>
+            <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+                Search for players by name or filter by position
+            </p>
+
+            <div style="margin-bottom: 2rem;">
+                <input
+                    type="text"
+                    id="player-search-input"
+                    placeholder="Search players..."
+                    style="
+                        width: 100%;
+                        padding: 1rem;
+                        border: 2px solid var(--border-color);
+                        border-radius: 8px;
+                        font-size: 1rem;
+                        background: var(--bg-secondary);
+                        color: var(--text-primary);
+                    "
+                    oninput="window.performPlayerSearch()"
+                >
+            </div>
+
+            <div style="display: flex; gap: 0.5rem; margin-bottom: 2rem;">
+                <button onclick="window.filterByPosition('all')" class="position-filter-btn" data-position="all" style="padding: 0.5rem 1rem; background: var(--primary-color); color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 600;">All</button>
+                <button onclick="window.filterByPosition(1)" class="position-filter-btn" data-position="1" style="padding: 0.5rem 1rem; background: var(--bg-secondary); color: var(--text-primary); border: none; border-radius: 0.5rem; cursor: pointer;">GKP</button>
+                <button onclick="window.filterByPosition(2)" class="position-filter-btn" data-position="2" style="padding: 0.5rem 1rem; background: var(--bg-secondary); color: var(--text-primary); border: none; border-radius: 0.5rem; cursor: pointer;">DEF</button>
+                <button onclick="window.filterByPosition(3)" class="position-filter-btn" data-position="3" style="padding: 0.5rem 1rem; background: var(--bg-secondary); color: var(--text-primary); border: none; border-radius: 0.5rem; cursor: pointer;">MID</button>
+                <button onclick="window.filterByPosition(4)" class="position-filter-btn" data-position="4" style="padding: 0.5rem 1rem; background: var(--bg-secondary); color: var(--text-primary); border: none; border-radius: 0.5rem; cursor: pointer;">FWD</button>
+            </div>
+
+            <div id="search-results">
+                <p style="text-align: center; color: var(--text-secondary); padding: 2rem;">Enter a search term or select a position</p>
+            </div>
+        </div>
+    `;
+}
+
+// ============================================================================
+// SEARCH HELPERS
+// ============================================================================
+
+/**
+ * Update search results based on current filters
+ */
+function updateSearchResults() {
+    const resultsContainer = document.getElementById('search-results');
+
+    if (!currentSearchQuery && currentPositionFilter === 'all') {
+        resultsContainer.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 2rem;">Enter a search term or select a position</p>';
+        return;
+    }
+
+    let players = getAllPlayers();
+
+    // Filter by position
+    if (currentPositionFilter !== 'all') {
+        players = players.filter(p => p.element_type == currentPositionFilter);
+    }
+
+    // Filter by search query
+    if (currentSearchQuery) {
+        players = players.filter(p =>
+            p.web_name.toLowerCase().includes(currentSearchQuery) ||
+            p.first_name.toLowerCase().includes(currentSearchQuery) ||
+            p.second_name.toLowerCase().includes(currentSearchQuery)
+        );
+    }
+
+    // Sort by total points
+    players = sortPlayers(players, 'total_points', false).slice(0, 50);
+
+    if (players.length === 0) {
+        resultsContainer.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 2rem;">No players found</p>';
+        return;
+    }
+
+    resultsContainer.innerHTML = `
+        <p style="color: var(--text-secondary); margin-bottom: 1rem;">Found ${players.length} player${players.length !== 1 ? 's' : ''}</p>
+        ${renderPlayerTable(players, 'next5')}
+    `;
+
+    attachRiskTooltipListeners();
+}
+
+// ============================================================================
+// GLOBAL WINDOW FUNCTIONS
+// ============================================================================
+
+/**
+ * Perform player search based on input
+ */
+window.performPlayerSearch = function() {
+    const input = document.getElementById('player-search-input');
+    currentSearchQuery = input.value.toLowerCase().trim();
+    updateSearchResults();
+};
+
+/**
+ * Filter players by position
+ */
+window.filterByPosition = function(position) {
+    currentPositionFilter = position;
+
+    // Update button styles
+    document.querySelectorAll('.position-filter-btn').forEach(btn => {
+        if (btn.dataset.position == position) {
+            btn.style.background = 'var(--primary-color)';
+            btn.style.color = 'white';
+        } else {
+            btn.style.background = 'var(--bg-secondary)';
+            btn.style.color = 'var(--text-primary)';
+        }
+    });
+
+    updateSearchResults();
+};
