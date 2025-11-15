@@ -88,19 +88,16 @@ function detectCurrentGW() {
         currentGW = 1;
         return;
     }
-    
-    const currentEvent = fplBootstrap.events.find(e => e.is_current);
-    const nextEvent = fplBootstrap.events.find(e => e.is_next);
-    
-    if (currentEvent) {
-        currentGW = currentEvent.id;
-    } else if (nextEvent) {
-        currentGW = nextEvent.id - 1;
-    } else {
-        currentGW = 1;
-    }
-    
-    console.log(`📅 Current GW detected: ${currentGW}`);
+
+    // Find the latest FINISHED game week (not is_current which could be in-progress)
+    const finishedEvents = fplBootstrap.events.filter(e => e.finished);
+    const latestFinishedGW = finishedEvents.length > 0
+        ? Math.max(...finishedEvents.map(e => e.id))
+        : 1;
+
+    currentGW = latestFinishedGW;
+
+    console.log(`📅 Latest Finished GW detected: ${currentGW}`);
 }
 
 /**

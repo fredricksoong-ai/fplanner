@@ -25,7 +25,7 @@ const CACHE_BACKUP_PATH = path.join(__dirname, 'cache-backup.json');
 // FPL API Endpoints
 const FPL_BASE_URL = 'https://fantasy.premierleague.com/api';
 // GitHub CSV Base URL (FPL-Elo-Insights)
-const GITHUB_BASE_URL = 'https://raw.githubusercontent.com/ncklr/FPL-Elo-Insights/main/data/2024-25';
+const GITHUB_BASE_URL = 'https://raw.githubusercontent.com/olbauday/FPL-Elo-Insights/main/data/2025-2026';
 
 /**
  * Get GitHub CSV URLs for current context
@@ -252,12 +252,16 @@ async function fetchGithubCSV() {
     if (!cache.bootstrap.data) {
       await fetchBootstrap();
     }
-    
-    const currentEvent = cache.bootstrap.data.events.find(e => e.is_current);
-    const currentGW = currentEvent ? currentEvent.id : 11;
-    const isFinished = currentEvent ? currentEvent.finished : false;
-    
-    console.log(`📊 Current GW: ${currentGW}, Finished: ${isFinished}`);
+
+    // Find the latest FINISHED game week (not is_current which could be in-progress)
+    const finishedEvents = cache.bootstrap.data.events.filter(e => e.finished);
+    const latestFinishedGW = finishedEvents.length > 0
+      ? Math.max(...finishedEvents.map(e => e.id))
+      : 1;
+    const currentGW = latestFinishedGW;
+    const isFinished = true; // By definition, we're using a finished GW
+
+    console.log(`📊 Latest Finished GW: ${currentGW}`);
     
     const urls = getGithubUrls(currentGW, isFinished);
     
