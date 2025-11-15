@@ -28,7 +28,9 @@ import {
     calculatePPM,
     sortPlayers,
     filterByPosition,
-    escapeHtml
+    escapeHtml,
+    calculateMinutesPercentage,
+    getFormTrend
 } from './utils.js';
 
 import {
