@@ -172,10 +172,11 @@ export function renderMyTeam(teamData) {
         </div>
 
         <div class="mb-8">
+            ${renderTeamSummary(allPlayers, gameweek, picks.entry_history)}
+        </div>
+
+        <div class="mb-8">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                <h2 class="text-2xl font-bold" style="color: var(--primary-color);">
-                    <i class="fas fa-users"></i> My Team - GW${gameweek}
-                </h2>
                 <button
                     onclick="window.resetMyTeam()"
                     style="
@@ -196,10 +197,6 @@ export function renderMyTeam(teamData) {
                 </button>
             </div>
             ${renderTeamTable(allPlayers, gameweek)}
-        </div>
-
-        <div class="mb-8">
-            ${renderTeamSummary(allPlayers, gameweek, picks.entry_history)}
         </div>
     `;
 
@@ -441,7 +438,8 @@ function renderTeamTable(players, gameweek) {
     const starters = players.filter(p => p.position <= 11);
     const bench = players.filter(p => p.position > 11);
 
-    const next3GWs = [gameweek + 1, gameweek + 2, gameweek + 3];
+    // Next 5 gameweeks for fixture columns
+    const next5GWs = [gameweek + 1, gameweek + 2, gameweek + 3, gameweek + 4, gameweek + 5];
 
     let html = `
         <div style="overflow-x: auto; background: var(--bg-primary); border-radius: 12px; box-shadow: 0 2px 8px var(--shadow);">
@@ -462,19 +460,23 @@ function renderTeamTable(players, gameweek) {
                         <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">Form</th>
                         <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">xGI</th>
                         <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">ΔT</th>
-                        <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">FDR(5)</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">GW${next5GWs[0]}</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">GW${next5GWs[1]}</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">GW${next5GWs[2]}</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">GW${next5GWs[3]}</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">GW${next5GWs[4]}</th>
                     </tr>
                 </thead>
                 <tbody>
     `;
 
     // Render starting 11
-    html += `<tr><td colspan="15" style="background: var(--bg-secondary); padding: 0.5rem 1rem; font-weight: 700; color: var(--primary-color);">Starting XI</td></tr>`;
-    html += renderTeamRows(starters, gameweek, next3GWs);
+    html += `<tr><td colspan="19" style="background: var(--bg-secondary); padding: 0.5rem 1rem; font-weight: 700; color: var(--primary-color);">Starting XI</td></tr>`;
+    html += renderTeamRows(starters, gameweek, next5GWs);
 
     // Render bench
-    html += `<tr><td colspan="15" style="background: var(--bg-secondary); padding: 0.5rem 1rem; font-weight: 700; color: var(--text-secondary);">Bench</td></tr>`;
-    html += renderTeamRows(bench, gameweek, next3GWs);
+    html += `<tr><td colspan="19" style="background: var(--bg-secondary); padding: 0.5rem 1rem; font-weight: 700; color: var(--text-secondary);">Bench</td></tr>`;
+    html += renderTeamRows(bench, gameweek, next5GWs);
 
     html += `
                 </tbody>
@@ -488,7 +490,7 @@ function renderTeamTable(players, gameweek) {
 /**
  * Render team table rows
  */
-function renderTeamRows(players, gameweek, next3GWs) {
+function renderTeamRows(players, gameweek, next5GWs) {
     let html = '';
 
     players.forEach((pick, index) => {
@@ -518,28 +520,40 @@ function renderTeamRows(players, gameweek, next3GWs) {
         // Get GW-specific stats from GitHub (only if matches current GW)
         const hasGWStats = player.github_gw && player.github_gw.gw === gameweek;
 
+        // Minutes: use GitHub if available, otherwise show dash (will show season total in future)
         const gwMinutes = hasGWStats ? player.github_gw.minutes : '—';
-        const gwPoints = hasGWStats ? player.github_gw.total_points : player.event_points;
-        const gwGoals = hasGWStats ? (player.github_gw.goals_scored || 0) : '—';
-        const gwAssists = hasGWStats ? (player.github_gw.assists || 0) : '—';
-        const gwGA = hasGWStats ? `${gwGoals}+${gwAssists}` : '—';
+
+        // Points: use GitHub if available, otherwise FPL API event_points
+        const gwPoints = hasGWStats ? player.github_gw.total_points : (player.event_points || 0);
+
+        // Goals + Assists: use GitHub if available, otherwise show dash
+        let gwGA = '—';
+        if (hasGWStats) {
+            const gwGoals = player.github_gw.goals_scored || 0;
+            const gwAssists = player.github_gw.assists || 0;
+            gwGA = `${gwGoals}+${gwAssists}`;
+        }
 
         // Calculate new metrics
         const ppm = calculatePPM(player);
         const ownership = parseFloat(player.selected_by_percent) || 0;
         const minPercentage = calculateMinutesPercentage(player, gameweek);
 
-        // Transfer momentum
+        // Transfer momentum: Use FPL API as fallback if GitHub data not available
         let transferNet = '—';
         if (player.github_transfers) {
             const netTransfers = player.github_transfers.transfers_in - player.github_transfers.transfers_out;
             const prefix = netTransfers > 0 ? '+' : '';
             transferNet = `${prefix}${(netTransfers / 1000).toFixed(0)}k`;
+        } else if (player.transfers_in_event !== undefined && player.transfers_out_event !== undefined) {
+            // Fallback to FPL API data
+            const netTransfers = player.transfers_in_event - player.transfers_out_event;
+            const prefix = netTransfers > 0 ? '+' : '';
+            transferNet = `${prefix}${(netTransfers / 1000).toFixed(0)}k`;
         }
 
-        // Fixture difficulty for next 5
-        const fdrNext5 = calculateFixtureDifficulty(player.team, 5);
-        const fdrClass = getDifficultyClass(Math.round(fdrNext5));
+        // Get next 5 fixtures for this player
+        const next5Fixtures = getFixtures(player.team, 5, false);
 
         // Position-specific xGI/xGC
         let metricValue = '';
@@ -590,11 +604,17 @@ function renderTeamRows(players, gameweek, next3GWs) {
                 <td style="padding: 0.75rem 0.5rem; text-align: center; font-size: 0.8rem; color: ${transferNet.startsWith('+') ? '#22c55e' : transferNet.startsWith('-') ? '#ef4444' : 'inherit'};">
                     ${transferNet}
                 </td>
-                <td style="padding: 0.75rem 0.5rem; text-align: center;">
-                    <span class="${fdrClass}" style="padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.75rem;">
-                        ${formatDecimal(fdrNext5)}
-                    </span>
-                </td>
+                ${next5Fixtures.map((fix, idx) => {
+                    const fdrClass = getDifficultyClass(fix.difficulty);
+                    return `
+                        <td style="padding: 0.75rem 0.5rem; text-align: center;">
+                            <span class="${fdrClass}" style="padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.75rem; white-space: nowrap;">
+                                ${fix.opponent}
+                            </span>
+                        </td>
+                    `;
+                }).join('')}
+                ${next5Fixtures.length < 5 ? Array(5 - next5Fixtures.length).fill('<td style="padding: 0.75rem 0.5rem; text-align: center;">—</td>').join('') : ''}
             </tr>
         `;
     });
