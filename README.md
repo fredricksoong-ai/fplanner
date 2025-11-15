@@ -134,6 +134,9 @@ fplanner/
 
 ### Data Analysis
 - **AI Insights (Powered by Gemini)** - Smart analysis and recommendations
+  - Era-based caching (refreshes with GitHub data: morning/evening)
+  - Contextual insights for market trends and differentials
+  - Manual refresh capability
 - Position-specific tables (GKP, DEF, MID, FWD)
 - Best value (PPM)
 - Form stars

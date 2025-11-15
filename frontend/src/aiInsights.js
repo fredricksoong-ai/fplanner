@@ -1,10 +1,22 @@
 // ============================================================================
 // AI INSIGHTS SERVICE
 // Handles Gemini API integration with smart caching
+// Aligns with GitHub data refresh (era-based: morning/evening)
 // ============================================================================
 
-const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
+const CACHE_DURATION = 12 * 60 * 60 * 1000; // 12 hours (fallback TTL)
 const CACHE_PREFIX = 'fplanner_ai_insights_';
+
+/**
+ * Get current data era based on UTC time
+ * Morning: 5am-5pm UTC | Evening: 5pm-5am UTC
+ * Matches GitHub CSV refresh timing
+ */
+function getCurrentEra() {
+    const now = new Date();
+    const hour = now.getUTCHours();
+    return (hour >= 5 && hour < 17) ? 'morning' : 'evening';
+}
 
 /**
  * AI Insights Service
@@ -27,7 +39,7 @@ export class AIInsightsService {
         // Check cache first
         const cached = this.getCached(context);
         if (cached && !this.isExpired(cached)) {
-            console.log('✨ AI Insights: Using cached data');
+            console.log('✨ AI Insights: Using cached data (era:', cached.era + ')');
             return cached.data;
         }
 
@@ -35,7 +47,7 @@ export class AIInsightsService {
         try {
             const insights = await this.fetchFromGemini(context);
             this.cache(context, insights);
-            console.log('✅ AI Insights: Fresh data cached');
+            console.log('✅ AI Insights: Fresh data cached for era:', getCurrentEra());
             return insights;
         } catch (error) {
             console.error('❌ AI Insights: Failed to fetch', error);
@@ -104,6 +116,7 @@ export class AIInsightsService {
         const cacheData = {
             data: insights,
             timestamp: Date.now(),
+            era: getCurrentEra(),
             ttl: CACHE_DURATION
         };
 
@@ -116,12 +129,28 @@ export class AIInsightsService {
 
     /**
      * Check if cached data is expired
+     * Uses era-based expiration (aligned with GitHub data refresh)
+     * Falls back to 12-hour TTL if era data missing
      * @param {Object} cached - Cached data object
      * @returns {boolean} True if expired
      */
     isExpired(cached) {
-        const age = Date.now() - cached.timestamp;
-        return age > cached.ttl;
+        // Primary check: Era changed (morning/evening switch)
+        if (cached.era && cached.era !== getCurrentEra()) {
+            console.log(`🔄 AI Insights: Cache expired (era changed: ${cached.era} → ${getCurrentEra()})`);
+            return true;
+        }
+
+        // Fallback check: 12-hour TTL (for older cache entries without era)
+        if (!cached.era) {
+            const age = Date.now() - cached.timestamp;
+            if (age > CACHE_DURATION) {
+                console.log(`🔄 AI Insights: Cache expired (>12 hours old)`);
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
