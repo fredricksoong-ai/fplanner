@@ -7,13 +7,41 @@ import { currentGW } from './data.js';
 import { calculatePPM, calculateMinutesPercentage } from './utils.js';
 
 // ============================================================================
+// TYPE DEFINITIONS
+// ============================================================================
+
+/**
+ * @typedef {Object} RiskFactor
+ * @property {'injury'|'suspension'|'rotation'|'form'|'value'|'deadwood'|'price'} type - Risk type
+ * @property {'high'|'medium'|'low'} severity - Risk severity level
+ * @property {string} icon - Emoji icon representing the risk
+ * @property {string} message - Short risk message for display
+ * @property {string} details - Detailed risk description
+ */
+
+/**
+ * @typedef {Object} RiskSummary
+ * @property {number} totalRisks - Total number of risks
+ * @property {number} highRisks - Number of high severity risks
+ * @property {number} mediumRisks - Number of medium severity risks
+ * @property {number} lowRisks - Number of low severity risks
+ * @property {boolean} hasAnyRisk - Whether player has any risks
+ * @property {boolean} hasHighRisk - Whether player has high severity risk
+ * @property {boolean} hasMediumRisk - Whether player has medium severity risk
+ * @property {RiskFactor[]} risks - Array of all risk factors
+ */
+
+// ============================================================================
 // RISK ANALYSIS
 // ============================================================================
 
 /**
  * Analyze all risk factors for a player
- * @param {Object} player - Player object
- * @returns {Array} Array of risk objects
+ * @param {import('./utils.js').Player} player - Player object with stats and status
+ * @returns {RiskFactor[]} Array of risk objects sorted by severity
+ * @example
+ * const risks = analyzePlayerRisks(player);
+ * // Returns: [{ type: 'injury', severity: 'high', icon: '🔴', message: '25% fit', details: '...' }]
  */
 export function analyzePlayerRisks(player) {
     const risks = [];
@@ -123,27 +151,31 @@ export function analyzePlayerRisks(player) {
 }
 
 /**
- * Check if player has high-severity risks
- * @param {Array} risks - Array of risk objects
- * @returns {boolean} True if any high-severity risks
+ * Check if player has high-severity risks (injuries, red cards, deadwood)
+ * @param {RiskFactor[]} risks - Array of risk objects from analyzePlayerRisks
+ * @returns {boolean} True if any risks have 'high' severity
  */
 export function hasHighRisk(risks) {
     return risks.some(risk => risk.severity === 'high');
 }
 
 /**
- * Check if player has medium-severity risks
- * @param {Array} risks - Array of risk objects
- * @returns {boolean} True if any medium-severity risks
+ * Check if player has medium-severity risks (yellow cards, rotation, poor form)
+ * @param {RiskFactor[]} risks - Array of risk objects from analyzePlayerRisks
+ * @returns {boolean} True if any risks have 'medium' severity
  */
 export function hasMediumRisk(risks) {
     return risks.some(risk => risk.severity === 'medium');
 }
 
 /**
- * Get risk summary for a player
- * @param {Object} player - Player object
- * @returns {Object} Risk summary
+ * Get comprehensive risk summary for a player
+ * @param {import('./utils.js').Player} player - Player object
+ * @returns {RiskSummary} Complete risk analysis summary with counts and flags
+ * @example
+ * const summary = getRiskSummary(player);
+ * console.log(summary.hasHighRisk); // true/false
+ * console.log(summary.totalRisks);  // 3
  */
 export function getRiskSummary(player) {
     const risks = analyzePlayerRisks(player);
@@ -303,60 +335,60 @@ export function getRiskBadge(risks) {
 // ============================================================================
 
 /**
- * Check if player has injury risk
- * @param {Object} player - Player object
- * @returns {boolean} True if injured
+ * Check if player has injury risk (< 75% chance to play)
+ * @param {import('./utils.js').Player} player - Player object
+ * @returns {boolean} True if chance_of_playing_next_round < 75%
  */
 export function hasInjuryRisk(player) {
-    return player.chance_of_playing_next_round !== null && 
+    return player.chance_of_playing_next_round !== null &&
            player.chance_of_playing_next_round !== undefined &&
            player.chance_of_playing_next_round < 75;
 }
 
 /**
- * Check if player has rotation risk
- * @param {Object} player - Player object
- * @returns {boolean} True if rotation risk
+ * Check if player has rotation risk (< 50% minutes after GW5)
+ * @param {import('./utils.js').Player} player - Player object
+ * @returns {boolean} True if playing < 50% of minutes (only checked after GW5)
  */
 export function hasRotationRisk(player) {
     const gw = currentGW || 1;
     if (gw < 5) return false;
-    
+
     const minutesPct = calculateMinutesPercentage(player, gw);
     return minutesPct < 50 && player.minutes > 0;
 }
 
 /**
- * Check if player has suspension risk
- * @param {Object} player - Player object
- * @returns {boolean} True if suspension risk
+ * Check if player has suspension risk (4+ yellows or any reds)
+ * @param {import('./utils.js').Player} player - Player object
+ * @returns {boolean} True if player has disciplinary concerns
  */
 export function hasSuspensionRisk(player) {
     return player.yellow_cards >= 4 || player.red_cards > 0;
 }
 
 /**
- * Check if player is dead wood (not playing)
- * @param {Object} player - Player object
- * @returns {boolean} True if dead wood
+ * Check if player is dead wood (0 minutes played after GW3)
+ * @param {import('./utils.js').Player} player - Player object
+ * @returns {boolean} True if player has not played any minutes (only checked after GW3)
  */
 export function isDeadWood(player) {
     const gw = currentGW || 1;
     if (gw < 3) return false;
-    
+
     const minutesPct = calculateMinutesPercentage(player, gw);
     return minutesPct === 0;
 }
 
 /**
- * Check if player has poor form
- * @param {Object} player - Player object
- * @returns {boolean} True if poor form
+ * Check if player has poor form (< 3 points per game after GW3)
+ * @param {import('./utils.js').Player} player - Player object
+ * @returns {boolean} True if form < 3 (requires 180+ minutes and GW3+)
  */
 export function hasPoorForm(player) {
     const gw = currentGW || 1;
     if (gw < 3 || player.minutes <= 180) return false;
-    
+
     const form = parseFloat(player.form) || 0;
     return form < 3;
 }

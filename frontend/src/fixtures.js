@@ -7,15 +7,45 @@ import { fplFixtures, fplBootstrap, currentGW } from './data.js';
 import { getTeamByCode } from './utils.js';
 
 // ============================================================================
+// TYPE DEFINITIONS
+// ============================================================================
+
+/**
+ * @typedef {Object} Fixture
+ * @property {string} opponent - Opponent short name with venue (e.g., 'ARS (H)', 'LIV (A)')
+ * @property {number} difficulty - FPL fixture difficulty rating (1=easiest, 5=hardest)
+ * @property {number} event - Gameweek number
+ */
+
+/**
+ * @typedef {Object} OpponentInfo
+ * @property {string} name - Opponent short name (3 letters)
+ * @property {number} difficulty - Fixture difficulty (1-5)
+ * @property {boolean} isHome - True if home fixture, false if away
+ */
+
+/**
+ * @typedef {Object} FixtureSwing
+ * @property {number} nextAvg - Average difficulty for next N fixtures
+ * @property {number} afterAvg - Average difficulty after that
+ * @property {number} swing - Difference (afterAvg - nextAvg)
+ * @property {boolean} improving - True if fixtures getting easier (swing < -0.5)
+ * @property {boolean} worsening - True if fixtures getting harder (swing > 0.5)
+ */
+
+// ============================================================================
 // FIXTURE RETRIEVAL
 // ============================================================================
 
 /**
- * Get fixtures for a team
+ * Get fixtures for a team (past or future)
  * @param {number} teamId - Team ID
- * @param {number} count - Number of fixtures to return
- * @param {boolean} isPast - Get past fixtures (true) or future (false)
- * @returns {Array} Array of fixture objects
+ * @param {number} [count=3] - Number of fixtures to return
+ * @param {boolean} [isPast=false] - Get past fixtures (true) or future (false)
+ * @returns {Fixture[]} Array of fixture objects with opponent and difficulty
+ * @example
+ * getFixtures(1, 3, false) // Next 3 fixtures for team 1
+ * getFixtures(5, 5, true)  // Last 5 fixtures for team 5
  */
 export function getFixtures(teamId, count = 3, isPast = false) {
     // Return real fixtures if we have the data
@@ -80,8 +110,10 @@ function getFallbackFixtures(count) {
 /**
  * Get opponent for a specific gameweek
  * @param {number} teamId - Team ID
- * @param {number} gameweek - Gameweek number
- * @returns {Object} Opponent info {name, difficulty, isHome}
+ * @param {number} gameweek - Gameweek number (1-38)
+ * @returns {OpponentInfo} Opponent info with name, difficulty, and venue
+ * @example
+ * getGWOpponent(1, 12) // { name: 'LIV', difficulty: 5, isHome: false }
  */
 export function getGWOpponent(teamId, gameweek) {
     if (!fplFixtures || !fplBootstrap || !teamId || !gameweek) {
@@ -116,22 +148,27 @@ export function getGWOpponent(teamId, gameweek) {
 /**
  * Calculate average fixture difficulty over next N gameweeks
  * @param {number} teamId - Team ID
- * @param {number} count - Number of gameweeks to analyze
- * @returns {number} Average difficulty (1-5)
+ * @param {number} [count=5] - Number of gameweeks to analyze
+ * @returns {number} Average difficulty rating (1-5, defaults to 3 if no fixtures)
+ * @example
+ * calculateFixtureDifficulty(1, 5) // 2.4 (good fixtures)
  */
 export function calculateFixtureDifficulty(teamId, count = 5) {
     const fixtures = getFixtures(teamId, count, false);
-    
+
     if (fixtures.length === 0) return 3;
-    
+
     const totalDifficulty = fixtures.reduce((sum, f) => sum + f.difficulty, 0);
     return totalDifficulty / fixtures.length;
 }
 
 /**
- * Get fixture difficulty rating class
+ * Get fixture difficulty rating classification
  * @param {number} avgDifficulty - Average difficulty (1-5)
- * @returns {string} Rating description
+ * @returns {'Excellent'|'Good'|'Average'|'Tough'|'Very Tough'} Rating description
+ * @example
+ * getFDRClass(1.8) // 'Excellent'
+ * getFDRClass(4.2) // 'Very Tough'
  */
 export function getFDRClass(avgDifficulty) {
     if (avgDifficulty <= 2) return 'Excellent';
@@ -142,11 +179,14 @@ export function getFDRClass(avgDifficulty) {
 }
 
 /**
- * Analyze fixture swing (improvement/deterioration)
+ * Analyze fixture swing (improvement/deterioration over time)
  * @param {number} teamId - Team ID
- * @param {number} nextCount - Fixtures to analyze next
- * @param {number} afterCount - Fixtures to analyze after that
- * @returns {Object} Swing analysis
+ * @param {number} [nextCount=3] - Fixtures to analyze next (immediate)
+ * @param {number} [afterCount=3] - Fixtures to analyze after that
+ * @returns {FixtureSwing} Swing analysis with averages and trend flags
+ * @example
+ * const swing = analyzeFixtureSwing(1, 3, 3);
+ * // { nextAvg: 3.5, afterAvg: 2.2, swing: -1.3, improving: true, worsening: false }
  */
 export function analyzeFixtureSwing(teamId, nextCount = 3, afterCount = 3) {
     const next = getFixtures(teamId, nextCount, false);
@@ -253,34 +293,44 @@ export function getTeamsWithWorstFixtures(count = 5, fixtureCount = 5) {
 // ============================================================================
 
 /**
- * Check if team has a blank (no fixture) in upcoming gameweeks
+ * Check if team has blank gameweeks (no fixtures) upcoming
  * @param {number} teamId - Team ID
- * @param {number} lookAhead - Number of gameweeks to check
- * @returns {Array} Array of blank gameweeks
+ * @param {number} [lookAhead=10] - Number of gameweeks to check ahead
+ * @returns {number[]} Array of gameweek numbers where team has no fixture
+ * @example
+ * getBlankGameweeks(1, 10) // [15, 28] (team has blanks in GW15 and GW28)
  */
 export function getBlankGameweeks(teamId, lookAhead = 10) {
     if (!fplFixtures || !fplBootstrap || !teamId) return [];
-    
+
     const blanks = [];
-    
+
     for (let gw = currentGW + 1; gw <= currentGW + lookAhead && gw <= 38; gw++) {
-        const hasFixture = fplFixtures.some(f => 
+        const hasFixture = fplFixtures.some(f =>
             f.event === gw && (f.team_h === teamId || f.team_a === teamId)
         );
-        
+
         if (!hasFixture) {
             blanks.push(gw);
         }
     }
-    
+
     return blanks;
 }
 
 /**
- * Check if team has a double gameweek upcoming
+ * @typedef {Object} DoubleGameweek
+ * @property {number} gameweek - Gameweek number
+ * @property {number} fixtures - Number of fixtures (usually 2)
+ */
+
+/**
+ * Check if team has double gameweeks (multiple fixtures) upcoming
  * @param {number} teamId - Team ID
- * @param {number} lookAhead - Number of gameweeks to check
- * @returns {Array} Array of double gameweeks
+ * @param {number} [lookAhead=10] - Number of gameweeks to check ahead
+ * @returns {DoubleGameweek[]} Array of double gameweek objects
+ * @example
+ * getDoubleGameweeks(1, 10) // [{ gameweek: 26, fixtures: 2 }]
  */
 export function getDoubleGameweeks(teamId, lookAhead = 10) {
     if (!fplFixtures || !fplBootstrap || !teamId) return [];

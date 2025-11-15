@@ -3,19 +3,54 @@
 // Handles all API calls to backend
 // ============================================================================
 
-// Backend API base URL
-const API_BASE = '/api'; // Vite proxy will route to localhost:3001
-
-// Global data storage (replaces global variables from MVP)
-export let fplBootstrap = null;
-export let fplFixtures = null;
-export let githubData = null;
-export let currentGW = null;
+/**
+ * @typedef {Object} FPLDataResponse
+ * @property {Object} bootstrap - FPL bootstrap data (events, teams, elements)
+ * @property {Array} fixtures - FPL fixtures data
+ * @property {Object} github - GitHub CSV enriched data
+ * @property {Object} meta - Cache metadata
+ */
 
 /**
- * Load all FPL data from backend
- * @param {string} queryParams - Optional query params (e.g., '?refresh=true')
- * @returns {Promise<Object>} Combined data object
+ * @typedef {Object} TeamData
+ * @property {Object} team - Team information (name, manager, etc.)
+ * @property {Object} picks - Team picks and entry history
+ * @property {number} gameweek - Current gameweek
+ */
+
+// Backend API base URL (proxied by Vite to localhost:3001)
+const API_BASE = '/api';
+
+// ============================================================================
+// GLOBAL DATA STORAGE
+// Module-level variables for shared data access across the application
+// ============================================================================
+
+/** @type {Object|null} FPL bootstrap data (events, teams, elements/players) */
+export let fplBootstrap = null;
+
+/** @type {Array|null} FPL fixtures data with difficulty ratings */
+export let fplFixtures = null;
+
+/** @type {Object|null} GitHub CSV enriched data (season stats, GW stats, transfers) */
+export let githubData = null;
+
+/** @type {number|null} Current gameweek number (latest finished GW) */
+export let currentGW = null;
+
+// ============================================================================
+// API FUNCTIONS
+// ============================================================================
+
+/**
+ * Load all FPL data from backend (bootstrap, fixtures, GitHub enrichments)
+ * Updates module-level variables: fplBootstrap, fplFixtures, githubData, currentGW
+ * @param {string} [queryParams=''] - Optional query params (e.g., '?refresh=true' to bypass cache)
+ * @returns {Promise<FPLDataResponse>} Combined data object from backend
+ * @throws {Error} If API request fails or returns non-OK status
+ * @example
+ * await loadFPLData(); // Load with cache
+ * await loadFPLData('?refresh=true'); // Force refresh
  */
 export async function loadFPLData(queryParams = '') {
     console.log('🔄 Loading FPL data from backend...');
@@ -51,9 +86,14 @@ export async function loadFPLData(queryParams = '') {
 }
 
 /**
- * Load user's team data
- * @param {number} teamId - FPL team ID
- * @returns {Promise<Object>} Team data
+ * Load user's team data from FPL API
+ * @param {number} teamId - FPL team ID (1-10 digits)
+ * @returns {Promise<TeamData>} Team data with picks and entry history
+ * @throws {Error} If team ID is invalid or API request fails
+ * @example
+ * const teamData = await loadMyTeam(123456);
+ * console.log(teamData.team.name); // Team name
+ * console.log(teamData.picks.entry_history.total_points); // GW points
  */
 export async function loadMyTeam(teamId) {
     console.log(`🔄 Loading team ${teamId}...`);
@@ -81,6 +121,8 @@ export async function loadMyTeam(teamId) {
 
 /**
  * Detect current gameweek from bootstrap data
+ * Sets the module-level currentGW variable to latest finished gameweek
+ * @private
  */
 function detectCurrentGW() {
     if (!fplBootstrap) {
@@ -102,6 +144,10 @@ function detectCurrentGW() {
 
 /**
  * Enrich FPL player data with GitHub CSV data (3-source enrichment)
+ * Adds github_season, github_gw, and github_transfers properties to player
+ * @private
+ * @param {import('./utils.js').Player} player - Player object to enrich
+ * @param {Object} githubData - GitHub CSV data with seasonStats, currentGWStats, nextGWStats
  */
 function enrichPlayerWithGithubData(player, githubData) {
     if (!githubData) {
@@ -163,16 +209,17 @@ function enrichPlayerWithGithubData(player, githubData) {
 }
 
 /**
- * Enrich all players with GitHub data
- * @param {Array} players - Array of player objects
- * @returns {Array} Enriched players array
+ * Enrich all players with GitHub CSV data
+ * @private
+ * @param {Array<import('./utils.js').Player>} players - Array of player objects
+ * @returns {Array<import('./utils.js').Player>} Enriched players array (same array, mutated)
  */
 function enrichPlayerData(players) {
     if (!players || !Array.isArray(players)) {
         return [];
     }
 
-    // Enrich each player with GitHub data
+    // Enrich each player with GitHub data (mutates player objects)
     players.forEach(player => {
         enrichPlayerWithGithubData(player, githubData);
     });
@@ -180,9 +227,16 @@ function enrichPlayerData(players) {
     return players;
 }
 
+// ============================================================================
+// PUBLIC DATA ACCESS FUNCTIONS
+// ============================================================================
+
 /**
- * Get all players with enriched data
- * @returns {Array} Enriched players array
+ * Get all players with enriched data (FPL + GitHub stats)
+ * @returns {Array<import('./utils.js').Player>} All players with github_season, github_gw, github_transfers
+ * @example
+ * const players = getAllPlayers();
+ * const topScorers = players.sort((a, b) => b.total_points - a.total_points).slice(0, 10);
  */
 export function getAllPlayers() {
     if (!fplBootstrap) {
@@ -195,8 +249,8 @@ export function getAllPlayers() {
 
 /**
  * Get player by ID
- * @param {number} playerId - Player ID
- * @returns {Object|null} Player object
+ * @param {number} playerId - Player ID from FPL API
+ * @returns {import('./utils.js').Player|null} Player object or null if not found
  */
 export function getPlayerById(playerId) {
     if (!fplBootstrap) return null;
@@ -205,8 +259,8 @@ export function getPlayerById(playerId) {
 
 /**
  * Get team by ID
- * @param {number} teamId - Team ID
- * @returns {Object|null} Team object
+ * @param {number} teamId - Team ID from FPL API
+ * @returns {import('./utils.js').Team|null} Team object or null if not found
  */
 export function getTeamById(teamId) {
     if (!fplBootstrap) return null;
@@ -214,8 +268,10 @@ export function getTeamById(teamId) {
 }
 
 /**
- * Force refresh data from backend
- * @returns {Promise<Object>} Fresh data
+ * Force refresh all data from backend (bypasses cache)
+ * @returns {Promise<FPLDataResponse>} Fresh data from FPL API
+ * @example
+ * await refreshData(); // Bypass cache and fetch latest data
  */
 export async function refreshData() {
     console.log('🔄 Force refreshing data...');
