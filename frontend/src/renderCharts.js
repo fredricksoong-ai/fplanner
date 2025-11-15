@@ -421,8 +421,20 @@ async function renderPointsPriceChart() {
             borderRadius: 3,
             distance: 5
         },
-        // Add value zones as background regions
-        markArea: pos === 'GKP' ? { // Only add zones once (on first series)
+        data: positions[pos].data
+    }));
+
+    // Add value zones as a separate series for consistent rendering
+    series.push({
+        name: 'Value Zones',
+        type: 'scatter',
+        silent: true,
+        symbolSize: 0,
+        itemStyle: {
+            opacity: 0
+        },
+        data: [],
+        markArea: {
             silent: true,
             itemStyle: {
                 opacity: 0.08
@@ -433,7 +445,17 @@ async function renderPointsPriceChart() {
                     name: 'Value Zone',
                     xAxis: 3,
                     yAxis: 120,
-                    itemStyle: { color: '#10b981' } // green
+                    itemStyle: { color: '#10b981' }, // green
+                    label: {
+                        show: true,
+                        position: 'insideTopLeft',
+                        fontSize: 11,
+                        fontWeight: 'bold',
+                        color: textColor,
+                        backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)',
+                        padding: [4, 8],
+                        borderRadius: 4
+                    }
                 }, {
                     xAxis: 8.5,
                     yAxis: 300
@@ -443,7 +465,17 @@ async function renderPointsPriceChart() {
                     name: 'Premium Zone',
                     xAxis: 8.5,
                     yAxis: 120,
-                    itemStyle: { color: '#3b82f6' } // blue
+                    itemStyle: { color: '#3b82f6' }, // blue
+                    label: {
+                        show: true,
+                        position: 'insideTopRight',
+                        fontSize: 11,
+                        fontWeight: 'bold',
+                        color: textColor,
+                        backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)',
+                        padding: [4, 8],
+                        borderRadius: 4
+                    }
                 }, {
                     xAxis: 15,
                     yAxis: 300
@@ -453,23 +485,24 @@ async function renderPointsPriceChart() {
                     name: 'Trap Zone',
                     xAxis: 8.5,
                     yAxis: 10,
-                    itemStyle: { color: '#ef4444' } // red
+                    itemStyle: { color: '#ef4444' }, // red
+                    label: {
+                        show: true,
+                        position: 'insideBottomRight',
+                        fontSize: 11,
+                        fontWeight: 'bold',
+                        color: textColor,
+                        backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)',
+                        padding: [4, 8],
+                        borderRadius: 4
+                    }
                 }, {
                     xAxis: 15,
                     yAxis: 120
                 }]
-            ],
-            label: {
-                show: true,
-                position: 'inside',
-                fontSize: 11,
-                fontWeight: 'bold',
-                color: textColor,
-                opacity: 0.5
-            }
-        } : undefined,
-        data: positions[pos].data
-    }));
+            ]
+        }
+    });
 
     // Initialize chart
     if (!echarts) {
@@ -747,18 +780,81 @@ async function renderFormPriceChart() {
             borderRadius: 3,
             distance: 5
         },
-        markArea: pos === 'GKP' ? {
+        data: positions[pos].data
+    }));
+
+    // Add value zones as a separate series for consistent rendering
+    series.push({
+        name: 'Value Zones',
+        type: 'scatter',
+        silent: true,
+        symbolSize: 0,
+        itemStyle: { opacity: 0 },
+        data: [],
+        markArea: {
             silent: true,
             itemStyle: { opacity: 0.08 },
             data: [
-                [{ name: 'Hot Form Value', xAxis: 3, yAxis: 5, itemStyle: { color: '#10b981' } }, { xAxis: 8.5, yAxis: 10 }],
-                [{ name: 'Premium Form', xAxis: 8.5, yAxis: 5, itemStyle: { color: '#3b82f6' } }, { xAxis: 15, yAxis: 10 }],
-                [{ name: 'Cold Trap', xAxis: 8.5, yAxis: 0, itemStyle: { color: '#ef4444' } }, { xAxis: 15, yAxis: 5 }]
-            ],
-            label: { show: true, position: 'inside', fontSize: 11, fontWeight: 'bold', color: textColor, opacity: 0.5 }
-        } : undefined,
-        data: positions[pos].data
-    }));
+                [
+                    {
+                        name: 'Hot Form Value',
+                        xAxis: 3,
+                        yAxis: 5,
+                        itemStyle: { color: '#10b981' },
+                        label: {
+                            show: true,
+                            position: 'insideTopLeft',
+                            fontSize: 11,
+                            fontWeight: 'bold',
+                            color: textColor,
+                            backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)',
+                            padding: [4, 8],
+                            borderRadius: 4
+                        }
+                    },
+                    { xAxis: 8.5, yAxis: 10 }
+                ],
+                [
+                    {
+                        name: 'Premium Form',
+                        xAxis: 8.5,
+                        yAxis: 5,
+                        itemStyle: { color: '#3b82f6' },
+                        label: {
+                            show: true,
+                            position: 'insideTopRight',
+                            fontSize: 11,
+                            fontWeight: 'bold',
+                            color: textColor,
+                            backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)',
+                            padding: [4, 8],
+                            borderRadius: 4
+                        }
+                    },
+                    { xAxis: 15, yAxis: 10 }
+                ],
+                [
+                    {
+                        name: 'Cold Trap',
+                        xAxis: 8.5,
+                        yAxis: 0,
+                        itemStyle: { color: '#ef4444' },
+                        label: {
+                            show: true,
+                            position: 'insideBottomRight',
+                            fontSize: 11,
+                            fontWeight: 'bold',
+                            color: textColor,
+                            backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)',
+                            padding: [4, 8],
+                            borderRadius: 4
+                        }
+                    },
+                    { xAxis: 15, yAxis: 5 }
+                ]
+            ]
+        }
+    });
 
     if (!echarts) return;
     currentChart = echarts.init(chartContainer);
@@ -940,19 +1036,37 @@ async function renderMinutesEfficiencyChart() {
             },
             borderWidth: (params) => params.data.isMyPlayer ? 3 : 1
         },
-        data: data,
-        markArea: position === 'GKP' ? {
+        data: data
+    }));
+
+    // Add value zones as a separate series for consistent rendering
+    series.push({
+        name: 'Value Zones',
+        type: 'scatter',
+        silent: true,
+        symbolSize: 0,
+        itemStyle: { opacity: 0 },
+        data: [],
+        markArea: {
             silent: true,
-            itemStyle: {
-                color: 'transparent'
-            },
+            itemStyle: { opacity: 0.08 },
             data: [
                 [
                     {
                         name: 'Nailed Performers',
                         xAxis: 70,
                         yAxis: 4.5,
-                        itemStyle: { color: 'rgba(16, 185, 129, 0.1)' }
+                        itemStyle: { color: '#10b981' },
+                        label: {
+                            show: true,
+                            position: 'insideTopRight',
+                            fontSize: 11,
+                            fontWeight: 'bold',
+                            color: textColor,
+                            backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)',
+                            padding: [4, 8],
+                            borderRadius: 4
+                        }
                     },
                     {
                         xAxis: 100,
@@ -964,7 +1078,17 @@ async function renderMinutesEfficiencyChart() {
                         name: 'Rotation Risk',
                         xAxis: 0,
                         yAxis: 0,
-                        itemStyle: { color: 'rgba(251, 191, 36, 0.1)' }
+                        itemStyle: { color: '#fbbf24' },
+                        label: {
+                            show: true,
+                            position: 'insideTopLeft',
+                            fontSize: 11,
+                            fontWeight: 'bold',
+                            color: textColor,
+                            backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)',
+                            padding: [4, 8],
+                            borderRadius: 4
+                        }
                     },
                     {
                         xAxis: 50,
@@ -976,7 +1100,17 @@ async function renderMinutesEfficiencyChart() {
                         name: 'Bench Fodder',
                         xAxis: 0,
                         yAxis: 0,
-                        itemStyle: { color: 'rgba(239, 68, 68, 0.1)' }
+                        itemStyle: { color: '#ef4444' },
+                        label: {
+                            show: true,
+                            position: 'insideBottomLeft',
+                            fontSize: 11,
+                            fontWeight: 'bold',
+                            color: textColor,
+                            backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)',
+                            padding: [4, 8],
+                            borderRadius: 4
+                        }
                     },
                     {
                         xAxis: 50,
@@ -984,8 +1118,8 @@ async function renderMinutesEfficiencyChart() {
                     }
                 ]
             ]
-        } : undefined
-    }));
+        }
+    });
 
     // Initialize chart
     currentChart = echarts.init(chartContainer);
@@ -1553,19 +1687,37 @@ async function renderOwnershipFormChart() {
             },
             borderWidth: (params) => params.data.isMyPlayer ? 3 : 1
         },
-        data: data,
-        markArea: position === 'GKP' ? {
+        data: data
+    }));
+
+    // Add value zones as a separate series for consistent rendering
+    series.push({
+        name: 'Value Zones',
+        type: 'scatter',
+        silent: true,
+        symbolSize: 0,
+        itemStyle: { opacity: 0 },
+        data: [],
+        markArea: {
             silent: true,
-            itemStyle: {
-                color: 'transparent'
-            },
+            itemStyle: { opacity: 0.08 },
             data: [
                 [
                     {
                         name: 'Hidden Gems',
                         xAxis: 0,
                         yAxis: 5,
-                        itemStyle: { color: 'rgba(16, 185, 129, 0.1)' }
+                        itemStyle: { color: '#10b981' },
+                        label: {
+                            show: true,
+                            position: 'insideTopLeft',
+                            fontSize: 11,
+                            fontWeight: 'bold',
+                            color: textColor,
+                            backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)',
+                            padding: [4, 8],
+                            borderRadius: 4
+                        }
                     },
                     {
                         xAxis: 10,
@@ -1577,7 +1729,17 @@ async function renderOwnershipFormChart() {
                         name: 'Template Picks',
                         xAxis: 30,
                         yAxis: 5,
-                        itemStyle: { color: 'rgba(59, 130, 246, 0.1)' }
+                        itemStyle: { color: '#3b82f6' },
+                        label: {
+                            show: true,
+                            position: 'insideTopRight',
+                            fontSize: 11,
+                            fontWeight: 'bold',
+                            color: textColor,
+                            backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)',
+                            padding: [4, 8],
+                            borderRadius: 4
+                        }
                     },
                     {
                         xAxis: 'max',
@@ -1589,7 +1751,17 @@ async function renderOwnershipFormChart() {
                         name: 'Avoid',
                         xAxis: 30,
                         yAxis: 0,
-                        itemStyle: { color: 'rgba(239, 68, 68, 0.1)' }
+                        itemStyle: { color: '#ef4444' },
+                        label: {
+                            show: true,
+                            position: 'insideBottomRight',
+                            fontSize: 11,
+                            fontWeight: 'bold',
+                            color: textColor,
+                            backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)',
+                            padding: [4, 8],
+                            borderRadius: 4
+                        }
                     },
                     {
                         xAxis: 'max',
@@ -1597,8 +1769,8 @@ async function renderOwnershipFormChart() {
                     }
                 ]
             ]
-        } : undefined
-    }));
+        }
+    });
 
     // Initialize chart
     currentChart = echarts.init(chartContainer);
@@ -1859,19 +2031,38 @@ async function renderFdrFormChart() {
             },
             borderWidth: (params) => params.data.isMyPlayer ? 3 : 1
         },
-        data: data,
-        markArea: position === 'GKP' ? {
+        data: data
+    }));
+
+    // Add value zones as a separate series for consistent rendering
+    // Note: FDR axis is inverted (lower is better), so visual positions are flipped
+    series.push({
+        name: 'Value Zones',
+        type: 'scatter',
+        silent: true,
+        symbolSize: 0,
+        itemStyle: { opacity: 0 },
+        data: [],
+        markArea: {
             silent: true,
-            itemStyle: {
-                color: 'transparent'
-            },
+            itemStyle: { opacity: 0.08 },
             data: [
                 [
                     {
                         name: 'Prime Targets',
                         xAxis: 1,
                         yAxis: 5,
-                        itemStyle: { color: 'rgba(16, 185, 129, 0.1)' }
+                        itemStyle: { color: '#10b981' },
+                        label: {
+                            show: true,
+                            position: 'insideTopRight', // Visually right due to inverted axis
+                            fontSize: 11,
+                            fontWeight: 'bold',
+                            color: textColor,
+                            backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)',
+                            padding: [4, 8],
+                            borderRadius: 4
+                        }
                     },
                     {
                         xAxis: 3,
@@ -1883,7 +2074,17 @@ async function renderFdrFormChart() {
                         name: 'Fixture Swing',
                         xAxis: 3.5,
                         yAxis: 5,
-                        itemStyle: { color: 'rgba(251, 191, 36, 0.1)' }
+                        itemStyle: { color: '#fbbf24' },
+                        label: {
+                            show: true,
+                            position: 'insideTopLeft', // Visually left due to inverted axis
+                            fontSize: 11,
+                            fontWeight: 'bold',
+                            color: textColor,
+                            backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)',
+                            padding: [4, 8],
+                            borderRadius: 4
+                        }
                     },
                     {
                         xAxis: 5,
@@ -1895,7 +2096,17 @@ async function renderFdrFormChart() {
                         name: 'Avoid',
                         xAxis: 3.5,
                         yAxis: 0,
-                        itemStyle: { color: 'rgba(239, 68, 68, 0.1)' }
+                        itemStyle: { color: '#ef4444' },
+                        label: {
+                            show: true,
+                            position: 'insideBottomLeft', // Visually left due to inverted axis
+                            fontSize: 11,
+                            fontWeight: 'bold',
+                            color: textColor,
+                            backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)',
+                            padding: [4, 8],
+                            borderRadius: 4
+                        }
                     },
                     {
                         xAxis: 5,
@@ -1903,8 +2114,8 @@ async function renderFdrFormChart() {
                     }
                 ]
             ]
-        } : undefined
-    }));
+        }
+    });
 
     // Initialize chart
     currentChart = echarts.init(chartContainer);
