@@ -465,8 +465,10 @@ function renderPositionSpecificTable(players, position = 'all') {
     }
 
     // Add fixture headers
-    fixtureHeaders.forEach(h => {
-        html += `<th style="text-align: center; padding: 0.5rem;">${h}</th>`;
+    fixtureHeaders.forEach((h, idx) => {
+        const isUpcomingGW = idx === 0;
+        const headerBg = isUpcomingGW ? 'background: rgba(139, 92, 246, 0.3);' : '';
+        html += `<th style="text-align: center; padding: 0.5rem; ${headerBg}">${h}</th>`;
     });
 
     html += `
@@ -601,9 +603,9 @@ function renderPositionSpecificTable(players, position = 'all') {
 
         // Add fixtures
         next5.forEach((f, fixIdx) => {
-            // Highlight first fixture (next GW) with soft purple if this is my player
-            const isNextGW = fixIdx === 0;
-            const fixtureHighlight = (isMyPlayer && isNextGW) ? 'background: rgba(137, 80, 252, 0.08);' : '';
+            // Highlight first fixture (next GW) with soft purple for ALL players
+            const isUpcomingGW = fixIdx === 0;
+            const fixtureHighlight = isUpcomingGW ? 'background: rgba(139, 92, 246, 0.1);' : '';
 
             html += `
                 <td style="padding: 0.5rem; text-align: center; ${fixtureHighlight}">

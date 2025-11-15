@@ -118,9 +118,26 @@ function updateSearchResults() {
         return;
     }
 
+    // Get user's team player IDs for highlighting
+    let myTeamPlayerIds = [];
+    const cachedTeamId = localStorage.getItem('fplanner_team_id');
+    if (cachedTeamId) {
+        const cachedTeamData = localStorage.getItem(`fplanner_team_${cachedTeamId}`);
+        if (cachedTeamData) {
+            try {
+                const teamData = JSON.parse(cachedTeamData);
+                if (teamData && teamData.picks && teamData.picks.picks) {
+                    myTeamPlayerIds = teamData.picks.picks.map(p => p.element);
+                }
+            } catch (e) {
+                console.log('Could not parse cached team data for highlighting');
+            }
+        }
+    }
+
     resultsContainer.innerHTML = `
         <p style="color: var(--text-secondary); margin-bottom: 1rem;">Found ${players.length} player${players.length !== 1 ? 's' : ''}</p>
-        ${renderPlayerTable(players, 'next5')}
+        ${renderPlayerTable(players, 'next5', myTeamPlayerIds)}
     `;
 
     attachRiskTooltipListeners();

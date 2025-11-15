@@ -77,9 +77,6 @@ function renderPage() {
         case 'my-team':
             renderMyTeamPage();
             break;
-        case 'transfer-committee':
-            renderTransferCommittee();
-            break;
         case 'data-analysis':
             renderDataAnalysis();
             break;
@@ -98,11 +95,6 @@ function renderPage() {
 async function renderMyTeamPage() {
     const { renderMyTeamForm } = await import('./renderMyTeam.js');
     renderMyTeamForm();
-}
-
-async function renderTransferCommittee() {
-    const { renderTransferCommittee: render } = await import('./renderTransferCommittee.js');
-    render();
 }
 
 async function renderDataAnalysis() {
@@ -328,7 +320,6 @@ function setupNavigation() {
     
     const pages = [
         { id: 'my-team', label: 'My Team', icon: 'fa-users' },
-        { id: 'transfer-committee', label: 'Transfer Committee', icon: 'fa-trophy' },
         { id: 'data-analysis', label: 'Data Analysis', icon: 'fa-chart-bar' },
         { id: 'search', label: 'Search', icon: 'fa-search' }
     ];
@@ -434,11 +425,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Import and expose render functions
 Promise.all([
-    import('./renderTransferCommittee.js'),
     import('./renderDataAnalysis.js'),
     import('./renderSearch.js')
-]).then(([tcModule, daModule, searchModule]) => {
-    window.renderTransferCommittee = tcModule.renderTransferCommittee;
+]).then(([daModule, searchModule]) => {
     window.renderDataAnalysis = daModule.renderDataAnalysis;
     window.renderSearch = searchModule.renderSearch;
 });
