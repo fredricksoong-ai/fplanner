@@ -37,18 +37,23 @@ import {
  * Render a player table with stats and fixtures
  * @param {Array} players - Array of player objects
  * @param {string} fixtureMode - 'next5' or 'past3next3'
+ * @param {Array} myTeamPlayerIds - Optional array of player IDs in user's team (for highlighting)
  * @returns {string} HTML string for player table
  */
-export function renderPlayerTable(players, fixtureMode = 'next5') {
+export function renderPlayerTable(players, fixtureMode = 'next5', myTeamPlayerIds = []) {
     if (!players || players.length === 0) {
         return '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">No players found</div>';
     }
 
     let fixtureHeaders = [];
+    let upcomingGWIndex = -1;
+
     if (fixtureMode === 'next5') {
         fixtureHeaders = getFixtureHeaders(5, 1);
+        upcomingGWIndex = 0; // First column is upcoming GW
     } else if (fixtureMode === 'past3next3') {
         fixtureHeaders = [...getPastGWHeaders(3), ...getFixtureHeaders(3, 1)];
+        upcomingGWIndex = 3; // Fourth column is upcoming GW (after 3 past GWs)
     }
 
     let html = `
@@ -64,14 +69,23 @@ export function renderPlayerTable(players, fixtureMode = 'next5') {
                         <th style="text-align: center; padding: 0.75rem 1rem;">PPM</th>
                         <th style="text-align: center; padding: 0.75rem 1rem;">Own %</th>
                         <th style="text-align: center; padding: 0.75rem 1rem;">Price</th>
-                        ${fixtureHeaders.map(h => `<th style="text-align: center; padding: 0.5rem;">${h}</th>`).join('')}
+                        ${fixtureHeaders.map((h, idx) => {
+                            const isUpcomingGW = idx === upcomingGWIndex;
+                            const headerBg = isUpcomingGW ? 'background: rgba(139, 92, 246, 0.3);' : '';
+                            return `<th style="text-align: center; padding: 0.5rem; ${headerBg}">${h}</th>`;
+                        }).join('')}
                     </tr>
                 </thead>
                 <tbody>
     `;
 
     players.forEach((player, index) => {
-        const rowBg = index % 2 === 0 ? 'var(--bg-secondary)' : 'var(--bg-primary)';
+        // Check if player is in user's team
+        const isInMyTeam = myTeamPlayerIds.includes(player.id);
+        const rowBg = isInMyTeam
+            ? 'rgba(139, 92, 246, 0.1)' // Soft purple highlight for user's team
+            : (index % 2 === 0 ? 'var(--bg-secondary)' : 'var(--bg-primary)');
+
         const risks = analyzePlayerRisks(player);
         const riskTooltip = renderRiskTooltip(risks);
         const hasHighSeverity = hasHighRisk(risks);
@@ -98,6 +112,7 @@ export function renderPlayerTable(players, fixtureMode = 'next5') {
                 <td style="padding: 0.75rem 1rem;">
                     <strong>${escapeHtml(player.web_name)}</strong>
                     ${riskTooltip ? `<span style="margin-left: 0.5rem;">${riskTooltip}</span>` : ''}
+                    ${isInMyTeam ? ' <span style="color: #8b5cf6; font-size: 0.75rem;">⭐</span>' : ''}
                 </td>
                 <td style="padding: 0.75rem 1rem;">${getTeamShortName(player.team)}</td>
                 <td style="padding: 0.75rem 1rem; text-align: center;">${player.minutes || 0}</td>
@@ -112,13 +127,17 @@ export function renderPlayerTable(players, fixtureMode = 'next5') {
                 </td>
                 <td style="padding: 0.75rem 1rem; text-align: center;">${formatPercent(player.selected_by_percent)}</td>
                 <td style="padding: 0.75rem 1rem; text-align: center;">${formatCurrency(player.now_cost)}</td>
-                ${fixtures.map(f => `
-                    <td style="padding: 0.5rem; text-align: center;">
-                        <span class="${getDifficultyClass(f.difficulty)}" style="padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.75rem; display: inline-block;">
-                            ${f.opponent}
-                        </span>
-                    </td>
-                `).join('')}
+                ${fixtures.map((f, idx) => {
+                    const isUpcomingGW = idx === upcomingGWIndex;
+                    const cellBg = isUpcomingGW ? 'background: rgba(139, 92, 246, 0.1);' : '';
+                    return `
+                        <td style="padding: 0.5rem; text-align: center; ${cellBg}">
+                            <span class="${getDifficultyClass(f.difficulty)}" style="padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.75rem; display: inline-block;">
+                                ${f.opponent}
+                            </span>
+                        </td>
+                    `;
+                }).join('')}
             </tr>
         `;
     });

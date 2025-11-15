@@ -31,7 +31,8 @@ import {
 
 import {
     analyzePlayerRisks,
-    hasHighRisk
+    hasHighRisk,
+    renderRiskTooltip
 } from './risk.js';
 
 import {
@@ -685,7 +686,7 @@ function renderTeamRows(players, gameweek, next5GWs) {
         const gwOpp = getGWOpponent(player.team, gameweek);
         const posType = getPositionType(player);
         const risks = analyzePlayerRisks(player);
-        const riskTooltip = risks.length > 0 ? `<span style="color: #fb923c; margin-left: 0.5rem;">⚠️</span>` : '';
+        const riskTooltip = renderRiskTooltip(risks);
         const hasHighSeverity = hasHighRisk(risks);
 
         const ptsHeatmap = getPtsHeatmap(player.total_points, 'pts');
@@ -744,7 +745,7 @@ function renderTeamRows(players, gameweek, next5GWs) {
                 <td style="padding: 0.75rem 0.5rem; font-weight: 600;">${getPositionShort(player)}</td>
                 <td style="padding: 0.75rem 0.5rem;">
                     <strong>${escapeHtml(player.web_name)}</strong>${captainBadge}
-                    ${riskTooltip}
+                    ${riskTooltip ? `${riskTooltip}` : ''}
                 </td>
                 <td style="padding: 0.75rem 0.5rem;">${getTeamShortName(player.team)}</td>
                 <td style="padding: 0.75rem 0.5rem; text-align: center;">
