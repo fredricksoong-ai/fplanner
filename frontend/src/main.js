@@ -6,6 +6,7 @@
 import './styles.css';
 import { loadFPLData, loadMyTeam, refreshData, currentGW } from './data.js';
 import { escapeHtml } from './utils.js';
+import { showSuccess, showError, showWarning } from './notifications.js';
 import {
     updateOwnershipThreshold as updateAnalysisOwnership,
     setFixtureFilter,
@@ -69,7 +70,10 @@ function updateNavLinks() {
  */
 function renderPage() {
     const container = document.getElementById('app-container');
-    
+
+    // Cleanup previous page resources
+    cleanupPreviousPage();
+
     // Show loading state
     container.innerHTML = `
         <div style="text-align: center; padding: 4rem 2rem; color: var(--text-secondary);">
@@ -77,7 +81,7 @@ function renderPage() {
             <p>Loading ${currentPage}...</p>
         </div>
     `;
-    
+
     // Route to appropriate render function
     switch (currentPage) {
         case 'my-team':
@@ -95,6 +99,18 @@ function renderPage() {
         default:
             container.innerHTML = '<p>Page not found</p>';
     }
+}
+
+/**
+ * Cleanup resources from previous page to prevent memory leaks
+ */
+function cleanupPreviousPage() {
+    // Cleanup charts when navigating away from charts page
+    import('./renderCharts.js').then(({ cleanupCharts }) => {
+        cleanupCharts();
+    }).catch(() => {
+        // Charts module not loaded yet, no cleanup needed
+    });
 }
 
 // ============================================================================
@@ -401,22 +417,22 @@ window.switchAnalysisTab = (tab) => {
 window.loadTeam = async () => {
     const input = document.getElementById('team-id-input');
     const teamId = input.value.trim();
-    
+
     if (!teamId) {
-        alert('Please enter a team ID');
+        showWarning('Please enter a team ID');
         return;
     }
-    
+
     try {
         console.log(`🔄 Loading team ${teamId}...`);
         myTeamData = await loadMyTeam(teamId);
         currentTeamId = teamId;
 
         // Team loaded successfully
-        alert(`Team loaded! Manager: ${myTeamData.team.player_first_name} ${myTeamData.team.player_last_name}`);
-        
+        showSuccess(`Team loaded! Manager: ${myTeamData.team.player_first_name} ${myTeamData.team.player_last_name}`);
+
     } catch (err) {
-        alert(`Failed to load team: ${err.message}`);
+        showError(`Failed to load team: ${err.message}`);
     }
 };
 

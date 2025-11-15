@@ -434,13 +434,95 @@ async function fetchTeamPicks(teamId, gameweek) {
 // ============================================================================
 
 /**
+ * Validate cache structure to prevent corruption
+ * @param {Object} cacheData - Cache object to validate
+ * @returns {boolean} - True if valid, false otherwise
+ */
+function validateCacheStructure(cacheData) {
+  if (!cacheData || typeof cacheData !== 'object') {
+    console.warn('⚠️ Cache validation failed: not an object');
+    return false;
+  }
+
+  // Check required top-level properties
+  const requiredProps = ['bootstrap', 'fixtures', 'github', 'stats'];
+  for (const prop of requiredProps) {
+    if (!(prop in cacheData)) {
+      console.warn(`⚠️ Cache validation failed: missing '${prop}' property`);
+      return false;
+    }
+  }
+
+  // Validate bootstrap structure
+  if (!cacheData.bootstrap || typeof cacheData.bootstrap !== 'object') {
+    console.warn('⚠️ Cache validation failed: invalid bootstrap structure');
+    return false;
+  }
+
+  // Validate fixtures structure
+  if (!cacheData.fixtures || typeof cacheData.fixtures !== 'object') {
+    console.warn('⚠️ Cache validation failed: invalid fixtures structure');
+    return false;
+  }
+
+  // Validate github structure
+  if (!cacheData.github || typeof cacheData.github !== 'object') {
+    console.warn('⚠️ Cache validation failed: invalid github structure');
+    return false;
+  }
+
+  // Validate stats structure
+  if (!cacheData.stats || typeof cacheData.stats !== 'object') {
+    console.warn('⚠️ Cache validation failed: invalid stats structure');
+    return false;
+  }
+
+  // If bootstrap has data, validate it's an array or object
+  if (cacheData.bootstrap.data) {
+    if (typeof cacheData.bootstrap.data !== 'object') {
+      console.warn('⚠️ Cache validation failed: invalid bootstrap data');
+      return false;
+    }
+  }
+
+  // If fixtures has data, validate it's an array
+  if (cacheData.fixtures.data) {
+    if (!Array.isArray(cacheData.fixtures.data)) {
+      console.warn('⚠️ Cache validation failed: fixtures data must be array');
+      return false;
+    }
+  }
+
+  console.log('✅ Cache structure validation passed');
+  return true;
+}
+
+/**
  * Load cache from disk on startup
  */
 function loadCacheFromDisk() {
   if (fs.existsSync(CACHE_BACKUP_PATH)) {
     try {
-      const backup = JSON.parse(fs.readFileSync(CACHE_BACKUP_PATH, 'utf8'));
-      
+      const fileContent = fs.readFileSync(CACHE_BACKUP_PATH, 'utf8');
+
+      // Check if file is empty
+      if (!fileContent || fileContent.trim().length === 0) {
+        console.warn('⚠️ Cache backup file is empty, starting fresh');
+        return;
+      }
+
+      const backup = JSON.parse(fileContent);
+
+      // Validate cache structure
+      if (!validateCacheStructure(backup)) {
+        console.error('❌ Cache backup corrupted, starting fresh');
+        // Rename corrupted file for debugging
+        const corruptedPath = `${CACHE_BACKUP_PATH}.corrupted.${Date.now()}`;
+        fs.renameSync(CACHE_BACKUP_PATH, corruptedPath);
+        console.log(`   Corrupted cache moved to: ${corruptedPath}`);
+        return;
+      }
+
       // Only restore if backup is less than 24 hours old
       const backupAge = Date.now() - (backup.bootstrap?.timestamp || 0);
       if (backupAge < 24 * 60 * 60 * 1000) {
@@ -455,6 +537,17 @@ function loadCacheFromDisk() {
     } catch (err) {
       console.error('❌ Failed to load cache from disk:', err.message);
       console.log('   Starting with empty cache');
+
+      // If JSON parse failed, rename the corrupted file
+      if (err instanceof SyntaxError) {
+        try {
+          const corruptedPath = `${CACHE_BACKUP_PATH}.corrupted.${Date.now()}`;
+          fs.renameSync(CACHE_BACKUP_PATH, corruptedPath);
+          console.log(`   Corrupted cache moved to: ${corruptedPath}`);
+        } catch (renameErr) {
+          console.error('   Failed to move corrupted cache:', renameErr.message);
+        }
+      }
     }
   } else {
     console.log('ℹ️ No cache backup found, starting fresh');
@@ -500,11 +593,16 @@ const app = express();
 // ============================================================================
 
 // Helmet - Security headers
+const isDevelopment = process.env.NODE_ENV !== 'production';
+
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"], // unsafe-inline needed for Vite dev
+      // Allow unsafe-inline only in development for Vite HMR
+      scriptSrc: isDevelopment
+        ? ["'self'", "'unsafe-inline'"]
+        : ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
       imgSrc: ["'self'", "data:", "https:"],
@@ -523,8 +621,17 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function(origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl)
-    if (!origin) return callback(null, true);
+    // Allow requests with no origin ONLY in development mode
+    // In production, require a valid origin for security
+    if (!origin) {
+      const isDevelopment = process.env.NODE_ENV !== 'production';
+      if (isDevelopment) {
+        return callback(null, true);
+      } else {
+        console.warn(`⚠️ CORS blocked: no origin header (production mode)`);
+        return callback(new Error('Not allowed by CORS'));
+      }
+    }
 
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
@@ -537,7 +644,7 @@ app.use(cors({
 }));
 
 // Rate limiting - Prevent abuse
-const limiter = rateLimit({
+const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // Limit each IP to 100 requests per window
   message: {
@@ -547,7 +654,7 @@ const limiter = rateLimit({
   standardHeaders: true, // Return rate limit info in `RateLimit-*` headers
   legacyHeaders: false, // Disable `X-RateLimit-*` headers
   handler: (req, res) => {
-    console.warn(`⚠️ Rate limit exceeded: ${req.ip}`);
+    console.warn(`⚠️ API rate limit exceeded: ${req.ip}`);
     res.status(429).json({
       error: 'Too many requests',
       message: 'Please wait 15 minutes before trying again'
@@ -555,8 +662,23 @@ const limiter = rateLimit({
   }
 });
 
+// Health check rate limiter (lighter than API limiter)
+const healthLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 60, // 60 requests per minute (1 per second)
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    console.warn(`⚠️ Health check rate limit exceeded: ${req.ip}`);
+    res.status(429).json({
+      error: 'Too many health check requests',
+      message: 'Please reduce health check frequency'
+    });
+  }
+});
+
 // Apply rate limiting to all API routes
-app.use('/api/', limiter);
+app.use('/api/', apiLimiter);
 
 // Request size limiting
 app.use(express.json({ limit: '1mb' }));
@@ -760,9 +882,9 @@ app.get('/api/stats', (req, res) => {
 
 /**
  * GET /health
- * Health check endpoint
+ * Health check endpoint (rate limited to prevent abuse)
  */
-app.get('/health', (req, res) => {
+app.get('/health', healthLimiter, (req, res) => {
   res.json({
     status: 'healthy',
     timestamp: new Date().toISOString()

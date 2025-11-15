@@ -24,8 +24,63 @@ let echarts = null; // Lazy-loaded ECharts instance
 let currentChart = null; // Current chart instance for cleanup
 
 // ============================================================================
+// CHART LIFECYCLE HELPERS
+// ============================================================================
+
+/**
+ * Safely dispose of the current chart instance to prevent memory leaks
+ */
+function disposeCurrentChart() {
+    if (currentChart) {
+        try {
+            currentChart.dispose();
+            console.log('✅ Chart instance disposed');
+        } catch (err) {
+            console.warn('⚠️ Error disposing chart:', err);
+        }
+        currentChart = null;
+    }
+}
+
+/**
+ * Initialize a new chart instance after disposing the old one
+ * @param {HTMLElement} container - DOM element to render chart into
+ * @returns {Object|null} ECharts instance or null if failed
+ */
+function initializeChart(container) {
+    // Dispose previous chart instance
+    disposeCurrentChart();
+
+    if (!echarts) {
+        console.error('❌ ECharts library not loaded');
+        return null;
+    }
+
+    if (!container) {
+        console.error('❌ Chart container element not found');
+        return null;
+    }
+
+    try {
+        currentChart = echarts.init(container);
+        console.log('✅ Chart instance initialized');
+        return currentChart;
+    } catch (err) {
+        console.error('❌ Failed to initialize chart:', err);
+        return null;
+    }
+}
+
+// ============================================================================
 // MAIN RENDER FUNCTION
 // ============================================================================
+
+/**
+ * Cleanup function to dispose charts when navigating away
+ */
+export function cleanupCharts() {
+    disposeCurrentChart();
+}
 
 /**
  * Render the Charts page
@@ -420,7 +475,7 @@ async function renderPointsPriceChart() {
             formatter: (params) => {
                 // Only show label if this is a top player
                 if (params.data.isTopPlayer) {
-                    return params.data.name;
+                    return escapeHtml(params.data.name);
                 }
                 return '';
             },
@@ -516,14 +571,9 @@ async function renderPointsPriceChart() {
         }
     });
 
-    // Initialize chart
-    if (!echarts) {
-        console.error('ECharts library not loaded');
-        return;
-    }
-    currentChart = echarts.init(chartContainer);
+    // Initialize chart (disposes previous instance automatically)
+    currentChart = initializeChart(chartContainer);
     if (!currentChart) {
-        console.error('Failed to initialize chart');
         return;
     }
 
@@ -782,7 +832,7 @@ async function renderFormPriceChart() {
         emphasis: { itemStyle: { opacity: 1, borderColor: '#fff', borderWidth: 2 } },
         label: {
             show: true,
-            formatter: (params) => params.data.isTopPlayer ? params.data.name : '',
+            formatter: (params) => params.data.isTopPlayer ? escapeHtml(params.data.name) : '',
             position: 'top',
             fontSize: 10,
             fontWeight: 'bold',
@@ -1036,7 +1086,7 @@ async function renderMinutesEfficiencyChart() {
             focus: 'series',
             label: {
                 show: true,
-                formatter: (param) => param.data.name,
+                formatter: (param) => escapeHtml(param.data.name),
                 position: 'top'
             }
         },
@@ -1389,7 +1439,7 @@ async function renderXgiActualChart() {
             focus: 'series',
             label: {
                 show: true,
-                formatter: (param) => param.data.name,
+                formatter: (param) => escapeHtml(param.data.name),
                 position: 'top'
             }
         },
@@ -1687,7 +1737,7 @@ async function renderOwnershipFormChart() {
             focus: 'series',
             label: {
                 show: true,
-                formatter: (param) => param.data.name,
+                formatter: (param) => escapeHtml(param.data.name),
                 position: 'top'
             }
         },
@@ -2031,7 +2081,7 @@ async function renderFdrFormChart() {
             focus: 'series',
             label: {
                 show: true,
-                formatter: (param) => param.data.name,
+                formatter: (param) => escapeHtml(param.data.name),
                 position: 'top'
             }
         },
@@ -2398,7 +2448,7 @@ async function renderXgcActualChart() {
             focus: 'series',
             label: {
                 show: true,
-                formatter: (param) => param.data.name,
+                formatter: (param) => escapeHtml(param.data.name),
                 position: 'top'
             }
         },
@@ -2688,7 +2738,7 @@ async function renderIctPointsChart() {
             focus: 'series',
             label: {
                 show: true,
-                formatter: (param) => param.data.name,
+                formatter: (param) => escapeHtml(param.data.name),
                 position: 'top'
             }
         },
@@ -2989,7 +3039,7 @@ async function renderXcsActualChart() {
             focus: 'series',
             label: {
                 show: true,
-                formatter: (param) => param.data.name,
+                formatter: (param) => escapeHtml(param.data.name),
                 position: 'top'
             }
         },

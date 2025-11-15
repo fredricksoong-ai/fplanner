@@ -23,6 +23,8 @@ import {
     calculateMinutesPercentage
 } from './utils.js';
 
+import { showSuccess, showError, showWarning } from './notifications.js';
+
 import {
     getFixtures,
     getGWOpponent,
@@ -795,7 +797,7 @@ window.loadAndRenderTeam = async function() {
     const teamId = input.value.trim();
 
     if (!teamId) {
-        alert('Please enter a team ID');
+        showWarning('Please enter a team ID');
         return;
     }
 
@@ -810,12 +812,13 @@ window.loadAndRenderTeam = async function() {
 
         const teamData = await loadMyTeam(teamId);
 
-        // CACHE TEAM ID ← ADD THIS
+        // CACHE TEAM ID
         localStorage.setItem('fplanner_team_id', teamId);
 
         renderMyTeam(teamData);
+        showSuccess(`Team loaded successfully!`);
     } catch (err) {
-        alert(`Failed to load team: ${err.message}`);
+        showError(`Failed to load team: ${err.message}`);
         renderMyTeamForm();
     }
 };
