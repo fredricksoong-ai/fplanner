@@ -665,7 +665,172 @@ async function renderFormPriceChart() {
         chartId: 'form-price-chart'
     });
 
-    contentContainer.innerHTML += '<div style="text-align: center; padding: 4rem; color: var(--text-secondary);"><i class="fas fa-spinner fa-spin" style="font-size: 2rem;"></i><br/><br/>Chart coming soon!</div>';
+    await new Promise(resolve => setTimeout(resolve, 0));
+    const chartContainer = document.getElementById('form-price-chart');
+    if (!chartContainer) return;
+    if (currentChart) currentChart.dispose();
+
+    // Define theme colors FIRST before any closures
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const textColor = isDark ? '#e5e7eb' : '#374151';
+    const gridColor = isDark ? '#374151' : '#e5e7eb';
+
+    let players = getAllPlayers().filter(p => (p.total_points || 0) >= 10);
+    if (currentPositionFilter !== 'all') {
+        const posMap = { 'GKP': 1, 'DEF': 2, 'MID': 3, 'FWD': 4 };
+        players = players.filter(p => p.element_type === posMap[currentPositionFilter]);
+    }
+
+    let myTeamPlayerIds = new Set();
+    const cachedTeamId = localStorage.getItem('fplanner_team_id');
+    if (cachedTeamId) {
+        const cachedTeamData = localStorage.getItem(`fplanner_team_${cachedTeamId}`);
+        if (cachedTeamData) {
+            try {
+                const teamData = JSON.parse(cachedTeamData);
+                if (teamData?.picks?.picks) myTeamPlayerIds = new Set(teamData.picks.picks.map(p => p.element));
+            } catch (e) {}
+        }
+    }
+
+    const positions = {
+        'GKP': { data: [], color: '#fbbf24', name: 'Goalkeepers' },
+        'DEF': { data: [], color: '#3b82f6', name: 'Defenders' },
+        'MID': { data: [], color: '#10b981', name: 'Midfielders' },
+        'FWD': { data: [], color: '#ef4444', name: 'Forwards' }
+    };
+
+    const sortedByForm = [...players].sort((a, b) => (parseFloat(b.form) || 0) - (parseFloat(a.form) || 0));
+    const topPlayerIds = new Set(sortedByForm.slice(0, 12).map(p => p.id));
+
+    players.forEach(player => {
+        const price = player.now_cost / 10;
+        const form = parseFloat(player.form) || 0;
+        const ownership = parseFloat(player.selected_by_percent) || 0;
+        const position = getPositionShort(player);
+        const ppm = calculatePPM(player);
+
+        if (positions[position]) {
+            positions[position].data.push({
+                name: player.web_name,
+                value: [price, form, ownership],
+                ppm,
+                isMyPlayer: myTeamPlayerIds.has(player.id),
+                isTopPlayer: topPlayerIds.has(player.id),
+                playerData: player
+            });
+        }
+    });
+
+    const series = Object.keys(positions).map(pos => ({
+        name: positions[pos].name,
+        type: 'scatter',
+        symbolSize: (data) => Math.max(6, Math.min(50, Math.sqrt(data[2]) * 6)),
+        symbol: (value, params) => params.data.isMyPlayer ? 'star' : 'circle',
+        itemStyle: {
+            color: positions[pos].color,
+            opacity: 0.7,
+            borderColor: (params) => params.data.isMyPlayer ? '#8b5cf6' : 'transparent',
+            borderWidth: (params) => params.data.isMyPlayer ? 3 : 0
+        },
+        emphasis: { itemStyle: { opacity: 1, borderColor: '#fff', borderWidth: 2 } },
+        label: {
+            show: true,
+            formatter: (params) => params.data.isTopPlayer ? params.data.name : '',
+            position: 'top',
+            fontSize: 10,
+            fontWeight: 'bold',
+            color: textColor,
+            backgroundColor: isDark ? 'rgba(0, 0, 0, 0.6)' : 'rgba(255, 255, 255, 0.8)',
+            padding: [2, 4],
+            borderRadius: 3,
+            distance: 5
+        },
+        markArea: pos === 'GKP' ? {
+            silent: true,
+            itemStyle: { opacity: 0.08 },
+            data: [
+                [{ name: 'Hot Form Value', xAxis: 3, yAxis: 5, itemStyle: { color: '#10b981' } }, { xAxis: 8.5, yAxis: 10 }],
+                [{ name: 'Premium Form', xAxis: 8.5, yAxis: 5, itemStyle: { color: '#3b82f6' } }, { xAxis: 15, yAxis: 10 }],
+                [{ name: 'Cold Trap', xAxis: 8.5, yAxis: 0, itemStyle: { color: '#ef4444' } }, { xAxis: 15, yAxis: 5 }]
+            ],
+            label: { show: true, position: 'inside', fontSize: 11, fontWeight: 'bold', color: textColor, opacity: 0.5 }
+        } : undefined,
+        data: positions[pos].data
+    }));
+
+    if (!echarts) return;
+    currentChart = echarts.init(chartContainer);
+    if (!currentChart) return;
+
+    currentChart.setOption({
+        backgroundColor: 'transparent',
+        textStyle: { color: textColor },
+        tooltip: {
+            trigger: 'item',
+            backgroundColor: isDark ? '#1f2937' : '#ffffff',
+            borderColor: isDark ? '#374151' : '#e5e7eb',
+            textStyle: { color: textColor },
+            formatter: (params) => {
+                const data = params.data;
+                const player = data.playerData;
+                const defConLine = getPositionShort(player) !== 'GKP' && player.github_season?.defensive_contribution_per_90
+                    ? `Def Con/90: ${player.github_season.defensive_contribution_per_90.toFixed(1)}<br/>`
+                    : '';
+                return `<div style="padding: 4px;">
+                    <strong>${escapeHtml(data.name)}${data.isMyPlayer ? ' ⭐' : ''}</strong><br/>
+                    Position: ${getPositionShort(player)}<br/>
+                    Price: £${data.value[0].toFixed(1)}m<br/>
+                    Form: ${data.value[1].toFixed(1)}<br/>
+                    Ownership: ${data.value[2].toFixed(1)}%<br/>
+                    PPM: ${data.ppm.toFixed(1)}<br/>
+                    ${defConLine}
+                </div>`;
+            }
+        },
+        legend: { data: Object.values(positions).map(p => p.name), textStyle: { color: textColor }, top: 10, left: 'center' },
+        grid: { left: '8%', right: '5%', bottom: '12%', top: '15%', containLabel: true },
+        xAxis: {
+            type: 'value',
+            name: 'Price (£m)',
+            nameLocation: 'middle',
+            nameGap: 30,
+            nameTextStyle: { color: textColor, fontWeight: 'bold' },
+            axisLine: { lineStyle: { color: gridColor } },
+            axisLabel: { color: textColor, formatter: (value) => `£${value.toFixed(1)}` },
+            splitLine: { lineStyle: { color: gridColor, type: 'dashed', opacity: 0.3 } },
+            min: 3,
+            max: 15
+        },
+        yAxis: {
+            type: 'value',
+            name: 'Form',
+            nameLocation: 'middle',
+            nameGap: 50,
+            nameTextStyle: { color: textColor, fontWeight: 'bold' },
+            axisLine: { lineStyle: { color: gridColor } },
+            axisLabel: { color: textColor },
+            splitLine: { lineStyle: { color: gridColor, type: 'dashed', opacity: 0.3 } }
+        },
+        series
+    });
+
+    const resizeHandler = () => { if (currentChart) currentChart.resize(); };
+    window.removeEventListener('resize', resizeHandler);
+    window.addEventListener('resize', resizeHandler);
+
+    const exportBtn = document.getElementById('export-chart-btn');
+    if (exportBtn) {
+        exportBtn.addEventListener('click', () => {
+            if (currentChart) {
+                const url = currentChart.getDataURL({ type: 'png', pixelRatio: 2, backgroundColor: isDark ? '#1f2937' : '#ffffff' });
+                const link = document.createElement('a');
+                link.download = `fpl-form-vs-price-${new Date().toISOString().split('T')[0]}.png`;
+                link.href = url;
+                link.click();
+            }
+        });
+    }
 }
 
 // ============================================================================
