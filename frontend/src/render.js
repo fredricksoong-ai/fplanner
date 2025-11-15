@@ -452,14 +452,10 @@ function renderTeamTable(players, gameweek) {
                         <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">Opp</th>
                         <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">Min</th>
                         <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">Pts</th>
-                        <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">G+A</th>
-                        <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">Price</th>
-                        <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">PPM</th>
-                        <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">Own%</th>
-                        <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">Min%</th>
                         <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">Form</th>
-                        <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">xGI</th>
-                        <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">ΔT</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">DefCon/90</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">xGI/xGC</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">Price</th>
                         <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">GW${next5GWs[0]}</th>
                         <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">GW${next5GWs[1]}</th>
                         <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">GW${next5GWs[2]}</th>
@@ -471,11 +467,11 @@ function renderTeamTable(players, gameweek) {
     `;
 
     // Render starting 11
-    html += `<tr><td colspan="19" style="background: var(--bg-secondary); padding: 0.5rem 1rem; font-weight: 700; color: var(--primary-color);">Starting XI</td></tr>`;
+    html += `<tr><td colspan="15" style="background: var(--bg-secondary); padding: 0.5rem 1rem; font-weight: 700; color: var(--primary-color);">Starting XI</td></tr>`;
     html += renderTeamRows(starters, gameweek, next5GWs);
 
     // Render bench
-    html += `<tr><td colspan="19" style="background: var(--bg-secondary); padding: 0.5rem 1rem; font-weight: 700; color: var(--text-secondary);">Bench</td></tr>`;
+    html += `<tr><td colspan="15" style="background: var(--bg-secondary); padding: 0.5rem 1rem; font-weight: 700; color: var(--text-secondary);">Bench</td></tr>`;
     html += renderTeamRows(bench, gameweek, next5GWs);
 
     html += `
@@ -526,32 +522,6 @@ function renderTeamRows(players, gameweek, next5GWs) {
         // Points: use GitHub if available, otherwise FPL API event_points
         const gwPoints = hasGWStats ? player.github_gw.total_points : (player.event_points || 0);
 
-        // Goals + Assists: use GitHub if available, otherwise show dash
-        let gwGA = '—';
-        if (hasGWStats) {
-            const gwGoals = player.github_gw.goals_scored || 0;
-            const gwAssists = player.github_gw.assists || 0;
-            gwGA = `${gwGoals}+${gwAssists}`;
-        }
-
-        // Calculate new metrics
-        const ppm = calculatePPM(player);
-        const ownership = parseFloat(player.selected_by_percent) || 0;
-        const minPercentage = calculateMinutesPercentage(player, gameweek);
-
-        // Transfer momentum: Use FPL API as fallback if GitHub data not available
-        let transferNet = '—';
-        if (player.github_transfers) {
-            const netTransfers = player.github_transfers.transfers_in - player.github_transfers.transfers_out;
-            const prefix = netTransfers > 0 ? '+' : '';
-            transferNet = `${prefix}${(netTransfers / 1000).toFixed(0)}k`;
-        } else if (player.transfers_in_event !== undefined && player.transfers_out_event !== undefined) {
-            // Fallback to FPL API data
-            const netTransfers = player.transfers_in_event - player.transfers_out_event;
-            const prefix = netTransfers > 0 ? '+' : '';
-            transferNet = `${prefix}${(netTransfers / 1000).toFixed(0)}k`;
-        }
-
         // Get next 5 fixtures for this player
         const next5Fixtures = getFixtures(player.team, 5, false);
 
@@ -565,11 +535,9 @@ function renderTeamRows(players, gameweek, next5GWs) {
             metricValue = formatDecimal(xGI);
         }
 
-        // Form trend arrow
-        const formTrend = getFormTrend(player);
-        let formArrow = '';
-        if (formTrend === 'up') formArrow = ' <span style="color: #22c55e;">↑</span>';
-        else if (formTrend === 'down') formArrow = ' <span style="color: #ef4444;">↓</span>';
+        // Defensive contribution per 90
+        const defCon = player.github_season?.defensive_contribution_per_90 || 0;
+        const defConFormatted = formatDecimal(defCon);
 
         html += `
             <tr style="background: ${hasHighSeverity ? 'rgba(220, 38, 38, 0.05)' : rowBg};">
@@ -590,20 +558,12 @@ function renderTeamRows(players, gameweek, next5GWs) {
                 <td style="padding: 0.75rem 0.5rem; text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 600;">
                     ${gwPoints}
                 </td>
-                <td style="padding: 0.75rem 0.5rem; text-align: center; font-size: 0.8rem;">
-                    ${gwGA}
-                </td>
-                <td style="padding: 0.75rem 0.5rem; text-align: center;">${formatCurrency(player.now_cost)}</td>
-                <td style="padding: 0.75rem 0.5rem; text-align: center; font-weight: 600;">${formatDecimal(ppm)}</td>
-                <td style="padding: 0.75rem 0.5rem; text-align: center; font-size: 0.8rem;">${ownership.toFixed(1)}%</td>
-                <td style="padding: 0.75rem 0.5rem; text-align: center; font-size: 0.8rem;">${minPercentage.toFixed(0)}%</td>
                 <td style="padding: 0.75rem 0.5rem; text-align: center; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 600;">
-                    ${formatDecimal(player.form)}${formArrow}
+                    ${formatDecimal(player.form)}
                 </td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center; font-weight: 600;">${defConFormatted}</td>
                 <td style="padding: 0.75rem 0.5rem; text-align: center;">${metricValue}</td>
-                <td style="padding: 0.75rem 0.5rem; text-align: center; font-size: 0.8rem; color: ${transferNet.startsWith('+') ? '#22c55e' : transferNet.startsWith('-') ? '#ef4444' : 'inherit'};">
-                    ${transferNet}
-                </td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center;">${formatCurrency(player.now_cost)}</td>
                 ${next5Fixtures.map((fix, idx) => {
                     const fdrClass = getDifficultyClass(fix.difficulty);
                     return `
@@ -627,55 +587,497 @@ function renderTeamRows(players, gameweek, next5GWs) {
 // ============================================================================
 
 /**
- * Render Transfer Committee page (top performers by position)
+ * Render Transfer Committee page (problem players with replacement suggestions)
  */
 export function renderTransferCommittee() {
     const container = document.getElementById('app-container');
-    
-    container.innerHTML = `
-        <div style="padding: 2rem;">
-            <h1 style="font-size: 2rem; font-weight: 700; color: var(--primary-color); margin-bottom: 1rem;">
-                <i class="fas fa-trophy"></i> Transfer Committee
-            </h1>
-            <p style="color: var(--text-secondary); margin-bottom: 2rem;">
-                Top performing players by position with upcoming fixture analysis
-            </p>
-            
-            ${renderPositionTables()}
-        </div>
-    `;
-    
-    attachRiskTooltipListeners();
-}
 
-function renderPositionTables() {
-    const players = getAllPlayers();
-    
-    const positions = [
-        { id: 1, name: 'Goalkeepers', short: 'GKP' },
-        { id: 2, name: 'Defenders', short: 'DEF' },
-        { id: 3, name: 'Midfielders', short: 'MID' },
-        { id: 4, name: 'Forwards', short: 'FWD' }
-    ];
-    
-    let html = '';
-    
-    positions.forEach(pos => {
-        const positionPlayers = filterByPosition(players, pos.id);
-        const top10 = sortPlayers(positionPlayers, 'total_points', false).slice(0, 10);
-        
-        html += `
-            <div style="margin-bottom: 3rem;">
-                <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
-                    ${pos.name}
-                </h2>
-                ${renderPlayerTable(top10, 'next5')}
+    // Check if team data is loaded
+    const cachedTeamId = localStorage.getItem('fplanner_team_id');
+
+    if (!cachedTeamId) {
+        container.innerHTML = `
+            <div style="max-width: 600px; margin: 0 auto; padding: 4rem 2rem; text-align: center;">
+                <div style="background: var(--bg-primary); border-radius: 12px; box-shadow: 0 2px 8px var(--shadow); padding: 3rem;">
+                    <i class="fas fa-exchange-alt" style="font-size: 4rem; color: var(--text-tertiary); margin-bottom: 1.5rem; display: block;"></i>
+                    <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
+                        Load Your Team First
+                    </h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 2rem; line-height: 1.6;">
+                        Transfer Committee requires your team data. Please go to My Team and load your squad first.
+                    </p>
+                    <button
+                        onclick="window.location.hash = 'my-team'"
+                        style="
+                            padding: 12px 24px;
+                            background: var(--primary-color);
+                            color: white;
+                            border: none;
+                            border-radius: 8px;
+                            font-weight: 600;
+                            cursor: pointer;
+                            font-size: 1rem;
+                        "
+                        onmouseover="this.style.opacity='0.9'"
+                        onmouseout="this.style.opacity='1'"
+                    >
+                        <i class="fas fa-users" style="margin-right: 0.5rem;"></i>Go to My Team
+                    </button>
+                </div>
             </div>
         `;
-    });
-    
-    return html;
+        return;
+    }
+
+    // Load team and analyze
+    loadMyTeam(cachedTeamId)
+        .then(teamData => {
+            renderTransferCommitteeWithTeam(teamData);
+        })
+        .catch(err => {
+            console.error('Failed to load team for Transfer Committee:', err);
+            container.innerHTML = `
+                <div style="max-width: 600px; margin: 0 auto; padding: 4rem 2rem; text-align: center;">
+                    <div style="background: var(--bg-primary); border-radius: 12px; box-shadow: 0 2px 8px var(--shadow); padding: 3rem;">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 4rem; color: #ef4444; margin-bottom: 1.5rem; display: block;"></i>
+                        <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
+                            Failed to Load Team
+                        </h2>
+                        <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+                            ${err.message}
+                        </p>
+                        <button
+                            onclick="window.location.hash = 'my-team'"
+                            style="
+                                padding: 12px 24px;
+                                background: var(--primary-color);
+                                color: white;
+                                border: none;
+                                border-radius: 8px;
+                                font-weight: 600;
+                                cursor: pointer;
+                            "
+                        >
+                            Go to My Team
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
 }
+
+/**
+ * Render Transfer Committee with loaded team data
+ */
+function renderTransferCommitteeWithTeam(teamData) {
+    const container = document.getElementById('app-container');
+    const { picks, gameweek } = teamData;
+
+    console.log('🔄 Rendering Transfer Committee...');
+
+    // Find problem players (players with risks)
+    const problemPlayers = [];
+
+    picks.picks.forEach(pick => {
+        const player = getPlayerById(pick.element);
+        if (!player) return;
+
+        const risks = analyzePlayerRisks(player);
+        if (hasHighRisk(risks) || risks.some(r => r.severity === 'medium')) {
+            problemPlayers.push({
+                pick: pick,
+                player: player,
+                risks: risks
+            });
+        }
+    });
+
+    console.log(`   🚨 Found ${problemPlayers.length} problem players`);
+
+    // If no problems, show success message
+    if (problemPlayers.length === 0) {
+        container.innerHTML = `
+            <div style="max-width: 600px; margin: 0 auto; padding: 4rem 2rem; text-align: center;">
+                <div style="background: var(--bg-primary); border-radius: 12px; box-shadow: 0 2px 8px var(--shadow); padding: 3rem;">
+                    <i class="fas fa-check-circle" style="font-size: 4rem; color: #10b981; margin-bottom: 1.5rem; display: block;"></i>
+                    <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
+                        No Issues Detected!
+                    </h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 2rem; line-height: 1.6;">
+                        Your squad looks good. No urgent transfer recommendations at this time.
+                    </p>
+                    <button
+                        onclick="window.location.hash = 'my-team'"
+                        style="
+                            padding: 12px 24px;
+                            background: var(--primary-color);
+                            color: white;
+                            border: none;
+                            border-radius: 8px;
+                            font-weight: 600;
+                            cursor: pointer;
+                        "
+                    >
+                        <i class="fas fa-arrow-left" style="margin-right: 0.5rem;"></i>Back to My Team
+                    </button>
+                </div>
+            </div>
+        `;
+        return;
+    }
+
+    // Next 5 gameweeks for fixture columns
+    const next5GWs = [gameweek + 1, gameweek + 2, gameweek + 3, gameweek + 4, gameweek + 5];
+
+    // Build table HTML
+    let html = `
+        <div style="padding: 2rem;">
+            <h1 style="font-size: 2rem; font-weight: 700; color: var(--primary-color); margin-bottom: 0.5rem;">
+                <i class="fas fa-exchange-alt" style="margin-right: 0.5rem;"></i>Transfer Committee
+            </h1>
+            <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+                ${problemPlayers.length} player${problemPlayers.length !== 1 ? 's' : ''} flagged for review. Click expand to view replacement suggestions.
+            </p>
+
+            <div style="background: var(--bg-primary); border-radius: 12px; box-shadow: 0 2px 8px var(--shadow); overflow: visible;">
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; font-size: 0.875rem; border-collapse: collapse;">
+                        <thead style="background: var(--primary-color); color: white;">
+                            <tr>
+                                <th style="text-align: center; padding: 0.75rem 0.5rem;">Pos</th>
+                                <th style="text-align: left; padding: 0.75rem 0.75rem;">Player</th>
+                                <th style="text-align: center; padding: 0.75rem 0.5rem;">Team</th>
+                                <th style="text-align: center; padding: 0.75rem 0.5rem;">Price</th>
+                                <th style="text-align: center; padding: 0.75rem 0.5rem;">Diff</th>
+                                <th style="text-align: center; padding: 0.75rem 0.5rem;">Form</th>
+                                <th style="text-align: center; padding: 0.75rem 0.5rem;">PPM</th>
+                                <th style="text-align: center; padding: 0.75rem 0.5rem;">xGI/xGC</th>
+                                <th style="text-align: center; padding: 0.75rem 0.5rem;">DefCon/90</th>
+                                <th style="text-align: center; padding: 0.75rem 0.5rem;">Own%</th>
+                                <th style="text-align: center; padding: 0.75rem 0.5rem;">Net Δ</th>
+                                <th style="text-align: center; padding: 0.75rem 0.5rem;">GW${next5GWs[0]}</th>
+                                <th style="text-align: center; padding: 0.75rem 0.5rem;">GW${next5GWs[1]}</th>
+                                <th style="text-align: center; padding: 0.75rem 0.5rem;">GW${next5GWs[2]}</th>
+                                <th style="text-align: center; padding: 0.75rem 0.5rem;">GW${next5GWs[3]}</th>
+                                <th style="text-align: center; padding: 0.75rem 0.5rem;">GW${next5GWs[4]}</th>
+                                <th style="text-align: center; padding: 0.75rem 0.5rem;"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+    `;
+
+    // Render problem players with replacement suggestions
+    problemPlayers.forEach((problem, idx) => {
+        const { player, risks } = problem;
+
+        // Find replacements
+        const replacements = findReplacements(player, picks, gameweek);
+
+        // Render problem player row
+        html += renderProblemPlayerRow(player, risks, idx, next5GWs, gameweek);
+
+        // Render replacement rows (hidden by default)
+        replacements.forEach((rep, repIdx) => {
+            html += renderReplacementRow(rep, player, idx, repIdx, next5GWs, gameweek);
+        });
+    });
+
+    html += `
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    `;
+
+    container.innerHTML = html;
+    attachRiskTooltipListeners();
+
+    console.log('   ✅ Transfer Committee rendered');
+}
+
+/**
+ * Render problem player row in Transfer Committee table
+ */
+function renderProblemPlayerRow(player, risks, idx, next5GWs, gameweek) {
+    const posType = getPositionType(player);
+    const riskTooltip = renderRiskTooltip(risks);
+    const rowBg = idx % 2 === 0 ? '#f9fafb' : 'white';
+
+    // Calculate metrics
+    const ppm = calculatePPM(player);
+    const ownership = parseFloat(player.selected_by_percent) || 0;
+    const formHeatmap = getFormHeatmap(player.form);
+    const formStyle = getHeatmapStyle(formHeatmap);
+
+    // Position-specific xGI/xGC
+    let metricValue = '';
+    if (posType === 'GKP' || posType === 'DEF') {
+        const xGC = player.expected_goals_conceded_per_90 || 0;
+        metricValue = formatDecimal(xGC);
+    } else {
+        const xGI = player.expected_goal_involvements_per_90 || 0;
+        metricValue = formatDecimal(xGI);
+    }
+
+    // Defensive contribution per 90
+    const defCon = player.github_season?.defensive_contribution_per_90 || 0;
+    const defConFormatted = formatDecimal(defCon);
+
+    // Transfer momentum
+    let transferNet = '—';
+    let transferColor = 'inherit';
+    if (player.github_transfers) {
+        const net = player.github_transfers.transfers_in - player.github_transfers.transfers_out;
+        const prefix = net > 0 ? '+' : '';
+        transferNet = `${prefix}${(net / 1000).toFixed(0)}k`;
+        transferColor = net > 0 ? '#22c55e' : net < 0 ? '#ef4444' : 'inherit';
+    } else if (player.transfers_in_event !== undefined && player.transfers_out_event !== undefined) {
+        const net = player.transfers_in_event - player.transfers_out_event;
+        const prefix = net > 0 ? '+' : '';
+        transferNet = `${prefix}${(net / 1000).toFixed(0)}k`;
+        transferColor = net > 0 ? '#22c55e' : net < 0 ? '#ef4444' : 'inherit';
+    }
+
+    // Get next 5 fixtures
+    const next5Fixtures = getFixtures(player.team, 5, false);
+
+    return `
+        <tr style="background: ${rowBg};">
+            <td style="padding: 0.75rem 0.5rem; text-align: center; font-weight: 600;">${getPositionShort(player)}</td>
+            <td style="padding: 0.75rem 0.75rem;">
+                <strong>${escapeHtml(player.web_name)}</strong>
+                ${riskTooltip ? `<span style="margin-left: 0.5rem;">${riskTooltip}</span>` : ''}
+            </td>
+            <td style="padding: 0.75rem 0.5rem; text-align: center;">${getTeamShortName(player.team)}</td>
+            <td style="padding: 0.75rem 0.5rem; text-align: center;">${formatCurrency(player.now_cost)}</td>
+            <td style="padding: 0.75rem 0.5rem; text-align: center;">±£0.0</td>
+            <td style="padding: 0.75rem 0.5rem; text-align: center; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 600;">${formatDecimal(player.form)}</td>
+            <td style="padding: 0.75rem 0.5rem; text-align: center; font-weight: 600;">${formatDecimal(ppm)}</td>
+            <td style="padding: 0.75rem 0.5rem; text-align: center;">${metricValue}</td>
+            <td style="padding: 0.75rem 0.5rem; text-align: center; font-weight: 600;">${defConFormatted}</td>
+            <td style="padding: 0.75rem 0.5rem; text-align: center; font-size: 0.8rem;">${ownership.toFixed(1)}%</td>
+            <td style="padding: 0.75rem 0.5rem; text-align: center; font-size: 0.8rem; color: ${transferColor};">${transferNet}</td>
+            ${next5Fixtures.map(fix => {
+                const fdrClass = getDifficultyClass(fix.difficulty);
+                return `
+                    <td style="padding: 0.75rem 0.5rem; text-align: center;">
+                        <span class="${fdrClass}" style="padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.75rem; white-space: nowrap;">
+                            ${fix.opponent}
+                        </span>
+                    </td>
+                `;
+            }).join('')}
+            ${next5Fixtures.length < 5 ? Array(5 - next5Fixtures.length).fill('<td style="padding: 0.75rem 0.5rem; text-align: center;">—</td>').join('') : ''}
+            <td style="padding: 0.75rem 0.5rem; text-align: center;">
+                <button
+                    onclick="window.toggleReplacements(${idx})"
+                    style="
+                        background: none;
+                        border: none;
+                        cursor: pointer;
+                        color: var(--primary-color);
+                        font-size: 1rem;
+                        padding: 0.25rem;
+                    "
+                >
+                    <i id="expand-icon-${idx}" class="fas fa-chevron-down"></i>
+                </button>
+            </td>
+        </tr>
+    `;
+}
+
+/**
+ * Render replacement suggestion row in Transfer Committee table
+ */
+function renderReplacementRow(rep, problemPlayer, problemIdx, repIdx, next5GWs, gameweek) {
+    const player = rep.player;
+    const priceDiff = rep.priceDiff;
+    const posType = getPositionType(player);
+
+    // Calculate metrics
+    const ppm = calculatePPM(player);
+    const ownership = parseFloat(player.selected_by_percent) || 0;
+    const formHeatmap = getFormHeatmap(player.form);
+    const formStyle = getHeatmapStyle(formHeatmap);
+
+    // Position-specific xGI/xGC
+    let metricValue = '';
+    if (posType === 'GKP' || posType === 'DEF') {
+        const xGC = player.expected_goals_conceded_per_90 || 0;
+        metricValue = formatDecimal(xGC);
+    } else {
+        const xGI = player.expected_goal_involvements_per_90 || 0;
+        metricValue = formatDecimal(xGI);
+    }
+
+    // Defensive contribution per 90
+    const defCon = player.github_season?.defensive_contribution_per_90 || 0;
+    const defConFormatted = formatDecimal(defCon);
+
+    // Transfer momentum
+    let transferNet = '—';
+    let transferColor = 'inherit';
+    if (player.github_transfers) {
+        const net = player.github_transfers.transfers_in - player.github_transfers.transfers_out;
+        const prefix = net > 0 ? '+' : '';
+        transferNet = `${prefix}${(net / 1000).toFixed(0)}k`;
+        transferColor = net > 0 ? '#22c55e' : net < 0 ? '#ef4444' : 'inherit';
+    } else if (player.transfers_in_event !== undefined && player.transfers_out_event !== undefined) {
+        const net = player.transfers_in_event - player.transfers_out_event;
+        const prefix = net > 0 ? '+' : '';
+        transferNet = `${prefix}${(net / 1000).toFixed(0)}k`;
+        transferColor = net > 0 ? '#22c55e' : net < 0 ? '#ef4444' : 'inherit';
+    }
+
+    // Price difference styling
+    const diffSign = priceDiff >= 0 ? '+' : '';
+    const diffColor = priceDiff < 0 ? '#22c55e' : '#ef4444';
+
+    // Get next 5 fixtures
+    const next5Fixtures = getFixtures(player.team, 5, false);
+
+    return `
+        <tr
+            id="rep-${problemIdx}-${repIdx}"
+            class="replacement-row"
+            data-problem="${problemIdx}"
+            style="display: none; background: rgba(229, 231, 235, 0.8);"
+        >
+            <td style="padding: 0.75rem 0.5rem; text-align: center; font-weight: 600;">${getPositionShort(player)}</td>
+            <td style="padding: 0.75rem 0.75rem; padding-left: 2rem;">
+                <span style="color: var(--text-tertiary); font-size: 0.875rem; margin-right: 0.5rem;">${repIdx + 1}.</span>
+                <strong>${escapeHtml(player.web_name)}</strong>
+            </td>
+            <td style="padding: 0.75rem 0.5rem; text-align: center;">${getTeamShortName(player.team)}</td>
+            <td style="padding: 0.75rem 0.5rem; text-align: center;">${formatCurrency(player.now_cost)}</td>
+            <td style="padding: 0.75rem 0.5rem; text-align: center; color: ${diffColor}; font-weight: 600;">${diffSign}£${Math.abs(priceDiff / 10).toFixed(1)}</td>
+            <td style="padding: 0.75rem 0.5rem; text-align: center; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 600;">${formatDecimal(player.form)}</td>
+            <td style="padding: 0.75rem 0.5rem; text-align: center; font-weight: 600;">${formatDecimal(ppm)}</td>
+            <td style="padding: 0.75rem 0.5rem; text-align: center;">${metricValue}</td>
+            <td style="padding: 0.75rem 0.5rem; text-align: center; font-weight: 600;">${defConFormatted}</td>
+            <td style="padding: 0.75rem 0.5rem; text-align: center; font-size: 0.8rem;">${ownership.toFixed(1)}%</td>
+            <td style="padding: 0.75rem 0.5rem; text-align: center; font-size: 0.8rem; color: ${transferColor};">${transferNet}</td>
+            ${next5Fixtures.map(fix => {
+                const fdrClass = getDifficultyClass(fix.difficulty);
+                return `
+                    <td style="padding: 0.75rem 0.5rem; text-align: center;">
+                        <span class="${fdrClass}" style="padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.75rem; white-space: nowrap;">
+                            ${fix.opponent}
+                        </span>
+                    </td>
+                `;
+            }).join('')}
+            ${next5Fixtures.length < 5 ? Array(5 - next5Fixtures.length).fill('<td style="padding: 0.75rem 0.5rem; text-align: center;">—</td>').join('') : ''}
+            <td style="padding: 0.75rem 0.5rem; text-align: center;"></td>
+        </tr>
+    `;
+}
+
+/**
+ * Find replacement suggestions for a problem player
+ */
+function findReplacements(problemPlayer, picks, gameweek) {
+    console.log(`   🔍 Finding replacements for ${problemPlayer.web_name}...`);
+
+    const allPlayers = getAllPlayers();
+    const teamValue = picks.entry_history.value || 1000;
+    const bank = picks.entry_history.bank || 0;
+    const maxBudget = problemPlayer.now_cost + bank;
+
+    const myPlayerIds = new Set(picks.picks.map(p => p.element));
+
+    // Filter candidates
+    const candidates = allPlayers.filter(p => {
+        return p.element_type === problemPlayer.element_type &&
+               p.id !== problemPlayer.id &&
+               p.now_cost <= maxBudget &&
+               !myPlayerIds.has(p.id);
+    });
+
+    console.log(`   📊 Found ${candidates.length} candidates for position ${problemPlayer.element_type}`);
+
+    // Score each candidate
+    const scored = candidates.map(c => {
+        const score = scoreReplacement(c);
+        return {
+            player: c,
+            score: score,
+            priceDiff: c.now_cost - problemPlayer.now_cost
+        };
+    });
+
+    // Sort by score
+    scored.sort((a, b) => b.score - a.score);
+
+    const top5 = scored.slice(0, 5);
+    console.log(`   ⭐ Top 5 replacements:`, top5.map(r => `${r.player.web_name} (${r.score.toFixed(0)})`));
+
+    return top5;
+}
+
+/**
+ * Score a replacement candidate
+ */
+function scoreReplacement(candidate) {
+    let score = 0;
+
+    // 1. Form (0-30 points)
+    const form = parseFloat(candidate.form) || 0;
+    score += Math.min(30, form * 5);
+
+    // 2. Fixture Difficulty (0-25 points)
+    const avgFDR = calculateFixtureDifficulty(candidate.team, 5);
+    score += Math.max(0, (5 - avgFDR) * 5); // Inverted: lower FDR = higher score
+
+    // 3. Points Per Million (0-20 points)
+    const ppm = calculatePPM(candidate);
+    score += Math.min(20, ppm * 10);
+
+    // 4. Minutes Played (0-15 points)
+    const minutesPct = calculateMinutesPercentage(candidate, currentGW);
+    score += Math.min(15, minutesPct / 6.67);
+
+    // 5. Transfer Trends (0-10 points)
+    let netTransfers = 0;
+    if (candidate.github_transfers) {
+        netTransfers = candidate.github_transfers.transfers_in - candidate.github_transfers.transfers_out;
+    } else if (candidate.transfers_in_event !== undefined && candidate.transfers_out_event !== undefined) {
+        netTransfers = candidate.transfers_in_event - candidate.transfers_out_event;
+    }
+    score += Math.min(10, Math.max(0, netTransfers / 10000));
+
+    return score;
+}
+
+/**
+ * Toggle replacement suggestions for a problem player
+ */
+window.toggleReplacements = function(idx) {
+    const rows = document.querySelectorAll(`.replacement-row[data-problem="${idx}"]`);
+    const icon = document.getElementById(`expand-icon-${idx}`);
+
+    if (rows.length === 0) {
+        console.log(`   ⚠️ No replacement rows found for problem ${idx}`);
+        return;
+    }
+
+    const isHidden = rows[0].style.display === 'none';
+    rows.forEach(row => {
+        row.style.display = isHidden ? 'table-row' : 'none';
+    });
+
+    if (icon) {
+        if (isHidden) {
+            icon.classList.remove('fa-chevron-down');
+            icon.classList.add('fa-chevron-up');
+        } else {
+            icon.classList.remove('fa-chevron-up');
+            icon.classList.add('fa-chevron-down');
+        }
+    }
+};
 
 /**
  * Generic player table renderer
