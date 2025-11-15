@@ -6,18 +6,48 @@
 import { fplBootstrap, currentGW } from './data.js';
 
 // ============================================================================
+// TYPE DEFINITIONS
+// ============================================================================
+
+/**
+ * @typedef {Object} Player
+ * @property {number} id - Unique player ID
+ * @property {string} web_name - Player web display name
+ * @property {number} element_type - Position type (1=GKP, 2=DEF, 3=MID, 4=FWD)
+ * @property {number} team - Team ID
+ * @property {number} now_cost - Current price in tenths (e.g., 95 = £9.5m)
+ * @property {number} total_points - Total points scored this season
+ * @property {string} form - Recent form (points per game as string)
+ * @property {number} minutes - Total minutes played
+ * @property {number} [yellow_cards] - Yellow cards received
+ * @property {number} [red_cards] - Red cards received
+ * @property {number|null} [chance_of_playing_next_round] - Injury status (0-100)
+ * @property {number} [cost_change_event] - Price change this gameweek (in tenths)
+ */
+
+/**
+ * @typedef {Object} Team
+ * @property {number} id - Team ID
+ * @property {number} code - Team code
+ * @property {string} name - Full team name
+ * @property {string} short_name - 3-letter abbreviation
+ */
+
+// ============================================================================
 // POSITION HELPERS
 // ============================================================================
 
 /**
  * Get short position name
- * @param {Object} player - Player object
- * @returns {string} Position abbreviation (GKP, DEF, MID, FWD)
+ * @param {Player} player - Player object with element_type property
+ * @returns {string} Position abbreviation ('GKP' | 'DEF' | 'MID' | 'FWD' | 'N/A')
+ * @example
+ * getPositionShort({ element_type: 3 }) // Returns 'MID'
  */
 export function getPositionShort(player) {
     const positions = {
         1: 'GKP',
-        2: 'DEF', 
+        2: 'DEF',
         3: 'MID',
         4: 'FWD'
     };
@@ -25,9 +55,9 @@ export function getPositionShort(player) {
 }
 
 /**
- * Get position type for analysis
- * @param {Object} player - Player object
- * @returns {string} Position type
+ * Get position type for analysis (alias for getPositionShort)
+ * @param {Player} player - Player object with element_type property
+ * @returns {string} Position type ('GKP' | 'DEF' | 'MID' | 'FWD' | 'N/A')
  */
 export function getPositionType(player) {
     return getPositionShort(player);
@@ -54,8 +84,11 @@ export function getPositionName(elementType) {
 
 /**
  * Format price in £X.Xm format
- * @param {number} price - Price in tenths (e.g., 95 = £9.5m)
- * @returns {string} Formatted price
+ * @param {number} price - Price in tenths from FPL API (e.g., 95 = £9.5m, 125 = £12.5m)
+ * @returns {string} Formatted price string (e.g., '£9.5m')
+ * @example
+ * formatCurrency(125) // Returns '£12.5m'
+ * formatCurrency(45)  // Returns '£4.5m'
  */
 export function formatCurrency(price) {
     return `£${(price / 10).toFixed(1)}m`;
@@ -295,9 +328,12 @@ export function getTeamByCode(teamCode) {
 // ============================================================================
 
 /**
- * Calculate points per million
- * @param {Object} player - Player object
- * @returns {number} Points per million value
+ * Calculate points per million (PPM) - value metric
+ * @param {Player} player - Player object with total_points and now_cost
+ * @returns {number} Points per million (0 if cost is zero)
+ * @example
+ * // Player with 100 points costing £12.5m (125 tenths)
+ * calculatePPM({ total_points: 100, now_cost: 125 }) // Returns 8.0
  */
 export function calculatePPM(player) {
     if (!player.now_cost || player.now_cost === 0) return 0;
@@ -305,9 +341,12 @@ export function calculatePPM(player) {
 }
 
 /**
- * Calculate points per 90 minutes
- * @param {Object} player - Player object
- * @returns {number} Points per 90
+ * Calculate points per 90 minutes (PP90) - efficiency metric
+ * @param {Player} player - Player object with total_points and minutes
+ * @returns {number} Points per 90 minutes (0 if no minutes played)
+ * @example
+ * // Player with 100 points in 900 minutes (10 full games)
+ * calculatePP90({ total_points: 100, minutes: 900 }) // Returns 10.0
  */
 export function calculatePP90(player) {
     if (!player.minutes || player.minutes === 0) return 0;
@@ -315,10 +354,13 @@ export function calculatePP90(player) {
 }
 
 /**
- * Calculate minutes percentage
- * @param {Object} player - Player object
- * @param {number} gw - Current gameweek
- * @returns {number} Minutes percentage
+ * Calculate minutes played as percentage of available minutes
+ * @param {Player} player - Player object with minutes property
+ * @param {number|null} gw - Current gameweek (uses getCurrentGW() if not provided)
+ * @returns {number} Percentage of minutes played (0-100+, can exceed 100 for extra time)
+ * @example
+ * // Player with 810 minutes in 10 gameweeks
+ * calculateMinutesPercentage({ minutes: 810 }, 10) // Returns 90.0 (90%)
  */
 export function calculateMinutesPercentage(player, gw = null) {
     const currentGw = gw || getCurrentGW();
@@ -391,9 +433,14 @@ export function filterByTeam(players, teamId) {
 // ============================================================================
 
 /**
- * Escape HTML to prevent XSS
- * @param {string} text - Text to escape
- * @returns {string} Escaped text
+ * Escape HTML to prevent XSS attacks (SECURITY CRITICAL)
+ * Uses textContent to safely escape all HTML entities
+ * @param {string|number|null|undefined} text - Text to escape (handles null/undefined gracefully)
+ * @returns {string} HTML-safe escaped text
+ * @example
+ * escapeHtml('<script>alert("xss")</script>') // Returns '&lt;script&gt;alert("xss")&lt;/script&gt;'
+ * escapeHtml('Tom & Jerry') // Returns 'Tom &amp; Jerry'
+ * escapeHtml(null) // Returns ''
  */
 export function escapeHtml(text) {
     if (!text) return '';
