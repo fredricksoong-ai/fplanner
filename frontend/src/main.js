@@ -404,6 +404,64 @@ import('./render.js').then(renderModule => {
 });
 
 // ============================================================================
+// DATA ANALYSIS HELPER FUNCTIONS
+// ============================================================================
+
+/**
+ * Switch between analysis tabs and positions
+ */
+window.switchAnalysisTab = (tab, position = 'all') => {
+    window.location.hash = `data-analysis/${tab}/${position}`;
+    window.renderDataAnalysis(tab, position);
+};
+
+/**
+ * Update ownership threshold filter
+ */
+window.updateOwnershipThreshold = (value) => {
+    document.getElementById('ownership-value').textContent = `${value}%`;
+    // Update state via re-importing render module
+    import('./render.js').then(renderModule => {
+        // Get current hash
+        const hash = window.location.hash.slice(1);
+        const parts = hash.split('/');
+        const tab = parts[1] || 'differentials';
+        const position = parts[2] || 'all';
+
+        // Re-render with new ownership value
+        setTimeout(() => {
+            window.renderDataAnalysis(tab, position);
+        }, 100);
+    });
+};
+
+/**
+ * Toggle fixture quality filter
+ */
+window.toggleFixtureFilter = (checked) => {
+    // Re-render differentials
+    const hash = window.location.hash.slice(1);
+    const parts = hash.split('/');
+    const position = parts[2] || 'all';
+    setTimeout(() => {
+        window.renderDataAnalysis('differentials', position);
+    }, 50);
+};
+
+/**
+ * Toggle momentum filter
+ */
+window.toggleMomentumFilter = (checked) => {
+    // Re-render differentials
+    const hash = window.location.hash.slice(1);
+    const parts = hash.split('/');
+    const position = parts[2] || 'all';
+    setTimeout(() => {
+        window.renderDataAnalysis('differentials', position);
+    }, 50);
+};
+
+// ============================================================================
 // START THE APP
 // ============================================================================
 

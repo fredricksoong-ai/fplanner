@@ -166,6 +166,24 @@ function enrichPlayerWithGithubData(player, githubData) {
 }
 
 /**
+ * Enrich all players with GitHub data
+ * @param {Array} players - Array of player objects
+ * @returns {Array} Enriched players array
+ */
+function enrichPlayerData(players) {
+    if (!players || !Array.isArray(players)) {
+        return [];
+    }
+
+    // Enrich each player with GitHub data
+    players.forEach(player => {
+        enrichPlayerWithGithubData(player, githubData);
+    });
+
+    return players;
+}
+
+/**
  * Get all players with enriched data
  * @returns {Array} Enriched players array
  */
@@ -174,7 +192,7 @@ export function getAllPlayers() {
         console.warn('⚠️ Bootstrap data not loaded yet');
         return [];
     }
-    
+
     return enrichPlayerData(fplBootstrap.elements);
 }
 

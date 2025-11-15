@@ -159,23 +159,23 @@ function renderMyTeamFormContent() {
 export function renderMyTeam(teamData) {
     const container = document.getElementById('app-container');
     const { picks, gameweek, team } = teamData;
-    
+
     console.log(`🎨 Rendering My Team for ${team.player_first_name} ${team.player_last_name}...`);
-    
+
     // Sort players by position order
     const allPlayers = picks.picks.sort((a, b) => a.position - b.position);
-    
+
     const html = `
         <div class="mb-6">
             ${renderManagerInfo(teamData)}
         </div>
-        
+
         <div class="mb-8">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                 <h2 class="text-2xl font-bold" style="color: var(--primary-color);">
                     <i class="fas fa-users"></i> My Team - GW${gameweek}
                 </h2>
-                <button 
+                <button
                     onclick="window.resetMyTeam()"
                     style="
                         padding: 8px 16px;
@@ -196,10 +196,190 @@ export function renderMyTeam(teamData) {
             </div>
             ${renderTeamTable(allPlayers, gameweek)}
         </div>
+
+        <div class="mb-8">
+            ${renderTeamSummary(allPlayers, gameweek, picks.entry_history)}
+        </div>
     `;
-    
+
     container.innerHTML = html;
     attachRiskTooltipListeners();
+}
+
+/**
+ * Render team summary cards
+ */
+function renderTeamSummary(players, gameweek, entryHistory) {
+    // Calculate bench statistics
+    const bench = players.filter(p => p.position > 11);
+    let benchPoints = 0;
+
+    bench.forEach(pick => {
+        const player = getPlayerById(pick.element);
+        if (player) {
+            const hasGWStats = player.github_gw && player.github_gw.gw === gameweek;
+            const gwPoints = hasGWStats ? player.github_gw.total_points : player.event_points;
+            benchPoints += gwPoints || 0;
+        }
+    });
+
+    // Calculate squad averages
+    let totalPPM = 0;
+    let totalOwnership = 0;
+    let totalMinPercent = 0;
+    let highRiskCount = 0;
+
+    players.forEach(pick => {
+        const player = getPlayerById(pick.element);
+        if (player) {
+            totalPPM += calculatePPM(player);
+            totalOwnership += parseFloat(player.selected_by_percent) || 0;
+            totalMinPercent += calculateMinutesPercentage(player, gameweek);
+
+            const risks = analyzePlayerRisks(player);
+            if (hasHighRisk(risks)) {
+                highRiskCount++;
+            }
+        }
+    });
+
+    const avgPPM = totalPPM / players.length;
+    const avgOwnership = totalOwnership / players.length;
+    const avgMinPercent = totalMinPercent / players.length;
+
+    // Calculate fixture difficulty for next 3 GWs
+    let totalFDR = 0;
+    players.forEach(pick => {
+        const player = getPlayerById(pick.element);
+        if (player) {
+            totalFDR += calculateFixtureDifficulty(player.team, 3, false, gameweek + 1);
+        }
+    });
+    const avgFDR = totalFDR / players.length;
+
+    return `
+        <div>
+            <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
+                <i class="fas fa-chart-bar"></i> Team Analytics
+            </h3>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                <!-- Bench Points -->
+                <div style="
+                    background: var(--bg-primary);
+                    padding: 1.5rem;
+                    border-radius: 12px;
+                    border-left: 4px solid ${benchPoints > 0 ? '#ef4444' : '#22c55e'};
+                    box-shadow: 0 2px 8px var(--shadow);
+                ">
+                    <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">
+                        Bench Points
+                    </div>
+                    <div style="font-size: 2rem; font-weight: 700; color: ${benchPoints > 0 ? '#ef4444' : 'var(--text-primary)'};">
+                        ${benchPoints}
+                    </div>
+                    <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                        ${benchPoints > 0 ? '⚠️ Points wasted' : '✓ No wasted points'}
+                    </div>
+                </div>
+
+                <!-- Average PPM -->
+                <div style="
+                    background: var(--bg-primary);
+                    padding: 1.5rem;
+                    border-radius: 12px;
+                    border-left: 4px solid var(--primary-color);
+                    box-shadow: 0 2px 8px var(--shadow);
+                ">
+                    <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">
+                        Avg PPM
+                    </div>
+                    <div style="font-size: 2rem; font-weight: 700; color: var(--text-primary);">
+                        ${avgPPM.toFixed(1)}
+                    </div>
+                    <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                        Squad value efficiency
+                    </div>
+                </div>
+
+                <!-- Average Ownership -->
+                <div style="
+                    background: var(--bg-primary);
+                    padding: 1.5rem;
+                    border-radius: 12px;
+                    border-left: 4px solid ${avgOwnership > 50 ? '#fb923c' : '#22c55e'};
+                    box-shadow: 0 2px 8px var(--shadow);
+                ">
+                    <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">
+                        Avg Ownership
+                    </div>
+                    <div style="font-size: 2rem; font-weight: 700; color: var(--text-primary);">
+                        ${avgOwnership.toFixed(1)}%
+                    </div>
+                    <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                        ${avgOwnership > 50 ? 'Template heavy' : 'Differential picks'}
+                    </div>
+                </div>
+
+                <!-- Fixture Difficulty -->
+                <div style="
+                    background: var(--bg-primary);
+                    padding: 1.5rem;
+                    border-radius: 12px;
+                    border-left: 4px solid ${avgFDR <= 2.5 ? '#22c55e' : avgFDR <= 3.5 ? '#fb923c' : '#ef4444'};
+                    box-shadow: 0 2px 8px var(--shadow);
+                ">
+                    <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">
+                        Next 3 GWs FDR
+                    </div>
+                    <div style="font-size: 2rem; font-weight: 700; color: var(--text-primary);">
+                        ${avgFDR.toFixed(2)}
+                    </div>
+                    <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                        ${avgFDR <= 2.5 ? '✓ Excellent fixtures' : avgFDR <= 3.5 ? 'Average fixtures' : '⚠️ Tough fixtures'}
+                    </div>
+                </div>
+
+                <!-- High Risk Players -->
+                <div style="
+                    background: var(--bg-primary);
+                    padding: 1.5rem;
+                    border-radius: 12px;
+                    border-left: 4px solid ${highRiskCount > 2 ? '#ef4444' : highRiskCount > 0 ? '#fb923c' : '#22c55e'};
+                    box-shadow: 0 2px 8px var(--shadow);
+                ">
+                    <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">
+                        High Risk Players
+                    </div>
+                    <div style="font-size: 2rem; font-weight: 700; color: ${highRiskCount > 2 ? '#ef4444' : 'var(--text-primary)'};">
+                        ${highRiskCount}
+                    </div>
+                    <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                        ${highRiskCount > 2 ? '⚠️ Action needed' : highRiskCount > 0 ? 'Monitor closely' : '✓ Squad stable'}
+                    </div>
+                </div>
+
+                <!-- Minutes % -->
+                <div style="
+                    background: var(--bg-primary);
+                    padding: 1.5rem;
+                    border-radius: 12px;
+                    border-left: 4px solid ${avgMinPercent >= 70 ? '#22c55e' : avgMinPercent >= 50 ? '#fb923c' : '#ef4444'};
+                    box-shadow: 0 2px 8px var(--shadow);
+                ">
+                    <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">
+                        Avg Minutes %
+                    </div>
+                    <div style="font-size: 2rem; font-weight: 700; color: var(--text-primary);">
+                        ${avgMinPercent.toFixed(0)}%
+                    </div>
+                    <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                        ${avgMinPercent >= 70 ? '✓ Regular starters' : avgMinPercent >= 50 ? 'Mixed rotation' : '⚠️ High rotation risk'}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
 }
 
 /**
@@ -255,66 +435,112 @@ function renderTeamTable(players, gameweek) {
     if (!players || players.length === 0) {
         return '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">No players found</div>';
     }
-    
-    const fixtureHeaders = getFixtureHeaders(5, 1); // Next 5 GWs
-    
+
+    // Separate starters and bench
+    const starters = players.filter(p => p.position <= 11);
+    const bench = players.filter(p => p.position > 11);
+
+    const next3GWs = [gameweek + 1, gameweek + 2, gameweek + 3];
+
     let html = `
         <div style="overflow-x: auto; background: var(--bg-primary); border-radius: 12px; box-shadow: 0 2px 8px var(--shadow);">
             <table style="width: 100%; font-size: 0.875rem; border-collapse: collapse;">
                 <thead style="background: var(--primary-color); color: white;">
                     <tr>
-                        <th style="text-align: left; padding: 0.75rem 1rem;">Pos</th>
-                        <th style="text-align: left; padding: 0.75rem 1rem;">Player</th>
-                        <th style="text-align: left; padding: 0.75rem 1rem;">Team</th>
-                        <th style="text-align: center; padding: 0.75rem 1rem;">Opp</th>
-                        <th style="text-align: center; padding: 0.75rem 1rem;">Mins</th>
-                        <th style="text-align: center; padding: 0.75rem 1rem;">Pts</th>
-                        <th style="text-align: center; padding: 0.75rem 1rem;">Form</th>
-                        <th style="text-align: center; padding: 0.75rem 1rem;">xGI/xGC</th>
-                        <th style="text-align: center; padding: 0.75rem 1rem;">Price</th>
-                        <th style="text-align: center; padding: 0.5rem;">${fixtureHeaders[0]}</th>
-                        <th style="text-align: center; padding: 0.5rem;">${fixtureHeaders[1]}</th>
-                        <th style="text-align: center; padding: 0.5rem;">${fixtureHeaders[2]}</th>
-                        <th style="text-align: center; padding: 0.5rem;">${fixtureHeaders[3]}</th>
-                        <th style="text-align: center; padding: 0.5rem;">${fixtureHeaders[4]}</th>
+                        <th style="text-align: left; padding: 0.75rem 0.5rem; white-space: nowrap;">Pos</th>
+                        <th style="text-align: left; padding: 0.75rem 0.5rem;">Player</th>
+                        <th style="text-align: left; padding: 0.75rem 0.5rem;">Team</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">Opp</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">Min</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">Pts</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">G+A</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">Price</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">PPM</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">Own%</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">Min%</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">Form</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">xGI</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">ΔT</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem; white-space: nowrap;">FDR(3)</th>
                     </tr>
                 </thead>
                 <tbody>
     `;
-    
+
+    // Render starting 11
+    html += `<tr><td colspan="15" style="background: var(--bg-secondary); padding: 0.5rem 1rem; font-weight: 700; color: var(--primary-color);">Starting XI</td></tr>`;
+    html += renderTeamRows(starters, gameweek, next3GWs);
+
+    // Render bench
+    html += `<tr><td colspan="15" style="background: var(--bg-secondary); padding: 0.5rem 1rem; font-weight: 700; color: var(--text-secondary);">Bench</td></tr>`;
+    html += renderTeamRows(bench, gameweek, next3GWs);
+
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+
+    return html;
+}
+
+/**
+ * Render team table rows
+ */
+function renderTeamRows(players, gameweek, next3GWs) {
+    let html = '';
+
     players.forEach((pick, index) => {
         const player = getPlayerById(pick.element);
         if (!player) return;
-        
-        // Debug: Log pick object structure
-        if (index === 0) {
-            console.log('🔍 Pick object structure:', pick);
-            console.log('🔍 Player object structure:', player);
-        }
-        
+
         const rowBg = index % 2 === 0 ? 'var(--bg-secondary)' : 'var(--bg-primary)';
         const isCaptain = pick.is_captain;
         const isVice = pick.is_vice_captain;
-        
+
         let captainBadge = '';
         if (isCaptain) captainBadge = ' <span style="color: var(--primary-color); font-weight: 700;">(C)</span>';
         if (isVice) captainBadge = ' <span style="color: var(--text-secondary); font-weight: 700;">(VC)</span>';
-        
+
         const gwOpp = getGWOpponent(player.team, gameweek);
-        const next5 = getFixtures(player.team, 10, false).filter(f => f.event > gameweek).slice(0, 5);
-        
         const posType = getPositionType(player);
         const risks = analyzePlayerRisks(player);
         const riskTooltip = renderRiskTooltip(risks);
         const hasHighSeverity = hasHighRisk(risks);
-        
+
         const ptsHeatmap = getPtsHeatmap(player.total_points, 'pts');
         const ptsStyle = getHeatmapStyle(ptsHeatmap);
-        
+
         const formHeatmap = getFormHeatmap(player.form);
         const formStyle = getHeatmapStyle(formHeatmap);
-        
-        // Position-specific metrics
+
+        // Get GW-specific stats from GitHub (only if matches current GW)
+        const hasGWStats = player.github_gw && player.github_gw.gw === gameweek;
+
+        const gwMinutes = hasGWStats ? player.github_gw.minutes : '—';
+        const gwPoints = hasGWStats ? player.github_gw.total_points : player.event_points;
+        const gwGoals = hasGWStats ? (player.github_gw.goals_scored || 0) : '—';
+        const gwAssists = hasGWStats ? (player.github_gw.assists || 0) : '—';
+        const gwGA = hasGWStats ? `${gwGoals}+${gwAssists}` : '—';
+
+        // Calculate new metrics
+        const ppm = calculatePPM(player);
+        const ownership = parseFloat(player.selected_by_percent) || 0;
+        const minPercentage = calculateMinutesPercentage(player, gameweek);
+
+        // Transfer momentum
+        let transferNet = '—';
+        if (player.github_transfers) {
+            const netTransfers = player.github_transfers.transfers_in - player.github_transfers.transfers_out;
+            const prefix = netTransfers > 0 ? '+' : '';
+            transferNet = `${prefix}${(netTransfers / 1000).toFixed(0)}k`;
+        }
+
+        // Fixture difficulty for next 5
+        const fdrNext5 = calculateFixtureDifficulty(player.team, 5, false, gameweek + 1);
+        const fdrClass = getFDRClass(fdrNext5);
+
+        // Position-specific xGI/xGC
         let metricValue = '';
         if (posType === 'GKP' || posType === 'DEF') {
             const xGC = player.expected_goals_conceded_per_90 || 0;
@@ -323,61 +549,67 @@ function renderTeamTable(players, gameweek) {
             const xGI = player.expected_goal_involvements_per_90 || 0;
             metricValue = formatDecimal(xGI);
         }
-        
-        // Get GW-specific stats from GitHub (only if matches current GW)
-        const hasGWStats = player.github_gw && player.github_gw.gw === gameweek;
-        
-        const gwMinutes = hasGWStats ? player.github_gw.minutes : player.minutes;
-        const gwPoints = hasGWStats ? player.github_gw.total_points : player.event_points;
-        
-        // Label to show data source
-        const statsLabel = hasGWStats ? `GW${gameweek}` : 'Season';
-        
+
+        // Form trend arrow
+        const formTrend = getFormTrend(player);
+        let formArrow = '';
+        if (formTrend === 'up') formArrow = ' <span style="color: #22c55e;">↑</span>';
+        else if (formTrend === 'down') formArrow = ' <span style="color: #ef4444;">↓</span>';
+
         html += `
             <tr style="background: ${hasHighSeverity ? 'rgba(220, 38, 38, 0.05)' : rowBg};">
-                <td style="padding: 0.75rem 1rem; font-weight: 600;">${getPositionShort(player)}</td>
-                <td style="padding: 0.75rem 1rem;">
+                <td style="padding: 0.75rem 0.5rem; font-weight: 600;">${getPositionShort(player)}</td>
+                <td style="padding: 0.75rem 0.5rem;">
                     <strong>${escapeHtml(player.web_name)}</strong>${captainBadge}
                     ${riskTooltip ? `<span style="margin-left: 0.5rem;">${riskTooltip}</span>` : ''}
                 </td>
-                <td style="padding: 0.75rem 1rem;">${getTeamShortName(player.team)}</td>
-                <td style="padding: 0.75rem 1rem; text-align: center;">
+                <td style="padding: 0.75rem 0.5rem;">${getTeamShortName(player.team)}</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center;">
                     <span class="${getDifficultyClass(gwOpp.difficulty)}" style="padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.75rem;">
                         ${gwOpp.name}${gwOpp.isHome ? ' (H)' : ' (A)'}
                     </span>
                 </td>
-                <td style="padding: 0.75rem 1rem; text-align: center;">
-                    ${gwMinutes}
-                    <div style="font-size: 0.65rem; color: var(--text-secondary); margin-top: 2px;">
-                        ${statsLabel}
-                    </div>
-                </td>                
-                <td style="padding: 0.75rem 1rem; text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 600;">
+                <td style="padding: 0.75rem 0.5rem; text-align: center; font-size: 0.8rem;">
+                    ${gwMinutes}${hasGWStats ? '<div style="font-size: 0.6rem; color: var(--text-secondary);">GW' + gameweek + '</div>' : ''}
+                </td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 600;">
                     ${gwPoints}
                 </td>
-                <td style="padding: 0.75rem 1rem; text-align: center; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 600;">
-                    ${formatDecimal(player.form)}
+                <td style="padding: 0.75rem 0.5rem; text-align: center; font-size: 0.8rem;">
+                    ${gwGA}
                 </td>
-                <td style="padding: 0.75rem 1rem; text-align: center;">${metricValue}</td>
-                <td style="padding: 0.75rem 1rem; text-align: center;">${formatCurrency(player.now_cost)}</td>
-                ${next5.map(f => `
-                    <td style="padding: 0.5rem; text-align: center;">
-                        <span class="${getDifficultyClass(f.difficulty)}" style="padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.75rem; display: inline-block;">
-                            ${f.opponent}
-                        </span>
-                    </td>
-                `).join('')}
+                <td style="padding: 0.75rem 0.5rem; text-align: center;">${formatCurrency(player.now_cost)}</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center; font-weight: 600;">${formatDecimal(ppm)}</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center; font-size: 0.8rem;">${ownership.toFixed(1)}%</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center; font-size: 0.8rem;">${minPercentage.toFixed(0)}%</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 600;">
+                    ${formatDecimal(player.form)}${formArrow}
+                </td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center;">${metricValue}</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center; font-size: 0.8rem; color: ${transferNet.startsWith('+') ? '#22c55e' : transferNet.startsWith('-') ? '#ef4444' : 'inherit'};">
+                    ${transferNet}
+                </td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center;">
+                    <span class="${fdrClass}" style="padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.75rem;">
+                        ${formatDecimal(fdrNext5)}
+                    </span>
+                </td>
             </tr>
         `;
     });
-    
-    html += `
-                </tbody>
-            </table>
-        </div>
-    `;
-    
+
     return html;
+}
+
+/**
+ * Get FDR difficulty class
+ */
+function getFDRClass(fdr) {
+    if (fdr <= 2) return 'fdr-1';
+    if (fdr <= 2.5) return 'fdr-2';
+    if (fdr <= 3.5) return 'fdr-3';
+    if (fdr <= 4) return 'fdr-4';
+    return 'fdr-5';
 }
 
 // ============================================================================
@@ -535,17 +767,28 @@ function renderPlayerTable(players, fixtureMode = 'next5') {
 // DATA ANALYSIS PAGE
 // ============================================================================
 
-export function renderDataAnalysis(subTab = 'overview') {
+// State for Data Analysis filters
+let analysisState = {
+    position: 'all',
+    ownershipThreshold: 5,
+    fixtureFilter: false,
+    momentumFilter: false
+};
+
+export function renderDataAnalysis(subTab = 'overview', position = 'all') {
     const container = document.getElementById('app-container');
-    
+    analysisState.position = position;
+
     const tabHTML = `
         <div style="margin-bottom: 2rem;">
             <h1 style="font-size: 2rem; font-weight: 700; color: var(--primary-color); margin-bottom: 1rem;">
                 <i class="fas fa-chart-bar"></i> Data Analysis
             </h1>
-            <div style="display: flex; gap: 0.5rem; border-bottom: 2px solid var(--border-color); margin-bottom: 2rem;">
-                <button 
-                    onclick="window.switchAnalysisTab('overview')"
+
+            <!-- Main Tabs -->
+            <div style="display: flex; gap: 0.5rem; border-bottom: 2px solid var(--border-color); margin-bottom: 1rem;">
+                <button
+                    onclick="window.switchAnalysisTab('overview', '${position}')"
                     style="
                         padding: 0.75rem 1.5rem;
                         background: ${subTab === 'overview' ? 'var(--primary-color)' : 'transparent'};
@@ -559,8 +802,8 @@ export function renderDataAnalysis(subTab = 'overview') {
                 >
                     Overview
                 </button>
-                <button 
-                    onclick="window.switchAnalysisTab('differentials')"
+                <button
+                    onclick="window.switchAnalysisTab('differentials', '${position}')"
                     style="
                         padding: 0.75rem 1.5rem;
                         background: ${subTab === 'differentials' ? 'var(--primary-color)' : 'transparent'};
@@ -575,67 +818,468 @@ export function renderDataAnalysis(subTab = 'overview') {
                     Differentials
                 </button>
             </div>
+
+            <!-- Position Filter -->
+            <div style="display: flex; gap: 0.5rem; margin-bottom: 2rem;">
+                ${['all', 'GKP', 'DEF', 'MID', 'FWD'].map(pos => `
+                    <button
+                        onclick="window.switchAnalysisTab('${subTab}', '${pos}')"
+                        style="
+                            padding: 0.5rem 1rem;
+                            background: ${position === pos ? 'var(--accent-color)' : 'var(--bg-secondary)'};
+                            color: ${position === pos ? 'white' : 'var(--text-primary)'};
+                            border: 1px solid ${position === pos ? 'var(--accent-color)' : 'var(--border-color)'};
+                            border-radius: 6px;
+                            cursor: pointer;
+                            font-weight: 500;
+                            font-size: 0.875rem;
+                            transition: all 0.2s;
+                        "
+                    >
+                        ${pos === 'all' ? 'All Positions' : pos}
+                    </button>
+                `).join('')}
+            </div>
         </div>
     `;
-    
+
     let contentHTML = '';
     if (subTab === 'overview') {
-        contentHTML = renderAnalysisOverview();
+        contentHTML = renderAnalysisOverview(position);
     } else {
-        contentHTML = renderDifferentials();
+        contentHTML = renderDifferentials(position);
     }
-    
+
     container.innerHTML = `
         <div style="padding: 2rem;">
             ${tabHTML}
             ${contentHTML}
         </div>
     `;
-    
+
     attachRiskTooltipListeners();
 }
 
-function renderAnalysisOverview() {
-    const players = getAllPlayers();
+function renderAnalysisOverview(position = 'all') {
+    let players = getAllPlayers();
+
+    // Filter by position if selected
+    if (position !== 'all') {
+        const posMap = { 'GKP': 1, 'DEF': 2, 'MID': 3, 'FWD': 4 };
+        players = players.filter(p => p.element_type === posMap[position]);
+    }
+
     const top20 = sortPlayers(players, 'total_points', false).slice(0, 20);
-    
+    const bestValue = players.filter(p => calculateMinutesPercentage(p, getCurrentGW()) > 30);
+    const top15Value = sortPlayers(bestValue, 'ppm', false).slice(0, 15);
+    const top15Form = sortPlayers(bestValue, 'form', false).slice(0, 15);
+
+    // Defensive standouts (for outfield players only)
+    let defensiveSection = '';
+    if (position === 'DEF' || position === 'MID' || position === 'FWD') {
+        const withDefCon = players.filter(p => p.github_season && p.github_season.defensive_contribution_per_90);
+        const topDefensive = withDefCon.sort((a, b) =>
+            b.github_season.defensive_contribution_per_90 - a.github_season.defensive_contribution_per_90
+        ).slice(0, 10);
+
+        if (topDefensive.length > 0) {
+            defensiveSection = `
+                <div style="margin-top: 3rem;">
+                    <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
+                        🛡️ Defensive Standouts
+                    </h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+                        Top ${position === 'all' ? 'outfield players' : position} by defensive contribution per 90
+                    </p>
+                    ${renderPositionSpecificTable(topDefensive, position)}
+                </div>
+            `;
+        }
+    }
+
     return `
         <div>
-            <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
-                Top 20 Players (Overall Points)
-            </h2>
-            <p style="color: var(--text-secondary); margin-bottom: 2rem;">
-                Showing past 3 and next 3 gameweeks
-            </p>
-            ${renderPlayerTable(top20, 'past3next3')}
+            <!-- Section 1: Top Performers -->
+            <div style="margin-bottom: 3rem;">
+                <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
+                    🏆 Top Performers
+                </h2>
+                <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+                    Top ${position === 'all' ? '20 players' : '20 ' + position} by total points
+                </p>
+                ${renderPositionSpecificTable(top20, position)}
+            </div>
+
+            <!-- Section 2: Best Value -->
+            <div style="margin-bottom: 3rem;">
+                <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
+                    💰 Best Value
+                </h2>
+                <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+                    Top 15 by points per million (min 30% minutes played)
+                </p>
+                ${renderPositionSpecificTable(top15Value, position)}
+            </div>
+
+            <!-- Section 3: Form Stars -->
+            <div style="margin-bottom: 3rem;">
+                <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
+                    🔥 Form Stars
+                </h2>
+                <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+                    Top 15 by recent form (min 30% minutes played)
+                </p>
+                ${renderPositionSpecificTable(top15Form, position)}
+            </div>
+
+            <!-- Section 4: Defensive Standouts (if applicable) -->
+            ${defensiveSection}
         </div>
     `;
 }
 
-function renderDifferentials() {
-    const players = getAllPlayers();
-    
-    // Differentials: Low ownership (<5%), decent points (>30), good form (>3)
-    const differentials = players.filter(p => 
-        parseFloat(p.selected_by_percent) < 5 &&
-        p.total_points > 30 &&
-        parseFloat(p.form) > 3 &&
-        p.minutes > 270 // At least 3 full games
-    );
-    
+function renderDifferentials(position = 'all') {
+    let players = getAllPlayers();
+
+    // Filter by position if selected
+    if (position !== 'all') {
+        const posMap = { 'GKP': 1, 'DEF': 2, 'MID': 3, 'FWD': 4 };
+        players = players.filter(p => p.element_type === posMap[position]);
+    }
+
+    // Apply filters
+    const differentials = players.filter(p => {
+        const ownership = parseFloat(p.selected_by_percent) || 0;
+        if (ownership >= analysisState.ownershipThreshold) return false;
+
+        // Position-specific thresholds
+        const minPercentage = calculateMinutesPercentage(p, getCurrentGW());
+        if (position === 'GKP' || p.element_type === 1) {
+            if (minPercentage <= 50 && (p.saves || 0) <= 20) return false;
+        } else if (position === 'DEF' || p.element_type === 2) {
+            if (minPercentage <= 40 && (!p.github_season || p.github_season.defensive_contribution_per_90 <= 3.0)) return false;
+        } else {
+            if (minPercentage <= 30 || parseFloat(p.form) <= 3) return false;
+        }
+
+        // Fixture filter
+        if (analysisState.fixtureFilter) {
+            const fdr = calculateFixtureDifficulty(p.team, 5);
+            if (fdr > 3.0) return false;
+        }
+
+        // Momentum filter
+        if (analysisState.momentumFilter && p.github_transfers) {
+            const netTransfers = p.github_transfers.transfers_in - p.github_transfers.transfers_out;
+            if (netTransfers <= 0) return false;
+        }
+
+        return true;
+    });
+
     const sortedDiffs = sortPlayers(differentials, 'total_points', false).slice(0, 20);
-    
+
     return `
         <div>
+            <!-- Filters -->
+            <div style="background: var(--bg-secondary); padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem;">
+                <h3 style="font-size: 1.125rem; font-weight: 600; margin-bottom: 1rem;">Filters</h3>
+
+                <!-- Ownership Slider -->
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">
+                        Ownership Threshold: <span id="ownership-value">${analysisState.ownershipThreshold}%</span>
+                    </label>
+                    <input
+                        type="range"
+                        min="1"
+                        max="10"
+                        value="${analysisState.ownershipThreshold}"
+                        style="width: 100%; max-width: 300px;"
+                        oninput="window.updateOwnershipThreshold(this.value)"
+                    />
+                </div>
+
+                <!-- Checkboxes -->
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                        <input
+                            type="checkbox"
+                            ${analysisState.fixtureFilter ? 'checked' : ''}
+                            onchange="window.toggleFixtureFilter(this.checked)"
+                        />
+                        <span>Only good fixtures (FDR ≤ 3.0)</span>
+                    </label>
+
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                        <input
+                            type="checkbox"
+                            ${analysisState.momentumFilter ? 'checked' : ''}
+                            onchange="window.toggleMomentumFilter(this.checked)"
+                        />
+                        <span>Only positive momentum (ΔT > 0)</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Results -->
             <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
-                Differential Picks
+                🎯 Differential Picks
             </h2>
             <p style="color: var(--text-secondary); margin-bottom: 2rem;">
-                Low ownership (<5%), strong performance (30+ pts, 3+ form)
+                Found ${sortedDiffs.length} ${position === 'all' ? 'players' : position} matching criteria
             </p>
-            ${sortedDiffs.length > 0 ? renderPlayerTable(sortedDiffs, 'past3next3') : '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">No differentials found matching criteria</div>'}
+            ${sortedDiffs.length > 0 ? renderPositionSpecificTable(sortedDiffs, position) : '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">No differentials found matching criteria. Try adjusting filters.</div>'}
         </div>
     `;
+}
+
+/**
+ * Render position-specific table with appropriate columns
+ */
+function renderPositionSpecificTable(players, position = 'all') {
+    if (!players || players.length === 0) {
+        return '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">No players found</div>';
+    }
+
+    const currentGW = getCurrentGW();
+
+    // Get next 5 fixtures headers
+    const fixtureHeaders = getFixtureHeaders(5, 1);
+
+    // Build table based on position
+    let html = `
+        <div style="overflow-x: auto; background: var(--bg-primary); border-radius: 12px; box-shadow: 0 2px 8px var(--shadow);">
+            <table style="width: 100%; font-size: 0.875rem; border-collapse: collapse;">
+                <thead style="background: var(--primary-color); color: white;">
+                    <tr>
+    `;
+
+    // Position-specific column headers
+    if (position === 'GKP') {
+        // GKP: Player, Team, Price, Pts, PPM, Own%, Min%, Form, Saves/90, CS/90, xGC/90, CS, ΔT, FDR(5), Fix 1-5
+        html += `
+                        <th style="text-align: left; padding: 0.75rem 0.5rem;">Player</th>
+                        <th style="text-align: left; padding: 0.75rem 0.5rem;">Team</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem;">Price</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem;">Pts</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem;">PPM</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem;">Own%</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem;">Min%</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem;">Form</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem;">Saves/90</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem;">CS/90</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem;">xGC/90</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem;">CS</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem;">ΔT</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem;">FDR(5)</th>
+        `;
+    } else if (position === 'DEF') {
+        // DEF: Player, Team, Price, Pts, PPM, Own%, Min%, Form, Def/90, CS, xGC/90, G+A, ΔT, FDR(5), Fix 1-5
+        html += `
+                        <th style="text-align: left; padding: 0.75rem 0.5rem;">Player</th>
+                        <th style="text-align: left; padding: 0.75rem 0.5rem;">Team</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem;">Price</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem;">Pts</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem;">PPM</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem;">Own%</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem;">Min%</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem;">Form</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem;">Def/90</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem;">CS</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem;">xGC/90</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem;">G+A</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem;">ΔT</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem;">FDR(5)</th>
+        `;
+    } else if (position === 'MID' || position === 'FWD') {
+        // MID/FWD: Player, Team, Price, Pts, PPM, Own%, Min%, Form, Def/90, Goals, Assists, xGI/90, PK, ΔT, FDR(5), Fix 1-5
+        html += `
+                        <th style="text-align: left; padding: 0.75rem 0.5rem;">Player</th>
+                        <th style="text-align: left; padding: 0.75rem 0.5rem;">Team</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem;">Price</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem;">Pts</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem;">PPM</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem;">Own%</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem;">Min%</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem;">Form</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem;">Def/90</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem;">Goals</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem;">Assists</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem;">xGI/90</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem;">PK</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem;">ΔT</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem;">FDR(5)</th>
+        `;
+    } else {
+        // ALL: Simplified view with position column
+        html += `
+                        <th style="text-align: left; padding: 0.75rem 0.5rem;">Pos</th>
+                        <th style="text-align: left; padding: 0.75rem 0.5rem;">Player</th>
+                        <th style="text-align: left; padding: 0.75rem 0.5rem;">Team</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem;">Price</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem;">Pts</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem;">PPM</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem;">Own%</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem;">Min%</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem;">Form</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem;">ΔT</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem;">FDR(5)</th>
+        `;
+    }
+
+    // Add fixture headers
+    fixtureHeaders.forEach(h => {
+        html += `<th style="text-align: center; padding: 0.5rem;">${h}</th>`;
+    });
+
+    html += `
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    // Render rows
+    players.forEach((player, index) => {
+        const rowBg = index % 2 === 0 ? 'var(--bg-secondary)' : 'var(--bg-primary)';
+
+        // Calculate common metrics
+        const ppm = calculatePPM(player);
+        const minPercentage = calculateMinutesPercentage(player, currentGW);
+        const ownership = parseFloat(player.selected_by_percent) || 0;
+        const fdr5 = calculateFixtureDifficulty(player.team, 5);
+        const fdrClass = getFDRClass(fdr5);
+
+        // Transfer momentum
+        let transferNet = '—';
+        let transferColor = 'inherit';
+        if (player.github_transfers) {
+            const net = player.github_transfers.transfers_in - player.github_transfers.transfers_out;
+            const prefix = net > 0 ? '+' : '';
+            transferNet = `${prefix}${(net / 1000).toFixed(0)}k`;
+            transferColor = net > 0 ? '#22c55e' : net < 0 ? '#ef4444' : 'inherit';
+        }
+
+        // Heatmaps
+        const ptsHeatmap = getPtsHeatmap(player.total_points, 'pts');
+        const ptsStyle = getHeatmapStyle(ptsHeatmap);
+        const formHeatmap = getFormHeatmap(player.form);
+        const formStyle = getHeatmapStyle(formHeatmap);
+        const ppmHeatmap = getPtsHeatmap(ppm, 'value');
+        const ppmStyle = getHeatmapStyle(ppmHeatmap);
+
+        // Get fixtures
+        const next5 = getFixtures(player.team, 10, false).filter(f => f.event > currentGW).slice(0, 5);
+
+        html += `<tr style="background: ${rowBg};">`;
+
+        // Position-specific columns
+        if (position === 'GKP') {
+            const saves90 = player.github_season?.saves_per_90 || 0;
+            const cs90 = player.github_season?.clean_sheets_per_90 || 0;
+            const xGC90 = player.expected_goals_conceded_per_90 || 0;
+            const cs = player.clean_sheets || 0;
+
+            html += `
+                <td style="padding: 0.75rem 0.5rem;"><strong>${escapeHtml(player.web_name)}</strong></td>
+                <td style="padding: 0.75rem 0.5rem;">${getTeamShortName(player.team)}</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center;">${formatCurrency(player.now_cost)}</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 600;">${player.total_points}</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center; background: ${ppmStyle.background}; color: ${ppmStyle.color}; font-weight: 600;">${formatDecimal(ppm)}</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center; font-size: 0.8rem;">${ownership.toFixed(1)}%</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center; font-size: 0.8rem;">${minPercentage.toFixed(0)}%</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 600;">${formatDecimal(player.form)}</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center; font-weight: 600;">${formatDecimal(saves90)}</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center; font-weight: 600;">${formatDecimal(cs90)}</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center;">${formatDecimal(xGC90)}</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center;">${cs}</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center; font-size: 0.8rem; color: ${transferColor};">${transferNet}</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center;"><span class="${fdrClass}" style="padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.75rem;">${formatDecimal(fdr5)}</span></td>
+            `;
+        } else if (position === 'DEF') {
+            const def90 = player.github_season?.defensive_contribution_per_90 || 0;
+            const cs = player.clean_sheets || 0;
+            const xGC90 = player.expected_goals_conceded_per_90 || 0;
+            const ga = (player.goals_scored || 0) + (player.assists || 0);
+
+            html += `
+                <td style="padding: 0.75rem 0.5rem;"><strong>${escapeHtml(player.web_name)}</strong></td>
+                <td style="padding: 0.75rem 0.5rem;">${getTeamShortName(player.team)}</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center;">${formatCurrency(player.now_cost)}</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 600;">${player.total_points}</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center; background: ${ppmStyle.background}; color: ${ppmStyle.color}; font-weight: 600;">${formatDecimal(ppm)}</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center; font-size: 0.8rem;">${ownership.toFixed(1)}%</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center; font-size: 0.8rem;">${minPercentage.toFixed(0)}%</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 600;">${formatDecimal(player.form)}</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center; font-weight: 600;">${formatDecimal(def90)}</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center;">${cs}</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center;">${formatDecimal(xGC90)}</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center; font-weight: 600;">${ga}</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center; font-size: 0.8rem; color: ${transferColor};">${transferNet}</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center;"><span class="${fdrClass}" style="padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.75rem;">${formatDecimal(fdr5)}</span></td>
+            `;
+        } else if (position === 'MID' || position === 'FWD') {
+            const def90 = player.github_season?.defensive_contribution_per_90 || 0;
+            const goals = player.goals_scored || 0;
+            const assists = player.assists || 0;
+            const xGI90 = player.expected_goal_involvements_per_90 || 0;
+            const pk = player.penalties_order === 1 ? '⚽' : '—';
+
+            html += `
+                <td style="padding: 0.75rem 0.5rem;"><strong>${escapeHtml(player.web_name)}</strong></td>
+                <td style="padding: 0.75rem 0.5rem;">${getTeamShortName(player.team)}</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center;">${formatCurrency(player.now_cost)}</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 600;">${player.total_points}</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center; background: ${ppmStyle.background}; color: ${ppmStyle.color}; font-weight: 600;">${formatDecimal(ppm)}</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center; font-size: 0.8rem;">${ownership.toFixed(1)}%</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center; font-size: 0.8rem;">${minPercentage.toFixed(0)}%</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 600;">${formatDecimal(player.form)}</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center; font-weight: 600;">${formatDecimal(def90)}</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center;">${goals}</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center;">${assists}</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center;">${formatDecimal(xGI90)}</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center;">${pk}</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center; font-size: 0.8rem; color: ${transferColor};">${transferNet}</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center;"><span class="${fdrClass}" style="padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.75rem;">${formatDecimal(fdr5)}</span></td>
+            `;
+        } else {
+            // ALL positions - simplified view
+            html += `
+                <td style="padding: 0.75rem 0.5rem; font-weight: 600;">${getPositionShort(player)}</td>
+                <td style="padding: 0.75rem 0.5rem;"><strong>${escapeHtml(player.web_name)}</strong></td>
+                <td style="padding: 0.75rem 0.5rem;">${getTeamShortName(player.team)}</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center;">${formatCurrency(player.now_cost)}</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 600;">${player.total_points}</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center; background: ${ppmStyle.background}; color: ${ppmStyle.color}; font-weight: 600;">${formatDecimal(ppm)}</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center; font-size: 0.8rem;">${ownership.toFixed(1)}%</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center; font-size: 0.8rem;">${minPercentage.toFixed(0)}%</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 600;">${formatDecimal(player.form)}</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center; font-size: 0.8rem; color: ${transferColor};">${transferNet}</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center;"><span class="${fdrClass}" style="padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.75rem;">${formatDecimal(fdr5)}</span></td>
+            `;
+        }
+
+        // Add fixtures
+        next5.forEach(f => {
+            html += `
+                <td style="padding: 0.5rem; text-align: center;">
+                    <span class="${getDifficultyClass(f.difficulty)}" style="padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.75rem; display: inline-block;">
+                        ${f.opponent}
+                    </span>
+                </td>
+            `;
+        });
+
+        html += `</tr>`;
+    });
+
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+
+    return html;
 }
 
 // ============================================================================
