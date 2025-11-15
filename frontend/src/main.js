@@ -378,8 +378,8 @@ window.loadTeam = async () => {
         console.log(`🔄 Loading team ${teamId}...`);
         myTeamData = await loadMyTeam(teamId);
         currentTeamId = teamId;
-        
-        // TODO: Will render properly once render.js is created
+
+        // Team loaded successfully
         alert(`Team loaded! Manager: ${myTeamData.team.player_first_name} ${myTeamData.team.player_last_name}`);
         
     } catch (err) {
@@ -425,19 +425,16 @@ window.switchAnalysisTab = (tab, position = 'all') => {
  */
 window.updateOwnershipThreshold = (value) => {
     document.getElementById('ownership-value').textContent = `${value}%`;
-    // Update state via re-importing render module
-    import('./render.js').then(renderModule => {
-        // Get current hash
-        const hash = window.location.hash.slice(1);
-        const parts = hash.split('/');
-        const tab = parts[1] || 'differentials';
-        const position = parts[2] || 'all';
+    // Get current hash
+    const hash = window.location.hash.slice(1);
+    const parts = hash.split('/');
+    const tab = parts[1] || 'differentials';
+    const position = parts[2] || 'all';
 
-        // Re-render with new ownership value
-        setTimeout(() => {
-            window.renderDataAnalysis(tab, position);
-        }, 100);
-    });
+    // Re-render with new ownership value
+    setTimeout(() => {
+        window.renderDataAnalysis(tab, position);
+    }, 100);
 };
 
 /**
