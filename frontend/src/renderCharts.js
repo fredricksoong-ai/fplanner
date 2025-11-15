@@ -279,9 +279,9 @@ async function renderPointsPriceChart() {
             left: 'center'
         },
         grid: {
-            left: '3%',
+            left: '5%',
             right: '4%',
-            bottom: '3%',
+            bottom: '10%',
             top: '15%',
             containLabel: true
         },
