@@ -177,17 +177,18 @@ export function renderRiskTooltip(risks) {
     // Generate tooltip content
     const riskItems = risks.map(risk => `
         <div style="
-            margin-bottom: 0.5rem;
-            padding: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 8px;
+            margin: 2px 0;
+            border-left: 3px solid ${getRiskBorderColor(risk.severity)};
+            border-radius: 4px;
+            font-size: 12px;
             background: ${getRiskBgColor(risk.severity)};
-            border-radius: 0.25rem;
         ">
-            <div style="font-weight: 600; margin-bottom: 0.25rem;">
-                ${risk.icon} ${risk.message}
-            </div>
-            <div style="font-size: 0.875rem; opacity: 0.9;">
-                ${risk.details}
-            </div>
+            <span style="font-size: 14px; flex-shrink: 0;">${risk.icon}</span>
+            <span style="color: #374151; font-weight: 500;">${risk.details}</span>
         </div>
     `).join('');
     
@@ -195,13 +196,14 @@ export function renderRiskTooltip(risks) {
     const primaryIcon = getPrimaryRiskIcon(risks);
     
     return `
-        <span 
+        <span
             class="risk-indicator"
             style="
                 cursor: help;
-                font-size: 1.25rem;
+                font-size: 1rem;
                 position: relative;
                 display: inline-block;
+                margin-left: 4px;
             "
             title="Click to see risk details"
         >
@@ -210,17 +212,18 @@ export function renderRiskTooltip(risks) {
                 display: none;
                 position: absolute;
                 z-index: 1000;
-                background: var(--bg-primary);
-                border: 2px solid var(--border-color);
-                border-radius: 0.5rem;
-                padding: 1rem;
-                min-width: 250px;
-                box-shadow: 0 4px 12px var(--shadow);
-                right: 0;
-                bottom: calc(100% + 0.5rem);
-                color: var(--text-primary);
+                background: white;
+                border: 1px solid #e5e7eb;
+                border-radius: 8px;
+                padding: 8px;
+                min-width: 220px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                left: 50%;
+                transform: translateX(-50%);
+                bottom: calc(100% + 4px);
+                color: #374151;
             ">
-                <div style="font-weight: 700; margin-bottom: 0.75rem; font-size: 1rem;">
+                <div style="font-weight: 700; margin-bottom: 8px; font-size: 0.875rem;">
                     Risk Factors
                 </div>
                 ${riskItems}
@@ -256,9 +259,20 @@ function getPrimaryRiskIcon(risks) {
  * @returns {string} CSS color
  */
 function getRiskBgColor(severity) {
-    if (severity === 'high') return 'rgba(220, 38, 38, 0.1)'; // Red tint
-    if (severity === 'medium') return 'rgba(245, 158, 11, 0.1)'; // Yellow tint
-    return 'rgba(59, 130, 246, 0.1)'; // Blue tint
+    if (severity === 'high') return '#fef2f2'; // Red tint
+    if (severity === 'medium') return '#fffbeb'; // Yellow tint
+    return '#eff6ff'; // Blue tint
+}
+
+/**
+ * Get border color for risk severity
+ * @param {string} severity - Risk severity ('high', 'medium', 'low')
+ * @returns {string} CSS color
+ */
+function getRiskBorderColor(severity) {
+    if (severity === 'high') return '#dc2626'; // Red
+    if (severity === 'medium') return '#f59e0b'; // Yellow/orange
+    return '#3b82f6'; // Blue
 }
 
 /**
