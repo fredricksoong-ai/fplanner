@@ -5,6 +5,7 @@
 
 import './styles.css';
 import { loadFPLData, loadMyTeam, refreshData, currentGW } from './data.js';
+import { escapeHtml } from './utils.js';
 
 // ============================================================================
 // STATE MANAGEMENT
@@ -292,7 +293,7 @@ async function initializeApp() {
                 <i class="fas fa-exclamation-triangle" style="font-size: 3rem; margin-bottom: 1rem;"></i>
                 <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem;">Failed to Load</h2>
                 <p style="color: var(--text-secondary); margin-bottom: 2rem;">
-                    ${err.message}
+                    ${escapeHtml(err.message)}
                 </p>
                 <button 
                     onclick="location.reload()"

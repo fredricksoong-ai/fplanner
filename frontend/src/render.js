@@ -800,7 +800,7 @@ export function renderTransferCommittee() {
                             Failed to Load Team
                         </h2>
                         <p style="color: var(--text-secondary); margin-bottom: 2rem;">
-                            ${err.message}
+                            ${escapeHtml(err.message)}
                         </p>
                         <button
                             onclick="window.location.hash = 'my-team'"
@@ -1967,10 +1967,10 @@ window.loadAndRenderTeam = async function() {
         container.innerHTML = `
             <div style="text-align: center; padding: 4rem 2rem; color: var(--text-secondary);">
                 <i class="fas fa-spinner fa-spin" style="font-size: 3rem; margin-bottom: 1rem;"></i>
-                <p>Loading team ${teamId}...</p>
+                <p>Loading team ${escapeHtml(teamId)}...</p>
             </div>
         `;
-        
+
         const teamData = await loadMyTeam(teamId);
         
         // CACHE TEAM ID ← ADD THIS
