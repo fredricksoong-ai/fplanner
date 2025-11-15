@@ -18,6 +18,7 @@ import {
 // ============================================================================
 
 let currentPositionFilter = 'all';
+let currentChartType = 'points-price'; // Current chart being displayed
 let echarts = null; // Lazy-loaded ECharts instance
 let currentChart = null; // Current chart instance for cleanup
 
@@ -28,8 +29,19 @@ let currentChart = null; // Current chart instance for cleanup
 /**
  * Render the Charts page
  */
-export async function renderCharts() {
+export async function renderCharts(chartType = 'points-price') {
     const container = document.getElementById('app-container');
+    currentChartType = chartType;
+
+    // Chart type configurations
+    const chartTypes = {
+        'points-price': { icon: '💰', label: 'Points vs Price' },
+        'form-price': { icon: '🔥', label: 'Form vs Price' },
+        'minutes-efficiency': { icon: '⏱️', label: 'Minutes vs Efficiency' },
+        'xgi-actual': { icon: '🎯', label: 'xGI vs Actual' },
+        'ownership-form': { icon: '📊', label: 'Ownership vs Form' },
+        'fdr-form': { icon: '🗓️', label: 'Fixtures vs Form' }
+    };
 
     container.innerHTML = `
         <div style="padding: 2rem;">
@@ -39,6 +51,30 @@ export async function renderCharts() {
             <p style="color: var(--text-secondary); margin-bottom: 2rem;">
                 Interactive charts to help you find value picks and differentials
             </p>
+
+            <!-- Chart Type Tabs -->
+            <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; overflow-x: auto; padding-bottom: 0.5rem;">
+                ${Object.entries(chartTypes).map(([type, config]) => `
+                    <button
+                        class="chart-type-tab"
+                        data-chart-type="${type}"
+                        style="
+                            padding: 0.75rem 1.25rem;
+                            background: ${chartType === type ? 'var(--primary-color)' : 'var(--bg-secondary)'};
+                            color: ${chartType === type ? 'white' : 'var(--text-primary)'};
+                            border: ${chartType === type ? 'none' : '1px solid var(--border-color)'};
+                            border-radius: 0.5rem;
+                            cursor: pointer;
+                            font-weight: ${chartType === type ? '700' : '500'};
+                            font-size: 0.875rem;
+                            white-space: nowrap;
+                            transition: all 0.2s;
+                        "
+                    >
+                        ${config.icon} ${config.label}
+                    </button>
+                `).join('')}
+            </div>
 
             <!-- Position Filter -->
             <div style="display: flex; gap: 0.5rem; margin-bottom: 2rem; flex-wrap: wrap;">
@@ -59,47 +95,8 @@ export async function renderCharts() {
                 </button>
             </div>
 
-            <!-- Chart Card -->
-            <div style="background: var(--bg-primary); border-radius: 12px; box-shadow: 0 2px 8px var(--shadow); padding: 1.5rem; margin-bottom: 2rem;">
-                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
-                    <div>
-                        <h2 style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem;">
-                            💰 Points vs Price
-                        </h2>
-                        <p style="color: var(--text-secondary); margin-bottom: 0.5rem; font-size: 0.875rem;">
-                            Find value picks and premium performers. Bubble size = ownership %, Your team = ⭐ (star shape with purple border)
-                        </p>
-                        <div style="display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.75rem; color: var(--text-secondary);">
-                            <span><span style="color: #10b981; font-weight: bold;">■</span> Value Zone (low price, high points)</span>
-                            <span><span style="color: #3b82f6; font-weight: bold;">■</span> Premium Zone (high price, high points)</span>
-                            <span><span style="color: #ef4444; font-weight: bold;">■</span> Trap Zone (high price, low points - avoid!)</span>
-                        </div>
-                    </div>
-                    <button
-                        id="export-chart-btn"
-                        style="
-                            padding: 0.5rem 1rem;
-                            background: var(--accent-color);
-                            color: white;
-                            border: none;
-                            border-radius: 6px;
-                            cursor: pointer;
-                            font-size: 0.875rem;
-                            font-weight: 600;
-                            display: flex;
-                            align-items: center;
-                            gap: 0.5rem;
-                            transition: opacity 0.2s;
-                        "
-                    >
-                        <i class="fas fa-download"></i>
-                        Export PNG
-                    </button>
-                </div>
-
-                <!-- Chart Container -->
-                <div id="points-price-chart" style="width: 100%; height: 600px; min-height: 400px; margin-top: 1rem;"></div>
-            </div>
+            <!-- Chart Container - Dynamic content -->
+            <div id="chart-content-container"></div>
 
             <!-- Legend -->
             <div style="background: var(--bg-secondary); border-radius: 8px; padding: 1rem; margin-top: 1rem;">
@@ -129,6 +126,15 @@ export async function renderCharts() {
         </div>
     `;
 
+    // Add event listeners to chart type tabs
+    const chartTypeTabs = container.querySelectorAll('.chart-type-tab');
+    chartTypeTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            const newChartType = tab.dataset.chartType;
+            window.renderCharts(newChartType);
+        });
+    });
+
     // Add event listeners for position filters
     const filterButtons = container.querySelectorAll('.chart-position-filter');
     filterButtons.forEach(btn => {
@@ -148,17 +154,109 @@ export async function renderCharts() {
                 }
             });
 
-            // Re-render chart
-            renderPointsPriceChart();
+            // Re-render current chart
+            renderCurrentChart();
         });
     });
 
-    // Lazy load ECharts and render chart
+    // Lazy load ECharts
     if (!echarts) {
         echarts = await import('echarts');
     }
 
-    renderPointsPriceChart();
+    // Render the selected chart
+    renderCurrentChart();
+
+    // Make renderCharts globally accessible for tab switching
+    window.renderCharts = renderCharts;
+}
+
+// ============================================================================
+// CHART ROUTER
+// ============================================================================
+
+/**
+ * Render the currently selected chart type
+ */
+function renderCurrentChart() {
+    switch (currentChartType) {
+        case 'points-price':
+            renderPointsPriceChart();
+            break;
+        case 'form-price':
+            renderFormPriceChart();
+            break;
+        case 'minutes-efficiency':
+            renderMinutesEfficiencyChart();
+            break;
+        case 'xgi-actual':
+            renderXgiActualChart();
+            break;
+        case 'ownership-form':
+            renderOwnershipFormChart();
+            break;
+        case 'fdr-form':
+            renderFdrFormChart();
+            break;
+        default:
+            renderPointsPriceChart();
+    }
+}
+
+// ============================================================================
+// HELPER: CREATE CHART CARD
+// ============================================================================
+
+/**
+ * Create the HTML for a chart card
+ */
+function createChartCard(config) {
+    const { title, icon, description, zones, chartId } = config;
+
+    const zonesHTML = zones ? `
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.75rem; color: var(--text-secondary);">
+            ${zones.map(z => `<span><span style="color: ${z.color}; font-weight: bold;">■</span> ${z.label}</span>`).join('')}
+        </div>
+    ` : '';
+
+    return `
+        <div style="background: var(--bg-primary); border-radius: 12px; box-shadow: 0 2px 8px var(--shadow); padding: 1.5rem; margin-bottom: 2rem;">
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
+                <div>
+                    <h2 style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem;">
+                        ${icon} ${title}
+                    </h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 0.5rem; font-size: 0.875rem;">
+                        ${description}
+                    </p>
+                    ${zonesHTML}
+                </div>
+                <button
+                    id="export-chart-btn"
+                    style="
+                        padding: 0.5rem 1rem;
+                        background: var(--accent-color);
+                        color: white;
+                        border: none;
+                        border-radius: 6px;
+                        cursor: pointer;
+                        font-size: 0.875rem;
+                        font-weight: 600;
+                        display: flex;
+                        align-items: center;
+                        gap: 0.5rem;
+                        transition: opacity 0.2s;
+                    "
+                >
+                    <i class="fas fa-download"></i>
+                    Export PNG
+                </button>
+            </div>
+
+            <!-- Chart Container -->
+            <div id="${chartId}" style="width: 100%; height: 600px; min-height: 400px; margin-top: 1rem;"></div>
+        </div>
+    `;
 }
 
 // ============================================================================
@@ -169,6 +267,22 @@ export async function renderCharts() {
  * Render Points vs Price scatter plot
  */
 async function renderPointsPriceChart() {
+    // Create chart card HTML
+    const contentContainer = document.getElementById('chart-content-container');
+    if (!contentContainer) return;
+
+    contentContainer.innerHTML = createChartCard({
+        title: 'Points vs Price',
+        icon: '💰',
+        description: 'Find value picks and premium performers. Bubble size = ownership %, Your team = ⭐ (star shape with purple border)',
+        zones: [
+            { color: '#10b981', label: 'Value Zone (low price, high points)' },
+            { color: '#3b82f6', label: 'Premium Zone (high price, high points)' },
+            { color: '#ef4444', label: 'Trap Zone (high price, low points - avoid!)' }
+        ],
+        chartId: 'points-price-chart'
+    });
+
     const chartContainer = document.getElementById('points-price-chart');
     if (!chartContainer) return;
 
@@ -495,6 +609,121 @@ async function renderPointsPriceChart() {
             }
         });
     }
+}
+
+// ============================================================================
+// CHART 2: FORM VS PRICE
+// ============================================================================
+
+async function renderFormPriceChart() {
+    const contentContainer = document.getElementById('chart-content-container');
+    if (!contentContainer) return;
+
+    contentContainer.innerHTML = createChartCard({
+        title: 'Form vs Price',
+        icon: '🔥',
+        description: 'Find in-form bargains and spot premium players losing form. Bubble size = ownership %',
+        zones: [
+            { color: '#10b981', label: 'Hot Form Value (low price, high form)' },
+            { color: '#3b82f6', label: 'Premium Form (high price, high form)' },
+            { color: '#ef4444', label: 'Cold Trap (high price, low form - avoid!)' }
+        ],
+        chartId: 'form-price-chart'
+    });
+
+    contentContainer.innerHTML += '<div style="text-align: center; padding: 4rem; color: var(--text-secondary);"><i class="fas fa-spinner fa-spin" style="font-size: 2rem;"></i><br/><br/>Chart coming soon!</div>';
+}
+
+// ============================================================================
+// CHART 3: MINUTES VS EFFICIENCY
+// ============================================================================
+
+async function renderMinutesEfficiencyChart() {
+    const contentContainer = document.getElementById('chart-content-container');
+    if (!contentContainer) return;
+
+    contentContainer.innerHTML = createChartCard({
+        title: 'Minutes % vs Points per 90',
+        icon: '⏱️',
+        description: 'Identify nailed-on starters with high efficiency. Bubble size = ownership %',
+        zones: [
+            { color: '#10b981', label: 'Nailed Performers (high minutes, high pts/90)' },
+            { color: '#fbbf24', label: 'Rotation Risk (low minutes)' },
+            { color: '#ef4444', label: 'Bench Fodder (low minutes, low pts/90)' }
+        ],
+        chartId: 'minutes-efficiency-chart'
+    });
+
+    contentContainer.innerHTML += '<div style="text-align: center; padding: 4rem; color: var(--text-secondary);"><i class="fas fa-spinner fa-spin" style="font-size: 2rem;"></i><br/><br/>Chart coming soon!</div>';
+}
+
+// ============================================================================
+// CHART 4: XGI VS ACTUAL
+// ============================================================================
+
+async function renderXgiActualChart() {
+    const contentContainer = document.getElementById('chart-content-container');
+    if (!contentContainer) return;
+
+    contentContainer.innerHTML = createChartCard({
+        title: 'Expected xGI vs Actual Goal Involvements',
+        icon: '🎯',
+        description: 'Find unlucky players due returns or overperforming players regressing. Bubble size = ownership %',
+        zones: [
+            { color: '#10b981', label: 'Underperforming (below diagonal - potential buys)' },
+            { color: '#3b82f6', label: 'Expected (on diagonal)' },
+            { color: '#fbbf24', label: 'Overperforming (above diagonal - potential sells)' }
+        ],
+        chartId: 'xgi-actual-chart'
+    });
+
+    contentContainer.innerHTML += '<div style="text-align: center; padding: 4rem; color: var(--text-secondary);"><i class="fas fa-spinner fa-spin" style="font-size: 2rem;"></i><br/><br/>Chart coming soon!</div>';
+}
+
+// ============================================================================
+// CHART 5: OWNERSHIP VS FORM
+// ============================================================================
+
+async function renderOwnershipFormChart() {
+    const contentContainer = document.getElementById('chart-content-container');
+    if (!contentContainer) return;
+
+    contentContainer.innerHTML = createChartCard({
+        title: 'Ownership % vs Form',
+        icon: '📊',
+        description: 'Find differential picks with low ownership and high form. Bubble size = price',
+        zones: [
+            { color: '#10b981', label: 'Hidden Gems (low ownership, high form)' },
+            { color: '#3b82f6', label: 'Template Picks (high ownership, high form)' },
+            { color: '#ef4444', label: 'Avoid (high ownership, low form)' }
+        ],
+        chartId: 'ownership-form-chart'
+    });
+
+    contentContainer.innerHTML += '<div style="text-align: center; padding: 4rem; color: var(--text-secondary);"><i class="fas fa-spinner fa-spin" style="font-size: 2rem;"></i><br/><br/>Chart coming soon!</div>';
+}
+
+// ============================================================================
+// CHART 6: FIXTURE DIFFICULTY VS FORM
+// ============================================================================
+
+async function renderFdrFormChart() {
+    const contentContainer = document.getElementById('chart-content-container');
+    if (!contentContainer) return;
+
+    contentContainer.innerHTML = createChartCard({
+        title: 'Fixture Difficulty vs Form',
+        icon: '🗓️',
+        description: 'Target form players with easy upcoming fixtures (next 5 GWs). Bubble size = ownership %',
+        zones: [
+            { color: '#10b981', label: 'Prime Targets (easy fixtures, high form)' },
+            { color: '#fbbf24', label: 'Fixture Swing (tough fixtures, high form)' },
+            { color: '#ef4444', label: 'Avoid (tough fixtures, low form)' }
+        ],
+        chartId: 'fdr-form-chart'
+    });
+
+    contentContainer.innerHTML += '<div style="text-align: center; padding: 4rem; color: var(--text-secondary);"><i class="fas fa-spinner fa-spin" style="font-size: 2rem;"></i><br/><br/>Chart coming soon!</div>';
 }
 
 // ============================================================================
