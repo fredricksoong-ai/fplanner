@@ -776,8 +776,15 @@ app.get('/health', (req, res) => {
 // Serve static files from frontend build
 app.use(express.static(path.join(__dirname, '../frontend/dist')));
 
-// Handle client-side routing - send all non-API requests to index.html
-app.get('*', (req, res) => {
+// Handle client-side routing - send all non-API, non-asset requests to index.html
+app.get('*', (req, res, next) => {
+    // Don't intercept requests for files with extensions (JS, CSS, images, etc.)
+    // This allows Vite's dynamically imported chunks to load properly
+    if (req.path.match(/\.[a-zA-Z0-9]+$/)) {
+        return next(); // File with extension - let it 404 if not found
+    }
+
+    // All other routes get the SPA
     res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
 });
 
