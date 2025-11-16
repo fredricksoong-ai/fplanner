@@ -179,6 +179,16 @@ function isValidTeamId(teamId) {
 }
 
 /**
+ * Validate league ID input
+ * @param {string} leagueId - League ID to validate
+ * @returns {boolean} - True if valid
+ */
+function isValidLeagueId(leagueId) {
+  // Must be numeric and between 1-10 digits (similar to team IDs)
+  return /^\d{1,10}$/.test(leagueId);
+}
+
+/**
  * Validate gameweek number
  * @param {number} gw - Gameweek number to validate
  * @returns {boolean} - True if valid
@@ -412,7 +422,7 @@ async function fetchTeamData(teamId) {
  */
 async function fetchTeamPicks(teamId, gameweek) {
   console.log(`📡 Fetching picks for team ${teamId}, GW${gameweek}...`);
-  
+
   try {
     const response = await axios.get(`${FPL_BASE_URL}/entry/${teamId}/event/${gameweek}/picks/`, {
       timeout: 10000,
@@ -420,12 +430,37 @@ async function fetchTeamPicks(teamId, gameweek) {
         'User-Agent': 'FPLanner/1.0'
       }
     });
-    
+
     console.log(`✅ Picks fetched for team ${teamId}, GW${gameweek}`);
     return response.data;
   } catch (err) {
     console.error(`❌ Failed to fetch picks for team ${teamId}:`, err.message);
     throw new Error(`Picks unavailable for team ${teamId}, GW${gameweek}`);
+  }
+}
+
+/**
+ * Fetch league standings
+ * @param {string} leagueId - League ID
+ * @param {number} page - Page number (default: 1)
+ */
+async function fetchLeagueStandings(leagueId, page = 1) {
+  console.log(`📡 Fetching league ${leagueId} standings (page ${page})...`);
+
+  try {
+    const response = await axios.get(`${FPL_BASE_URL}/leagues-classic/${leagueId}/standings/`, {
+      timeout: 10000,
+      params: { page_standings: page },
+      headers: {
+        'User-Agent': 'FPLanner/1.0'
+      }
+    });
+
+    console.log(`✅ League ${leagueId} standings fetched (${response.data.standings.results.length} entries)`);
+    return response.data;
+  } catch (err) {
+    console.error(`❌ Failed to fetch league ${leagueId}:`, err.message);
+    throw new Error(`League data unavailable for league ${leagueId}`);
   }
 }
 
@@ -720,6 +755,65 @@ app.get('/api/team/:teamId', async (req, res) => {
 });
 
 /**
+ * GET /api/leagues/:leagueId
+ * Returns league standings
+ * Query params:
+ *   - page: Page number (default: 1)
+ */
+app.get('/api/leagues/:leagueId', async (req, res) => {
+  const { leagueId } = req.params;
+  const page = parseInt(req.query.page) || 1;
+
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log(`📥 GET /api/leagues/${leagueId} (page ${page})`);
+
+  // Validate league ID
+  if (!isValidLeagueId(leagueId)) {
+    console.warn(`⚠️ Invalid league ID format: ${leagueId}`);
+    return res.status(400).json({
+      error: 'Invalid league ID',
+      message: 'League ID must be a number between 1 and 10 digits'
+    });
+  }
+
+  // Validate page number
+  if (page < 1 || page > 100) {
+    console.warn(`⚠️ Invalid page number: ${page}`);
+    return res.status(400).json({
+      error: 'Invalid page number',
+      message: 'Page must be between 1 and 100'
+    });
+  }
+
+  try {
+    const leagueData = await fetchLeagueStandings(leagueId, page);
+
+    const response = {
+      league: leagueData.league,
+      standings: leagueData.standings,
+      new_entries: leagueData.new_entries,
+      timestamp: new Date().toISOString()
+    };
+
+    console.log(`✅ League data ready`);
+    console.log(`   League: ${leagueData.league.name}`);
+    console.log(`   Entries: ${leagueData.standings.results.length}`);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+    res.json(response);
+  } catch (err) {
+    console.error(`❌ Error fetching league ${leagueId}:`, err.message);
+
+    // Don't expose detailed error messages in production
+    const isProduction = process.env.NODE_ENV === 'production';
+    res.status(err.message.includes('unavailable') ? 404 : 500).json({
+      error: 'Failed to fetch league data',
+      message: isProduction ? 'League not found or unavailable' : err.message
+    });
+  }
+});
+
+/**
  * GET /api/stats
  * Returns cache statistics and health info
  */
@@ -805,6 +899,7 @@ app.listen(PORT, HOST, () => {
   console.log(`  GET  /api/fpl-data       - Combined FPL data`);
   console.log(`  GET  /api/fpl-data?refresh=true - Force refresh`);
   console.log(`  GET  /api/team/:teamId   - User team data`);
+  console.log(`  GET  /api/leagues/:leagueId - League standings`);
   console.log(`  GET  /api/stats          - Cache statistics`);
   console.log(`  GET  /health             - Health check`);
   console.log('');
