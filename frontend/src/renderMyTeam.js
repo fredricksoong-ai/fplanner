@@ -53,6 +53,15 @@ import {
     renderSwipeablePlayerCards
 } from './renderMyTeamMobile.js';
 
+import {
+    initPullToRefresh,
+    showRefreshToast
+} from './pullToRefresh.js';
+
+import {
+    addSkeletonStyles
+} from './mobileLoadingStates.js';
+
 // ============================================================================
 // MY TEAM PAGE
 // ============================================================================
@@ -66,7 +75,8 @@ let myTeamState = {
     comparisonRivalId: null, // Currently selected rival for comparison
     comparisonRivalData: null, // Cached rival team data
     leagueStandingsCache: new Map(), // Cache for league standings API responses
-    rivalTeamCache: new Map() // Cache for rival team data
+    rivalTeamCache: new Map(), // Cache for rival team data
+    pullToRefreshInstance: null // Pull-to-refresh instance
 };
 
 /**
@@ -192,6 +202,31 @@ function renderMyTeamFormContent() {
 }
 
 /**
+ * Handle team data refresh
+ * Reloads team data from API and re-renders
+ */
+async function handleTeamRefresh() {
+    if (!myTeamState.teamData) {
+        throw new Error('No team data to refresh');
+    }
+
+    const teamId = localStorage.getItem('fplanner_team_id');
+    if (!teamId) {
+        throw new Error('No team ID found');
+    }
+
+    console.log('🔄 Refreshing team data...');
+
+    // Reload team data
+    const freshData = await loadMyTeam(teamId);
+
+    // Re-render with fresh data
+    renderMyTeam(freshData, myTeamState.currentTab);
+
+    console.log('✅ Team data refreshed');
+}
+
+/**
  * Render My Team page with loaded data
  * @param {Object} teamData - Team data from API
  * @param {string} subTab - Current sub-tab ('overview' or 'leagues')
@@ -277,6 +312,27 @@ export function renderMyTeam(teamData, subTab = 'overview') {
                 >
                     <i class="fas fa-arrow-left" style="margin-right: 6px;"></i>Change Team
                 </button>
+
+                <button
+                    id="refresh-team-btn"
+                    class="hide-desktop touch-target"
+                    style="
+                        padding: 8px 16px;
+                        border-radius: 20px;
+                        background: var(--secondary-color);
+                        color: var(--primary-color);
+                        border: none;
+                        font-size: 14px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        transition: all 0.2s ease;
+                        display: flex;
+                        align-items: center;
+                        gap: 6px;
+                    "
+                >
+                    <i class="fas fa-sync-alt"></i>Refresh
+                </button>
             </div>
         </div>
     `;
@@ -314,6 +370,44 @@ export function renderMyTeam(teamData, subTab = 'overview') {
             e.target.style.background = 'var(--bg-secondary)';
             e.target.style.color = 'var(--text-secondary)';
             e.target.style.borderColor = 'var(--border-color)';
+        });
+    }
+
+    // Add event listener for Refresh button (mobile only)
+    const refreshBtn = document.getElementById('refresh-team-btn');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', async () => {
+            const icon = refreshBtn.querySelector('i');
+            icon.classList.add('fa-spin');
+            refreshBtn.disabled = true;
+
+            try {
+                await handleTeamRefresh();
+                showRefreshToast('Team data refreshed!');
+            } catch (error) {
+                console.error('Refresh failed:', error);
+                showRefreshToast('Failed to refresh');
+            } finally {
+                icon.classList.remove('fa-spin');
+                refreshBtn.disabled = false;
+            }
+        });
+    }
+
+    // Initialize pull-to-refresh on mobile
+    if (shouldUseMobileLayout() && subTab === 'overview') {
+        // Destroy existing instance if any
+        if (myTeamState.pullToRefreshInstance) {
+            myTeamState.pullToRefreshInstance.destroy();
+        }
+
+        // Add skeleton styles
+        addSkeletonStyles();
+
+        // Initialize pull-to-refresh
+        myTeamState.pullToRefreshInstance = initPullToRefresh(async () => {
+            await handleTeamRefresh();
+            showRefreshToast('Team data refreshed!');
         });
     }
 

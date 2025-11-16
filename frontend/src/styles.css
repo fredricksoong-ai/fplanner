@@ -231,3 +231,47 @@ body {
     padding: 1.5rem !important;
   }
 }
+
+/* Mobile interaction polish */
+@media (max-width: 767px) {
+  /* Smooth button interactions */
+  button, .touch-target {
+    -webkit-tap-highlight-color: rgba(0, 255, 136, 0.2);
+  }
+
+  /* Active state for mobile buttons */
+  button:active {
+    transform: scale(0.98);
+    transition: transform 0.1s ease;
+  }
+
+  /* Swipeable cards smooth scroll */
+  .swipeable {
+    scroll-padding: 1rem;
+  }
+
+  /* Mobile card hover/active state */
+  .mobile-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .mobile-card:active {
+    transform: translateY(2px);
+  }
+
+  /* Refresh button pulse on mobile */
+  #refresh-team-btn:disabled {
+    opacity: 0.7;
+  }
+
+  /* Bottom nav button active feedback */
+  .mobile-nav-item:active {
+    transform: scale(0.95);
+    transition: transform 0.1s ease;
+  }
+
+  /* Smooth page transitions */
+  #app-container {
+    transition: opacity 0.2s ease;
+  }
+}
