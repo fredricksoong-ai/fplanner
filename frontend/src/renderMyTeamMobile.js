@@ -25,6 +25,10 @@ import {
     renderRiskTooltip
 } from './risk.js';
 
+import {
+    getPlayerById
+} from './data.js';
+
 /**
  * Detect if user is on mobile device
  * @returns {boolean}
@@ -163,7 +167,7 @@ export function renderMobileTeamSummary(players, gwNumber, entryHistory) {
     // Calculate bench points
     const benchPlayers = players.filter(p => p.position > 11);
     const benchPoints = benchPlayers.reduce((sum, p) => {
-        const player = window.fplData?.elements?.find(el => el.id === p.element);
+        const player = getPlayerById(p.element);
         return sum + (player?.event_points || 0);
     }, 0);
 
@@ -241,7 +245,7 @@ export function renderSwipeablePlayerCards(players, gwNumber) {
             </h3>
             <div class="swipeable scroll-mobile">
                 ${starters.map(player => {
-                    const fullPlayer = window.fplData?.elements?.find(el => el.id === player.element);
+                    const fullPlayer = getPlayerById(player.element);
                     if (!fullPlayer) return '';
                     return `<div style="min-width: 280px; max-width: 280px;">${renderMobilePlayerCard(player, fullPlayer, gwNumber)}</div>`;
                 }).join('')}
@@ -255,7 +259,7 @@ export function renderSwipeablePlayerCards(players, gwNumber) {
             </h3>
             <div class="swipeable scroll-mobile">
                 ${bench.map(player => {
-                    const fullPlayer = window.fplData?.elements?.find(el => el.id === player.element);
+                    const fullPlayer = getPlayerById(player.element);
                     if (!fullPlayer) return '';
                     return `<div style="min-width: 280px; max-width: 280px;">${renderMobilePlayerCard(player, fullPlayer, gwNumber)}</div>`;
                 }).join('')}
