@@ -1078,7 +1078,8 @@ app.get('/api/stats', (req, res) => {
 app.get('/health', (req, res) => {
   res.json({
     status: 'healthy',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    gemini_api_configured: !!GEMINI_API_KEY && GEMINI_API_KEY !== 'your_gemini_api_key_here'
   });
 });
 
