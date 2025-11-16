@@ -12,6 +12,7 @@ import {
     setMomentumFilter,
     setPriceRange
 } from './renderDataAnalysis.js';
+import { initMobileNav, updateMobileNav } from './mobileNav.js';
 
 // ============================================================================
 // STATE MANAGEMENT
@@ -62,6 +63,9 @@ function updateNavLinks() {
             link.style.fontWeight = '500';
         }
     });
+
+    // Update mobile navigation as well
+    updateMobileNav(currentPage);
 }
 
 /**
@@ -269,14 +273,17 @@ async function initializeApp() {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('🚀 Initializing FPLanner...');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    
+
     try {
         // Load theme
         loadTheme();
-        
+
         // Setup navigation
         setupNavigation();
-        
+
+        // Initialize mobile navigation
+        initMobileNav(navigate);
+
         // Load FPL data from backend
         console.log('📡 Loading data from backend...');
         await loadFPLData();
