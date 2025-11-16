@@ -825,6 +825,7 @@ app.post('/api/ai-insights', async (req, res) => {
 
     // Debug: Log raw Gemini response
     console.log('🔍 DEBUG: Raw Gemini response:', JSON.stringify(geminiResponse.data, null, 2));
+    console.log('🔍 DEBUG: Candidates array:', JSON.stringify(geminiResponse.data.candidates, null, 2));
 
     // Parse Gemini response
     const insights = parseGeminiResponse(geminiResponse.data, gameweek);
@@ -1044,6 +1045,8 @@ function parseGeminiResponse(geminiData, gameweek) {
       debug: {
         errorMessage: error.message,
         rawGeminiData: geminiData,
+        candidatesArray: geminiData.candidates,
+        firstCandidate: geminiData.candidates?.[0],
         extractedText: geminiData.candidates?.[0]?.content?.parts?.[0]?.text?.substring(0, 1000)
       }
     };

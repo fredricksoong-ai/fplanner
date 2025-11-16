@@ -88,6 +88,8 @@ export class AIInsightsService {
             console.log('🔍 DEBUG: Full AI Insights Response:', data);
             if (data.debug) {
                 console.log('🔍 DEBUG: Error Message:', data.debug.errorMessage);
+                console.log('🔍 DEBUG: Candidates Array:', data.debug.candidatesArray);
+                console.log('🔍 DEBUG: First Candidate:', data.debug.firstCandidate);
                 console.log('🔍 DEBUG: Extracted Text:', data.debug.extractedText);
                 console.log('🔍 DEBUG: Raw Gemini Data:', data.debug.rawGeminiData);
             }
