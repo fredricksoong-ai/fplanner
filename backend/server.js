@@ -801,30 +801,31 @@ app.post('/api/ai-insights', async (req, res) => {
 
     console.log(`🤖 Calling Gemini API...`);
 
-    // Call Gemini API with Google Search grounding
+    // Call Gemini API (Google Search grounding disabled temporarily for debugging)
     const geminiResponse = await axios.post(
       `${GEMINI_API_URL}?key=${GEMINI_API_KEY}`,
       {
         contents: [{
           parts: [{ text: prompt }]
         }],
-        tools: [{
-          googleSearchRetrieval: {
-            dynamicRetrievalConfig: {
-              mode: "MODE_DYNAMIC",
-              dynamicThreshold: 0.3
-            }
-          }
-        }],
+        // TODO: Re-enable Google Search grounding once we confirm it works
+        // tools: [{
+        //   googleSearchRetrieval: {
+        //     dynamicRetrievalConfig: {
+        //       mode: "MODE_DYNAMIC",
+        //       dynamicThreshold: 0.3
+        //     }
+        //   }
+        // }],
         generationConfig: {
           temperature: 0.7,
-          maxOutputTokens: 8192,  // Increased for 5 categories + search results
+          maxOutputTokens: 8192,  // Increased for 5 categories
           topP: 0.8,
           topK: 40
         }
       },
       {
-        timeout: 45000,  // Increased timeout for search grounding
+        timeout: 45000,
         headers: {
           'Content-Type': 'application/json'
         }
@@ -924,11 +925,11 @@ function buildAIPrompt(page, tab, position, gameweek, data) {
 
 CRITICAL INSTRUCTIONS:
 - Current FPL Gameweek is ${gameweek}
-- Use the provided player data context AND use Google Search to find the most recent real-world news (injuries, form, managerial changes, fixtures/results)
+- Use the provided player data context to generate insights
 - Generate exactly 3 sharp, concise, and actionable insights for EACH of the following 5 categories
 - Each insight should be a single compelling statement (1-2 sentences max)
-- Use actual player names and specific stats
-- Base analysis on current Premier League results, recent news, and player data
+- Use actual player names and specific stats from the data provided
+- Be data-driven and actionable
 
 PLAYER DATA CONTEXT:
 ${JSON.stringify(data, null, 2)}
