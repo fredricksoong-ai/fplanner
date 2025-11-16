@@ -82,19 +82,19 @@ export async function renderCharts(chartType = 'points-price') {
 
             <!-- Position Filter -->
             <div style="display: flex; gap: 0.5rem; margin-bottom: 2rem; flex-wrap: wrap;">
-                <button class="chart-position-filter" data-position="all" style="padding: 0.5rem 1rem; background: var(--primary-color); color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 600; transition: all 0.2s;">
+                <button class="chart-position-filter" data-position="all" style="padding: 0.5rem 1rem; background: ${currentPositionFilter === 'all' ? 'var(--primary-color)' : 'var(--bg-secondary)'}; color: ${currentPositionFilter === 'all' ? 'white' : 'var(--text-primary)'}; border: ${currentPositionFilter === 'all' ? 'none' : '1px solid var(--border-color)'}; border-radius: 0.5rem; cursor: pointer; font-weight: ${currentPositionFilter === 'all' ? '600' : '500'}; transition: all 0.2s;">
                     All Positions
                 </button>
-                <button class="chart-position-filter" data-position="GKP" style="padding: 0.5rem 1rem; background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 0.5rem; cursor: pointer; font-weight: 500; transition: all 0.2s;">
+                <button class="chart-position-filter" data-position="GKP" style="padding: 0.5rem 1rem; background: ${currentPositionFilter === 'GKP' ? 'var(--primary-color)' : 'var(--bg-secondary)'}; color: ${currentPositionFilter === 'GKP' ? 'white' : 'var(--text-primary)'}; border: ${currentPositionFilter === 'GKP' ? 'none' : '1px solid var(--border-color)'}; border-radius: 0.5rem; cursor: pointer; font-weight: ${currentPositionFilter === 'GKP' ? '600' : '500'}; transition: all 0.2s;">
                     GKP
                 </button>
-                <button class="chart-position-filter" data-position="DEF" style="padding: 0.5rem 1rem; background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 0.5rem; cursor: pointer; font-weight: 500; transition: all 0.2s;">
+                <button class="chart-position-filter" data-position="DEF" style="padding: 0.5rem 1rem; background: ${currentPositionFilter === 'DEF' ? 'var(--primary-color)' : 'var(--bg-secondary)'}; color: ${currentPositionFilter === 'DEF' ? 'white' : 'var(--text-primary)'}; border: ${currentPositionFilter === 'DEF' ? 'none' : '1px solid var(--border-color)'}; border-radius: 0.5rem; cursor: pointer; font-weight: ${currentPositionFilter === 'DEF' ? '600' : '500'}; transition: all 0.2s;">
                     DEF
                 </button>
-                <button class="chart-position-filter" data-position="MID" style="padding: 0.5rem 1rem; background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 0.5rem; cursor: pointer; font-weight: 500; transition: all 0.2s;">
+                <button class="chart-position-filter" data-position="MID" style="padding: 0.5rem 1rem; background: ${currentPositionFilter === 'MID' ? 'var(--primary-color)' : 'var(--bg-secondary)'}; color: ${currentPositionFilter === 'MID' ? 'white' : 'var(--text-primary)'}; border: ${currentPositionFilter === 'MID' ? 'none' : '1px solid var(--border-color)'}; border-radius: 0.5rem; cursor: pointer; font-weight: ${currentPositionFilter === 'MID' ? '600' : '500'}; transition: all 0.2s;">
                     MID
                 </button>
-                <button class="chart-position-filter" data-position="FWD" style="padding: 0.5rem 1rem; background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 0.5rem; cursor: pointer; font-weight: 500; transition: all 0.2s;">
+                <button class="chart-position-filter" data-position="FWD" style="padding: 0.5rem 1rem; background: ${currentPositionFilter === 'FWD' ? 'var(--primary-color)' : 'var(--bg-secondary)'}; color: ${currentPositionFilter === 'FWD' ? 'white' : 'var(--text-primary)'}; border: ${currentPositionFilter === 'FWD' ? 'none' : '1px solid var(--border-color)'}; border-radius: 0.5rem; cursor: pointer; font-weight: ${currentPositionFilter === 'FWD' ? '600' : '500'}; transition: all 0.2s;">
                     FWD
                 </button>
             </div>
