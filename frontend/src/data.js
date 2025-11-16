@@ -97,24 +97,58 @@ export async function loadFPLData(queryParams = '') {
  */
 export async function loadMyTeam(teamId) {
     console.log(`🔄 Loading team ${teamId}...`);
-    
+
     try {
         const response = await fetch(`${API_BASE}/team/${teamId}`);
-        
+
         if (!response.ok) {
             throw new Error(`Failed to load team ${teamId}`);
         }
-        
+
         const data = await response.json();
-        
+
         console.log(`✅ Team ${teamId} loaded`);
         console.log(`   Manager: ${data.team.player_first_name} ${data.team.player_last_name}`);
         console.log(`   Team: ${data.team.name}`);
         console.log(`   GW${data.gameweek}: ${data.picks.entry_history.total_points} pts`);
-        
+
         return data;
     } catch (err) {
         console.error(`❌ Failed to load team:`, err);
+        throw err;
+    }
+}
+
+/**
+ * Load league standings from FPL API
+ * @param {number} leagueId - FPL league ID
+ * @param {number} [page=1] - Page number for pagination (default: 1)
+ * @returns {Promise<Object>} League data with standings
+ * @throws {Error} If league ID is invalid or API request fails
+ * @example
+ * const leagueData = await loadLeagueStandings(12345);
+ * console.log(leagueData.league.name); // League name
+ * console.log(leagueData.standings.results); // Array of standings
+ */
+export async function loadLeagueStandings(leagueId, page = 1) {
+    console.log(`🔄 Loading league ${leagueId} (page ${page})...`);
+
+    try {
+        const response = await fetch(`${API_BASE}/leagues/${leagueId}?page=${page}`);
+
+        if (!response.ok) {
+            throw new Error(`Failed to load league ${leagueId}`);
+        }
+
+        const data = await response.json();
+
+        console.log(`✅ League ${leagueId} loaded`);
+        console.log(`   Name: ${data.league.name}`);
+        console.log(`   Entries: ${data.standings.results.length}`);
+
+        return data;
+    } catch (err) {
+        console.error(`❌ Failed to load league:`, err);
         throw err;
     }
 }

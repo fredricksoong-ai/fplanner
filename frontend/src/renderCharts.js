@@ -38,13 +38,11 @@ export async function renderCharts(chartType = 'points-price') {
     const chartTypes = {
         'points-price': { icon: '💰', label: 'Points vs Price' },
         'form-price': { icon: '🔥', label: 'Form vs Price' },
-        'minutes-efficiency': { icon: '⏱️', label: 'Minutes vs Efficiency' },
+        'ownership-form': { icon: '📊', label: 'Ownership vs Form' },
+        'fdr-form': { icon: '🗓️', label: 'Fixtures vs Form' },
         'xgi-actual': { icon: '🎯', label: 'xGI vs Actual' },
         'xgc-actual': { icon: '🛡️', label: 'xGC vs Actual' },
-        'ict-points': { icon: '📈', label: 'ICT vs Points' },
-        'xcs-actual': { icon: '🥅', label: 'xCS vs Actual' },
-        'ownership-form': { icon: '📊', label: 'Ownership vs Form' },
-        'fdr-form': { icon: '🗓️', label: 'Fixtures vs Form' }
+        'ict-points': { icon: '📈', label: 'ICT vs Points' }
     };
 
     container.innerHTML = `
@@ -82,19 +80,19 @@ export async function renderCharts(chartType = 'points-price') {
 
             <!-- Position Filter -->
             <div style="display: flex; gap: 0.5rem; margin-bottom: 2rem; flex-wrap: wrap;">
-                <button class="chart-position-filter" data-position="all" style="padding: 0.5rem 1rem; background: var(--primary-color); color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 600; transition: all 0.2s;">
+                <button class="chart-position-filter" data-position="all" style="padding: 0.5rem 1rem; background: ${currentPositionFilter === 'all' ? 'var(--primary-color)' : 'var(--bg-secondary)'}; color: ${currentPositionFilter === 'all' ? 'white' : 'var(--text-primary)'}; border: ${currentPositionFilter === 'all' ? 'none' : '1px solid var(--border-color)'}; border-radius: 0.5rem; cursor: pointer; font-weight: ${currentPositionFilter === 'all' ? '600' : '500'}; transition: all 0.2s;">
                     All Positions
                 </button>
-                <button class="chart-position-filter" data-position="GKP" style="padding: 0.5rem 1rem; background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 0.5rem; cursor: pointer; font-weight: 500; transition: all 0.2s;">
+                <button class="chart-position-filter" data-position="GKP" style="padding: 0.5rem 1rem; background: ${currentPositionFilter === 'GKP' ? 'var(--primary-color)' : 'var(--bg-secondary)'}; color: ${currentPositionFilter === 'GKP' ? 'white' : 'var(--text-primary)'}; border: ${currentPositionFilter === 'GKP' ? 'none' : '1px solid var(--border-color)'}; border-radius: 0.5rem; cursor: pointer; font-weight: ${currentPositionFilter === 'GKP' ? '600' : '500'}; transition: all 0.2s;">
                     GKP
                 </button>
-                <button class="chart-position-filter" data-position="DEF" style="padding: 0.5rem 1rem; background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 0.5rem; cursor: pointer; font-weight: 500; transition: all 0.2s;">
+                <button class="chart-position-filter" data-position="DEF" style="padding: 0.5rem 1rem; background: ${currentPositionFilter === 'DEF' ? 'var(--primary-color)' : 'var(--bg-secondary)'}; color: ${currentPositionFilter === 'DEF' ? 'white' : 'var(--text-primary)'}; border: ${currentPositionFilter === 'DEF' ? 'none' : '1px solid var(--border-color)'}; border-radius: 0.5rem; cursor: pointer; font-weight: ${currentPositionFilter === 'DEF' ? '600' : '500'}; transition: all 0.2s;">
                     DEF
                 </button>
-                <button class="chart-position-filter" data-position="MID" style="padding: 0.5rem 1rem; background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 0.5rem; cursor: pointer; font-weight: 500; transition: all 0.2s;">
+                <button class="chart-position-filter" data-position="MID" style="padding: 0.5rem 1rem; background: ${currentPositionFilter === 'MID' ? 'var(--primary-color)' : 'var(--bg-secondary)'}; color: ${currentPositionFilter === 'MID' ? 'white' : 'var(--text-primary)'}; border: ${currentPositionFilter === 'MID' ? 'none' : '1px solid var(--border-color)'}; border-radius: 0.5rem; cursor: pointer; font-weight: ${currentPositionFilter === 'MID' ? '600' : '500'}; transition: all 0.2s;">
                     MID
                 </button>
-                <button class="chart-position-filter" data-position="FWD" style="padding: 0.5rem 1rem; background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 0.5rem; cursor: pointer; font-weight: 500; transition: all 0.2s;">
+                <button class="chart-position-filter" data-position="FWD" style="padding: 0.5rem 1rem; background: ${currentPositionFilter === 'FWD' ? 'var(--primary-color)' : 'var(--bg-secondary)'}; color: ${currentPositionFilter === 'FWD' ? 'white' : 'var(--text-primary)'}; border: ${currentPositionFilter === 'FWD' ? 'none' : '1px solid var(--border-color)'}; border-radius: 0.5rem; cursor: pointer; font-weight: ${currentPositionFilter === 'FWD' ? '600' : '500'}; transition: all 0.2s;">
                     FWD
                 </button>
             </div>
@@ -190,9 +188,6 @@ function renderCurrentChart() {
         case 'form-price':
             renderFormPriceChart();
             break;
-        case 'minutes-efficiency':
-            renderMinutesEfficiencyChart();
-            break;
         case 'xgi-actual':
             renderXgiActualChart();
             break;
@@ -201,9 +196,6 @@ function renderCurrentChart() {
             break;
         case 'ict-points':
             renderIctPointsChart();
-            break;
-        case 'xcs-actual':
-            renderXcsActualChart();
             break;
         case 'ownership-form':
             renderOwnershipFormChart();
@@ -290,7 +282,7 @@ async function renderPointsPriceChart() {
     contentContainer.innerHTML = createChartCard({
         title: 'Points vs Price',
         icon: '💰',
-        description: 'Find value picks and premium performers. Bubble size = ownership %, Your team = ⭐ (star shape with purple border)',
+        description: 'Find value picks and premium performers. Bubble size = ownership %',
         zones: [
             { color: '#10b981', label: 'Value Zone (low price, high points)' },
             { color: '#3b82f6', label: 'Premium Zone (high price, high points)' },
@@ -1740,7 +1732,7 @@ async function renderOwnershipFormChart() {
                     {
                         name: 'Template Picks',
                         xAxis: 30,
-                        yAxis: 5,
+                        yAxis: 5.5,
                         itemStyle: { color: '#3b82f6' },
                         label: {
                             show: true,
@@ -1754,8 +1746,8 @@ async function renderOwnershipFormChart() {
                         }
                     },
                     {
-                        xAxis: 'max',
-                        yAxis: 'max'
+                        xAxis: 100,
+                        yAxis: 12
                     }
                 ],
                 [
@@ -1776,8 +1768,8 @@ async function renderOwnershipFormChart() {
                         }
                     },
                     {
-                        xAxis: 'max',
-                        yAxis: 3
+                        xAxis: 100,
+                        yAxis: 5
                     }
                 ]
             ]
