@@ -345,6 +345,14 @@ export function renderMyTeam(teamData, subTab = 'overview') {
             loadAndCompareRivalTeam(rivalId);
         }
     });
+
+    // Add event delegation for modal close button
+    container.addEventListener('click', (e) => {
+        const closeBtn = e.target.closest('.close-modal-btn');
+        if (closeBtn) {
+            closeComparisonModal();
+        }
+    });
 }
 
 /**
@@ -987,7 +995,7 @@ async function loadAndCompareRivalTeam(rivalId) {
                     <i class="fas fa-exclamation-circle" style="font-size: 2rem; color: #ef4444; margin-bottom: 1rem;"></i>
                     <p style="color: var(--text-secondary); margin-bottom: 1rem;">Failed to load rival team. Please try again.</p>
                     <button
-                        onclick="closeComparisonModal()"
+                        class="close-modal-btn"
                         style="
                             padding: 0.5rem 1rem;
                             background: var(--primary-color);
@@ -1015,9 +1023,6 @@ function closeComparisonModal() {
         modal.innerHTML = '';
     }
 }
-
-// Make closeComparisonModal available globally
-window.closeComparisonModal = closeComparisonModal;
 
 /**
  * Render comparison modal wrapper
@@ -1079,7 +1084,7 @@ function renderTeamComparison(myTeamData, rivalTeamData) {
                     <i class="fas fa-compress-arrows-alt"></i> Team Comparison
                 </h2>
                 <button
-                    onclick="closeComparisonModal()"
+                    class="close-modal-btn"
                     style="
                         padding: 0.5rem 1rem;
                         background: var(--bg-secondary);
@@ -1090,8 +1095,6 @@ function renderTeamComparison(myTeamData, rivalTeamData) {
                         font-size: 0.875rem;
                         transition: all 0.2s;
                     "
-                    onmouseenter="this.style.background='var(--bg-tertiary)'; this.style.color='var(--primary-color)';"
-                    onmouseleave="this.style.background='var(--bg-secondary)'; this.style.color='var(--text-secondary)';"
                 >
                     <i class="fas fa-times"></i> Close
                 </button>
