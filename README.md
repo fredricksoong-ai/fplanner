@@ -133,6 +133,10 @@ fplanner/
 - Value recommendations
 
 ### Data Analysis
+- **AI Insights (Powered by Gemini)** - Smart analysis and recommendations
+  - Automatic refresh at 5am & 5pm UTC (synced with data updates)
+  - Era-based caching minimizes API calls (~2 calls/day per user)
+  - Contextual insights for market trends and differentials
 - Position-specific tables (GKP, DEF, MID, FWD)
 - Best value (PPM)
 - Form stars
@@ -159,7 +163,16 @@ fplanner/
 PORT=3001                          # Server port (default: 3001)
 NODE_ENV=production                # Environment mode
 ALLOWED_ORIGIN=https://yourdomain.com  # CORS allowed origin
+GEMINI_API_KEY=your_api_key_here   # Gemini AI API key for insights feature
 ```
+
+**Setting up Gemini AI Insights:**
+1. Get your API key from: https://makersuite.google.com/app/apikey
+2. Create a `.env` file in the `backend/` directory
+3. Add: `GEMINI_API_KEY=your_api_key_here`
+4. Restart the backend server
+
+The AI insights feature will be disabled if no API key is configured.
 
 ## 🧪 Testing
 
