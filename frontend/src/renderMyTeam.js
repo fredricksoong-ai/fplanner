@@ -55,6 +55,7 @@ let myTeamState = {
     currentTab: 'overview', // 'overview' or 'leagues'
     teamData: null, // Cached team data
     selectedLeagues: [], // Array of selected league IDs (max 3)
+    activeLeagueTab: null, // Currently active league tab (null = no league selected, or league ID)
     comparisonRivalId: null, // Currently selected rival for comparison
     comparisonRivalData: null, // Cached rival team data
     leagueStandingsCache: new Map(), // Cache for league standings API responses
@@ -324,14 +325,17 @@ export function renderMyTeam(teamData, subTab = 'overview') {
         }
     });
 
-    // Add event delegation for league card clicks
+    // Add event delegation for league menu item clicks
     container.addEventListener('click', (e) => {
-        const card = e.target.closest('.league-card');
-        if (card && card.classList.contains('selectable')) {
-            const leagueId = parseInt(card.dataset.leagueId);
+        const menuItem = e.target.closest('.league-menu-item');
+        if (menuItem && menuItem.classList.contains('selectable')) {
+            const leagueId = parseInt(menuItem.dataset.leagueId);
             toggleLeagueSelection(leagueId);
         }
     });
+
+    // Attach league tab listeners
+    attachLeagueTabListeners();
 
     // Add event delegation for rival team row clicks
     container.addEventListener('click', (e) => {
@@ -373,26 +377,35 @@ function renderTeamOverviewTab(teamData) {
 }
 
 /**
- * Render My Leagues tab content
+ * Render My Leagues tab content with side menu layout
  */
 function renderLeaguesTab(teamData) {
     const { team } = teamData;
 
-    const html = `
-        <div>
-            <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
-                <i class="fas fa-trophy"></i> League Management
-            </h3>
-            <p style="color: var(--text-secondary); margin-bottom: 2rem;">
-                Select up to 3 leagues to track. Your selected leagues will be displayed with detailed standings.
-            </p>
+    // Set active league tab to first selected league if not set
+    if (myTeamState.selectedLeagues.length > 0 && !myTeamState.activeLeagueTab) {
+        myTeamState.activeLeagueTab = myTeamState.selectedLeagues[0];
+    }
 
-            <div id="league-selection-container">
-                ${renderLeagueSelection(team)}
+    const html = `
+        <div style="display: grid; grid-template-columns: 300px 1fr; gap: 1.5rem; height: calc(100vh - 300px);">
+            <!-- Left Sidebar: League Selection -->
+            <div id="league-selection-sidebar" style="background: var(--bg-secondary); padding: 1.5rem; border-radius: 12px; overflow-y: auto;">
+                <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem;">
+                    <i class="fas fa-trophy"></i> Your Leagues
+                </h3>
+                <p style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 1.5rem;">
+                    Select up to 3 leagues to track
+                </p>
+                ${renderLeagueSideMenu(team)}
             </div>
 
-            <div id="league-standings-container" style="margin-top: 2rem;">
-                <!-- League standings will be rendered here -->
+            <!-- Right Content: League Tabs and Standings -->
+            <div style="display: flex; flex-direction: column; background: var(--bg-primary); border-radius: 12px; overflow: hidden;">
+                ${renderLeagueTabs()}
+                <div id="league-content-container" style="flex: 1; overflow-y: auto; padding: 1.5rem;">
+                    ${renderLeagueContent()}
+                </div>
             </div>
 
             <!-- Modal for team comparison -->
@@ -400,21 +413,25 @@ function renderLeaguesTab(teamData) {
         </div>
     `;
 
-    // Load standings after DOM is ready (using requestAnimationFrame for better performance)
-    requestAnimationFrame(() => loadSelectedLeagueStandings());
+    // Load standings after DOM is ready
+    requestAnimationFrame(() => {
+        if (myTeamState.activeLeagueTab) {
+            loadLeagueStandingsForTab(myTeamState.activeLeagueTab);
+        }
+    });
 
     return html;
 }
 
 /**
- * Render league selection UI
+ * Render league side menu (replaces old card grid)
  */
-function renderLeagueSelection(team) {
+function renderLeagueSideMenu(team) {
     if (!team.leagues || !team.leagues.classic || team.leagues.classic.length === 0) {
         return `
-            <div style="background: var(--bg-secondary); padding: 2rem; border-radius: 12px; text-align: center;">
-                <i class="fas fa-info-circle" style="font-size: 2rem; color: var(--text-secondary); margin-bottom: 1rem;"></i>
-                <p style="color: var(--text-secondary);">You are not in any leagues yet. Join a league to see standings here!</p>
+            <div style="text-align: center; padding: 1rem;">
+                <i class="fas fa-info-circle" style="font-size: 1.5rem; color: var(--text-secondary); margin-bottom: 0.5rem; display: block;"></i>
+                <p style="color: var(--text-secondary); font-size: 0.875rem;">No leagues found. Join a league first!</p>
             </div>
         `;
     }
@@ -423,121 +440,217 @@ function renderLeagueSelection(team) {
 
     // Sort leagues by entry_rank (user's rank in league)
     const sortedLeagues = [...leagues].sort((a, b) => {
-        // Prioritize leagues where user has a rank (in case some don't)
         if (!a.entry_rank) return 1;
         if (!b.entry_rank) return -1;
         return a.entry_rank - b.entry_rank;
     });
 
     return `
-        <div style="background: var(--bg-primary); padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px var(--shadow);">
-            <h4 style="font-size: 1rem; font-weight: 600; color: var(--text-primary); margin-bottom: 1rem;">
-                Your Leagues (${leagues.length})
-            </h4>
-            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem;">
-                ${sortedLeagues.map(league => {
-                    const isSelected = myTeamState.selectedLeagues.includes(league.id);
-                    const canSelect = isSelected || myTeamState.selectedLeagues.length < 3;
+        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+            ${sortedLeagues.map(league => {
+                const isSelected = myTeamState.selectedLeagues.includes(league.id);
+                const canSelect = isSelected || myTeamState.selectedLeagues.length < 3;
 
-                    return `
-                        <div
-                            class="league-card ${canSelect ? 'selectable' : 'disabled'}"
-                            data-league-id="${league.id}"
-                            style="
-                                background: ${isSelected ? 'var(--primary-color)' : 'var(--bg-secondary)'};
-                                color: ${isSelected ? 'white' : 'var(--text-primary)'};
-                                padding: 1rem;
-                                border-radius: 8px;
-                                border: 2px solid ${isSelected ? 'var(--primary-color)' : 'var(--border-color)'};
-                                cursor: ${canSelect ? 'pointer' : 'not-allowed'};
-                                transition: all 0.2s;
-                                opacity: ${canSelect ? '1' : '0.5'};
-                            "
-                        >
-                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
-                                <div style="flex: 1;">
-                                    <div style="font-weight: 600; margin-bottom: 0.25rem;">${escapeHtml(league.name)}</div>
-                                    <div style="font-size: 0.875rem; opacity: 0.8;">
-                                        Rank: ${league.entry_rank ? league.entry_rank.toLocaleString() : 'N/A'}
-                                    </div>
-                                </div>
-                                <div>
-                                    <i class="fas fa-${isSelected ? 'check-circle' : 'circle'}" style="font-size: 1.5rem; opacity: 0.8;"></i>
-                                </div>
+                return `
+                    <div
+                        class="league-menu-item ${canSelect ? 'selectable' : 'disabled'}"
+                        data-league-id="${league.id}"
+                        style="
+                            background: ${isSelected ? 'var(--primary-color)' : 'var(--bg-primary)'};
+                            color: ${isSelected ? 'white' : 'var(--text-primary)'};
+                            padding: 0.875rem;
+                            border-radius: 8px;
+                            border: 2px solid ${isSelected ? 'var(--primary-color)' : 'var(--border-color)'};
+                            cursor: ${canSelect ? 'pointer' : 'not-allowed'};
+                            transition: all 0.2s;
+                            opacity: ${canSelect ? '1' : '0.5'};
+                            display: flex;
+                            align-items: center;
+                            gap: 0.75rem;
+                        "
+                    >
+                        <div>
+                            <i class="fas fa-${isSelected ? 'check-square' : 'square'}" style="font-size: 1.25rem;"></i>
+                        </div>
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="font-weight: 600; font-size: 0.875rem; margin-bottom: 0.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(league.name)}">
+                                ${escapeHtml(league.name)}
+                            </div>
+                            <div style="font-size: 0.75rem; opacity: 0.8;">
+                                Rank: ${league.entry_rank ? league.entry_rank.toLocaleString() : 'N/A'}
                             </div>
                         </div>
-                    `;
-                }).join('')}
-            </div>
-            ${myTeamState.selectedLeagues.length === 0 ? `
-                <p style="color: var(--text-secondary); font-size: 0.875rem; margin-top: 1rem; text-align: center;">
-                    <i class="fas fa-hand-pointer"></i> Click on a league to select it (max 3)
-                </p>
-            ` : `
-                <p style="color: var(--text-secondary); font-size: 0.875rem; margin-top: 1rem; text-align: center;">
-                    ${myTeamState.selectedLeagues.length}/3 leagues selected
-                </p>
-            `}
+                    </div>
+                `;
+            }).join('')}
+        </div>
+        <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+            <p style="color: var(--text-secondary); font-size: 0.75rem; text-align: center;" id="league-selection-count">
+                ${myTeamState.selectedLeagues.length}/3 leagues selected
+            </p>
         </div>
     `;
 }
 
 /**
- * Toggle league selection (optimized - no full re-render)
+ * Render league tabs for selected leagues
+ */
+function renderLeagueTabs() {
+    if (myTeamState.selectedLeagues.length === 0) {
+        return '';
+    }
+
+    return `
+        <div style="display: flex; gap: 0.25rem; background: var(--bg-secondary); padding: 0.5rem; border-bottom: 2px solid var(--border-color);">
+            ${myTeamState.selectedLeagues.map((leagueId, index) => {
+                const isActive = myTeamState.activeLeagueTab === leagueId;
+                const leagueData = myTeamState.leagueStandingsCache.get(leagueId);
+                const leagueName = leagueData?.league?.name || `League ${index + 1}`;
+
+                return `
+                    <button
+                        class="league-tab-btn"
+                        data-league-id="${leagueId}"
+                        style="
+                            padding: 0.75rem 1.25rem;
+                            background: ${isActive ? 'var(--primary-color)' : 'var(--bg-primary)'};
+                            color: ${isActive ? 'white' : 'var(--text-primary)'};
+                            border: none;
+                            border-radius: 6px 6px 0 0;
+                            cursor: pointer;
+                            font-weight: ${isActive ? '600' : '500'};
+                            font-size: 0.875rem;
+                            transition: all 0.2s;
+                            white-space: nowrap;
+                            max-width: 200px;
+                            overflow: hidden;
+                            text-overflow: ellipsis;
+                        "
+                        title="${escapeHtml(leagueName)}"
+                    >
+                        <i class="fas fa-trophy" style="margin-right: 0.5rem; font-size: 0.75rem;"></i>
+                        ${escapeHtml(leagueName)}
+                    </button>
+                `;
+            }).join('')}
+        </div>
+    `;
+}
+
+/**
+ * Render content for the active league tab
+ */
+function renderLeagueContent() {
+    if (myTeamState.selectedLeagues.length === 0) {
+        return `
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; padding: 2rem;">
+                <i class="fas fa-hand-pointer" style="font-size: 3rem; color: var(--text-secondary); margin-bottom: 1rem;"></i>
+                <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem;">
+                    No Leagues Selected
+                </h3>
+                <p style="color: var(--text-secondary); max-width: 400px;">
+                    Select up to 3 leagues from the sidebar to view detailed standings and compare with rivals.
+                </p>
+            </div>
+        `;
+    }
+
+    if (!myTeamState.activeLeagueTab) {
+        return `
+            <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                <i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                <p>Loading...</p>
+            </div>
+        `;
+    }
+
+    // Check if data is cached
+    if (myTeamState.leagueStandingsCache.has(myTeamState.activeLeagueTab)) {
+        const leagueData = myTeamState.leagueStandingsCache.get(myTeamState.activeLeagueTab);
+        return renderLeagueStandings(leagueData);
+    }
+
+    // Show loading state
+    return `
+        <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+            <i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+            <p>Loading league standings...</p>
+        </div>
+    `;
+}
+
+/**
+ * Toggle league selection (with dynamic tab management)
  */
 function toggleLeagueSelection(leagueId) {
     const index = myTeamState.selectedLeagues.indexOf(leagueId);
     const wasSelected = index > -1;
 
     if (wasSelected) {
-        // Deselect
+        // Deselect - remove from selected leagues
         myTeamState.selectedLeagues.splice(index, 1);
+
+        // If this was the active tab, switch to another tab or clear
+        if (myTeamState.activeLeagueTab === leagueId) {
+            myTeamState.activeLeagueTab = myTeamState.selectedLeagues[0] || null;
+        }
     } else {
         // Select (if under limit)
         if (myTeamState.selectedLeagues.length >= 3) {
             return; // Already at max, do nothing
         }
         myTeamState.selectedLeagues.push(leagueId);
+
+        // Set as active tab if it's the first selection
+        if (myTeamState.selectedLeagues.length === 1) {
+            myTeamState.activeLeagueTab = leagueId;
+        }
     }
 
     // Save to localStorage
     localStorage.setItem('fplanner_selected_leagues', JSON.stringify(myTeamState.selectedLeagues));
 
-    // Optimized: Update only the affected card and standings
-    updateLeagueCardUI(leagueId, !wasSelected);
+    // Update UI: menu item, tabs, and content
+    updateLeagueMenuItemUI(leagueId, !wasSelected);
     updateLeagueSelectionCount();
-    loadSelectedLeagueStandings(); // This will use cached data
+    updateLeagueTabsUI();
+    updateLeagueContentUI();
+
+    // Load data for newly selected league
+    if (!wasSelected && !myTeamState.leagueStandingsCache.has(leagueId)) {
+        loadLeagueStandingsForTab(leagueId);
+    }
 }
 
 /**
- * Update a single league card's UI without re-rendering
+ * Update a single league menu item's UI without re-rendering
  */
-function updateLeagueCardUI(leagueId, isSelected) {
-    const card = document.querySelector(`.league-card[data-league-id="${leagueId}"]`);
-    if (!card) return;
+function updateLeagueMenuItemUI(leagueId, isSelected) {
+    const menuItem = document.querySelector(`.league-menu-item[data-league-id="${leagueId}"]`);
+    if (!menuItem) return;
 
-    // Update card styling
-    card.style.background = isSelected ? 'var(--primary-color)' : 'var(--bg-secondary)';
-    card.style.color = isSelected ? 'white' : 'var(--text-primary)';
-    card.style.borderColor = isSelected ? 'var(--primary-color)' : 'var(--border-color)';
+    // Update menu item styling
+    menuItem.style.background = isSelected ? 'var(--primary-color)' : 'var(--bg-primary)';
+    menuItem.style.color = isSelected ? 'white' : 'var(--text-primary)';
+    menuItem.style.borderColor = isSelected ? 'var(--primary-color)' : 'var(--border-color)';
 
     // Update icon
-    const icon = card.querySelector('i.fas');
+    const icon = menuItem.querySelector('i.fas');
     if (icon) {
-        icon.className = isSelected ? 'fas fa-check-circle' : 'fas fa-circle';
+        icon.className = isSelected ? 'fas fa-check-square' : 'fas fa-square';
     }
 
-    // Update all cards' selectability
-    const allCards = document.querySelectorAll('.league-card');
-    allCards.forEach(c => {
-        const cId = parseInt(c.dataset.leagueId);
-        const cIsSelected = myTeamState.selectedLeagues.includes(cId);
-        const canSelect = cIsSelected || myTeamState.selectedLeagues.length < 3;
+    // Update all menu items' selectability
+    const allMenuItems = document.querySelectorAll('.league-menu-item');
+    allMenuItems.forEach(item => {
+        const itemId = parseInt(item.dataset.leagueId);
+        const itemIsSelected = myTeamState.selectedLeagues.includes(itemId);
+        const canSelect = itemIsSelected || myTeamState.selectedLeagues.length < 3;
 
-        c.classList.toggle('selectable', canSelect);
-        c.classList.toggle('disabled', !canSelect);
-        c.style.cursor = canSelect ? 'pointer' : 'not-allowed';
-        c.style.opacity = canSelect ? '1' : '0.5';
+        item.classList.toggle('selectable', canSelect);
+        item.classList.toggle('disabled', !canSelect);
+        item.style.cursor = canSelect ? 'pointer' : 'not-allowed';
+        item.style.opacity = canSelect ? '1' : '0.5';
     });
 }
 
@@ -545,33 +658,89 @@ function updateLeagueCardUI(leagueId, isSelected) {
  * Update league selection count text
  */
 function updateLeagueSelectionCount() {
-    const container = document.getElementById('league-selection-container');
-    if (!container) return;
-
-    const countText = container.querySelector('p:last-child');
+    const countText = document.getElementById('league-selection-count');
     if (countText) {
-        if (myTeamState.selectedLeagues.length === 0) {
-            countText.innerHTML = '<i class="fas fa-hand-pointer"></i> Click on a league to select it (max 3)';
-        } else {
-            countText.innerHTML = `${myTeamState.selectedLeagues.length}/3 leagues selected`;
-        }
+        countText.textContent = `${myTeamState.selectedLeagues.length}/3 leagues selected`;
     }
 }
 
 /**
- * Load standings for selected leagues (with caching)
+ * Update league tabs UI (dynamically add/remove tabs)
  */
-async function loadSelectedLeagueStandings() {
-    const container = document.getElementById('league-standings-container');
+function updateLeagueTabsUI() {
+    const tabsContainer = document.querySelector('[style*="border-bottom: 2px solid var(--border-color)"]');
+    if (!tabsContainer) return;
 
-    if (!container) return;
+    // Re-render tabs
+    tabsContainer.innerHTML = renderLeagueTabs().replace(/<div[^>]*>/, '').replace(/<\/div>$/, '');
 
-    if (myTeamState.selectedLeagues.length === 0) {
-        container.innerHTML = '';
+    // Re-attach event listeners for new tabs
+    attachLeagueTabListeners();
+}
+
+/**
+ * Update league content UI (show content for active tab)
+ */
+function updateLeagueContentUI() {
+    const contentContainer = document.getElementById('league-content-container');
+    if (!contentContainer) return;
+
+    contentContainer.innerHTML = renderLeagueContent();
+}
+
+/**
+ * Switch to a specific league tab
+ */
+function switchLeagueTab(leagueId) {
+    myTeamState.activeLeagueTab = leagueId;
+
+    // Update tabs styling
+    updateLeagueTabsUI();
+
+    // Update content
+    updateLeagueContentUI();
+
+    // Load data if not cached
+    if (!myTeamState.leagueStandingsCache.has(leagueId)) {
+        loadLeagueStandingsForTab(leagueId);
+    }
+}
+
+/**
+ * Attach event listeners to league tabs
+ */
+function attachLeagueTabListeners() {
+    const tabButtons = document.querySelectorAll('.league-tab-btn');
+    tabButtons.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const leagueId = parseInt(e.currentTarget.dataset.leagueId);
+            switchLeagueTab(leagueId);
+        });
+    });
+}
+
+/**
+ * Load standings for a specific league tab (with caching)
+ */
+async function loadLeagueStandingsForTab(leagueId) {
+    const contentContainer = document.getElementById('league-content-container');
+    if (!contentContainer) return;
+
+    // Check if this is still the active tab
+    if (myTeamState.activeLeagueTab !== leagueId) {
+        console.log(`⏭️ Skipping load for league ${leagueId} (no longer active)`);
         return;
     }
 
-    container.innerHTML = `
+    // Check cache first
+    if (myTeamState.leagueStandingsCache.has(leagueId)) {
+        console.log(`✅ Using cached data for league ${leagueId}`);
+        updateLeagueContentUI();
+        return;
+    }
+
+    // Show loading state
+    contentContainer.innerHTML = `
         <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
             <i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 1rem;"></i>
             <p>Loading league standings...</p>
@@ -579,37 +748,28 @@ async function loadSelectedLeagueStandings() {
     `;
 
     try {
-        // Load all selected leagues in parallel with caching
-        const leaguePromises = myTeamState.selectedLeagues.map(async leagueId => {
-            // Check cache first
-            if (myTeamState.leagueStandingsCache.has(leagueId)) {
-                console.log(`✅ Using cached data for league ${leagueId}`);
-                return myTeamState.leagueStandingsCache.get(leagueId);
-            }
+        // Fetch and cache
+        const data = await loadLeagueStandings(leagueId);
+        myTeamState.leagueStandingsCache.set(leagueId, data);
 
-            // Fetch and cache
-            const data = await loadLeagueStandings(leagueId);
-            myTeamState.leagueStandingsCache.set(leagueId, data);
-            return data;
-        });
-
-        const leaguesData = await Promise.all(leaguePromises);
-
-        // Render standings for each league
-        const standingsHTML = leaguesData.map(leagueData =>
-            renderLeagueStandings(leagueData)
-        ).join('');
-
-        container.innerHTML = standingsHTML;
+        // Update content if still active tab
+        if (myTeamState.activeLeagueTab === leagueId) {
+            updateLeagueContentUI();
+            updateLeagueTabsUI(); // Update tab name with fetched league name
+        }
 
     } catch (err) {
-        console.error('Failed to load league standings:', err);
-        container.innerHTML = `
-            <div style="background: var(--bg-secondary); padding: 2rem; border-radius: 12px; text-align: center;">
-                <i class="fas fa-exclamation-circle" style="font-size: 2rem; color: #ef4444; margin-bottom: 1rem;"></i>
-                <p style="color: var(--text-secondary);">Failed to load league standings. Please try again.</p>
-            </div>
-        `;
+        console.error(`Failed to load league ${leagueId}:`, err);
+
+        // Show error if still active tab
+        if (myTeamState.activeLeagueTab === leagueId) {
+            contentContainer.innerHTML = `
+                <div style="background: var(--bg-secondary); padding: 2rem; border-radius: 12px; text-align: center;">
+                    <i class="fas fa-exclamation-circle" style="font-size: 2rem; color: #ef4444; margin-bottom: 1rem;"></i>
+                    <p style="color: var(--text-secondary);">Failed to load league standings. Please try again.</p>
+                </div>
+            `;
+        }
     }
 }
 
