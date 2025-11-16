@@ -202,7 +202,7 @@ function renderMyTeamFormContent() {
 }
 
 /**
- * Handle team data refresh
+ * Handle team data refresh with rate limit protection
  * Reloads team data from API and re-renders
  */
 async function handleTeamRefresh() {
@@ -215,10 +215,23 @@ async function handleTeamRefresh() {
         throw new Error('No team ID found');
     }
 
+    // Check last refresh time to prevent rate limiting
+    const lastRefresh = localStorage.getItem('fplanner_last_refresh');
+    const now = Date.now();
+    const MIN_REFRESH_INTERVAL = 30000; // 30 seconds minimum between refreshes
+
+    if (lastRefresh && (now - parseInt(lastRefresh)) < MIN_REFRESH_INTERVAL) {
+        const waitTime = Math.ceil((MIN_REFRESH_INTERVAL - (now - parseInt(lastRefresh))) / 1000);
+        throw new Error(`Please wait ${waitTime}s before refreshing`);
+    }
+
     console.log('🔄 Refreshing team data...');
 
     // Reload team data
     const freshData = await loadMyTeam(teamId);
+
+    // Update last refresh timestamp
+    localStorage.setItem('fplanner_last_refresh', now.toString());
 
     // Re-render with fresh data
     renderMyTeam(freshData, myTeamState.currentTab);
@@ -383,10 +396,11 @@ export function renderMyTeam(teamData, subTab = 'overview') {
 
             try {
                 await handleTeamRefresh();
-                showRefreshToast('Team data refreshed!');
+                showRefreshToast('✅ Team data refreshed!');
             } catch (error) {
                 console.error('Refresh failed:', error);
-                showRefreshToast('Failed to refresh');
+                // Show user-friendly error message
+                showRefreshToast(error.message || '⚠️ Failed to refresh');
             } finally {
                 icon.classList.remove('fa-spin');
                 refreshBtn.disabled = false;
@@ -394,21 +408,9 @@ export function renderMyTeam(teamData, subTab = 'overview') {
         });
     }
 
-    // Initialize pull-to-refresh on mobile
-    if (shouldUseMobileLayout() && subTab === 'overview') {
-        // Destroy existing instance if any
-        if (myTeamState.pullToRefreshInstance) {
-            myTeamState.pullToRefreshInstance.destroy();
-        }
-
-        // Add skeleton styles
+    // Add skeleton styles for loading states
+    if (shouldUseMobileLayout()) {
         addSkeletonStyles();
-
-        // Initialize pull-to-refresh
-        myTeamState.pullToRefreshInstance = initPullToRefresh(async () => {
-            await handleTeamRefresh();
-            showRefreshToast('Team data refreshed!');
-        });
     }
 
     // Add event delegation for Problem Players toggle and replacement buttons
