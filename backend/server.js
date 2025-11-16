@@ -1029,17 +1029,23 @@ function parseGeminiResponse(geminiData, gameweek) {
     console.error('❌ Failed to parse Gemini response:', error.message);
     console.error('❌ Full error:', error.stack);
 
-    // Return fallback insights
+    // TEMPORARY DEBUG: Return raw response in error case
     return {
       gameweek: gameweek,
       items: [{
         type: 'insight',
-        title: 'AI Analysis Available',
-        description: 'AI insights are being generated. Please refresh in a moment.',
+        title: 'DEBUG: Parse Error',
+        description: `Error: ${error.message}. Check browser console for raw Gemini response.`,
         priority: 'low'
       }],
       timestamp: Date.now(),
-      parseError: true
+      parseError: true,
+      // DEBUG INFO - will be visible in browser console
+      debug: {
+        errorMessage: error.message,
+        rawGeminiData: geminiData,
+        extractedText: geminiData.candidates?.[0]?.content?.parts?.[0]?.text?.substring(0, 1000)
+      }
     };
   }
 }
