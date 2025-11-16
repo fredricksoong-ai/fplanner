@@ -566,8 +566,8 @@ function renderGameweekContent(plan, gameweek) {
                 </button>
             </div>
 
-            <!-- Auto-Suggestions -->
-            ${renderAutoSuggestions(plan, gameweek)}
+            <!-- Auto-Suggestions (lazy-loaded) -->
+            ${renderAutoSuggestionsPlaceholder(gameweek)}
         </div>
     `;
 }
@@ -692,13 +692,60 @@ function renderTransferRow(transfer, index, gameweek) {
 }
 
 /**
- * Render auto-suggestions panel
+ * Render auto-suggestions placeholder (lazy-loaded)
+ */
+function renderAutoSuggestionsPlaceholder(gameweek) {
+    return `
+        <div id="suggestions-container-${gameweek}" style="
+            background: var(--bg-primary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px var(--shadow);
+            border-left: 4px solid #3b82f6;
+        ">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="font-size: 1.125rem; font-weight: 700; color: var(--text-primary); margin: 0;">
+                    <i class="fas fa-lightbulb"></i> Transfer Suggestions
+                </h3>
+                <button
+                    id="load-suggestions-btn-${gameweek}"
+                    class="load-suggestions-btn"
+                    data-gw="${gameweek}"
+                    style="
+                        padding: 0.5rem 1rem;
+                        background: var(--primary-color);
+                        color: white;
+                        border: none;
+                        border-radius: 6px;
+                        font-size: 0.875rem;
+                        font-weight: 600;
+                        cursor: pointer;
+                        transition: all 0.2s;
+                    "
+                >
+                    <i class="fas fa-magic"></i> Get Suggestions
+                </button>
+            </div>
+            <div id="suggestions-content-${gameweek}" style="margin-top: 1rem; display: none;">
+                <!-- Suggestions will be loaded here -->
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Render auto-suggestions panel (called on demand)
  */
 function renderAutoSuggestions(plan, gameweek) {
     const suggestions = findSuggestedTransfers(plan, gameweek, 5);
 
     if (suggestions.length === 0) {
-        return '';
+        return `
+            <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                <i class="fas fa-check-circle" style="font-size: 2rem; margin-bottom: 0.5rem; color: #22c55e;"></i>
+                <p>No suggestions - your squad looks good for this gameweek!</p>
+            </div>
+        `;
     }
 
     const priorityColor = {
@@ -708,62 +755,50 @@ function renderAutoSuggestions(plan, gameweek) {
     };
 
     return `
-        <div style="
-            background: var(--bg-primary);
-            border-radius: 12px;
-            padding: 1.5rem;
-            box-shadow: 0 2px 8px var(--shadow);
-            border-left: 4px solid #3b82f6;
-        ">
-            <h3 style="font-size: 1.125rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
-                <i class="fas fa-lightbulb"></i> Suggested Transfers
-            </h3>
-
-            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-                ${suggestions.map((sug, idx) => `
-                    <div style="
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: center;
-                        padding: 1rem;
-                        background: var(--bg-secondary);
-                        border-radius: 8px;
-                        border-left: 3px solid ${priorityColor[sug.priority]};
-                    ">
-                        <div style="flex: 1;">
-                            <div style="font-size: 0.75rem; color: ${priorityColor[sug.priority]}; font-weight: 600; text-transform: uppercase; margin-bottom: 0.25rem;">
-                                ${sug.type} • ${sug.priority} priority
-                            </div>
-                            <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 0.25rem;">
-                                ${escapeHtml(sug.playerOut.web_name)} → ${escapeHtml(sug.playerIn.web_name)}
-                            </div>
-                            <div style="font-size: 0.875rem; color: var(--text-secondary);">
-                                ${sug.reason}
-                            </div>
+        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+            ${suggestions.map((sug, idx) => `
+                <div style="
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 1rem;
+                    background: var(--bg-secondary);
+                    border-radius: 8px;
+                    border-left: 3px solid ${priorityColor[sug.priority]};
+                ">
+                    <div style="flex: 1;">
+                        <div style="font-size: 0.75rem; color: ${priorityColor[sug.priority]}; font-weight: 600; text-transform: uppercase; margin-bottom: 0.25rem;">
+                            ${sug.type} • ${sug.priority} priority
                         </div>
-                        <button
-                            class="apply-suggestion-btn"
-                            data-out="${sug.playerOut.id}"
-                            data-in="${sug.playerIn.id}"
-                            data-gw="${gameweek}"
-                            style="
-                                padding: 0.5rem 1rem;
-                                background: var(--primary-color);
-                                color: white;
-                                border: none;
-                                border-radius: 6px;
-                                font-size: 0.875rem;
-                                font-weight: 600;
-                                cursor: pointer;
-                                transition: all 0.2s;
-                                white-space: nowrap;
-                            "
-                        >
-                            <i class="fas fa-check"></i> Apply
-                        </button>
+                        <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 0.25rem;">
+                            ${escapeHtml(sug.playerOut.web_name)} → ${escapeHtml(sug.playerIn.web_name)}
+                        </div>
+                        <div style="font-size: 0.875rem; color: var(--text-secondary);">
+                            ${sug.reason}
+                        </div>
                     </div>
-                `).join('')}
-            </div>
+                    <button
+                        class="apply-suggestion-btn"
+                        data-out="${sug.playerOut.id}"
+                        data-in="${sug.playerIn.id}"
+                        data-gw="${gameweek}"
+                        style="
+                            padding: 0.5rem 1rem;
+                            background: var(--primary-color);
+                            color: white;
+                            border: none;
+                            border-radius: 6px;
+                            font-size: 0.875rem;
+                            font-weight: 600;
+                            cursor: pointer;
+                            transition: all 0.2s;
+                            white-space: nowrap;
+                        "
+                    >
+                        <i class="fas fa-check"></i> Apply
+                    </button>
+                </div>
+            `).join('')}
         </div>
     `;
 }
@@ -964,6 +999,11 @@ function attachEventListeners() {
         btn.addEventListener('click', handleRemoveTransfer);
     });
 
+    // Load suggestions buttons (lazy-load)
+    document.querySelectorAll('.load-suggestions-btn').forEach(btn => {
+        btn.addEventListener('click', handleLoadSuggestions);
+    });
+
     // Apply suggestion buttons
     document.querySelectorAll('.apply-suggestion-btn').forEach(btn => {
         btn.addEventListener('click', handleApplySuggestion);
@@ -1030,6 +1070,38 @@ function handleRemoveTransfer(e) {
 
     savePlansToStorage(allPlans);
     renderTeamBuilderContent();
+}
+
+/**
+ * Handle load suggestions (lazy-load on demand)
+ */
+function handleLoadSuggestions(e) {
+    const btn = e.currentTarget;
+    const gw = parseInt(btn.dataset.gw);
+
+    // Show loading state
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+    btn.disabled = true;
+
+    // Small delay to show loading state
+    setTimeout(() => {
+        const activePlan = allPlans.find(p => p.id === activePlanId);
+        if (!activePlan) return;
+
+        const suggestionsContent = document.getElementById(`suggestions-content-${gw}`);
+        if (suggestionsContent) {
+            suggestionsContent.innerHTML = renderAutoSuggestions(activePlan, gw);
+            suggestionsContent.style.display = 'block';
+        }
+
+        // Hide the button after loading
+        btn.style.display = 'none';
+
+        // Re-attach event listeners for apply buttons
+        document.querySelectorAll('.apply-suggestion-btn').forEach(applyBtn => {
+            applyBtn.addEventListener('click', handleApplySuggestion);
+        });
+    }, 100);
 }
 
 /**

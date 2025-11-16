@@ -239,14 +239,16 @@ export function renderMyTeam(teamData) {
         });
     }
 
-    // Add event listener for Problem Players toggle
-    const problemPlayersHeader = document.getElementById('problem-players-header');
-    if (problemPlayersHeader) {
-        problemPlayersHeader.addEventListener('click', () => window.toggleProblemPlayers());
-    }
-
-    // Add event delegation for toggle replacement buttons
+    // Add event delegation for Problem Players toggle and replacement buttons
     container.addEventListener('click', (e) => {
+        // Problem Players header toggle
+        const header = e.target.closest('#problem-players-header');
+        if (header) {
+            window.toggleProblemPlayers();
+            return;
+        }
+
+        // Toggle replacement buttons
         const btn = e.target.closest('.toggle-replacements-btn');
         if (btn) {
             const idx = parseInt(btn.dataset.idx);
