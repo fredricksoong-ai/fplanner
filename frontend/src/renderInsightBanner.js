@@ -210,7 +210,7 @@ export function renderInsightBanner(insights, contextId) {
                     font-size: 1rem;
                     margin: 0 0 1rem 0;
                 ">
-                    AI Insights
+                    🤖 AI Insights
                 </h3>
 
                 <!-- Tab Navigation -->
@@ -225,6 +225,7 @@ export function renderInsightBanner(insights, contextId) {
                             class="ai-insight-tab-btn"
                             data-category="${category}"
                             data-context="${contextId}"
+                            data-is-active="${index === 0}"
                             style="
                                 padding: 0.5rem 1rem;
                                 background: ${index === 0 ? 'var(--accent-color)' : 'var(--bg-secondary)'};
@@ -237,8 +238,6 @@ export function renderInsightBanner(insights, contextId) {
                                 transition: all 0.2s;
                                 white-space: nowrap;
                             "
-                            onmouseover="if(this.style.background !== 'var(--accent-color)') this.style.opacity='0.7'"
-                            onmouseout="this.style.opacity='1'"
                         >
                             ${category}
                         </button>
@@ -309,19 +308,25 @@ export function attachInsightBannerListeners(contextId, onRetry) {
     // Attach tab switching listeners
     const tabBtns = document.querySelectorAll(`.ai-insight-tab-btn[data-context="${contextId}"]`);
     tabBtns.forEach(btn => {
+        // Tab click handler
         btn.addEventListener('click', () => {
             const targetCategory = btn.dataset.category;
 
             // Update button styles
             tabBtns.forEach(b => {
-                if (b.dataset.category === targetCategory) {
+                const isActive = b.dataset.category === targetCategory;
+                b.dataset.isActive = isActive;
+
+                if (isActive) {
                     b.style.background = 'var(--accent-color)';
                     b.style.color = 'white';
                     b.style.borderColor = 'var(--accent-color)';
+                    b.style.opacity = '1';
                 } else {
                     b.style.background = 'var(--bg-secondary)';
                     b.style.color = 'var(--text-secondary)';
                     b.style.borderColor = 'var(--border-color)';
+                    b.style.opacity = '1';
                 }
             });
 
@@ -334,6 +339,17 @@ export function attachInsightBannerListeners(contextId, onRetry) {
                     content.style.display = 'none';
                 }
             });
+        });
+
+        // Hover effects (CSP-compliant)
+        btn.addEventListener('mouseenter', () => {
+            if (btn.dataset.isActive !== 'true') {
+                btn.style.opacity = '0.7';
+            }
+        });
+
+        btn.addEventListener('mouseleave', () => {
+            btn.style.opacity = '1';
         });
     });
 }
