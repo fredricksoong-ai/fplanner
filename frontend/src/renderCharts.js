@@ -13,6 +13,7 @@ import {
     getCurrentGW
 } from './utils.js';
 import { calculateFixtureDifficulty } from './fixtures.js';
+import { renderPointsPriceChart } from './charts/pointsVsPrice.js';
 
 // ============================================================================
 // STATE
@@ -181,9 +182,13 @@ export async function renderCharts(chartType = 'points-price') {
  * Render the currently selected chart type
  */
 function renderCurrentChart() {
+    // Get container for modular charts
+    const contentContainer = document.getElementById('chart-content-container');
+
     switch (currentChartType) {
         case 'points-price':
-            renderPointsPriceChart();
+            // Use modular version
+            renderModularChart(contentContainer);
             break;
         case 'form-price':
             renderFormPriceChart();
@@ -204,8 +209,34 @@ function renderCurrentChart() {
             renderFdrFormChart();
             break;
         default:
-            renderPointsPriceChart();
+            renderModularChart(contentContainer);
     }
+}
+
+/**
+ * Render modular chart (new architecture)
+ * Disposes old chart and creates new one using modular approach
+ */
+async function renderModularChart(contentContainer) {
+    // Dispose previous chart instance
+    if (currentChart) {
+        currentChart.dispose();
+        currentChart = null;
+    }
+
+    // Load ECharts if not already loaded
+    if (!echarts) {
+        try {
+            const echartsModule = await import('echarts');
+            echarts = echartsModule;
+        } catch (error) {
+            console.error('Failed to load ECharts:', error);
+            return;
+        }
+    }
+
+    // Call the modular chart render function
+    currentChart = await renderPointsPriceChart(contentContainer, echarts, currentPositionFilter);
 }
 
 // ============================================================================
