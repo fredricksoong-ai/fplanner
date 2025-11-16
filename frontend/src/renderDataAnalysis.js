@@ -1153,92 +1153,120 @@ function renderPositionSpecificTable(players, position = 'all') {
  * Load AI insights for current tab
  */
 async function loadAIInsightsForTab(tab, position) {
+    // Only load AI insights for Overview tab
+    if (tab !== 'overview') {
+        // Clear AI insights container for other tabs
+        const container = document.getElementById('ai-insights-container');
+        if (container) {
+            container.innerHTML = '';
+        }
+        return;
+    }
+
     const currentGW = getCurrentGW();
     const players = getAllPlayers();
 
-    // Prepare context data based on tab
-    let contextData = {};
+    // Prepare comprehensive data for all 5 AI categories
+    let filteredPlayers = players;
+    if (position !== 'all') {
+        const posMap = { 'GKP': 1, 'DEF': 2, 'MID': 3, 'FWD': 4 };
+        filteredPlayers = players.filter(p => p.element_type === posMap[position]);
+    }
 
-    if (tab === 'overview') {
-        // Filter players by position if needed
-        let filteredPlayers = players;
-        if (position !== 'all') {
-            const posMap = { 'GKP': 1, 'DEF': 2, 'MID': 3, 'FWD': 4 };
-            filteredPlayers = players.filter(p => p.element_type === posMap[position]);
-        }
+    // 1. Overview data: Top performers and form players
+    const topPerformers = sortPlayers(filteredPlayers, 'total_points', false)
+        .slice(0, 15)
+        .map(p => ({
+            name: p.web_name,
+            position: getPositionShort(p),
+            points: p.total_points,
+            form: parseFloat(p.form) || 0,
+            ppm: calculatePPM(p),
+            ownership: parseFloat(p.selected_by_percent) || 0,
+            price: p.now_cost / 10
+        }));
 
-        // Get top performers for context
-        const topPerformers = sortPlayers(filteredPlayers, 'total_points', false)
-            .slice(0, 10)
-            .map(p => ({
-                name: p.web_name,
-                position: getPositionShort(p),
-                points: p.total_points,
-                form: parseFloat(p.form) || 0,
-                ppm: calculatePPM(p),
-                ownership: parseFloat(p.selected_by_percent) || 0,
-                price: p.now_cost / 10
-            }));
+    // 2. Hidden Gems: Low ownership (<5%) but good form/value
+    const hiddenGems = filteredPlayers
+        .filter(p => {
+            const ownership = parseFloat(p.selected_by_percent) || 0;
+            const form = parseFloat(p.form) || 0;
+            const minutesPerc = calculateMinutesPercentage(p, currentGW);
+            return ownership < 5 && form > 3 && minutesPerc > 50;
+        })
+        .slice(0, 15)
+        .map(p => ({
+            name: p.web_name,
+            position: getPositionShort(p),
+            ownership: parseFloat(p.selected_by_percent) || 0,
+            form: parseFloat(p.form) || 0,
+            ppm: calculatePPM(p),
+            price: p.now_cost / 10
+        }));
 
-        // Get best value players
-        const bestValue = filteredPlayers.filter(p => calculateMinutesPercentage(p, currentGW) > 30);
-        const topValue = sortPlayers(bestValue, 'ppm', false)
-            .slice(0, 10)
-            .map(p => ({
-                name: p.web_name,
-                position: getPositionShort(p),
-                ppm: calculatePPM(p),
-                form: parseFloat(p.form) || 0,
-                ownership: parseFloat(p.selected_by_percent) || 0,
-                price: p.now_cost / 10
-            }));
+    // 3. Differentials: Low ownership (<15%) with high upside
+    const differentials = filteredPlayers
+        .filter(p => {
+            const ownership = parseFloat(p.selected_by_percent) || 0;
+            return ownership < 15 && ownership > 0;
+        })
+        .slice(0, 15)
+        .map(p => ({
+            name: p.web_name,
+            position: getPositionShort(p),
+            ownership: parseFloat(p.selected_by_percent) || 0,
+            form: parseFloat(p.form) || 0,
+            ppm: calculatePPM(p),
+            price: p.now_cost / 10,
+            transfersIn: p.transfers_in_event || 0,
+            transfersOut: p.transfers_out_event || 0
+        }));
 
-        contextData = {
+    // 4. Transfer Targets: Best value + fixtures
+    const bestValue = filteredPlayers.filter(p => calculateMinutesPercentage(p, currentGW) > 50);
+    const transferTargets = sortPlayers(bestValue, 'ppm', false)
+        .slice(0, 15)
+        .map(p => ({
+            name: p.web_name,
+            position: getPositionShort(p),
+            ppm: calculatePPM(p),
+            form: parseFloat(p.form) || 0,
+            ownership: parseFloat(p.selected_by_percent) || 0,
+            price: p.now_cost / 10,
+            points: p.total_points
+        }));
+
+    // 5. Team Analysis: Position distribution and budget data
+    const positionCounts = {};
+    const positionAvgPPM = {};
+    ['GKP', 'DEF', 'MID', 'FWD'].forEach(pos => {
+        const posMap = { 'GKP': 1, 'DEF': 2, 'MID': 3, 'FWD': 4 };
+        const posPlayers = players.filter(p => p.element_type === posMap[pos]);
+        positionCounts[pos] = posPlayers.length;
+        const avgPPM = posPlayers.reduce((sum, p) => sum + calculatePPM(p), 0) / posPlayers.length || 0;
+        positionAvgPPM[pos] = avgPPM.toFixed(2);
+    });
+
+    const contextData = {
+        overview: {
             topPerformers,
-            topValue,
             positionFilter: position,
             totalPlayers: filteredPlayers.length
-        };
-    }
-
-    if (tab === 'differentials') {
-        // Get current differentials based on filters
-        let filteredPlayers = players;
-        if (position !== 'all') {
-            const posMap = { 'GKP': 1, 'DEF': 2, 'MID': 3, 'FWD': 4 };
-            filteredPlayers = players.filter(p => p.element_type === posMap[position]);
+        },
+        hiddenGems,
+        differentials,
+        transferTargets,
+        teamAnalysis: {
+            positionCounts,
+            positionAvgPPM,
+            currentGW
         }
-
-        const differentials = filteredPlayers
-            .filter(p => {
-                const ownership = parseFloat(p.selected_by_percent) || 0;
-                return ownership < analysisState.ownershipThreshold;
-            })
-            .slice(0, 15)
-            .map(p => ({
-                name: p.web_name,
-                position: getPositionShort(p),
-                ownership: parseFloat(p.selected_by_percent) || 0,
-                form: parseFloat(p.form) || 0,
-                ppm: calculatePPM(p),
-                price: p.now_cost / 10,
-                fdr: calculateFixtureDifficulty(p.team, 5),
-                transfersNet: p.github_transfers ?
-                    (p.github_transfers.transfers_in - p.github_transfers.transfers_out) / 1000 : 0
-            }));
-
-        contextData = {
-            ownershipThreshold: analysisState.ownershipThreshold,
-            differentials,
-            positionFilter: position,
-            totalFound: differentials.length
-        };
-    }
+    };
 
     // Build context for AI
     const context = {
         page: 'data-analysis',
-        tab: tab,
+        tab: 'overview',  // Always overview for AI insights
         position: position,
         gameweek: currentGW,
         data: contextData
