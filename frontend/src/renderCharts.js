@@ -14,6 +14,8 @@ import {
 } from './utils.js';
 import { calculateFixtureDifficulty } from './fixtures.js';
 import { renderPointsPriceChart } from './charts/pointsVsPrice.js';
+import { renderFormVsPriceChart } from './charts/formVsPrice.js';
+import { renderOwnershipVsFormChart } from './charts/ownershipVsForm.js';
 
 // ============================================================================
 // STATE
@@ -187,11 +189,13 @@ function renderCurrentChart() {
 
     switch (currentChartType) {
         case 'points-price':
-            // Use modular version
-            renderModularChart(contentContainer);
+            renderModularChart(contentContainer, 'points-price');
             break;
         case 'form-price':
-            renderFormPriceChart();
+            renderModularChart(contentContainer, 'form-price');
+            break;
+        case 'ownership-form':
+            renderModularChart(contentContainer, 'ownership-form');
             break;
         case 'xgi-actual':
             renderXgiActualChart();
@@ -202,14 +206,11 @@ function renderCurrentChart() {
         case 'ict-points':
             renderIctPointsChart();
             break;
-        case 'ownership-form':
-            renderOwnershipFormChart();
-            break;
         case 'fdr-form':
             renderFdrFormChart();
             break;
         default:
-            renderModularChart(contentContainer);
+            renderModularChart(contentContainer, 'points-price');
     }
 }
 
@@ -217,7 +218,7 @@ function renderCurrentChart() {
  * Render modular chart (new architecture)
  * Disposes old chart and creates new one using modular approach
  */
-async function renderModularChart(contentContainer) {
+async function renderModularChart(contentContainer, chartType) {
     // Dispose previous chart instance
     if (currentChart) {
         currentChart.dispose();
@@ -235,8 +236,20 @@ async function renderModularChart(contentContainer) {
         }
     }
 
-    // Call the modular chart render function
-    currentChart = await renderPointsPriceChart(contentContainer, echarts, currentPositionFilter);
+    // Call the appropriate modular chart render function
+    switch (chartType) {
+        case 'points-price':
+            currentChart = await renderPointsPriceChart(contentContainer, echarts, currentPositionFilter);
+            break;
+        case 'form-price':
+            currentChart = await renderFormVsPriceChart(contentContainer, echarts, currentPositionFilter);
+            break;
+        case 'ownership-form':
+            currentChart = await renderOwnershipVsFormChart(contentContainer, echarts, currentPositionFilter);
+            break;
+        default:
+            currentChart = await renderPointsPriceChart(contentContainer, echarts, currentPositionFilter);
+    }
 }
 
 // ============================================================================
