@@ -54,6 +54,12 @@ import {
 } from './renderMyTeamMobile.js';
 
 import {
+    renderCompactHeader,
+    renderCompactTeamList,
+    renderMatchSchedule
+} from './renderMyTeamCompact.js';
+
+import {
     initPullToRefresh,
     showRefreshToast
 } from './pullToRefresh.js';
@@ -476,19 +482,18 @@ function renderTeamOverviewTab(teamData) {
     const useMobile = shouldUseMobileLayout();
 
     if (useMobile) {
-        // Mobile-optimized layout
-        return `
-            <div style="margin-bottom: 1rem;">
-                ${renderMobileManagerInfo(teamData)}
-            </div>
+        // Mobile ultra-compact layout
+        // TODO: Get template player IDs from selected league
+        const templatePlayerIds = new Set();
 
-            ${renderMobileTeamSummary(allPlayers, gameweek, picks.entry_history)}
+        return `
+            ${renderCompactHeader(teamData, gameweek)}
+
+            ${renderCompactTeamList(allPlayers, gameweek, templatePlayerIds)}
+
+            ${renderMatchSchedule(allPlayers, gameweek)}
 
             ${problemPlayersSection}
-
-            <div style="margin-top: 1.5rem;">
-                ${renderSwipeablePlayerCards(allPlayers, gameweek)}
-            </div>
         `;
     } else {
         // Desktop layout (original)
