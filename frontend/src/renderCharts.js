@@ -38,10 +38,11 @@ export async function renderCharts(chartType = 'points-price') {
     const chartTypes = {
         'points-price': { icon: '💰', label: 'Points vs Price' },
         'form-price': { icon: '🔥', label: 'Form vs Price' },
-        'minutes-efficiency': { icon: '⏱️', label: 'Minutes vs Efficiency' },
-        'xgi-actual': { icon: '🎯', label: 'xGI vs Actual' },
         'ownership-form': { icon: '📊', label: 'Ownership vs Form' },
-        'fdr-form': { icon: '🗓️', label: 'Fixtures vs Form' }
+        'fdr-form': { icon: '🗓️', label: 'Fixtures vs Form' },
+        'xgi-actual': { icon: '🎯', label: 'xGI vs Actual' },
+        'xgc-actual': { icon: '🛡️', label: 'xGC vs Actual' },
+        'ict-points': { icon: '📈', label: 'ICT vs Points' }
     };
 
     container.innerHTML = `
@@ -79,19 +80,19 @@ export async function renderCharts(chartType = 'points-price') {
 
             <!-- Position Filter -->
             <div style="display: flex; gap: 0.5rem; margin-bottom: 2rem; flex-wrap: wrap;">
-                <button class="chart-position-filter" data-position="all" style="padding: 0.5rem 1rem; background: var(--primary-color); color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 600; transition: all 0.2s;">
+                <button class="chart-position-filter" data-position="all" style="padding: 0.5rem 1rem; background: ${currentPositionFilter === 'all' ? 'var(--primary-color)' : 'var(--bg-secondary)'}; color: ${currentPositionFilter === 'all' ? 'white' : 'var(--text-primary)'}; border: ${currentPositionFilter === 'all' ? 'none' : '1px solid var(--border-color)'}; border-radius: 0.5rem; cursor: pointer; font-weight: ${currentPositionFilter === 'all' ? '600' : '500'}; transition: all 0.2s;">
                     All Positions
                 </button>
-                <button class="chart-position-filter" data-position="GKP" style="padding: 0.5rem 1rem; background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 0.5rem; cursor: pointer; font-weight: 500; transition: all 0.2s;">
+                <button class="chart-position-filter" data-position="GKP" style="padding: 0.5rem 1rem; background: ${currentPositionFilter === 'GKP' ? 'var(--primary-color)' : 'var(--bg-secondary)'}; color: ${currentPositionFilter === 'GKP' ? 'white' : 'var(--text-primary)'}; border: ${currentPositionFilter === 'GKP' ? 'none' : '1px solid var(--border-color)'}; border-radius: 0.5rem; cursor: pointer; font-weight: ${currentPositionFilter === 'GKP' ? '600' : '500'}; transition: all 0.2s;">
                     GKP
                 </button>
-                <button class="chart-position-filter" data-position="DEF" style="padding: 0.5rem 1rem; background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 0.5rem; cursor: pointer; font-weight: 500; transition: all 0.2s;">
+                <button class="chart-position-filter" data-position="DEF" style="padding: 0.5rem 1rem; background: ${currentPositionFilter === 'DEF' ? 'var(--primary-color)' : 'var(--bg-secondary)'}; color: ${currentPositionFilter === 'DEF' ? 'white' : 'var(--text-primary)'}; border: ${currentPositionFilter === 'DEF' ? 'none' : '1px solid var(--border-color)'}; border-radius: 0.5rem; cursor: pointer; font-weight: ${currentPositionFilter === 'DEF' ? '600' : '500'}; transition: all 0.2s;">
                     DEF
                 </button>
-                <button class="chart-position-filter" data-position="MID" style="padding: 0.5rem 1rem; background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 0.5rem; cursor: pointer; font-weight: 500; transition: all 0.2s;">
+                <button class="chart-position-filter" data-position="MID" style="padding: 0.5rem 1rem; background: ${currentPositionFilter === 'MID' ? 'var(--primary-color)' : 'var(--bg-secondary)'}; color: ${currentPositionFilter === 'MID' ? 'white' : 'var(--text-primary)'}; border: ${currentPositionFilter === 'MID' ? 'none' : '1px solid var(--border-color)'}; border-radius: 0.5rem; cursor: pointer; font-weight: ${currentPositionFilter === 'MID' ? '600' : '500'}; transition: all 0.2s;">
                     MID
                 </button>
-                <button class="chart-position-filter" data-position="FWD" style="padding: 0.5rem 1rem; background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 0.5rem; cursor: pointer; font-weight: 500; transition: all 0.2s;">
+                <button class="chart-position-filter" data-position="FWD" style="padding: 0.5rem 1rem; background: ${currentPositionFilter === 'FWD' ? 'var(--primary-color)' : 'var(--bg-secondary)'}; color: ${currentPositionFilter === 'FWD' ? 'white' : 'var(--text-primary)'}; border: ${currentPositionFilter === 'FWD' ? 'none' : '1px solid var(--border-color)'}; border-radius: 0.5rem; cursor: pointer; font-weight: ${currentPositionFilter === 'FWD' ? '600' : '500'}; transition: all 0.2s;">
                     FWD
                 </button>
             </div>
@@ -187,11 +188,14 @@ function renderCurrentChart() {
         case 'form-price':
             renderFormPriceChart();
             break;
-        case 'minutes-efficiency':
-            renderMinutesEfficiencyChart();
-            break;
         case 'xgi-actual':
             renderXgiActualChart();
+            break;
+        case 'xgc-actual':
+            renderXgcActualChart();
+            break;
+        case 'ict-points':
+            renderIctPointsChart();
             break;
         case 'ownership-form':
             renderOwnershipFormChart();
@@ -278,7 +282,7 @@ async function renderPointsPriceChart() {
     contentContainer.innerHTML = createChartCard({
         title: 'Points vs Price',
         icon: '💰',
-        description: 'Find value picks and premium performers. Bubble size = ownership %, Your team = ⭐ (star shape with purple border)',
+        description: 'Find value picks and premium performers. Bubble size = ownership %',
         zones: [
             { color: '#10b981', label: 'Value Zone (low price, high points)' },
             { color: '#3b82f6', label: 'Premium Zone (high price, high points)' },
@@ -369,6 +373,15 @@ async function renderPointsPriceChart() {
         }
     });
 
+    // Calculate dynamic zone boundaries based on actual data
+    const allPoints = players.map(p => p.total_points || 0);
+    const maxPoints = Math.max(...allPoints, 50); // At least 50 to avoid very small charts
+    const yAxisMax = Math.ceil((maxPoints + 25) / 10) * 10; // Round up to nearest 10
+
+    // Define zone boundaries dynamically
+    // High points threshold = 60% of max points (above this = Value/Premium zones)
+    const highPointsThreshold = Math.round(maxPoints * 0.6);
+
     // Create series
     const series = Object.keys(positions).map(pos => ({
         name: positions[pos].name,
@@ -421,55 +434,82 @@ async function renderPointsPriceChart() {
             borderRadius: 3,
             distance: 5
         },
-        // Add value zones as background regions
-        markArea: pos === 'GKP' ? { // Only add zones once (on first series)
-            silent: true,
-            itemStyle: {
-                opacity: 0.08
-            },
-            data: [
-                // Value Zone (top-left): low price, high points - THE SWEET SPOT
-                [{
-                    name: 'Value Zone',
-                    xAxis: 3,
-                    yAxis: 120,
-                    itemStyle: { color: '#10b981' } // green
-                }, {
-                    xAxis: 8.5,
-                    yAxis: 300
-                }],
-                // Premium Zone (top-right): high price, high points - proven performers
-                [{
-                    name: 'Premium Zone',
-                    xAxis: 8.5,
-                    yAxis: 120,
-                    itemStyle: { color: '#3b82f6' } // blue
-                }, {
-                    xAxis: 15,
-                    yAxis: 300
-                }],
-                // Trap Zone (bottom-right): high price, low points - AVOID
-                [{
-                    name: 'Trap Zone',
-                    xAxis: 8.5,
-                    yAxis: 10,
-                    itemStyle: { color: '#ef4444' } // red
-                }, {
-                    xAxis: 15,
-                    yAxis: 120
-                }]
-            ],
-            label: {
-                show: true,
-                position: 'inside',
-                fontSize: 11,
-                fontWeight: 'bold',
-                color: textColor,
-                opacity: 0.5
-            }
-        } : undefined,
         data: positions[pos].data
     }));
+
+    // Add value zones FIRST as a separate series for proper rendering
+    series.unshift({
+        name: 'Value Zones',
+        type: 'scatter',
+        silent: true,
+        symbolSize: 0,
+        itemStyle: { opacity: 0 },
+        data: [],
+        z: -1,
+        markArea: {
+            silent: true,
+            itemStyle: { opacity: 0.15 },
+            data: [
+                [
+                    {
+                        name: 'Value Zone',
+                        xAxis: 3,
+                        yAxis: highPointsThreshold,
+                        itemStyle: { color: '#10b981' },
+                        label: {
+                            show: true,
+                            position: 'insideTopLeft',
+                            fontSize: 11,
+                            fontWeight: 'bold',
+                            color: textColor,
+                            backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)',
+                            padding: [4, 8],
+                            borderRadius: 4
+                        }
+                    },
+                    { xAxis: 8.5, yAxis: yAxisMax }
+                ],
+                [
+                    {
+                        name: 'Premium Zone',
+                        xAxis: 8.5,
+                        yAxis: highPointsThreshold,
+                        itemStyle: { color: '#3b82f6' },
+                        label: {
+                            show: true,
+                            position: 'insideTopRight',
+                            fontSize: 11,
+                            fontWeight: 'bold',
+                            color: textColor,
+                            backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)',
+                            padding: [4, 8],
+                            borderRadius: 4
+                        }
+                    },
+                    { xAxis: 15, yAxis: yAxisMax }
+                ],
+                [
+                    {
+                        name: 'Trap Zone',
+                        xAxis: 8.5,
+                        yAxis: 10,
+                        itemStyle: { color: '#ef4444' },
+                        label: {
+                            show: true,
+                            position: 'insideBottomRight',
+                            fontSize: 11,
+                            fontWeight: 'bold',
+                            color: textColor,
+                            backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)',
+                            padding: [4, 8],
+                            borderRadius: 4
+                        }
+                    },
+                    { xAxis: 15, yAxis: highPointsThreshold }
+                ]
+            ]
+        }
+    });
 
     // Initialize chart
     if (!echarts) {
@@ -591,7 +631,9 @@ async function renderPointsPriceChart() {
                     type: 'dashed',
                     opacity: 0.3
                 }
-            }
+            },
+            min: 0,
+            max: yAxisMax
         },
         series: series
     };
@@ -747,18 +789,81 @@ async function renderFormPriceChart() {
             borderRadius: 3,
             distance: 5
         },
-        markArea: pos === 'GKP' ? {
+        data: positions[pos].data
+    }));
+
+    // Add value zones as a separate series for consistent rendering
+    series.push({
+        name: 'Value Zones',
+        type: 'scatter',
+        silent: true,
+        symbolSize: 0,
+        itemStyle: { opacity: 0 },
+        data: [],
+        markArea: {
             silent: true,
             itemStyle: { opacity: 0.08 },
             data: [
-                [{ name: 'Hot Form Value', xAxis: 3, yAxis: 5, itemStyle: { color: '#10b981' } }, { xAxis: 8.5, yAxis: 10 }],
-                [{ name: 'Premium Form', xAxis: 8.5, yAxis: 5, itemStyle: { color: '#3b82f6' } }, { xAxis: 15, yAxis: 10 }],
-                [{ name: 'Cold Trap', xAxis: 8.5, yAxis: 0, itemStyle: { color: '#ef4444' } }, { xAxis: 15, yAxis: 5 }]
-            ],
-            label: { show: true, position: 'inside', fontSize: 11, fontWeight: 'bold', color: textColor, opacity: 0.5 }
-        } : undefined,
-        data: positions[pos].data
-    }));
+                [
+                    {
+                        name: 'Hot Form Value',
+                        xAxis: 3,
+                        yAxis: 5,
+                        itemStyle: { color: '#10b981' },
+                        label: {
+                            show: true,
+                            position: 'insideTopLeft',
+                            fontSize: 11,
+                            fontWeight: 'bold',
+                            color: textColor,
+                            backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)',
+                            padding: [4, 8],
+                            borderRadius: 4
+                        }
+                    },
+                    { xAxis: 8.5, yAxis: 10 }
+                ],
+                [
+                    {
+                        name: 'Premium Form',
+                        xAxis: 8.5,
+                        yAxis: 5,
+                        itemStyle: { color: '#3b82f6' },
+                        label: {
+                            show: true,
+                            position: 'insideTopRight',
+                            fontSize: 11,
+                            fontWeight: 'bold',
+                            color: textColor,
+                            backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)',
+                            padding: [4, 8],
+                            borderRadius: 4
+                        }
+                    },
+                    { xAxis: 15, yAxis: 10 }
+                ],
+                [
+                    {
+                        name: 'Cold Trap',
+                        xAxis: 8.5,
+                        yAxis: 0,
+                        itemStyle: { color: '#ef4444' },
+                        label: {
+                            show: true,
+                            position: 'insideBottomRight',
+                            fontSize: 11,
+                            fontWeight: 'bold',
+                            color: textColor,
+                            backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)',
+                            padding: [4, 8],
+                            borderRadius: 4
+                        }
+                    },
+                    { xAxis: 15, yAxis: 5 }
+                ]
+            ]
+        }
+    });
 
     if (!echarts) return;
     currentChart = echarts.init(chartContainer);
@@ -940,19 +1045,37 @@ async function renderMinutesEfficiencyChart() {
             },
             borderWidth: (params) => params.data.isMyPlayer ? 3 : 1
         },
-        data: data,
-        markArea: position === 'GKP' ? {
+        data: data
+    }));
+
+    // Add value zones as a separate series for consistent rendering
+    series.push({
+        name: 'Value Zones',
+        type: 'scatter',
+        silent: true,
+        symbolSize: 0,
+        itemStyle: { opacity: 0 },
+        data: [],
+        markArea: {
             silent: true,
-            itemStyle: {
-                color: 'transparent'
-            },
+            itemStyle: { opacity: 0.08 },
             data: [
                 [
                     {
                         name: 'Nailed Performers',
                         xAxis: 70,
                         yAxis: 4.5,
-                        itemStyle: { color: 'rgba(16, 185, 129, 0.1)' }
+                        itemStyle: { color: '#10b981' },
+                        label: {
+                            show: true,
+                            position: 'insideTopRight',
+                            fontSize: 11,
+                            fontWeight: 'bold',
+                            color: textColor,
+                            backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)',
+                            padding: [4, 8],
+                            borderRadius: 4
+                        }
                     },
                     {
                         xAxis: 100,
@@ -964,7 +1087,17 @@ async function renderMinutesEfficiencyChart() {
                         name: 'Rotation Risk',
                         xAxis: 0,
                         yAxis: 0,
-                        itemStyle: { color: 'rgba(251, 191, 36, 0.1)' }
+                        itemStyle: { color: '#fbbf24' },
+                        label: {
+                            show: true,
+                            position: 'insideTopLeft',
+                            fontSize: 11,
+                            fontWeight: 'bold',
+                            color: textColor,
+                            backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)',
+                            padding: [4, 8],
+                            borderRadius: 4
+                        }
                     },
                     {
                         xAxis: 50,
@@ -976,7 +1109,17 @@ async function renderMinutesEfficiencyChart() {
                         name: 'Bench Fodder',
                         xAxis: 0,
                         yAxis: 0,
-                        itemStyle: { color: 'rgba(239, 68, 68, 0.1)' }
+                        itemStyle: { color: '#ef4444' },
+                        label: {
+                            show: true,
+                            position: 'insideBottomLeft',
+                            fontSize: 11,
+                            fontWeight: 'bold',
+                            color: textColor,
+                            backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)',
+                            padding: [4, 8],
+                            borderRadius: 4
+                        }
                     },
                     {
                         xAxis: 50,
@@ -984,8 +1127,8 @@ async function renderMinutesEfficiencyChart() {
                     }
                 ]
             ]
-        } : undefined
-    }));
+        }
+    });
 
     // Initialize chart
     currentChart = echarts.init(chartContainer);
@@ -1553,19 +1696,37 @@ async function renderOwnershipFormChart() {
             },
             borderWidth: (params) => params.data.isMyPlayer ? 3 : 1
         },
-        data: data,
-        markArea: position === 'GKP' ? {
+        data: data
+    }));
+
+    // Add value zones as a separate series for consistent rendering
+    series.push({
+        name: 'Value Zones',
+        type: 'scatter',
+        silent: true,
+        symbolSize: 0,
+        itemStyle: { opacity: 0 },
+        data: [],
+        markArea: {
             silent: true,
-            itemStyle: {
-                color: 'transparent'
-            },
+            itemStyle: { opacity: 0.08 },
             data: [
                 [
                     {
                         name: 'Hidden Gems',
                         xAxis: 0,
                         yAxis: 5,
-                        itemStyle: { color: 'rgba(16, 185, 129, 0.1)' }
+                        itemStyle: { color: '#10b981' },
+                        label: {
+                            show: true,
+                            position: 'insideTopLeft',
+                            fontSize: 11,
+                            fontWeight: 'bold',
+                            color: textColor,
+                            backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)',
+                            padding: [4, 8],
+                            borderRadius: 4
+                        }
                     },
                     {
                         xAxis: 10,
@@ -1576,12 +1737,22 @@ async function renderOwnershipFormChart() {
                     {
                         name: 'Template Picks',
                         xAxis: 30,
-                        yAxis: 5,
-                        itemStyle: { color: 'rgba(59, 130, 246, 0.1)' }
+                        yAxis: 5.5,
+                        itemStyle: { color: '#3b82f6' },
+                        label: {
+                            show: true,
+                            position: 'insideTopRight',
+                            fontSize: 11,
+                            fontWeight: 'bold',
+                            color: textColor,
+                            backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)',
+                            padding: [4, 8],
+                            borderRadius: 4
+                        }
                     },
                     {
-                        xAxis: 'max',
-                        yAxis: 'max'
+                        xAxis: 100,
+                        yAxis: 12
                     }
                 ],
                 [
@@ -1589,16 +1760,26 @@ async function renderOwnershipFormChart() {
                         name: 'Avoid',
                         xAxis: 30,
                         yAxis: 0,
-                        itemStyle: { color: 'rgba(239, 68, 68, 0.1)' }
+                        itemStyle: { color: '#ef4444' },
+                        label: {
+                            show: true,
+                            position: 'insideBottomRight',
+                            fontSize: 11,
+                            fontWeight: 'bold',
+                            color: textColor,
+                            backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)',
+                            padding: [4, 8],
+                            borderRadius: 4
+                        }
                     },
                     {
-                        xAxis: 'max',
-                        yAxis: 3
+                        xAxis: 100,
+                        yAxis: 5
                     }
                 ]
             ]
-        } : undefined
-    }));
+        }
+    });
 
     // Initialize chart
     currentChart = echarts.init(chartContainer);
@@ -1859,19 +2040,38 @@ async function renderFdrFormChart() {
             },
             borderWidth: (params) => params.data.isMyPlayer ? 3 : 1
         },
-        data: data,
-        markArea: position === 'GKP' ? {
+        data: data
+    }));
+
+    // Add value zones as a separate series for consistent rendering
+    // Note: FDR axis is inverted (lower is better), so visual positions are flipped
+    series.push({
+        name: 'Value Zones',
+        type: 'scatter',
+        silent: true,
+        symbolSize: 0,
+        itemStyle: { opacity: 0 },
+        data: [],
+        markArea: {
             silent: true,
-            itemStyle: {
-                color: 'transparent'
-            },
+            itemStyle: { opacity: 0.08 },
             data: [
                 [
                     {
                         name: 'Prime Targets',
                         xAxis: 1,
                         yAxis: 5,
-                        itemStyle: { color: 'rgba(16, 185, 129, 0.1)' }
+                        itemStyle: { color: '#10b981' },
+                        label: {
+                            show: true,
+                            position: 'insideTopRight', // Visually right due to inverted axis
+                            fontSize: 11,
+                            fontWeight: 'bold',
+                            color: textColor,
+                            backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)',
+                            padding: [4, 8],
+                            borderRadius: 4
+                        }
                     },
                     {
                         xAxis: 3,
@@ -1883,7 +2083,17 @@ async function renderFdrFormChart() {
                         name: 'Fixture Swing',
                         xAxis: 3.5,
                         yAxis: 5,
-                        itemStyle: { color: 'rgba(251, 191, 36, 0.1)' }
+                        itemStyle: { color: '#fbbf24' },
+                        label: {
+                            show: true,
+                            position: 'insideTopLeft', // Visually left due to inverted axis
+                            fontSize: 11,
+                            fontWeight: 'bold',
+                            color: textColor,
+                            backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)',
+                            padding: [4, 8],
+                            borderRadius: 4
+                        }
                     },
                     {
                         xAxis: 5,
@@ -1895,7 +2105,17 @@ async function renderFdrFormChart() {
                         name: 'Avoid',
                         xAxis: 3.5,
                         yAxis: 0,
-                        itemStyle: { color: 'rgba(239, 68, 68, 0.1)' }
+                        itemStyle: { color: '#ef4444' },
+                        label: {
+                            show: true,
+                            position: 'insideBottomLeft', // Visually left due to inverted axis
+                            fontSize: 11,
+                            fontWeight: 'bold',
+                            color: textColor,
+                            backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)',
+                            padding: [4, 8],
+                            borderRadius: 4
+                        }
                     },
                     {
                         xAxis: 5,
@@ -1903,8 +2123,8 @@ async function renderFdrFormChart() {
                     }
                 ]
             ]
-        } : undefined
-    }));
+        }
+    });
 
     // Initialize chart
     currentChart = echarts.init(chartContainer);
@@ -2076,6 +2296,896 @@ async function renderFdrFormChart() {
     }
 
     console.log('FDR vs Form chart rendered successfully');
+}
+
+// ============================================================================
+// CHART 7: xGC VS ACTUAL GOALS CONCEDED (GKP/DEF)
+// ============================================================================
+
+async function renderXgcActualChart() {
+    const contentContainer = document.getElementById('chart-content-container');
+    if (!contentContainer) return;
+
+    contentContainer.innerHTML = createChartCard({
+        title: 'Expected xGC vs Actual Goals Conceded (per 90)',
+        icon: '🛡️',
+        description: 'Find defensive over/underperformers. Below diagonal = keeping more clean sheets than expected. Bubble size = ownership %',
+        zones: [
+            { color: '#10b981', label: 'Overperforming (below diagonal - conceding less)' },
+            { color: '#3b82f6', label: 'Expected (on diagonal)' },
+            { color: '#ef4444', label: 'Underperforming (above diagonal - conceding more)' }
+        ],
+        chartId: 'xgc-actual-chart'
+    });
+
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    const chartContainer = document.getElementById('xgc-actual-chart');
+    if (!chartContainer) {
+        console.error('Xgc-actual-chart container not found');
+        return;
+    }
+
+    if (currentChart) {
+        currentChart.dispose();
+    }
+
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const textColor = isDark ? '#e5e7eb' : '#374151';
+    const gridColor = isDark ? '#374151' : '#e5e7eb';
+
+    let players = getAllPlayers();
+
+    // Filter to GKP/DEF only
+    if (currentPositionFilter !== 'all') {
+        players = players.filter(p => getPositionShort(p) === currentPositionFilter);
+    } else {
+        players = players.filter(p => {
+            const pos = getPositionShort(p);
+            return pos === 'GKP' || pos === 'DEF';
+        });
+    }
+
+    // Calculate xGC/90 and actual GC/90
+    const chartData = players
+        .filter(p => p.minutes >= 270) // At least 3 full games
+        .map(p => {
+            const xGC90 = parseFloat(p.expected_goals_conceded_per_90) || 0;
+            const actualGC90 = p.minutes > 0 ? (p.goals_conceded / p.minutes) * 90 : 0;
+            const ownership = parseFloat(p.selected_by_percent) || 0;
+
+            return {
+                name: p.web_name,
+                value: [xGC90, actualGC90, ownership],
+                playerData: p,
+                isMyPlayer: window.myTeamPlayerIds?.includes(p.id) || false,
+                xGC90: xGC90,
+                actualGC90: actualGC90,
+                variance: actualGC90 - xGC90
+            };
+        })
+        .filter(d => d.xGC90 > 0 || d.actualGC90 > 0);
+
+    const positionColors = {
+        'GKP': '#fbbf24',
+        'DEF': '#10b981'
+    };
+
+    const seriesByPosition = {};
+    chartData.forEach(player => {
+        const position = getPositionShort(player.playerData);
+        if (!seriesByPosition[position]) {
+            seriesByPosition[position] = [];
+        }
+        seriesByPosition[position].push(player);
+    });
+
+    const maxXGC = Math.max(...chartData.map(d => d.xGC90), 2);
+    const maxActual = Math.max(...chartData.map(d => d.actualGC90), 2);
+    const maxValue = Math.ceil(Math.max(maxXGC, maxActual));
+
+    const series = Object.entries(seriesByPosition).map(([position, data]) => ({
+        name: position,
+        type: 'scatter',
+        symbolSize: (data) => {
+            const ownership = data[2];
+            return Math.max(8, Math.min(60, ownership * 3));
+        },
+        emphasis: {
+            focus: 'series',
+            label: {
+                show: true,
+                formatter: (param) => param.data.name,
+                position: 'top'
+            }
+        },
+        itemStyle: {
+            color: positionColors[position],
+            opacity: 0.7,
+            borderColor: (params) => {
+                return params.data.isMyPlayer ? '#fff' : positionColors[position];
+            },
+            borderWidth: (params) => params.data.isMyPlayer ? 3 : 1
+        },
+        data: data
+    }));
+
+    // Add diagonal line (expected = actual)
+    series.push({
+        name: 'Expected Line',
+        type: 'line',
+        data: [[0, 0], [maxValue, maxValue]],
+        lineStyle: {
+            color: isDark ? '#6b7280' : '#9ca3af',
+            width: 2,
+            type: 'dashed'
+        },
+        symbol: 'none',
+        silent: true,
+        z: 1
+    });
+
+    currentChart = echarts.init(chartContainer);
+    if (!currentChart) {
+        console.error('Failed to initialize chart');
+        return;
+    }
+
+    const option = {
+        backgroundColor: 'transparent',
+        textStyle: {
+            color: textColor
+        },
+        tooltip: {
+            trigger: 'item',
+            backgroundColor: isDark ? '#1f2937' : '#ffffff',
+            borderColor: isDark ? '#374151' : '#e5e7eb',
+            textStyle: {
+                color: textColor
+            },
+            formatter: (params) => {
+                if (params.seriesName === 'Expected Line') return '';
+
+                const data = params.data;
+                const player = data.playerData;
+                const xGC90 = data.value[0];
+                const actualGC90 = data.value[1];
+                const ownership = data.value[2];
+                const variance = data.variance;
+                const myTeamBadge = data.isMyPlayer ? ' ⭐' : '';
+                const position = getPositionShort(player);
+
+                let varianceLabel = '';
+                let varianceColor = '';
+                if (variance < -0.1) {
+                    varianceLabel = 'Overperforming';
+                    varianceColor = '#10b981';
+                } else if (variance > 0.1) {
+                    varianceLabel = 'Underperforming';
+                    varianceColor = '#ef4444';
+                } else {
+                    varianceLabel = 'As Expected';
+                    varianceColor = '#3b82f6';
+                }
+
+                return `
+                    <div style="padding: 4px;">
+                        <strong>${escapeHtml(data.name)}${myTeamBadge}</strong><br/>
+                        Position: ${position}<br/>
+                        xGC/90: ${xGC90.toFixed(2)}<br/>
+                        Actual GC/90: ${actualGC90.toFixed(2)}<br/>
+                        Variance: <span style="color: ${varianceColor}">${variance > 0 ? '+' : ''}${variance.toFixed(2)} (${varianceLabel})</span><br/>
+                        Total GC: ${player.goals_conceded || 0}<br/>
+                        Clean Sheets: ${player.clean_sheets || 0}<br/>
+                        Minutes: ${player.minutes}<br/>
+                        Ownership: ${ownership.toFixed(1)}%<br/>
+                        Price: £${(player.now_cost / 10).toFixed(1)}m
+                    </div>
+                `;
+            }
+        },
+        legend: {
+            data: ['GKP', 'DEF', 'Expected Line'],
+            top: 10,
+            textStyle: {
+                color: textColor
+            }
+        },
+        grid: {
+            left: '10%',
+            right: '10%',
+            bottom: '15%',
+            top: '15%',
+            containLabel: true
+        },
+        xAxis: {
+            type: 'value',
+            name: 'Expected Goals Conceded per 90 (xGC/90)',
+            nameLocation: 'middle',
+            nameGap: 30,
+            nameTextStyle: {
+                color: textColor,
+                fontSize: 12
+            },
+            axisLine: {
+                lineStyle: {
+                    color: gridColor
+                }
+            },
+            axisLabel: {
+                color: textColor
+            },
+            splitLine: {
+                lineStyle: {
+                    color: gridColor,
+                    opacity: 0.3
+                }
+            },
+            min: 0,
+            max: maxValue
+        },
+        yAxis: {
+            type: 'value',
+            name: 'Actual Goals Conceded per 90',
+            nameLocation: 'middle',
+            nameGap: 50,
+            nameTextStyle: {
+                color: textColor,
+                fontSize: 12
+            },
+            axisLine: {
+                lineStyle: {
+                    color: gridColor
+                }
+            },
+            axisLabel: {
+                color: textColor
+            },
+            splitLine: {
+                lineStyle: {
+                    color: gridColor,
+                    opacity: 0.3
+                }
+            },
+            min: 0,
+            max: maxValue
+        },
+        series: series
+    };
+
+    currentChart.setOption(option);
+
+    const resizeObserver = new ResizeObserver(() => {
+        if (currentChart) {
+            currentChart.resize();
+        }
+    });
+    resizeObserver.observe(chartContainer);
+
+    const exportBtn = document.getElementById('export-chart-btn');
+    if (exportBtn) {
+        const newExportBtn = exportBtn.cloneNode(true);
+        exportBtn.parentNode.replaceChild(newExportBtn, exportBtn);
+
+        newExportBtn.addEventListener('click', () => {
+            if (currentChart) {
+                try {
+                    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                    const url = currentChart.getDataURL({
+                        type: 'png',
+                        pixelRatio: 2,
+                        backgroundColor: isDark ? '#1f2937' : '#ffffff'
+                    });
+
+                    const link = document.createElement('a');
+                    link.download = `fpl-xgc-actual-${new Date().toISOString().split('T')[0]}.png`;
+                    link.href = url;
+                    link.click();
+
+                    console.log('Chart exported successfully');
+                } catch (error) {
+                    console.error('Error exporting chart:', error);
+                }
+            }
+        });
+    }
+
+    console.log('xGC vs Actual chart rendered successfully');
+}
+
+// ============================================================================
+// CHART 8: ICT INDEX VS ACTUAL POINTS
+// ============================================================================
+
+async function renderIctPointsChart() {
+    const contentContainer = document.getElementById('chart-content-container');
+    if (!contentContainer) return;
+
+    contentContainer.innerHTML = createChartCard({
+        title: 'ICT Index vs Actual Points',
+        icon: '📈',
+        description: 'ICT (Influence, Creativity, Threat) measures underlying performance. Above diagonal = efficient scoring, below = unlucky/due hauls. Bubble size = ownership %',
+        zones: [
+            { color: '#10b981', label: 'Efficient (above diagonal - converting ICT to points)' },
+            { color: '#3b82f6', label: 'Expected (on diagonal)' },
+            { color: '#fbbf24', label: 'Unlucky (below diagonal - high ICT, low points)' }
+        ],
+        chartId: 'ict-points-chart'
+    });
+
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    const chartContainer = document.getElementById('ict-points-chart');
+    if (!chartContainer) {
+        console.error('Ict-points-chart container not found');
+        return;
+    }
+
+    if (currentChart) {
+        currentChart.dispose();
+    }
+
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const textColor = isDark ? '#e5e7eb' : '#374151';
+    const gridColor = isDark ? '#374151' : '#e5e7eb';
+
+    let players = getAllPlayers();
+
+    if (currentPositionFilter !== 'all') {
+        players = players.filter(p => getPositionShort(p) === currentPositionFilter);
+    }
+
+    const chartData = players
+        .filter(p => p.minutes >= 270) // At least 3 full games
+        .map(p => {
+            const ictIndex = parseFloat(p.github_season?.ict_index) || parseFloat(p.ict_index) || 0;
+            const totalPoints = p.total_points || 0;
+            const ownership = parseFloat(p.selected_by_percent) || 0;
+
+            return {
+                name: p.web_name,
+                value: [ictIndex, totalPoints, ownership],
+                playerData: p,
+                isMyPlayer: window.myTeamPlayerIds?.includes(p.id) || false,
+                ictIndex: ictIndex,
+                totalPoints: totalPoints
+            };
+        })
+        .filter(d => d.ictIndex > 0 || d.totalPoints > 0);
+
+    const positionColors = {
+        'GKP': '#fbbf24',
+        'DEF': '#10b981',
+        'MID': '#3b82f6',
+        'FWD': '#ef4444'
+    };
+
+    const seriesByPosition = {};
+    chartData.forEach(player => {
+        const position = getPositionShort(player.playerData);
+        if (!seriesByPosition[position]) {
+            seriesByPosition[position] = [];
+        }
+        seriesByPosition[position].push(player);
+    });
+
+    // Calculate expected points per ICT ratio
+    const avgPointsPerICT = chartData.reduce((sum, d) => sum + (d.totalPoints / Math.max(d.ictIndex, 1)), 0) / chartData.length;
+    const maxICT = Math.max(...chartData.map(d => d.ictIndex), 10);
+    const maxPoints = Math.max(...chartData.map(d => d.totalPoints), 50);
+
+    const series = Object.entries(seriesByPosition).map(([position, data]) => ({
+        name: position,
+        type: 'scatter',
+        symbolSize: (data) => {
+            const ownership = data[2];
+            return Math.max(8, Math.min(60, ownership * 3));
+        },
+        emphasis: {
+            focus: 'series',
+            label: {
+                show: true,
+                formatter: (param) => param.data.name,
+                position: 'top'
+            }
+        },
+        itemStyle: {
+            color: positionColors[position],
+            opacity: 0.7,
+            borderColor: (params) => {
+                return params.data.isMyPlayer ? '#fff' : positionColors[position];
+            },
+            borderWidth: (params) => params.data.isMyPlayer ? 3 : 1
+        },
+        data: data
+    }));
+
+    // Add trend line (expected points based on average conversion)
+    series.push({
+        name: 'Expected Trend',
+        type: 'line',
+        data: [[0, 0], [maxICT, maxICT * avgPointsPerICT]],
+        lineStyle: {
+            color: isDark ? '#6b7280' : '#9ca3af',
+            width: 2,
+            type: 'dashed'
+        },
+        symbol: 'none',
+        silent: true,
+        z: 1
+    });
+
+    currentChart = echarts.init(chartContainer);
+    if (!currentChart) {
+        console.error('Failed to initialize chart');
+        return;
+    }
+
+    const option = {
+        backgroundColor: 'transparent',
+        textStyle: {
+            color: textColor
+        },
+        tooltip: {
+            trigger: 'item',
+            backgroundColor: isDark ? '#1f2937' : '#ffffff',
+            borderColor: isDark ? '#374151' : '#e5e7eb',
+            textStyle: {
+                color: textColor
+            },
+            formatter: (params) => {
+                if (params.seriesName === 'Expected Trend') return '';
+
+                const data = params.data;
+                const player = data.playerData;
+                const ictIndex = data.value[0];
+                const totalPoints = data.value[1];
+                const ownership = data.value[2];
+                const myTeamBadge = data.isMyPlayer ? ' ⭐' : '';
+                const position = getPositionShort(player);
+
+                const expectedPoints = ictIndex * avgPointsPerICT;
+                const efficiency = totalPoints / Math.max(expectedPoints, 1);
+
+                let efficiencyLabel = '';
+                let efficiencyColor = '';
+                if (efficiency > 1.15) {
+                    efficiencyLabel = 'Very Efficient';
+                    efficiencyColor = '#10b981';
+                } else if (efficiency > 0.85) {
+                    efficiencyLabel = 'As Expected';
+                    efficiencyColor = '#3b82f6';
+                } else {
+                    efficiencyLabel = 'Unlucky/Inefficient';
+                    efficiencyColor = '#fbbf24';
+                }
+
+                return `
+                    <div style="padding: 4px;">
+                        <strong>${escapeHtml(data.name)}${myTeamBadge}</strong><br/>
+                        Position: ${position}<br/>
+                        ICT Index: ${ictIndex.toFixed(1)}<br/>
+                        Total Points: ${totalPoints}<br/>
+                        Expected Pts: ${expectedPoints.toFixed(0)}<br/>
+                        Efficiency: <span style="color: ${efficiencyColor}">${(efficiency * 100).toFixed(0)}% (${efficiencyLabel})</span><br/>
+                        Ownership: ${ownership.toFixed(1)}%<br/>
+                        Price: £${(player.now_cost / 10).toFixed(1)}m
+                    </div>
+                `;
+            }
+        },
+        legend: {
+            data: ['GKP', 'DEF', 'MID', 'FWD', 'Expected Trend'],
+            top: 10,
+            textStyle: {
+                color: textColor
+            }
+        },
+        grid: {
+            left: '10%',
+            right: '10%',
+            bottom: '15%',
+            top: '15%',
+            containLabel: true
+        },
+        xAxis: {
+            type: 'value',
+            name: 'ICT Index (Influence, Creativity, Threat)',
+            nameLocation: 'middle',
+            nameGap: 30,
+            nameTextStyle: {
+                color: textColor,
+                fontSize: 12
+            },
+            axisLine: {
+                lineStyle: {
+                    color: gridColor
+                }
+            },
+            axisLabel: {
+                color: textColor
+            },
+            splitLine: {
+                lineStyle: {
+                    color: gridColor,
+                    opacity: 0.3
+                }
+            },
+            min: 0
+        },
+        yAxis: {
+            type: 'value',
+            name: 'Total Points',
+            nameLocation: 'middle',
+            nameGap: 50,
+            nameTextStyle: {
+                color: textColor,
+                fontSize: 12
+            },
+            axisLine: {
+                lineStyle: {
+                    color: gridColor
+                }
+            },
+            axisLabel: {
+                color: textColor
+            },
+            splitLine: {
+                lineStyle: {
+                    color: gridColor,
+                    opacity: 0.3
+                }
+            },
+            min: 0,
+            max: 400
+        },
+        series: series
+    };
+
+    currentChart.setOption(option);
+
+    const resizeObserver = new ResizeObserver(() => {
+        if (currentChart) {
+            currentChart.resize();
+        }
+    });
+    resizeObserver.observe(chartContainer);
+
+    const exportBtn = document.getElementById('export-chart-btn');
+    if (exportBtn) {
+        const newExportBtn = exportBtn.cloneNode(true);
+        exportBtn.parentNode.replaceChild(newExportBtn, exportBtn);
+
+        newExportBtn.addEventListener('click', () => {
+            if (currentChart) {
+                try {
+                    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                    const url = currentChart.getDataURL({
+                        type: 'png',
+                        pixelRatio: 2,
+                        backgroundColor: isDark ? '#1f2937' : '#ffffff'
+                    });
+
+                    const link = document.createElement('a');
+                    link.download = `fpl-ict-points-${new Date().toISOString().split('T')[0]}.png`;
+                    link.href = url;
+                    link.click();
+
+                    console.log('Chart exported successfully');
+                } catch (error) {
+                    console.error('Error exporting chart:', error);
+                }
+            }
+        });
+    }
+
+    console.log('ICT vs Points chart rendered successfully');
+}
+
+// ============================================================================
+// CHART 9: xCS VS ACTUAL CLEAN SHEETS (GKP/DEF)
+// ============================================================================
+
+async function renderXcsActualChart() {
+    const contentContainer = document.getElementById('chart-content-container');
+    if (!contentContainer) return;
+
+    contentContainer.innerHTML = createChartCard({
+        title: 'Expected xCS vs Actual Clean Sheets',
+        icon: '🥅',
+        description: 'Derived from xGC - find lucky/unlucky defenders. Above diagonal = more CS than expected. Bubble size = ownership %',
+        zones: [
+            { color: '#10b981', label: 'Overperforming (above diagonal - more CS)' },
+            { color: '#3b82f6', label: 'Expected (on diagonal)' },
+            { color: '#fbbf24', label: 'Underperforming (below diagonal - fewer CS)' }
+        ],
+        chartId: 'xcs-actual-chart'
+    });
+
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    const chartContainer = document.getElementById('xcs-actual-chart');
+    if (!chartContainer) {
+        console.error('Xcs-actual-chart container not found');
+        return;
+    }
+
+    if (currentChart) {
+        currentChart.dispose();
+    }
+
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const textColor = isDark ? '#e5e7eb' : '#374151';
+    const gridColor = isDark ? '#374151' : '#e5e7eb';
+
+    let players = getAllPlayers();
+
+    // Filter to GKP/DEF only
+    if (currentPositionFilter !== 'all') {
+        players = players.filter(p => getPositionShort(p) === currentPositionFilter);
+    } else {
+        players = players.filter(p => {
+            const pos = getPositionShort(p);
+            return pos === 'GKP' || pos === 'DEF';
+        });
+    }
+
+    const chartData = players
+        .filter(p => p.minutes >= 270) // At least 3 full games
+        .map(p => {
+            const xGC90 = parseFloat(p.expected_goals_conceded_per_90) || 0;
+            const gamesPlayed = Math.floor(p.minutes / 90);
+            // Estimate expected CS based on xGC (lower xGC = higher probability of CS)
+            // Rough heuristic: if xGC/90 < 1, good chance of CS
+            const xCS = gamesPlayed > 0 ? gamesPlayed * Math.max(0, (1.2 - xGC90)) : 0;
+            const actualCS = p.clean_sheets || 0;
+            const ownership = parseFloat(p.selected_by_percent) || 0;
+
+            // Also get CS per 90 from github data if available
+            const csper90 = parseFloat(p.github_season?.clean_sheets_per_90) || 0;
+
+            return {
+                name: p.web_name,
+                value: [xCS, actualCS, ownership],
+                playerData: p,
+                isMyPlayer: window.myTeamPlayerIds?.includes(p.id) || false,
+                xCS: xCS,
+                actualCS: actualCS,
+                variance: actualCS - xCS,
+                csper90: csper90,
+                gamesPlayed: gamesPlayed
+            };
+        })
+        .filter(d => d.gamesPlayed >= 3); // At least 3 games
+
+    const positionColors = {
+        'GKP': '#fbbf24',
+        'DEF': '#10b981'
+    };
+
+    const seriesByPosition = {};
+    chartData.forEach(player => {
+        const position = getPositionShort(player.playerData);
+        if (!seriesByPosition[position]) {
+            seriesByPosition[position] = [];
+        }
+        seriesByPosition[position].push(player);
+    });
+
+    const maxXCS = Math.max(...chartData.map(d => d.xCS), 5);
+    const maxActualCS = Math.max(...chartData.map(d => d.actualCS), 5);
+    const maxValue = Math.ceil(Math.max(maxXCS, maxActualCS));
+
+    const series = Object.entries(seriesByPosition).map(([position, data]) => ({
+        name: position,
+        type: 'scatter',
+        symbolSize: (data) => {
+            const ownership = data[2];
+            return Math.max(8, Math.min(60, ownership * 3));
+        },
+        emphasis: {
+            focus: 'series',
+            label: {
+                show: true,
+                formatter: (param) => param.data.name,
+                position: 'top'
+            }
+        },
+        itemStyle: {
+            color: positionColors[position],
+            opacity: 0.7,
+            borderColor: (params) => {
+                return params.data.isMyPlayer ? '#fff' : positionColors[position];
+            },
+            borderWidth: (params) => params.data.isMyPlayer ? 3 : 1
+        },
+        data: data
+    }));
+
+    // Add diagonal line (expected = actual)
+    series.push({
+        name: 'Expected Line',
+        type: 'line',
+        data: [[0, 0], [maxValue, maxValue]],
+        lineStyle: {
+            color: isDark ? '#6b7280' : '#9ca3af',
+            width: 2,
+            type: 'dashed'
+        },
+        symbol: 'none',
+        silent: true,
+        z: 1
+    });
+
+    currentChart = echarts.init(chartContainer);
+    if (!currentChart) {
+        console.error('Failed to initialize chart');
+        return;
+    }
+
+    const option = {
+        backgroundColor: 'transparent',
+        textStyle: {
+            color: textColor
+        },
+        tooltip: {
+            trigger: 'item',
+            backgroundColor: isDark ? '#1f2937' : '#ffffff',
+            borderColor: isDark ? '#374151' : '#e5e7eb',
+            textStyle: {
+                color: textColor
+            },
+            formatter: (params) => {
+                if (params.seriesName === 'Expected Line') return '';
+
+                const data = params.data;
+                const player = data.playerData;
+                const xCS = data.value[0];
+                const actualCS = data.value[1];
+                const ownership = data.value[2];
+                const variance = data.variance;
+                const myTeamBadge = data.isMyPlayer ? ' ⭐' : '';
+                const position = getPositionShort(player);
+
+                let varianceLabel = '';
+                let varianceColor = '';
+                if (variance > 1) {
+                    varianceLabel = 'Very Lucky';
+                    varianceColor = '#10b981';
+                } else if (variance > 0) {
+                    varianceLabel = 'Slightly Lucky';
+                    varianceColor = '#22c55e';
+                } else if (variance < -1) {
+                    varianceLabel = 'Unlucky';
+                    varianceColor = '#fbbf24';
+                } else {
+                    varianceLabel = 'As Expected';
+                    varianceColor = '#3b82f6';
+                }
+
+                return `
+                    <div style="padding: 4px;">
+                        <strong>${escapeHtml(data.name)}${myTeamBadge}</strong><br/>
+                        Position: ${position}<br/>
+                        Expected CS: ${xCS.toFixed(1)}<br/>
+                        Actual CS: ${actualCS}<br/>
+                        Variance: <span style="color: ${varianceColor}">${variance > 0 ? '+' : ''}${variance.toFixed(1)} (${varianceLabel})</span><br/>
+                        CS/90: ${data.csper90.toFixed(2)}<br/>
+                        Games Played: ${data.gamesPlayed}<br/>
+                        Total GC: ${player.goals_conceded || 0}<br/>
+                        Ownership: ${ownership.toFixed(1)}%<br/>
+                        Price: £${(player.now_cost / 10).toFixed(1)}m
+                    </div>
+                `;
+            }
+        },
+        legend: {
+            data: ['GKP', 'DEF', 'Expected Line'],
+            top: 10,
+            textStyle: {
+                color: textColor
+            }
+        },
+        grid: {
+            left: '10%',
+            right: '10%',
+            bottom: '15%',
+            top: '15%',
+            containLabel: true
+        },
+        xAxis: {
+            type: 'value',
+            name: 'Expected Clean Sheets (derived from xGC)',
+            nameLocation: 'middle',
+            nameGap: 30,
+            nameTextStyle: {
+                color: textColor,
+                fontSize: 12
+            },
+            axisLine: {
+                lineStyle: {
+                    color: gridColor
+                }
+            },
+            axisLabel: {
+                color: textColor
+            },
+            splitLine: {
+                lineStyle: {
+                    color: gridColor,
+                    opacity: 0.3
+                }
+            },
+            min: 0,
+            max: maxValue
+        },
+        yAxis: {
+            type: 'value',
+            name: 'Actual Clean Sheets',
+            nameLocation: 'middle',
+            nameGap: 50,
+            nameTextStyle: {
+                color: textColor,
+                fontSize: 12
+            },
+            axisLine: {
+                lineStyle: {
+                    color: gridColor
+                }
+            },
+            axisLabel: {
+                color: textColor
+            },
+            splitLine: {
+                lineStyle: {
+                    color: gridColor,
+                    opacity: 0.3
+                }
+            },
+            min: 0,
+            max: maxValue
+        },
+        series: series
+    };
+
+    currentChart.setOption(option);
+
+    const resizeObserver = new ResizeObserver(() => {
+        if (currentChart) {
+            currentChart.resize();
+        }
+    });
+    resizeObserver.observe(chartContainer);
+
+    const exportBtn = document.getElementById('export-chart-btn');
+    if (exportBtn) {
+        const newExportBtn = exportBtn.cloneNode(true);
+        exportBtn.parentNode.replaceChild(newExportBtn, exportBtn);
+
+        newExportBtn.addEventListener('click', () => {
+            if (currentChart) {
+                try {
+                    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                    const url = currentChart.getDataURL({
+                        type: 'png',
+                        pixelRatio: 2,
+                        backgroundColor: isDark ? '#1f2937' : '#ffffff'
+                    });
+
+                    const link = document.createElement('a');
+                    link.download = `fpl-xcs-actual-${new Date().toISOString().split('T')[0]}.png`;
+                    link.href = url;
+                    link.click();
+
+                    console.log('Chart exported successfully');
+                } catch (error) {
+                    console.error('Error exporting chart:', error);
+                }
+            }
+        });
+    }
+
+    console.log('xCS vs Actual CS chart rendered successfully');
 }
 
 // ============================================================================

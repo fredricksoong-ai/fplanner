@@ -9,7 +9,8 @@ import { escapeHtml } from './utils.js';
 import {
     updateOwnershipThreshold as updateAnalysisOwnership,
     setFixtureFilter,
-    setMomentumFilter
+    setMomentumFilter,
+    setPriceRange
 } from './renderDataAnalysis.js';
 
 // ============================================================================
@@ -27,7 +28,7 @@ let myTeamData = null;
 
 /**
  * Navigate to a specific page
- * @param {string} page - Page name ('my-team', 'transfer-committee', 'data-analysis', 'search')
+ * @param {string} page - Page name ('my-team', 'team-builder', 'data-analysis', 'charts', 'search')
  * @param {string} subTab - Optional sub-tab for pages with tabs
  */
 export function navigate(page, subTab = 'overview') {
@@ -82,6 +83,9 @@ function renderPage() {
         case 'my-team':
             renderMyTeamPage();
             break;
+        case 'team-builder':
+            renderTeamBuilderPage();
+            break;
         case 'data-analysis':
             renderDataAnalysis();
             break;
@@ -103,6 +107,11 @@ function renderPage() {
 async function renderMyTeamPage() {
     const { renderMyTeamForm } = await import('./renderMyTeam.js');
     renderMyTeamForm();
+}
+
+async function renderTeamBuilderPage() {
+    const { renderTeamBuilder } = await import('./renderTeamBuilder.js');
+    renderTeamBuilder();
 }
 
 async function renderDataAnalysis() {
@@ -277,10 +286,17 @@ async function initializeApp() {
 
         // Parse URL hash for initial page
         const hash = window.location.hash.slice(1); // Remove #
-        const [page, subTab] = hash.split('/');
-        
+        const [page, subTab, position] = hash.split('/');
+
         if (page) {
-            navigate(page, subTab || 'overview');
+            if (page === 'data-analysis' && position) {
+                currentPage = page;
+                currentSubTab = subTab || 'overview';
+                updateNavigation();
+                renderDataAnalysis(subTab || 'overview', position);
+            } else {
+                navigate(page, subTab || 'overview');
+            }
         } else {
             navigate('my-team');
         }
@@ -333,6 +349,7 @@ function setupNavigation() {
     
     const pages = [
         { id: 'my-team', label: 'My Team', icon: 'fa-users' },
+        { id: 'team-builder', label: 'Team Builder', icon: 'fa-chess' },
         { id: 'data-analysis', label: 'Data Analysis', icon: 'fa-chart-bar' },
         { id: 'charts', label: 'Charts', icon: 'fa-chart-line' },
         { id: 'search', label: 'Search', icon: 'fa-search' }
@@ -511,6 +528,22 @@ window.toggleMomentumFilter = (checked) => {
     }, 50);
 };
 
+/**
+ * Toggle price range filter
+ */
+window.togglePriceRange = (range) => {
+    // Update state in renderDataAnalysis module
+    setPriceRange(range);
+
+    // Re-render differentials
+    const hash = window.location.hash.slice(1);
+    const parts = hash.split('/');
+    const position = parts[2] || 'all';
+    setTimeout(() => {
+        window.renderDataAnalysis('differentials', position);
+    }, 50);
+};
+
 // ============================================================================
 // START THE APP
 // ============================================================================
@@ -525,10 +558,15 @@ if (document.readyState === 'loading') {
 // Handle browser back/forward
 window.addEventListener('hashchange', () => {
     const hash = window.location.hash.slice(1);
-    const [page, subTab] = hash.split('/');
+    const [page, subTab, position] = hash.split('/');
     if (page) {
         currentPage = page;
         currentSubTab = subTab || 'overview';
-        renderPage();
+        updateNavigation();
+        if (page === 'data-analysis' && position) {
+            renderDataAnalysis(subTab || 'overview', position);
+        } else {
+            renderPage();
+        }
     }
 });

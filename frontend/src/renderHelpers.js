@@ -57,7 +57,7 @@ export function renderPlayerTable(players, fixtureMode = 'next5', myTeamPlayerId
     }
 
     let html = `
-        <div style="overflow-x: auto; background: var(--bg-primary); border-radius: 12px; box-shadow: 0 2px 8px var(--shadow);">
+        <div style="overflow-x: auto; overflow-y: visible; background: var(--bg-primary); border-radius: 12px; box-shadow: 0 2px 8px var(--shadow); padding-top: 120px; margin-top: -120px;">
             <table style="width: 100%; font-size: 0.875rem; border-collapse: collapse;">
                 <thead style="background: var(--primary-color); color: white;">
                     <tr>
@@ -107,9 +107,15 @@ export function renderPlayerTable(players, fixtureMode = 'next5', myTeamPlayerId
             fixtures = [...past3, ...next3];
         }
 
+        // Ensure we have the right number of fixture cells (fill with empty cells if needed)
+        const expectedFixtureCount = fixtureHeaders.length;
+        while (fixtures.length < expectedFixtureCount) {
+            fixtures.push({ opponent: '—', difficulty: 3, event: 0 });
+        }
+
         html += `
             <tr style="background: ${hasHighSeverity ? 'rgba(220, 38, 38, 0.05)' : rowBg};">
-                <td style="padding: 0.75rem 1rem;">
+                <td style="padding: 0.75rem 1rem; position: relative;">
                     <strong>${escapeHtml(player.web_name)}</strong>
                     ${riskTooltip ? `<span style="margin-left: 0.5rem;">${riskTooltip}</span>` : ''}
                     ${isInMyTeam ? ' <span style="color: #8b5cf6; font-size: 0.75rem;">⭐</span>' : ''}
@@ -130,11 +136,14 @@ export function renderPlayerTable(players, fixtureMode = 'next5', myTeamPlayerId
                 ${fixtures.map((f, idx) => {
                     const isUpcomingGW = idx === upcomingGWIndex;
                     const cellBg = isUpcomingGW ? 'background: rgba(139, 92, 246, 0.1);' : '';
+                    const isEmptyCell = f.opponent === '—';
                     return `
                         <td style="padding: 0.5rem; text-align: center; ${cellBg}">
-                            <span class="${getDifficultyClass(f.difficulty)}" style="padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.75rem; display: inline-block;">
-                                ${f.opponent}
-                            </span>
+                            ${isEmptyCell ? '<span style="color: var(--text-secondary);">—</span>' : `
+                                <span class="${getDifficultyClass(f.difficulty)}" style="padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.75rem; display: inline-block;">
+                                    ${f.opponent}
+                                </span>
+                            `}
                         </td>
                     `;
                 }).join('')}
