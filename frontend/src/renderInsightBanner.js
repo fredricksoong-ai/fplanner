@@ -140,20 +140,59 @@ export function renderInsightBannerError(message, contextId) {
 }
 
 /**
- * Render AI insights banner
+ * Render a category's insights as bullet points
+ * @param {Array<string>} insights - Array of insight strings
+ * @returns {string} HTML string
+ */
+function renderCategoryInsights(insights) {
+    if (!insights || insights.length === 0) {
+        return '<div style="color: var(--text-secondary); font-style: italic;">No insights available</div>';
+    }
+
+    return `
+        <ul style="
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        ">
+            ${insights.map(insight => `
+                <li style="
+                    margin-bottom: 0.75rem;
+                    padding-left: 1.5rem;
+                    position: relative;
+                    line-height: 1.6;
+                    color: var(--text-primary);
+                ">
+                    <span style="
+                        position: absolute;
+                        left: 0;
+                        color: var(--accent-color);
+                        font-weight: 700;
+                    ">•</span>
+                    ${escapeHtml(insight)}
+                </li>
+            `).join('')}
+        </ul>
+    `;
+}
+
+/**
+ * Render AI insights banner with tabbed categories
  * @param {Object} insights - Insights data from API
  * @param {string} contextId - Unique context ID for refresh functionality
  * @returns {string} HTML string
  */
 export function renderInsightBanner(insights, contextId) {
     // Handle error state
-    if (insights.error || !insights.items || insights.items.length === 0) {
+    if (insights.error || !insights.categories) {
         const message = insights.message || 'Unable to load AI insights';
         return renderInsightBannerError(message, contextId);
     }
 
     const timestamp = new Date(insights.timestamp).toLocaleTimeString();
     const gwText = insights.gameweek ? ` FOR GW ${insights.gameweek}` : '';
+
+    const categories = ['Overview', 'Hidden Gems', 'Differentials', 'Transfer Targets', 'Team Analysis'];
 
     return `
         <div class="ai-insights-banner" id="ai-insights-${contextId}" style="
@@ -170,15 +209,60 @@ export function renderInsightBanner(insights, contextId) {
                     color: var(--accent-color);
                     font-weight: 700;
                     font-size: 1rem;
-                    margin: 0;
+                    margin: 0 0 1rem 0;
                 ">
                     🤖 AI INSIGHTS${gwText}
                 </h3>
+
+                <!-- Tab Navigation -->
+                <div class="ai-insights-tabs" style="
+                    display: flex;
+                    gap: 0.5rem;
+                    flex-wrap: wrap;
+                    margin-bottom: 1rem;
+                ">
+                    ${categories.map((category, index) => `
+                        <button
+                            class="ai-insight-tab-btn"
+                            data-category="${category}"
+                            data-context="${contextId}"
+                            style="
+                                padding: 0.5rem 1rem;
+                                background: ${index === 0 ? 'var(--accent-color)' : 'var(--bg-secondary)'};
+                                color: ${index === 0 ? 'white' : 'var(--text-secondary)'};
+                                border: 1px solid ${index === 0 ? 'var(--accent-color)' : 'var(--border-color)'};
+                                border-radius: 6px;
+                                cursor: pointer;
+                                font-size: 0.75rem;
+                                font-weight: 600;
+                                transition: all 0.2s;
+                                white-space: nowrap;
+                            "
+                            onmouseover="if(this.style.background !== 'var(--accent-color)') this.style.opacity='0.7'"
+                            onmouseout="this.style.opacity='1'"
+                        >
+                            ${category}
+                        </button>
+                    `).join('')}
+                </div>
             </div>
 
-            <!-- Insights Items -->
-            <div class="ai-insights-items">
-                ${insights.items.map(item => renderInsightItem(item)).join('')}
+            <!-- Tab Content -->
+            <div class="ai-insights-content" style="
+                min-height: 200px;
+                padding: 1rem;
+                background: var(--bg-secondary);
+                border-radius: 8px;
+            ">
+                ${categories.map((category, index) => `
+                    <div
+                        class="ai-insight-tab-content"
+                        data-category="${category}"
+                        style="display: ${index === 0 ? 'block' : 'none'};"
+                    >
+                        ${renderCategoryInsights(insights.categories[category])}
+                    </div>
+                `).join('')}
             </div>
 
             <!-- Footer -->
@@ -222,6 +306,37 @@ export function attachInsightBannerListeners(contextId, onRetry) {
             }
         });
     }
+
+    // Attach tab switching listeners
+    const tabBtns = document.querySelectorAll(`.ai-insight-tab-btn[data-context="${contextId}"]`);
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const targetCategory = btn.dataset.category;
+
+            // Update button styles
+            tabBtns.forEach(b => {
+                if (b.dataset.category === targetCategory) {
+                    b.style.background = 'var(--accent-color)';
+                    b.style.color = 'white';
+                    b.style.borderColor = 'var(--accent-color)';
+                } else {
+                    b.style.background = 'var(--bg-secondary)';
+                    b.style.color = 'var(--text-secondary)';
+                    b.style.borderColor = 'var(--border-color)';
+                }
+            });
+
+            // Show/hide content
+            const contents = document.querySelectorAll('.ai-insight-tab-content');
+            contents.forEach(content => {
+                if (content.dataset.category === targetCategory) {
+                    content.style.display = 'block';
+                } else {
+                    content.style.display = 'none';
+                }
+            });
+        });
+    });
 }
 
 /**
@@ -249,6 +364,9 @@ export async function loadAndRenderInsights(context, containerId) {
 
         // Render banner
         container.innerHTML = renderInsightBanner(insights, contextId);
+
+        // Attach tab switching listeners
+        attachInsightBannerListeners(contextId);
 
     } catch (error) {
         console.error('Failed to load AI insights:', error);

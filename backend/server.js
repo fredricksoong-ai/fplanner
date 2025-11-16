@@ -801,22 +801,30 @@ app.post('/api/ai-insights', async (req, res) => {
 
     console.log(`🤖 Calling Gemini API...`);
 
-    // Call Gemini API
+    // Call Gemini API with Google Search grounding
     const geminiResponse = await axios.post(
       `${GEMINI_API_URL}?key=${GEMINI_API_KEY}`,
       {
         contents: [{
           parts: [{ text: prompt }]
         }],
+        tools: [{
+          googleSearchRetrieval: {
+            dynamicRetrievalConfig: {
+              mode: "MODE_DYNAMIC",
+              dynamicThreshold: 0.3
+            }
+          }
+        }],
         generationConfig: {
           temperature: 0.7,
-          maxOutputTokens: 4096,  // Increased to allow for thoughts + response
+          maxOutputTokens: 8192,  // Increased for 5 categories + search results
           topP: 0.8,
           topK: 40
         }
       },
       {
-        timeout: 30000,
+        timeout: 45000,  // Increased timeout for search grounding
         headers: {
           'Content-Type': 'application/json'
         }
@@ -830,7 +838,8 @@ app.post('/api/ai-insights', async (req, res) => {
     // Parse Gemini response
     const insights = parseGeminiResponse(geminiResponse.data, gameweek);
 
-    console.log(`✅ AI Insights generated (${insights.items.length} items)`);
+    const categoryCount = Object.keys(insights.categories || {}).length;
+    console.log(`✅ AI Insights generated (${categoryCount} categories)`);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
     res.json(insights);
@@ -910,63 +919,54 @@ app.get('/api/leagues/:leagueId', async (req, res) => {
  * Build AI prompt based on context
  */
 function buildAIPrompt(page, tab, position, gameweek, data) {
-  const positionText = position === 'all' ? 'all positions' : position;
-
   if (page === 'data-analysis' && tab === 'overview') {
-    return `You are an expert Fantasy Premier League analyst. Analyze the following market data for Gameweek ${gameweek} and provide 3-4 actionable insights.
+    return `You are a concise, sharp, and highly accurate Fantasy Premier League (FPL) analyst. Your task is to analyze the current Premier League state and FPL player data to generate compelling transfer insights across multiple categories.
 
-Context:
-- Viewing: ${positionText} overview
-- Market Data: ${JSON.stringify(data, null, 2)}
+CRITICAL INSTRUCTIONS:
+- Current FPL Gameweek is ${gameweek}
+- Use the provided player data context AND use Google Search to find the most recent real-world news (injuries, form, managerial changes, fixtures/results)
+- Generate exactly 3 sharp, concise, and actionable insights for EACH of the following 5 categories
+- Each insight should be a single compelling statement (1-2 sentences max)
+- Use actual player names and specific stats
+- Base analysis on current Premier League results, recent news, and player data
 
-Provide insights as a JSON array with this exact structure:
-[
-  {
-    "type": "opportunity|warning|action|insight",
-    "title": "Short headline (max 60 chars)",
-    "description": "1-2 sentence explanation with specific stats and player names",
-    "priority": "high|medium|low"
-  }
-]
+PLAYER DATA CONTEXT:
+${JSON.stringify(data, null, 2)}
 
-Focus on:
-1. Best value players (high PPM, good form)
-2. Emerging differentials (low ownership, strong performance)
-3. Position-specific trends and comparisons
-4. Form vs price analysis
+OUTPUT FORMAT (MUST be valid JSON):
+{
+  "Overview": [
+    "insight 1 about overall FPL market trends and key opportunities",
+    "insight 2 about form players and captain picks",
+    "insight 3 about major news or fixture swings"
+  ],
+  "Hidden Gems": [
+    "insight 1 about undervalued players with strong underlying stats",
+    "insight 2 about budget enablers flying under the radar",
+    "insight 3 about players in form but under 5% ownership"
+  ],
+  "Differentials": [
+    "insight 1 about low-owned players with high upside (under 15% ownership)",
+    "insight 2 about transfer momentum and price rise candidates",
+    "insight 3 about fixture-based differential opportunities"
+  ],
+  "Transfer Targets": [
+    "insight 1 about premium players worth transferring in",
+    "insight 2 about mid-price players with excellent fixtures",
+    "insight 3 about players to avoid or transfer out"
+  ],
+  "Team Analysis": [
+    "insight 1 about optimal team structure and budget allocation",
+    "insight 2 about position-specific trends (GKP/DEF/MID/FWD)",
+    "insight 3 about chip strategy or captaincy recommendations"
+  ]
+}
 
-Be concise, data-driven, and actionable. Use actual player names from the data provided.`;
-  }
-
-  if (page === 'data-analysis' && tab === 'differentials') {
-    return `You are an expert Fantasy Premier League analyst. Analyze the following differential players data for Gameweek ${gameweek} and provide 3-4 actionable insights.
-
-Context:
-- Viewing: ${positionText} differentials
-- Ownership Threshold: ${data.ownershipThreshold}%
-- Players Data: ${JSON.stringify(data, null, 2)}
-
-Provide insights as a JSON array with this exact structure:
-[
-  {
-    "type": "opportunity|warning|action|insight",
-    "title": "Short headline (max 60 chars)",
-    "description": "1-2 sentence explanation with specific stats and player names",
-    "priority": "high|medium|low"
-  }
-]
-
-Focus on:
-1. Transfer momentum alerts (players rising/falling)
-2. Price prediction insights
-3. Fixture window analysis (next 3-5 gameweeks)
-4. Contrarian advantage opportunities
-
-Be concise, data-driven, and actionable. Use actual player names from the data provided.`;
+Generate the JSON now.`;
   }
 
-  // Default generic prompt
-  return `You are an expert Fantasy Premier League analyst. Provide 3-4 helpful insights for Gameweek ${gameweek} as a JSON array.`;
+  // Fallback for other tabs (shouldn't be called with new design)
+  return `You are an expert Fantasy Premier League analyst. Provide comprehensive insights for Gameweek ${gameweek}.`;
 }
 
 /**
@@ -986,43 +986,56 @@ function parseGeminiResponse(geminiData, gameweek) {
     // Try to extract JSON from response (handles markdown code blocks)
     let jsonText = text;
 
-    // Remove markdown code blocks if present
-    const jsonMatch = text.match(/```(?:json)?\s*(\[[\s\S]*?\])\s*```/);
+    // Remove markdown code blocks if present (for object structure)
+    const jsonMatch = text.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
     if (jsonMatch) {
       jsonText = jsonMatch[1];
       console.log('🔍 DEBUG: Found JSON in markdown code block');
     } else {
-      // Try to find JSON array directly
-      const arrayMatch = text.match(/\[[\s\S]*\]/);
-      if (arrayMatch) {
-        jsonText = arrayMatch[0];
-        console.log('🔍 DEBUG: Found JSON array directly');
+      // Try to find JSON object directly
+      const objectMatch = text.match(/\{[\s\S]*\}/);
+      if (objectMatch) {
+        jsonText = objectMatch[0];
+        console.log('🔍 DEBUG: Found JSON object directly');
       } else {
-        console.log('⚠️ DEBUG: No JSON array found in response');
+        console.log('⚠️ DEBUG: No JSON object found in response');
       }
     }
 
-    console.log('🔍 DEBUG: JSON text to parse:', jsonText.substring(0, 300));
+    console.log('🔍 DEBUG: JSON text to parse:', jsonText.substring(0, 500));
 
     // Parse JSON
-    const items = JSON.parse(jsonText);
+    const categories = JSON.parse(jsonText);
 
-    // Validate structure
-    if (!Array.isArray(items)) {
-      throw new Error('Parsed response is not an array');
+    // Validate structure - should be an object with category keys
+    if (typeof categories !== 'object' || Array.isArray(categories)) {
+      throw new Error('Parsed response is not an object');
     }
 
-    // Validate and sanitize each item
-    const validatedItems = items.map(item => ({
-      type: ['opportunity', 'warning', 'action', 'insight'].includes(item.type) ? item.type : 'insight',
-      title: String(item.title || 'Insight').substring(0, 80),
-      description: String(item.description || '').substring(0, 500),
-      priority: ['high', 'medium', 'low'].includes(item.priority) ? item.priority : 'medium'
-    }));
+    // Expected categories
+    const expectedCategories = ['Overview', 'Hidden Gems', 'Differentials', 'Transfer Targets', 'Team Analysis'];
+
+    // Validate and sanitize each category
+    const validatedCategories = {};
+    for (const category of expectedCategories) {
+      if (categories[category] && Array.isArray(categories[category])) {
+        // Ensure each insight is a string and trim to reasonable length
+        validatedCategories[category] = categories[category]
+          .slice(0, 3)  // Take first 3 insights
+          .map(insight => String(insight || '').substring(0, 300));
+      } else {
+        // Fallback if category missing
+        validatedCategories[category] = [
+          'Analysis pending for this category',
+          'Please refresh for updated insights',
+          'Check back at next era refresh (5am/5pm UTC)'
+        ];
+      }
+    }
 
     return {
       gameweek: gameweek,
-      items: validatedItems,
+      categories: validatedCategories,
       timestamp: Date.now()
     };
 
@@ -1031,14 +1044,20 @@ function parseGeminiResponse(geminiData, gameweek) {
     console.error('❌ Full error:', error.stack);
 
     // TEMPORARY DEBUG: Return raw response in error case
+    const fallbackCategories = {};
+    const expectedCategories = ['Overview', 'Hidden Gems', 'Differentials', 'Transfer Targets', 'Team Analysis'];
+
+    for (const category of expectedCategories) {
+      fallbackCategories[category] = [
+        `DEBUG: Parse Error - ${error.message}`,
+        'Check browser console for raw Gemini response',
+        'AI insights will be available after fixing the issue'
+      ];
+    }
+
     return {
       gameweek: gameweek,
-      items: [{
-        type: 'insight',
-        title: 'DEBUG: Parse Error',
-        description: `Error: ${error.message}. Check browser console for raw Gemini response.`,
-        priority: 'low'
-      }],
+      categories: fallbackCategories,
       timestamp: Date.now(),
       parseError: true,
       // DEBUG INFO - will be visible in browser console
