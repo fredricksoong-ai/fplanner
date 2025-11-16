@@ -190,7 +190,6 @@ export function renderInsightBanner(insights, contextId) {
     }
 
     const timestamp = new Date(insights.timestamp).toLocaleTimeString();
-    const gwText = insights.gameweek ? ` FOR GW ${insights.gameweek}` : '';
 
     const categories = ['Overview', 'Hidden Gems', 'Differentials', 'Transfer Targets', 'Team Analysis'];
 
@@ -211,7 +210,7 @@ export function renderInsightBanner(insights, contextId) {
                     font-size: 1rem;
                     margin: 0 0 1rem 0;
                 ">
-                    🤖 AI INSIGHTS${gwText}
+                    AI Insights
                 </h3>
 
                 <!-- Tab Navigation -->

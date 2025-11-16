@@ -957,9 +957,9 @@ OUTPUT FORMAT (MUST be valid JSON):
     "insight 3 about players to avoid or transfer out"
   ],
   "Team Analysis": [
-    "insight 1 about optimal team structure and budget allocation",
-    "insight 2 about position-specific trends (GKP/DEF/MID/FWD)",
-    "insight 3 about chip strategy or captaincy recommendations"
+    "insight 1 about teams with the best fixtures in the next 5 gameweeks",
+    "insight 2 about teams to avoid due to tough upcoming fixtures",
+    "insight 3 about fixture swings or teams entering/exiting good runs"
   ]
 }
 
