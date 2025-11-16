@@ -510,12 +510,18 @@ function renderLeagueTabs() {
         return '';
     }
 
+    // Get team data to access league names
+    const teamLeagues = myTeamState.teamData?.team?.leagues?.classic || [];
+
     return `
-        <div style="display: flex; gap: 0.25rem; background: var(--bg-secondary); padding: 0.5rem; border-bottom: 2px solid var(--border-color);">
+        <div class="league-tabs-container" style="display: flex; gap: 0.25rem; background: var(--bg-secondary); padding: 0.5rem; border-bottom: 2px solid var(--border-color);">
             ${myTeamState.selectedLeagues.map((leagueId, index) => {
                 const isActive = myTeamState.activeLeagueTab === leagueId;
+
+                // Try to get league name from team data first (immediate), then from standings cache
+                const teamLeague = teamLeagues.find(l => l.id === leagueId);
                 const leagueData = myTeamState.leagueStandingsCache.get(leagueId);
-                const leagueName = leagueData?.league?.name || `League ${index + 1}`;
+                const leagueName = teamLeague?.name || leagueData?.league?.name || `League ${index + 1}`;
 
                 return `
                     <button
@@ -593,28 +599,33 @@ function renderLeagueContent() {
  * Toggle league selection (with dynamic tab management)
  */
 function toggleLeagueSelection(leagueId) {
+    console.log(`🔄 Toggle league selection: ${leagueId}`);
+
     const index = myTeamState.selectedLeagues.indexOf(leagueId);
     const wasSelected = index > -1;
 
     if (wasSelected) {
         // Deselect - remove from selected leagues
         myTeamState.selectedLeagues.splice(index, 1);
+        console.log(`➖ Deselected league ${leagueId}`);
 
         // If this was the active tab, switch to another tab or clear
         if (myTeamState.activeLeagueTab === leagueId) {
             myTeamState.activeLeagueTab = myTeamState.selectedLeagues[0] || null;
+            console.log(`🔄 Active tab changed to: ${myTeamState.activeLeagueTab}`);
         }
     } else {
         // Select (if under limit)
         if (myTeamState.selectedLeagues.length >= 3) {
+            console.warn('⚠️ Already at max 3 leagues');
             return; // Already at max, do nothing
         }
         myTeamState.selectedLeagues.push(leagueId);
+        console.log(`✅ Selected league ${leagueId}`);
 
-        // Set as active tab if it's the first selection
-        if (myTeamState.selectedLeagues.length === 1) {
-            myTeamState.activeLeagueTab = leagueId;
-        }
+        // Set newly selected league as active tab
+        myTeamState.activeLeagueTab = leagueId;
+        console.log(`🎯 Set as active tab: ${leagueId}`);
     }
 
     // Save to localStorage
@@ -628,6 +639,7 @@ function toggleLeagueSelection(leagueId) {
 
     // Load data for newly selected league
     if (!wasSelected && !myTeamState.leagueStandingsCache.has(leagueId)) {
+        console.log(`📥 Loading data for league ${leagueId}...`);
         loadLeagueStandingsForTab(leagueId);
     }
 }
@@ -678,11 +690,30 @@ function updateLeagueSelectionCount() {
  * Update league tabs UI (dynamically add/remove tabs)
  */
 function updateLeagueTabsUI() {
-    const tabsContainer = document.querySelector('[style*="border-bottom: 2px solid var(--border-color)"]');
-    if (!tabsContainer) return;
+    // Find the tabs container
+    const tabsContainer = document.querySelector('.league-tabs-container');
+    if (!tabsContainer) {
+        console.warn('⚠️ League tabs container not found');
+        return;
+    }
 
-    // Re-render tabs
-    tabsContainer.innerHTML = renderLeagueTabs().replace(/<div[^>]*>/, '').replace(/<\/div>$/, '');
+    // Re-render tabs HTML
+    const newTabsHTML = renderLeagueTabs();
+
+    if (newTabsHTML) {
+        // Parse the new HTML to get just the buttons
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = newTabsHTML;
+        const newButtons = tempDiv.querySelector('.league-tabs-container').innerHTML;
+        tabsContainer.innerHTML = newButtons;
+        tabsContainer.style.display = 'flex'; // Make sure it's visible
+        console.log('✅ Updated league tabs UI');
+    } else {
+        // No selected leagues, clear tabs
+        tabsContainer.innerHTML = '';
+        tabsContainer.style.display = 'none';
+        console.log('🔄 Cleared league tabs (no selections)');
+    }
 
     // Re-attach event listeners for new tabs
     attachLeagueTabListeners();
