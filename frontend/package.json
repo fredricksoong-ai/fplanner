@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "generate-icons": "node public/icons/generate-icons.js"
   },
   "devDependencies": {
     "@vitest/ui": "^4.0.9",
