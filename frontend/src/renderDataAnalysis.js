@@ -4,7 +4,8 @@
 // ============================================================================
 
 import {
-    getAllPlayers
+    getAllPlayers,
+    fplBootstrap
 } from './data.js';
 
 import {
@@ -42,7 +43,8 @@ let analysisState = {
     position: 'all',
     ownershipThreshold: 5,
     fixtureFilter: false,
-    momentumFilter: false
+    momentumFilter: false,
+    priceRange: 'all' // 'all', 'budget' (<6.0m), 'mid' (6.0-9.0m), 'premium' (>9.0m)
 };
 
 // Export functions to update state
@@ -58,6 +60,10 @@ export function setMomentumFilter(checked) {
     analysisState.momentumFilter = checked;
 }
 
+export function setPriceRange(range) {
+    analysisState.priceRange = range;
+}
+
 export function renderDataAnalysis(subTab = 'overview', position = 'all') {
     const container = document.getElementById('app-container');
     analysisState.position = position;
@@ -69,7 +75,7 @@ export function renderDataAnalysis(subTab = 'overview', position = 'all') {
             </h1>
 
             <!-- Main Tabs -->
-            <div style="display: flex; gap: 0.5rem; border-bottom: 2px solid var(--border-color); margin-bottom: 1rem;">
+            <div style="display: flex; gap: 0.5rem; border-bottom: 2px solid var(--border-color); margin-bottom: 1rem; overflow-x: auto; flex-wrap: nowrap;">
                 <button
                     class="analysis-tab-btn"
                     data-tab="overview"
@@ -83,9 +89,28 @@ export function renderDataAnalysis(subTab = 'overview', position = 'all') {
                         cursor: pointer;
                         font-weight: 600;
                         transition: all 0.2s;
+                        white-space: nowrap;
                     "
                 >
                     Overview
+                </button>
+                <button
+                    class="analysis-tab-btn"
+                    data-tab="hidden-gems"
+                    data-position="${position}"
+                    style="
+                        padding: 0.75rem 1.5rem;
+                        background: ${subTab === 'hidden-gems' ? 'var(--primary-color)' : 'transparent'};
+                        color: ${subTab === 'hidden-gems' ? 'white' : 'var(--text-primary)'};
+                        border: none;
+                        border-bottom: 3px solid ${subTab === 'hidden-gems' ? 'var(--primary-color)' : 'transparent'};
+                        cursor: pointer;
+                        font-weight: 600;
+                        transition: all 0.2s;
+                        white-space: nowrap;
+                    "
+                >
+                    Hidden Gems
                 </button>
                 <button
                     class="analysis-tab-btn"
@@ -100,9 +125,46 @@ export function renderDataAnalysis(subTab = 'overview', position = 'all') {
                         cursor: pointer;
                         font-weight: 600;
                         transition: all 0.2s;
+                        white-space: nowrap;
                     "
                 >
                     Differentials
+                </button>
+                <button
+                    class="analysis-tab-btn"
+                    data-tab="transfer-targets"
+                    data-position="${position}"
+                    style="
+                        padding: 0.75rem 1.5rem;
+                        background: ${subTab === 'transfer-targets' ? 'var(--primary-color)' : 'transparent'};
+                        color: ${subTab === 'transfer-targets' ? 'white' : 'var(--text-primary)'};
+                        border: none;
+                        border-bottom: 3px solid ${subTab === 'transfer-targets' ? 'var(--primary-color)' : 'transparent'};
+                        cursor: pointer;
+                        font-weight: 600;
+                        transition: all 0.2s;
+                        white-space: nowrap;
+                    "
+                >
+                    Transfer Targets
+                </button>
+                <button
+                    class="analysis-tab-btn"
+                    data-tab="team-analysis"
+                    data-position="${position}"
+                    style="
+                        padding: 0.75rem 1.5rem;
+                        background: ${subTab === 'team-analysis' ? 'var(--primary-color)' : 'transparent'};
+                        color: ${subTab === 'team-analysis' ? 'white' : 'var(--text-primary)'};
+                        border: none;
+                        border-bottom: 3px solid ${subTab === 'team-analysis' ? 'var(--primary-color)' : 'transparent'};
+                        cursor: pointer;
+                        font-weight: 600;
+                        transition: all 0.2s;
+                        white-space: nowrap;
+                    "
+                >
+                    Team Analysis
                 </button>
             </div>
 
@@ -135,8 +197,16 @@ export function renderDataAnalysis(subTab = 'overview', position = 'all') {
     let contentHTML = '';
     if (subTab === 'overview') {
         contentHTML = renderAnalysisOverview(position);
-    } else {
+    } else if (subTab === 'hidden-gems') {
+        contentHTML = renderHiddenGems(position);
+    } else if (subTab === 'differentials') {
         contentHTML = renderDifferentials(position);
+    } else if (subTab === 'transfer-targets') {
+        contentHTML = renderTransferTargets(position);
+    } else if (subTab === 'team-analysis') {
+        contentHTML = renderTeamAnalysis(position);
+    } else {
+        contentHTML = renderAnalysisOverview(position);
     }
 
     container.innerHTML = `
@@ -189,6 +259,14 @@ export function renderDataAnalysis(subTab = 'overview', position = 'all') {
         });
     }
 
+    // Add event listeners for price range buttons
+    const priceRangeButtons = container.querySelectorAll('.price-range-btn');
+    priceRangeButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            window.togglePriceRange(btn.dataset.range);
+        });
+    });
+
     attachRiskTooltipListeners();
 }
 
@@ -205,6 +283,11 @@ function renderAnalysisOverview(position = 'all') {
     const bestValue = players.filter(p => calculateMinutesPercentage(p, getCurrentGW()) > 30);
     const top15Value = sortPlayers(bestValue, 'ppm', false).slice(0, 15);
     const top15Form = sortPlayers(bestValue, 'form', false).slice(0, 15);
+
+    // Penalty takers (exclude GKP)
+    const penaltyTakers = players.filter(p =>
+        p.penalties_order === 1 && p.element_type !== 1
+    ).sort((a, b) => calculateFixtureDifficulty(a.team, 5) - calculateFixtureDifficulty(b.team, 5));
 
     // Defensive standouts (for outfield players only)
     let defensiveSection = '';
@@ -264,7 +347,20 @@ function renderAnalysisOverview(position = 'all') {
                 ${renderPositionSpecificTable(top15Form, position)}
             </div>
 
-            <!-- Section 4: Defensive Standouts (if applicable) -->
+            <!-- Section 4: Penalty Takers -->
+            ${penaltyTakers.length > 0 ? `
+                <div style="margin-top: 3rem;">
+                    <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
+                        ⚽ Penalty Takers
+                    </h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+                        First-choice penalty takers sorted by upcoming fixture difficulty
+                    </p>
+                    ${renderPositionSpecificTable(penaltyTakers.slice(0, 15), position)}
+                </div>
+            ` : ''}
+
+            <!-- Section 5: Defensive Standouts (if applicable) -->
             ${defensiveSection}
         </div>
     `;
@@ -283,6 +379,12 @@ function renderDifferentials(position = 'all') {
     const differentials = players.filter(p => {
         const ownership = parseFloat(p.selected_by_percent) || 0;
         if (ownership >= analysisState.ownershipThreshold) return false;
+
+        // Price range filter
+        const price = p.now_cost / 10; // Convert to millions
+        if (analysisState.priceRange === 'budget' && price >= 6.0) return false;
+        if (analysisState.priceRange === 'mid' && (price < 6.0 || price >= 9.0)) return false;
+        if (analysisState.priceRange === 'premium' && price < 9.0) return false;
 
         // Position-specific thresholds
         const minPercentage = calculateMinutesPercentage(p, getCurrentGW());
@@ -332,6 +434,69 @@ function renderDifferentials(position = 'all') {
                     />
                 </div>
 
+                <!-- Price Range Filter -->
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Price Range</label>
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <button
+                            class="price-range-btn"
+                            data-range="all"
+                            style="
+                                padding: 0.5rem 1rem;
+                                background: ${analysisState.priceRange === 'all' ? 'var(--accent-color)' : 'var(--bg-primary)'};
+                                color: ${analysisState.priceRange === 'all' ? 'white' : 'var(--text-primary)'};
+                                border: 1px solid ${analysisState.priceRange === 'all' ? 'var(--accent-color)' : 'var(--border-color)'};
+                                border-radius: 6px;
+                                cursor: pointer;
+                                font-weight: 500;
+                                font-size: 0.875rem;
+                            "
+                        >All Prices</button>
+                        <button
+                            class="price-range-btn"
+                            data-range="budget"
+                            style="
+                                padding: 0.5rem 1rem;
+                                background: ${analysisState.priceRange === 'budget' ? 'var(--accent-color)' : 'var(--bg-primary)'};
+                                color: ${analysisState.priceRange === 'budget' ? 'white' : 'var(--text-primary)'};
+                                border: 1px solid ${analysisState.priceRange === 'budget' ? 'var(--accent-color)' : 'var(--border-color)'};
+                                border-radius: 6px;
+                                cursor: pointer;
+                                font-weight: 500;
+                                font-size: 0.875rem;
+                            "
+                        >Budget (<£6.0m)</button>
+                        <button
+                            class="price-range-btn"
+                            data-range="mid"
+                            style="
+                                padding: 0.5rem 1rem;
+                                background: ${analysisState.priceRange === 'mid' ? 'var(--accent-color)' : 'var(--bg-primary)'};
+                                color: ${analysisState.priceRange === 'mid' ? 'white' : 'var(--text-primary)'};
+                                border: 1px solid ${analysisState.priceRange === 'mid' ? 'var(--accent-color)' : 'var(--border-color)'};
+                                border-radius: 6px;
+                                cursor: pointer;
+                                font-weight: 500;
+                                font-size: 0.875rem;
+                            "
+                        >Mid-range (£6-9m)</button>
+                        <button
+                            class="price-range-btn"
+                            data-range="premium"
+                            style="
+                                padding: 0.5rem 1rem;
+                                background: ${analysisState.priceRange === 'premium' ? 'var(--accent-color)' : 'var(--bg-primary)'};
+                                color: ${analysisState.priceRange === 'premium' ? 'white' : 'var(--text-primary)'};
+                                border: 1px solid ${analysisState.priceRange === 'premium' ? 'var(--accent-color)' : 'var(--border-color)'};
+                                border-radius: 6px;
+                                cursor: pointer;
+                                font-weight: 500;
+                                font-size: 0.875rem;
+                            "
+                        >Premium (>£9.0m)</button>
+                    </div>
+                </div>
+
                 <!-- Checkboxes -->
                 <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
                     <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
@@ -364,6 +529,338 @@ function renderDifferentials(position = 'all') {
             ${sortedDiffs.length > 0 ? renderPositionSpecificTable(sortedDiffs, position) : '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">No differentials found matching criteria. Try adjusting filters.</div>'}
         </div>
     `;
+}
+
+function renderHiddenGems(position = 'all') {
+    let players = getAllPlayers();
+
+    // Filter by position if selected
+    if (position !== 'all') {
+        const posMap = { 'GKP': 1, 'DEF': 2, 'MID': 3, 'FWD': 4 };
+        players = players.filter(p => p.element_type === posMap[position]);
+    }
+
+    // Filter players with enough minutes and data
+    const activePlayers = players.filter(p => {
+        const minPercentage = calculateMinutesPercentage(p, getCurrentGW());
+        return minPercentage > 30;
+    });
+
+    // xG Overperformers (actual goals > expected)
+    const overperformers = activePlayers.filter(p => {
+        const xG = parseFloat(p.expected_goals) || 0;
+        const actualGoals = p.goals_scored || 0;
+        return actualGoals > xG + 1; // At least 1 goal over expected
+    }).sort((a, b) => {
+        const aVariance = (a.goals_scored || 0) - (parseFloat(a.expected_goals) || 0);
+        const bVariance = (b.goals_scored || 0) - (parseFloat(b.expected_goals) || 0);
+        return bVariance - aVariance;
+    }).slice(0, 15);
+
+    // xG Underperformers (expected > actual, likely to bounce back)
+    const underperformers = activePlayers.filter(p => {
+        const xG = parseFloat(p.expected_goals) || 0;
+        const actualGoals = p.goals_scored || 0;
+        const xGI = parseFloat(p.expected_goal_involvements) || 0;
+        return xG > 2 && (xG - actualGoals) > 1.5; // High xG but underperforming
+    }).sort((a, b) => {
+        const aVariance = (parseFloat(a.expected_goals) || 0) - (a.goals_scored || 0);
+        const bVariance = (parseFloat(b.expected_goals) || 0) - (b.goals_scored || 0);
+        return bVariance - aVariance;
+    }).slice(0, 15);
+
+    // Bonus magnets (high BPS per 90, if available via github_season)
+    const bonusMagnets = activePlayers.filter(p => {
+        return p.bonus && p.bonus > 0;
+    }).sort((a, b) => b.bonus - a.bonus).slice(0, 15);
+
+    return `
+        <div>
+            <!-- Section 1: xG Overperformers -->
+            <div style="margin-bottom: 3rem;">
+                <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
+                    🔥 xG Overperformers
+                </h2>
+                <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+                    Players scoring more than expected (hot streak, may not be sustainable)
+                </p>
+                ${overperformers.length > 0 ? renderPositionSpecificTable(overperformers, position) : '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">No overperformers found</div>'}
+            </div>
+
+            <!-- Section 2: xG Underperformers -->
+            <div style="margin-bottom: 3rem;">
+                <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
+                    📈 xG Underperformers (Bounce-back Candidates)
+                </h2>
+                <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+                    High xG but low actual goals - likely to return to form
+                </p>
+                ${underperformers.length > 0 ? renderPositionSpecificTable(underperformers, position) : '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">No underperformers found</div>'}
+            </div>
+
+            <!-- Section 3: Bonus Magnets -->
+            <div style="margin-bottom: 3rem;">
+                <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
+                    🎁 Bonus Magnets
+                </h2>
+                <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+                    Players with high bonus points (valuable for tight gameweeks)
+                </p>
+                ${bonusMagnets.length > 0 ? renderPositionSpecificTable(bonusMagnets, position) : '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">No bonus magnets found</div>'}
+            </div>
+        </div>
+    `;
+}
+
+function renderTransferTargets(position = 'all') {
+    let players = getAllPlayers();
+
+    // Filter by position if selected
+    if (position !== 'all') {
+        const posMap = { 'GKP': 1, 'DEF': 2, 'MID': 3, 'FWD': 4 };
+        players = players.filter(p => p.element_type === posMap[position]);
+    }
+
+    // Rising stars (positive momentum + good fixtures + good form)
+    const risingStars = players.filter(p => {
+        const minPercentage = calculateMinutesPercentage(p, getCurrentGW());
+        if (minPercentage < 30) return false;
+
+        const form = parseFloat(p.form) || 0;
+        const fdr5 = calculateFixtureDifficulty(p.team, 5);
+
+        let hasPositiveMomentum = false;
+        if (p.github_transfers) {
+            const net = p.github_transfers.transfers_in - p.github_transfers.transfers_out;
+            hasPositiveMomentum = net > 0;
+        }
+
+        return form > 4 && fdr5 <= 3.0 && hasPositiveMomentum;
+    }).sort((a, b) => {
+        const aNet = a.github_transfers ? (a.github_transfers.transfers_in - a.github_transfers.transfers_out) : 0;
+        const bNet = b.github_transfers ? (b.github_transfers.transfers_in - b.github_transfers.transfers_out) : 0;
+        return bNet - aNet;
+    }).slice(0, 20);
+
+    // Sell candidates (negative momentum + bad fixtures + poor form)
+    const sellCandidates = players.filter(p => {
+        const minPercentage = calculateMinutesPercentage(p, getCurrentGW());
+        const ownership = parseFloat(p.selected_by_percent) || 0;
+        if (minPercentage < 20 || ownership < 2) return false;
+
+        const form = parseFloat(p.form) || 0;
+        const fdr5 = calculateFixtureDifficulty(p.team, 5);
+
+        let hasNegativeMomentum = false;
+        if (p.github_transfers) {
+            const net = p.github_transfers.transfers_in - p.github_transfers.transfers_out;
+            hasNegativeMomentum = net < -10000; // Significant negative transfers
+        }
+
+        return (form < 3 || fdr5 >= 4.0) && hasNegativeMomentum;
+    }).sort((a, b) => {
+        const aNet = a.github_transfers ? (a.github_transfers.transfers_in - a.github_transfers.transfers_out) : 0;
+        const bNet = b.github_transfers ? (b.github_transfers.transfers_in - b.github_transfers.transfers_out) : 0;
+        return aNet - bNet;
+    }).slice(0, 20);
+
+    // Fixture turnarounds (bad fixtures now, good fixtures soon)
+    const fixtureTurnarounds = players.filter(p => {
+        const minPercentage = calculateMinutesPercentage(p, getCurrentGW());
+        if (minPercentage < 30) return false;
+
+        const next3FDR = calculateFixtureDifficulty(p.team, 3);
+        // Would need to calculate next 3 after that for swing
+        // For now, just use players with improving fixtures
+        return next3FDR <= 2.5;
+    }).sort((a, b) => {
+        const aFDR = calculateFixtureDifficulty(a.team, 5);
+        const bFDR = calculateFixtureDifficulty(b.team, 5);
+        return aFDR - bFDR;
+    }).slice(0, 15);
+
+    return `
+        <div>
+            <!-- Section 1: Rising Stars -->
+            <div style="margin-bottom: 3rem;">
+                <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
+                    ⭐ Rising Stars
+                </h2>
+                <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+                    High form + good fixtures + positive transfer momentum
+                </p>
+                ${risingStars.length > 0 ? renderPositionSpecificTable(risingStars, position) : '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">No rising stars found</div>'}
+            </div>
+
+            <!-- Section 2: Sell Candidates -->
+            <div style="margin-bottom: 3rem;">
+                <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
+                    📉 Sell Candidates
+                </h2>
+                <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+                    Poor form or bad fixtures + negative transfer momentum
+                </p>
+                ${sellCandidates.length > 0 ? renderPositionSpecificTable(sellCandidates, position) : '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">No sell candidates found</div>'}
+            </div>
+
+            <!-- Section 3: Fixture Turnarounds -->
+            <div style="margin-bottom: 3rem;">
+                <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
+                    🔄 Fixture Turnarounds
+                </h2>
+                <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+                    Players with improving fixtures (good time to buy before price rises)
+                </p>
+                ${fixtureTurnarounds.length > 0 ? renderPositionSpecificTable(fixtureTurnarounds, position) : '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">No fixture turnarounds found</div>'}
+            </div>
+        </div>
+    `;
+}
+
+function renderTeamAnalysis(position = 'all') {
+    if (!fplBootstrap || !fplBootstrap.teams) {
+        return '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">Team data not available</div>';
+    }
+
+    // Get all teams with fixture analysis
+    const teamAnalysis = fplBootstrap.teams.map(team => {
+        const fdr3 = calculateFixtureDifficulty(team.id, 3);
+        const fdr5 = calculateFixtureDifficulty(team.id, 5);
+
+        // Find best player from this team
+        const teamPlayers = getAllPlayers().filter(p => p.team === team.id);
+        const bestPlayer = teamPlayers.sort((a, b) => b.total_points - a.total_points)[0];
+
+        return {
+            team,
+            fdr3,
+            fdr5,
+            bestPlayer,
+            strength: team.strength,
+            strengthAttackHome: team.strength_attack_home,
+            strengthAttackAway: team.strength_attack_away,
+            strengthDefenceHome: team.strength_defence_home,
+            strengthDefenceAway: team.strength_defence_away
+        };
+    });
+
+    // Best fixtures (next 5)
+    const bestFixtures = [...teamAnalysis].sort((a, b) => a.fdr5 - b.fdr5).slice(0, 10);
+
+    // Worst fixtures (next 5)
+    const worstFixtures = [...teamAnalysis].sort((a, b) => b.fdr5 - a.fdr5).slice(0, 10);
+
+    // Best attack teams
+    const bestAttack = [...teamAnalysis].sort((a, b) =>
+        (b.team.strength_attack_home + b.team.strength_attack_away) -
+        (a.team.strength_attack_home + a.team.strength_attack_away)
+    ).slice(0, 10);
+
+    // Best defense teams
+    const bestDefense = [...teamAnalysis].sort((a, b) =>
+        (b.team.strength_defence_home + b.team.strength_defence_away) -
+        (a.team.strength_defence_home + a.team.strength_defence_away)
+    ).slice(0, 10);
+
+    return `
+        <div>
+            <!-- Section 1: Best Fixtures -->
+            <div style="margin-bottom: 3rem;">
+                <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
+                    ✅ Teams with Best Fixtures (Next 5 GWs)
+                </h2>
+                ${renderTeamTable(bestFixtures)}
+            </div>
+
+            <!-- Section 2: Worst Fixtures -->
+            <div style="margin-bottom: 3rem;">
+                <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
+                    ❌ Teams with Worst Fixtures (Next 5 GWs)
+                </h2>
+                ${renderTeamTable(worstFixtures)}
+            </div>
+
+            <!-- Section 3: Best Attack -->
+            <div style="margin-bottom: 3rem;">
+                <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
+                    ⚔️ Best Attack Teams
+                </h2>
+                ${renderTeamTable(bestAttack)}
+            </div>
+
+            <!-- Section 4: Best Defense -->
+            <div style="margin-bottom: 3rem;">
+                <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
+                    🛡️ Best Defense Teams
+                </h2>
+                ${renderTeamTable(bestDefense)}
+            </div>
+        </div>
+    `;
+}
+
+function renderTeamTable(teamAnalysis) {
+    const fixtureHeaders = getFixtureHeaders(5, 1);
+
+    let html = `
+        <div style="overflow-x: auto; background: var(--bg-primary); border-radius: 12px; box-shadow: 0 2px 8px var(--shadow);">
+            <table style="width: 100%; font-size: 0.875rem; border-collapse: collapse;">
+                <thead style="background: var(--primary-color); color: white;">
+                    <tr>
+                        <th style="text-align: left; padding: 0.75rem 0.5rem;">Team</th>
+                        <th style="text-align: left; padding: 0.75rem 0.5rem;">Best Player</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem;">Price</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem;">Pts</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem;">FDR(3)</th>
+                        <th style="text-align: center; padding: 0.75rem 0.5rem;">FDR(5)</th>
+                        ${fixtureHeaders.map(h => `<th style="text-align: center; padding: 0.5rem;">${h}</th>`).join('')}
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    teamAnalysis.forEach((ta, index) => {
+        const rowBg = index % 2 === 0 ? 'var(--bg-secondary)' : 'var(--bg-primary)';
+        const fdr3Class = getDifficultyClass(Math.round(ta.fdr3));
+        const fdr5Class = getDifficultyClass(Math.round(ta.fdr5));
+
+        const bestPlayerName = ta.bestPlayer ? escapeHtml(ta.bestPlayer.web_name) : '—';
+        const bestPlayerPrice = ta.bestPlayer ? formatCurrency(ta.bestPlayer.now_cost) : '—';
+        const bestPlayerPts = ta.bestPlayer ? ta.bestPlayer.total_points : '—';
+
+        const currentGW = getCurrentGW();
+        const next5 = getFixtures(ta.team.id, 10, false).filter(f => f.event > currentGW).slice(0, 5);
+
+        html += `
+            <tr style="background: ${rowBg};">
+                <td style="padding: 0.75rem 0.5rem;"><strong>${escapeHtml(ta.team.name)}</strong></td>
+                <td style="padding: 0.75rem 0.5rem;">${bestPlayerName}</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center;">${bestPlayerPrice}</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center;">${bestPlayerPts}</td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center;"><span class="${fdr3Class}" style="padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.75rem;">${formatDecimal(ta.fdr3)}</span></td>
+                <td style="padding: 0.75rem 0.5rem; text-align: center;"><span class="${fdr5Class}" style="padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.75rem;">${formatDecimal(ta.fdr5)}</span></td>
+        `;
+
+        next5.forEach((f) => {
+            html += `
+                <td style="padding: 0.5rem; text-align: center;">
+                    <span class="${getDifficultyClass(f.difficulty)}" style="padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.75rem; display: inline-block;">
+                        ${f.opponent}
+                    </span>
+                </td>
+            `;
+        });
+
+        html += `</tr>`;
+    });
+
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+
+    return html;
 }
 
 /**
