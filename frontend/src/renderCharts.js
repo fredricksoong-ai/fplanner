@@ -428,17 +428,18 @@ async function renderPointsPriceChart() {
         data: positions[pos].data
     }));
 
-    // Add value zones as a separate series for consistent rendering
-    series.push({
+    // Add value zones FIRST as a separate series for proper rendering
+    series.unshift({
         name: 'Value Zones',
         type: 'scatter',
         silent: true,
         symbolSize: 0,
         itemStyle: { opacity: 0 },
         data: [],
+        z: -1,
         markArea: {
             silent: true,
-            itemStyle: { opacity: 0.08 },
+            itemStyle: { opacity: 0.15 },
             data: [
                 [
                     {
@@ -621,7 +622,9 @@ async function renderPointsPriceChart() {
                     type: 'dashed',
                     opacity: 0.3
                 }
-            }
+            },
+            min: 0,
+            max: 300
         },
         series: series
     };
