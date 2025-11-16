@@ -292,7 +292,7 @@ async function initializeApp() {
             if (page === 'data-analysis' && position) {
                 currentPage = page;
                 currentSubTab = subTab || 'overview';
-                updateNavigation();
+                updateNavLinks();
                 renderDataAnalysis(subTab || 'overview', position);
             } else {
                 navigate(page, subTab || 'overview');
@@ -562,7 +562,7 @@ window.addEventListener('hashchange', () => {
     if (page) {
         currentPage = page;
         currentSubTab = subTab || 'overview';
-        updateNavigation();
+        updateNavLinks();
         if (page === 'data-analysis' && position) {
             renderDataAnalysis(subTab || 'overview', position);
         } else {
