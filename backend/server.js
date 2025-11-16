@@ -823,6 +823,9 @@ app.post('/api/ai-insights', async (req, res) => {
       }
     );
 
+    // Debug: Log raw Gemini response
+    console.log('🔍 DEBUG: Raw Gemini response:', JSON.stringify(geminiResponse.data, null, 2));
+
     // Parse Gemini response
     const insights = parseGeminiResponse(geminiResponse.data, gameweek);
 
@@ -973,6 +976,8 @@ function parseGeminiResponse(geminiData, gameweek) {
     // Extract text from Gemini response
     const text = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
+    console.log('🔍 DEBUG: Extracted text from Gemini:', text.substring(0, 500)); // First 500 chars
+
     if (!text) {
       throw new Error('No text content in Gemini response');
     }
@@ -984,13 +989,19 @@ function parseGeminiResponse(geminiData, gameweek) {
     const jsonMatch = text.match(/```(?:json)?\s*(\[[\s\S]*?\])\s*```/);
     if (jsonMatch) {
       jsonText = jsonMatch[1];
+      console.log('🔍 DEBUG: Found JSON in markdown code block');
     } else {
       // Try to find JSON array directly
       const arrayMatch = text.match(/\[[\s\S]*\]/);
       if (arrayMatch) {
         jsonText = arrayMatch[0];
+        console.log('🔍 DEBUG: Found JSON array directly');
+      } else {
+        console.log('⚠️ DEBUG: No JSON array found in response');
       }
     }
+
+    console.log('🔍 DEBUG: JSON text to parse:', jsonText.substring(0, 300));
 
     // Parse JSON
     const items = JSON.parse(jsonText);
@@ -1015,7 +1026,8 @@ function parseGeminiResponse(geminiData, gameweek) {
     };
 
   } catch (error) {
-    console.error('❌ Failed to parse Gemini response:', error);
+    console.error('❌ Failed to parse Gemini response:', error.message);
+    console.error('❌ Full error:', error.stack);
 
     // Return fallback insights
     return {
