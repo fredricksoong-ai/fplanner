@@ -3,6 +3,9 @@
 // Smart caching for FPL API + GitHub CSV data
 // ============================================================================
 
+// Load environment variables from .env file
+import 'dotenv/config';
+
 import express from 'express';
 import axios from 'axios';
 import Papa from 'papaparse';
