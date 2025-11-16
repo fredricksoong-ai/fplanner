@@ -199,16 +199,6 @@ export class AIInsightsService {
             message: 'Unable to generate insights at this time'
         };
     }
-
-    /**
-     * Manually refresh insights (bypass cache)
-     * @param {Object} context - Context data
-     * @returns {Promise<Object>} Fresh insights
-     */
-    async refresh(context) {
-        this.clearCache(context);
-        return await this.getInsights(context);
-    }
 }
 
 // Export singleton instance

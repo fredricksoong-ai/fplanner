@@ -165,14 +165,7 @@ export function renderInsightBanner(insights, contextId) {
             box-shadow: 0 4px 12px var(--shadow);
         ">
             <!-- Header -->
-            <div style="
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 1rem;
-                flex-wrap: wrap;
-                gap: 0.5rem;
-            ">
+            <div style="margin-bottom: 1rem;">
                 <h3 style="
                     color: var(--accent-color);
                     font-weight: 700;
@@ -181,28 +174,6 @@ export function renderInsightBanner(insights, contextId) {
                 ">
                     🤖 AI INSIGHTS${gwText}
                 </h3>
-                <button
-                    class="ai-insights-refresh-btn"
-                    data-context="${contextId}"
-                    style="
-                        padding: 0.5rem 1rem;
-                        background: var(--accent-color);
-                        color: white;
-                        border: none;
-                        border-radius: 6px;
-                        cursor: pointer;
-                        font-size: 0.875rem;
-                        transition: opacity 0.2s;
-                        display: flex;
-                        align-items: center;
-                        gap: 0.25rem;
-                    "
-                    onmouseover="this.style.opacity='0.8'"
-                    onmouseout="this.style.opacity='1'"
-                >
-                    <i class="fas fa-sync-alt"></i>
-                    <span>Refresh</span>
-                </button>
             </div>
 
             <!-- Insights Items -->
@@ -219,7 +190,7 @@ export function renderInsightBanner(insights, contextId) {
                 padding-top: 1rem;
                 border-top: 1px solid var(--border-color);
             ">
-                Last updated: ${timestamp} •
+                Generated: ${timestamp} • Refreshes at 5am & 5pm UTC •
                 <span style="opacity: 0.7;">Powered by Gemini AI</span>
             </div>
         </div>
@@ -229,33 +200,12 @@ export function renderInsightBanner(insights, contextId) {
 /**
  * Attach event listeners to AI insights banner buttons
  * @param {string} contextId - Context identifier
- * @param {Function} onRefresh - Callback function when refresh is clicked
+ * @param {Function} onRetry - Callback function when retry is clicked (error state only)
  */
-export function attachInsightBannerListeners(contextId, onRefresh) {
-    // Attach refresh button listener
-    const refreshBtn = document.querySelector(`.ai-insights-refresh-btn[data-context="${contextId}"]`);
-    if (refreshBtn) {
-        refreshBtn.addEventListener('click', async () => {
-            const icon = refreshBtn.querySelector('i');
-            const originalHTML = refreshBtn.innerHTML;
-
-            // Show loading state
-            refreshBtn.disabled = true;
-            refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>Loading...</span>';
-
-            try {
-                await onRefresh();
-            } finally {
-                // Restore button state
-                refreshBtn.disabled = false;
-                refreshBtn.innerHTML = originalHTML;
-            }
-        });
-    }
-
-    // Attach retry button listener (for error state)
+export function attachInsightBannerListeners(contextId, onRetry) {
+    // Attach retry button listener (for error state only)
     const retryBtn = document.querySelector(`.ai-insights-retry-btn[data-context="${contextId}"]`);
-    if (retryBtn) {
+    if (retryBtn && onRetry) {
         retryBtn.addEventListener('click', async () => {
             const originalHTML = retryBtn.innerHTML;
 
@@ -264,7 +214,7 @@ export function attachInsightBannerListeners(contextId, onRefresh) {
             retryBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Retrying...';
 
             try {
-                await onRefresh();
+                await onRetry();
             } finally {
                 // Restore button state
                 retryBtn.disabled = false;
@@ -276,12 +226,12 @@ export function attachInsightBannerListeners(contextId, onRefresh) {
 
 /**
  * Helper function to load and render AI insights
+ * Insights automatically refresh based on era schedule (5am & 5pm UTC)
  * @param {Object} context - Context for AI insights
  * @param {string} containerId - ID of container element to render into
- * @param {Function} onRefresh - Optional callback after refresh
  * @returns {Promise<void>}
  */
-export async function loadAndRenderInsights(context, containerId, onRefresh) {
+export async function loadAndRenderInsights(context, containerId) {
     const container = document.getElementById(containerId);
     if (!container) {
         console.error(`Container ${containerId} not found`);
@@ -294,28 +244,11 @@ export async function loadAndRenderInsights(context, containerId, onRefresh) {
     container.innerHTML = renderInsightBannerLoading();
 
     try {
-        // Fetch insights
+        // Fetch insights (uses era-based caching automatically)
         const insights = await aiInsights.getInsights(context);
 
         // Render banner
         container.innerHTML = renderInsightBanner(insights, contextId);
-
-        // Attach listeners
-        attachInsightBannerListeners(contextId, async () => {
-            // Refresh insights
-            const freshInsights = await aiInsights.refresh(context);
-
-            // Re-render
-            container.innerHTML = renderInsightBanner(freshInsights, contextId);
-
-            // Re-attach listeners
-            attachInsightBannerListeners(contextId, arguments.callee);
-
-            // Call optional callback
-            if (onRefresh) {
-                onRefresh(freshInsights);
-            }
-        });
 
     } catch (error) {
         console.error('Failed to load AI insights:', error);
@@ -324,9 +257,9 @@ export async function loadAndRenderInsights(context, containerId, onRefresh) {
             contextId
         );
 
-        // Attach retry listener
+        // Attach retry listener for error state only
         attachInsightBannerListeners(contextId, () => {
-            loadAndRenderInsights(context, containerId, onRefresh);
+            loadAndRenderInsights(context, containerId);
         });
     }
 }
