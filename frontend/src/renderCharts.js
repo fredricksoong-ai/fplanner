@@ -38,11 +38,9 @@ export async function renderCharts(chartType = 'points-price') {
     const chartTypes = {
         'points-price': { icon: '💰', label: 'Points vs Price' },
         'form-price': { icon: '🔥', label: 'Form vs Price' },
-        'minutes-efficiency': { icon: '⏱️', label: 'Minutes vs Efficiency' },
         'xgi-actual': { icon: '🎯', label: 'xGI vs Actual' },
         'xgc-actual': { icon: '🛡️', label: 'xGC vs Actual' },
         'ict-points': { icon: '📈', label: 'ICT vs Points' },
-        'xcs-actual': { icon: '🥅', label: 'xCS vs Actual' },
         'ownership-form': { icon: '📊', label: 'Ownership vs Form' },
         'fdr-form': { icon: '🗓️', label: 'Fixtures vs Form' }
     };
@@ -190,9 +188,6 @@ function renderCurrentChart() {
         case 'form-price':
             renderFormPriceChart();
             break;
-        case 'minutes-efficiency':
-            renderMinutesEfficiencyChart();
-            break;
         case 'xgi-actual':
             renderXgiActualChart();
             break;
@@ -201,9 +196,6 @@ function renderCurrentChart() {
             break;
         case 'ict-points':
             renderIctPointsChart();
-            break;
-        case 'xcs-actual':
-            renderXcsActualChart();
             break;
         case 'ownership-form':
             renderOwnershipFormChart();
@@ -290,7 +282,7 @@ async function renderPointsPriceChart() {
     contentContainer.innerHTML = createChartCard({
         title: 'Points vs Price',
         icon: '💰',
-        description: 'Find value picks and premium performers. Bubble size = ownership %, Your team = ⭐ (star shape with purple border)',
+        description: 'Find value picks and premium performers. Bubble size = ownership %',
         zones: [
             { color: '#10b981', label: 'Value Zone (low price, high points)' },
             { color: '#3b82f6', label: 'Premium Zone (high price, high points)' },
@@ -476,7 +468,7 @@ async function renderPointsPriceChart() {
                 [{
                     name: 'Premium Zone',
                     xAxis: 8.5,
-                    yAxis: 120,
+                    yAxis: 125,
                     itemStyle: { color: '#3b82f6' }, // blue
                     label: {
                         show: true,
@@ -1740,7 +1732,7 @@ async function renderOwnershipFormChart() {
                     {
                         name: 'Template Picks',
                         xAxis: 30,
-                        yAxis: 5,
+                        yAxis: 5.5,
                         itemStyle: { color: '#3b82f6' },
                         label: {
                             show: true,
@@ -1754,8 +1746,8 @@ async function renderOwnershipFormChart() {
                         }
                     },
                     {
-                        xAxis: 'max',
-                        yAxis: 'max'
+                        xAxis: 100,
+                        yAxis: 12
                     }
                 ],
                 [
@@ -1776,8 +1768,8 @@ async function renderOwnershipFormChart() {
                         }
                     },
                     {
-                        xAxis: 'max',
-                        yAxis: 3
+                        xAxis: 100,
+                        yAxis: 5
                     }
                 ]
             ]
