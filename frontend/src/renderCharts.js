@@ -434,76 +434,69 @@ async function renderPointsPriceChart() {
         type: 'scatter',
         silent: true,
         symbolSize: 0,
-        itemStyle: {
-            opacity: 0
-        },
+        itemStyle: { opacity: 0 },
         data: [],
         markArea: {
             silent: true,
-            itemStyle: {
-                opacity: 0.08
-            },
+            itemStyle: { opacity: 0.08 },
             data: [
-                // Value Zone (top-left): low price, high points - THE SWEET SPOT
-                [{
-                    name: 'Value Zone',
-                    xAxis: 3,
-                    yAxis: 120,
-                    itemStyle: { color: '#10b981' }, // green
-                    label: {
-                        show: true,
-                        position: 'insideTopLeft',
-                        fontSize: 11,
-                        fontWeight: 'bold',
-                        color: textColor,
-                        backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)',
-                        padding: [4, 8],
-                        borderRadius: 4
-                    }
-                }, {
-                    xAxis: 8.5,
-                    yAxis: 300
-                }],
-                // Premium Zone (top-right): high price, high points - proven performers
-                [{
-                    name: 'Premium Zone',
-                    xAxis: 8.5,
-                    yAxis: 120,
-                    itemStyle: { color: '#3b82f6' }, // blue
-                    label: {
-                        show: true,
-                        position: 'insideTopRight',
-                        fontSize: 11,
-                        fontWeight: 'bold',
-                        color: textColor,
-                        backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)',
-                        padding: [4, 8],
-                        borderRadius: 4
-                    }
-                }, {
-                    xAxis: 15,
-                    yAxis: 300
-                }],
-                // Trap Zone (bottom-right): high price, low points - AVOID
-                [{
-                    name: 'Trap Zone',
-                    xAxis: 8.5,
-                    yAxis: 10,
-                    itemStyle: { color: '#ef4444' }, // red
-                    label: {
-                        show: true,
-                        position: 'insideBottomRight',
-                        fontSize: 11,
-                        fontWeight: 'bold',
-                        color: textColor,
-                        backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)',
-                        padding: [4, 8],
-                        borderRadius: 4
-                    }
-                }, {
-                    xAxis: 15,
-                    yAxis: 120
-                }]
+                [
+                    {
+                        name: 'Value Zone',
+                        xAxis: 3,
+                        yAxis: 120,
+                        itemStyle: { color: '#10b981' },
+                        label: {
+                            show: true,
+                            position: 'insideTopLeft',
+                            fontSize: 11,
+                            fontWeight: 'bold',
+                            color: textColor,
+                            backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)',
+                            padding: [4, 8],
+                            borderRadius: 4
+                        }
+                    },
+                    { xAxis: 8.5, yAxis: 300 }
+                ],
+                [
+                    {
+                        name: 'Premium Zone',
+                        xAxis: 8.5,
+                        yAxis: 120,
+                        itemStyle: { color: '#3b82f6' },
+                        label: {
+                            show: true,
+                            position: 'insideTopRight',
+                            fontSize: 11,
+                            fontWeight: 'bold',
+                            color: textColor,
+                            backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)',
+                            padding: [4, 8],
+                            borderRadius: 4
+                        }
+                    },
+                    { xAxis: 15, yAxis: 300 }
+                ],
+                [
+                    {
+                        name: 'Trap Zone',
+                        xAxis: 8.5,
+                        yAxis: 10,
+                        itemStyle: { color: '#ef4444' },
+                        label: {
+                            show: true,
+                            position: 'insideBottomRight',
+                            fontSize: 11,
+                            fontWeight: 'bold',
+                            color: textColor,
+                            backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)',
+                            padding: [4, 8],
+                            borderRadius: 4
+                        }
+                    },
+                    { xAxis: 15, yAxis: 120 }
+                ]
             ]
         }
     });
@@ -2831,7 +2824,8 @@ async function renderIctPointsChart() {
                     opacity: 0.3
                 }
             },
-            min: 0
+            min: 0,
+            max: 400
         },
         series: series
     };
