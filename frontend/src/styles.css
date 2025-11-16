@@ -202,9 +202,10 @@ body {
     margin: 1rem auto !important;
   }
 
-  /* Compact header on mobile */
+  /* Compact header on mobile with safe area support */
   nav {
     padding: 0.75rem 1rem !important;
+    padding-top: calc(0.75rem + env(safe-area-inset-top)) !important;
   }
 
   nav h1 {
