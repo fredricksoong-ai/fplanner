@@ -14,7 +14,7 @@ import {
     getTeamShortName,
     getDifficultyClass
 } from './utils.js';
-import { getFixtures } from './fixtures.js';
+import { getFixtures, calculateFixtureDifficulty } from './fixtures.js';
 import { analyzePlayerRisks, hasHighRisk, renderRiskTooltip } from './risk.js';
 import { attachRiskTooltipListeners } from './renderHelpers.js';
 import {
