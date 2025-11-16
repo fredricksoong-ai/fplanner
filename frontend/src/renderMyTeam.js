@@ -46,6 +46,13 @@ import {
     renderReplacementRow
 } from './transferHelpers.js';
 
+import {
+    shouldUseMobileLayout,
+    renderMobileManagerInfo,
+    renderMobileTeamSummary,
+    renderSwipeablePlayerCards
+} from './renderMyTeamMobile.js';
+
 // ============================================================================
 // MY TEAM PAGE
 // ============================================================================
@@ -369,21 +376,42 @@ function renderTeamOverviewTab(teamData) {
     // Find problem players for Transfer Committee integration
     const problemPlayersSection = renderProblemPlayersSection(allPlayers, picks, gameweek);
 
-    return `
-        <div class="mb-6">
-            ${renderManagerInfo(teamData)}
-        </div>
+    // Check if mobile layout should be used
+    const useMobile = shouldUseMobileLayout();
 
-        <div class="mb-8">
-            ${renderTeamSummary(allPlayers, gameweek, picks.entry_history)}
-        </div>
+    if (useMobile) {
+        // Mobile-optimized layout
+        return `
+            <div style="margin-bottom: 1rem;">
+                ${renderMobileManagerInfo(teamData)}
+            </div>
 
-        ${problemPlayersSection}
+            ${renderMobileTeamSummary(allPlayers, gameweek, picks.entry_history)}
 
-        <div class="mb-8">
-            ${renderTeamTable(allPlayers, gameweek)}
-        </div>
-    `;
+            ${problemPlayersSection}
+
+            <div style="margin-top: 1.5rem;">
+                ${renderSwipeablePlayerCards(allPlayers, gameweek)}
+            </div>
+        `;
+    } else {
+        // Desktop layout (original)
+        return `
+            <div class="mb-6">
+                ${renderManagerInfo(teamData)}
+            </div>
+
+            <div class="mb-8">
+                ${renderTeamSummary(allPlayers, gameweek, picks.entry_history)}
+            </div>
+
+            ${problemPlayersSection}
+
+            <div class="mb-8">
+                ${renderTeamTable(allPlayers, gameweek)}
+            </div>
+        `;
+    }
 }
 
 /**
@@ -397,10 +425,12 @@ function renderLeaguesTab(teamData) {
         myTeamState.activeLeagueTab = myTeamState.selectedLeagues[0];
     }
 
+    const useMobile = shouldUseMobileLayout();
+
     const html = `
-        <div style="display: grid; grid-template-columns: 300px 1fr; gap: 1.5rem; height: calc(100vh - 300px);">
+        <div style="display: ${useMobile ? 'flex' : 'grid'}; ${useMobile ? 'flex-direction: column;' : 'grid-template-columns: 300px 1fr;'} gap: 1.5rem; ${useMobile ? '' : 'height: calc(100vh - 300px);'}">
             <!-- Left Sidebar: League Selection -->
-            <div id="league-selection-sidebar" style="background: var(--bg-secondary); padding: 1.5rem; border-radius: 12px; overflow-y: auto;">
+            <div id="league-selection-sidebar" style="background: var(--bg-secondary); padding: ${useMobile ? '1rem' : '1.5rem'}; border-radius: 12px; ${useMobile ? '' : 'overflow-y: auto;'}">
                 <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem;">
                     <i class="fas fa-trophy"></i> Your Leagues
                 </h3>
@@ -411,9 +441,9 @@ function renderLeaguesTab(teamData) {
             </div>
 
             <!-- Right Content: League Tabs and Standings -->
-            <div style="display: flex; flex-direction: column; background: var(--bg-primary); border-radius: 12px; overflow: hidden;">
+            <div style="display: flex; flex-direction: column; background: var(--bg-primary); border-radius: 12px; overflow: hidden; ${useMobile ? 'min-height: 400px' : ''}">
                 ${renderLeagueTabs()}
-                <div id="league-content-container" style="flex: 1; overflow-y: auto; padding: 1.5rem;">
+                <div id="league-content-container" style="flex: 1; overflow-y: auto; padding: ${useMobile ? '1rem' : '1.5rem'};">
                     ${renderLeagueContent()}
                 </div>
             </div>
