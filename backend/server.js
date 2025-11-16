@@ -29,7 +29,7 @@ const CACHE_BACKUP_PATH = path.join(__dirname, 'cache-backup.json');
 
 // Gemini API Configuration
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent';
 
 // FPL API Endpoints
 const FPL_BASE_URL = 'https://fantasy.premierleague.com/api';
