@@ -27,7 +27,9 @@ import {
 
 import {
     getFixtures,
-    calculateFixtureDifficulty
+    calculateFixtureDifficulty,
+    getTeamsWithBestFixtures,
+    getTeamsWithWorstFixtures
 } from './fixtures.js';
 
 import {
@@ -1236,16 +1238,9 @@ async function loadAIInsightsForTab(tab, position) {
             points: p.total_points
         }));
 
-    // 5. Team Analysis: Position distribution and budget data
-    const positionCounts = {};
-    const positionAvgPPM = {};
-    ['GKP', 'DEF', 'MID', 'FWD'].forEach(pos => {
-        const posMap = { 'GKP': 1, 'DEF': 2, 'MID': 3, 'FWD': 4 };
-        const posPlayers = players.filter(p => p.element_type === posMap[pos]);
-        positionCounts[pos] = posPlayers.length;
-        const avgPPM = posPlayers.reduce((sum, p) => sum + calculatePPM(p), 0) / posPlayers.length || 0;
-        positionAvgPPM[pos] = avgPPM.toFixed(2);
-    });
+    // 5. Team Analysis: Teams with best/worst fixtures in next 5 games
+    const teamsWithBestFixtures = getTeamsWithBestFixtures(10, 5);
+    const teamsWithWorstFixtures = getTeamsWithWorstFixtures(10, 5);
 
     const contextData = {
         overview: {
@@ -1257,8 +1252,8 @@ async function loadAIInsightsForTab(tab, position) {
         differentials,
         transferTargets,
         teamAnalysis: {
-            positionCounts,
-            positionAvgPPM,
+            bestFixtures: teamsWithBestFixtures,
+            worstFixtures: teamsWithWorstFixtures,
             currentGW
         }
     };
