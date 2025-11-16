@@ -414,6 +414,33 @@ export function renderMyTeam(teamData, subTab = 'overview') {
         });
     }
 
+    // Add event listeners for mobile icon buttons
+    const changeTeamBtnMobile = document.getElementById('change-team-btn-mobile');
+    if (changeTeamBtnMobile) {
+        changeTeamBtnMobile.addEventListener('click', () => window.resetMyTeam());
+    }
+
+    const refreshBtnMobile = document.getElementById('refresh-team-btn-mobile');
+    if (refreshBtnMobile) {
+        refreshBtnMobile.addEventListener('click', async () => {
+            const icon = refreshBtnMobile.querySelector('i');
+            icon.classList.add('fa-spin');
+            refreshBtnMobile.disabled = true;
+
+            try {
+                await handleTeamRefresh();
+                showRefreshToast('✅ Team data refreshed!');
+            } catch (error) {
+                console.error('Refresh failed:', error);
+                // Show user-friendly error message
+                showRefreshToast(error.message || '⚠️ Failed to refresh');
+            } finally {
+                icon.classList.remove('fa-spin');
+                refreshBtnMobile.disabled = false;
+            }
+        });
+    }
+
     // Add skeleton styles for loading states
     if (shouldUseMobileLayout()) {
         addSkeletonStyles();
