@@ -38,11 +38,11 @@ export async function renderCharts(chartType = 'points-price') {
     const chartTypes = {
         'points-price': { icon: '💰', label: 'Points vs Price' },
         'form-price': { icon: '🔥', label: 'Form vs Price' },
+        'ownership-form': { icon: '📊', label: 'Ownership vs Form' },
+        'fdr-form': { icon: '🗓️', label: 'Fixtures vs Form' },
         'xgi-actual': { icon: '🎯', label: 'xGI vs Actual' },
         'xgc-actual': { icon: '🛡️', label: 'xGC vs Actual' },
-        'ict-points': { icon: '📈', label: 'ICT vs Points' },
-        'ownership-form': { icon: '📊', label: 'Ownership vs Form' },
-        'fdr-form': { icon: '🗓️', label: 'Fixtures vs Form' }
+        'ict-points': { icon: '📈', label: 'ICT vs Points' }
     };
 
     container.innerHTML = `
@@ -468,7 +468,7 @@ async function renderPointsPriceChart() {
                 [{
                     name: 'Premium Zone',
                     xAxis: 8.5,
-                    yAxis: 125,
+                    yAxis: 120,
                     itemStyle: { color: '#3b82f6' }, // blue
                     label: {
                         show: true,
