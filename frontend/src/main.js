@@ -28,7 +28,7 @@ let myTeamData = null;
 
 /**
  * Navigate to a specific page
- * @param {string} page - Page name ('my-team', 'transfer-committee', 'data-analysis', 'search')
+ * @param {string} page - Page name ('my-team', 'team-builder', 'data-analysis', 'charts', 'search')
  * @param {string} subTab - Optional sub-tab for pages with tabs
  */
 export function navigate(page, subTab = 'overview') {
@@ -83,6 +83,9 @@ function renderPage() {
         case 'my-team':
             renderMyTeamPage();
             break;
+        case 'team-builder':
+            renderTeamBuilderPage();
+            break;
         case 'data-analysis':
             renderDataAnalysis();
             break;
@@ -104,6 +107,11 @@ function renderPage() {
 async function renderMyTeamPage() {
     const { renderMyTeamForm } = await import('./renderMyTeam.js');
     renderMyTeamForm();
+}
+
+async function renderTeamBuilderPage() {
+    const { renderTeamBuilder } = await import('./renderTeamBuilder.js');
+    renderTeamBuilder();
 }
 
 async function renderDataAnalysis() {
@@ -334,6 +342,7 @@ function setupNavigation() {
     
     const pages = [
         { id: 'my-team', label: 'My Team', icon: 'fa-users' },
+        { id: 'team-builder', label: 'Team Builder', icon: 'fa-chess' },
         { id: 'data-analysis', label: 'Data Analysis', icon: 'fa-chart-bar' },
         { id: 'charts', label: 'Charts', icon: 'fa-chart-line' },
         { id: 'search', label: 'Search', icon: 'fa-search' }
