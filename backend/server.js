@@ -810,7 +810,7 @@ app.post('/api/ai-insights', async (req, res) => {
         }],
         generationConfig: {
           temperature: 0.7,
-          maxOutputTokens: 1024,
+          maxOutputTokens: 4096,  // Increased to allow for thoughts + response
           topP: 0.8,
           topK: 40
         }
