@@ -373,6 +373,15 @@ async function renderPointsPriceChart() {
         }
     });
 
+    // Calculate dynamic zone boundaries based on actual data
+    const allPoints = players.map(p => p.total_points || 0);
+    const maxPoints = Math.max(...allPoints, 50); // At least 50 to avoid very small charts
+    const yAxisMax = Math.ceil((maxPoints + 25) / 10) * 10; // Round up to nearest 10
+
+    // Define zone boundaries dynamically
+    // High points threshold = 60% of max points (above this = Value/Premium zones)
+    const highPointsThreshold = Math.round(maxPoints * 0.6);
+
     // Create series
     const series = Object.keys(positions).map(pos => ({
         name: positions[pos].name,
@@ -445,7 +454,7 @@ async function renderPointsPriceChart() {
                     {
                         name: 'Value Zone',
                         xAxis: 3,
-                        yAxis: 120,
+                        yAxis: highPointsThreshold,
                         itemStyle: { color: '#10b981' },
                         label: {
                             show: true,
@@ -458,13 +467,13 @@ async function renderPointsPriceChart() {
                             borderRadius: 4
                         }
                     },
-                    { xAxis: 8.5, yAxis: 300 }
+                    { xAxis: 8.5, yAxis: yAxisMax }
                 ],
                 [
                     {
                         name: 'Premium Zone',
                         xAxis: 8.5,
-                        yAxis: 120,
+                        yAxis: highPointsThreshold,
                         itemStyle: { color: '#3b82f6' },
                         label: {
                             show: true,
@@ -477,7 +486,7 @@ async function renderPointsPriceChart() {
                             borderRadius: 4
                         }
                     },
-                    { xAxis: 15, yAxis: 300 }
+                    { xAxis: 15, yAxis: yAxisMax }
                 ],
                 [
                     {
@@ -496,7 +505,7 @@ async function renderPointsPriceChart() {
                             borderRadius: 4
                         }
                     },
-                    { xAxis: 15, yAxis: 120 }
+                    { xAxis: 15, yAxis: highPointsThreshold }
                 ]
             ]
         }
@@ -624,7 +633,7 @@ async function renderPointsPriceChart() {
                 }
             },
             min: 0,
-            max: 300
+            max: yAxisMax
         },
         series: series
     };

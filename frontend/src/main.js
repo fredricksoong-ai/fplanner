@@ -286,10 +286,17 @@ async function initializeApp() {
 
         // Parse URL hash for initial page
         const hash = window.location.hash.slice(1); // Remove #
-        const [page, subTab] = hash.split('/');
-        
+        const [page, subTab, position] = hash.split('/');
+
         if (page) {
-            navigate(page, subTab || 'overview');
+            if (page === 'data-analysis' && position) {
+                currentPage = page;
+                currentSubTab = subTab || 'overview';
+                updateNavigation();
+                renderDataAnalysis(subTab || 'overview', position);
+            } else {
+                navigate(page, subTab || 'overview');
+            }
         } else {
             navigate('my-team');
         }
@@ -551,10 +558,15 @@ if (document.readyState === 'loading') {
 // Handle browser back/forward
 window.addEventListener('hashchange', () => {
     const hash = window.location.hash.slice(1);
-    const [page, subTab] = hash.split('/');
+    const [page, subTab, position] = hash.split('/');
     if (page) {
         currentPage = page;
         currentSubTab = subTab || 'overview';
-        renderPage();
+        updateNavigation();
+        if (page === 'data-analysis' && position) {
+            renderDataAnalysis(subTab || 'overview', position);
+        } else {
+            renderPage();
+        }
     }
 });
