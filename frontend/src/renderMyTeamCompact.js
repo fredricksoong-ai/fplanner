@@ -50,8 +50,42 @@ export function renderCompactHeader(teamData, gwNumber) {
     // Team value and bank from entry_history (GW-specific)
     const teamValue = ((entry.value || 0) / 10).toFixed(1);
     const bank = ((entry.bank || 0) / 10).toFixed(1);
+    const squadValue = ((entry.value || 0) / 10 - (entry.bank || 0) / 10).toFixed(1);
     const freeTransfers = entry.event_transfers || 0;
     const transferCost = entry.event_transfers_cost || 0;
+
+    // Rank change arrow (TODO: need to find the rank change field from API)
+    // For now, using a placeholder - we can hook this up when we identify the field
+    const rankChange = 0; // Placeholder: positive = rank improved (went down in number), negative = rank worsened
+    let rankArrow = '';
+    if (rankChange > 0) {
+        rankArrow = ' <span style="color: #22c55e;">↑</span>';
+    } else if (rankChange < 0) {
+        rankArrow = ' <span style="color: #ef4444;">↓</span>';
+    }
+
+    // Find captain and vice captain
+    const captainPick = picks.picks.find(p => p.is_captain);
+    const vicePick = picks.picks.find(p => p.is_vice_captain);
+
+    let captainInfo = 'None';
+    let viceInfo = 'None';
+
+    if (captainPick) {
+        const captainPlayer = window.fplData?.elements?.find(el => el.id === captainPick.element);
+        if (captainPlayer) {
+            const captainTeam = window.fplData?.teams?.find(t => t.id === captainPlayer.team);
+            captainInfo = `${captainPlayer.web_name} • ${captainTeam?.short_name || 'N/A'}`;
+        }
+    }
+
+    if (vicePick) {
+        const vicePlayer = window.fplData?.elements?.find(el => el.id === vicePick.element);
+        if (vicePlayer) {
+            const viceTeam = window.fplData?.teams?.find(t => t.id === vicePlayer.team);
+            viceInfo = `${vicePlayer.web_name} • ${viceTeam?.short_name || 'N/A'}`;
+        }
+    }
 
     // Calculate GW card color based on rank performance (relative to overall rank)
     let gwCardBg = 'var(--bg-secondary)';
