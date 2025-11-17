@@ -200,7 +200,7 @@ body {
   #app-container {
     padding: 0 !important;
     padding-top: 0 !important;
-    padding-bottom: 0 !important;
+    /* padding-bottom is managed by mobileNav.js for bottom nav clearance */
     margin: 0 auto !important;
   }
 
