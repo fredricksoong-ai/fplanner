@@ -32,9 +32,9 @@ export function createMobileNav(currentPage, onNavigate) {
                 background: #37003c;
                 border-top: 1px solid rgba(255,255,255,0.1);
                 display: flex;
-                justify-content: space-around;
+                justify-content: space-between;
                 align-items: center;
-                padding: 0.25rem 0;
+                padding: 0.25rem 0.5rem;
                 padding-bottom: max(0.25rem, env(safe-area-inset-bottom));
                 z-index: 1000;
             "
