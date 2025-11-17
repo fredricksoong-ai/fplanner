@@ -10,6 +10,11 @@ import {
 } from './data.js';
 
 import {
+    loadAndRenderLeagueInfo,
+    initializeLeagueSelector
+} from './leagueInfo.js';
+
+import {
     getPositionShort,
     getPositionType,
     formatCurrency,
@@ -403,6 +408,14 @@ export function renderMyTeam(teamData, subTab = 'overview') {
             e.target.style.background = 'var(--bg-secondary)';
             e.target.style.color = 'var(--text-secondary)';
             e.target.style.borderColor = 'var(--border-color)';
+        });
+    }
+
+    // Initialize league selector and league info for mobile
+    if (useMobile) {
+        requestAnimationFrame(async () => {
+            await initializeLeagueSelector(teamData.team.id);
+            await loadAndRenderLeagueInfo();
         });
     }
 

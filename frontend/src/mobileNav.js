@@ -3,8 +3,6 @@
  * Bottom navigation bar for mobile devices
  */
 
-import { showLeagueSelector } from './leagueSelector.js';
-
 /**
  * Create mobile bottom navigation bar
  * @param {string} currentPage - Currently active page
@@ -101,27 +99,19 @@ export function initMobileNav(navigateCallback) {
             // Handle action buttons (League, Refresh)
             const action = item.dataset.action;
             if (action === 'league') {
-                console.log('🏆 League button clicked');
-                // Get team ID from window or localStorage
-                const teamId = window.currentTeamId || localStorage.getItem('fplanner_team_id');
-                console.log('Team ID:', teamId);
+                console.log('🏆 League button clicked - navigating to leagues');
+                // Navigate to leagues page/view
+                // The league selector is now in the compact header, so the button should navigate
+                const page = 'my-team'; // Could create dedicated league page later
+                navigateCallback(page);
 
-                if (teamId) {
-                    console.log('Opening league selector...');
-                    try {
-                        showLeagueSelector(parseInt(teamId, 10), (leagueId) => {
-                            console.log('✅ League selected:', leagueId);
-                            // Trigger refresh to update template players
-                            if (window.handleTeamRefresh) {
-                                window.handleTeamRefresh();
-                            }
-                        });
-                    } catch (error) {
-                        console.error('❌ Error opening league selector:', error);
+                // Scroll to league info if available
+                setTimeout(() => {
+                    const leagueInfo = document.getElementById('league-info-placeholder');
+                    if (leagueInfo) {
+                        leagueInfo.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                     }
-                } else {
-                    console.error('❌ No team ID found');
-                }
+                }, 300);
                 return;
             }
             if (action === 'refresh') {
