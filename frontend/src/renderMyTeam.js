@@ -10,8 +10,7 @@ import {
 } from './data.js';
 
 import {
-    loadAndRenderLeagueInfo,
-    initializeLeagueSelector
+    loadAndRenderLeagueInfo
 } from './leagueInfo.js';
 
 import {
@@ -420,10 +419,9 @@ export function renderMyTeam(teamData, subTab = 'overview') {
         });
     }
 
-    // Initialize league selector and league info for mobile
+    // Initialize league info for mobile (shows league position in GW card)
     if (useMobile) {
         requestAnimationFrame(async () => {
-            await initializeLeagueSelector(teamData.team.id);
             await loadAndRenderLeagueInfo();
         });
     }
