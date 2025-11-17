@@ -198,9 +198,9 @@ body {
 
   /* Make main content full width on mobile */
   #app-container {
-    padding: 0.5rem !important;
+    padding: 0 !important;
     padding-top: 0 !important;
-    padding-bottom: 2rem !important; /* Space for bottom nav */
+    padding-bottom: 0 !important;
     margin: 0 auto !important;
   }
 

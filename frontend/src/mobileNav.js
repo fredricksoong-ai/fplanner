@@ -69,7 +69,7 @@ export function createMobileNav(currentPage, onNavigate) {
                         flex-direction: column;
                         align-items: center;
                         gap: 0.15rem;
-                        background: ${currentPage === item.id ? 'rgba(255,255,255,0.15)' : 'transparent'};
+                        background: ${buttonBg};
                         border: none;
                         padding: 0.3rem 0.35rem;
                         border-radius: 0.4rem;
@@ -183,7 +183,8 @@ export function initMobileNav(navigateCallback) {
             if (!item.disabled) {
                 const page = item.dataset.page;
                 const currentPage = getCurrentPage();
-                item.style.background = currentPage === page ? 'rgba(255,255,255,0.15)' : 'transparent';
+                const isRefresh = item.dataset.action === 'refresh';
+                item.style.background = isRefresh ? '#00ff87' : (currentPage === page ? 'rgba(255,255,255,0.15)' : 'transparent');
             }
         });
     });
@@ -201,8 +202,9 @@ export function updateMobileNav(activePage) {
     mobileNavItems.forEach(item => {
         const page = item.dataset.page;
         const isActive = page === activePage;
+        const isRefresh = item.dataset.action === 'refresh';
 
-        item.style.background = isActive ? 'rgba(255,255,255,0.15)' : 'transparent';
+        item.style.background = isRefresh ? '#00ff87' : (isActive ? 'rgba(255,255,255,0.15)' : 'transparent');
         const label = item.querySelector('span');
         if (label) {
             label.style.fontWeight = isActive || item.dataset.action === 'refresh' ? '700' : '500';
@@ -224,7 +226,8 @@ function addMainContentPadding() {
             }
 
             body {
-                padding-bottom: env(safe-area-inset-bottom);
+                padding-bottom: 0;
+                margin-bottom: 0;
             }
         }
     `;
