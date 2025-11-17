@@ -103,16 +103,24 @@ export function initMobileNav(navigateCallback) {
             // Handle action buttons (League, Refresh)
             const action = item.dataset.action;
             if (action === 'league') {
+                console.log('🏆 League button clicked');
                 // Get team ID from window or localStorage
                 const teamId = window.currentTeamId || localStorage.getItem('teamId');
+                console.log('Team ID:', teamId);
+
                 if (teamId) {
-                    showLeagueSelector(parseInt(teamId, 10), (leagueId) => {
-                        console.log('✅ League selected:', leagueId);
-                        // Trigger refresh to update template players
-                        if (window.handleTeamRefresh) {
-                            window.handleTeamRefresh();
-                        }
-                    });
+                    console.log('Opening league selector...');
+                    try {
+                        showLeagueSelector(parseInt(teamId, 10), (leagueId) => {
+                            console.log('✅ League selected:', leagueId);
+                            // Trigger refresh to update template players
+                            if (window.handleTeamRefresh) {
+                                window.handleTeamRefresh();
+                            }
+                        });
+                    } catch (error) {
+                        console.error('❌ Error opening league selector:', error);
+                    }
                 } else {
                     console.error('❌ No team ID found');
                 }
