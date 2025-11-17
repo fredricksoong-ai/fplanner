@@ -221,8 +221,7 @@ function addMainContentPadding() {
     style.textContent = `
         @media (max-width: 767px) {
             #app-container {
-                /* Reduced from 5rem to 3.5rem to fix overlap while maintaining safe space */
-                padding-bottom: calc(3.5rem + env(safe-area-inset-bottom)) !important;
+                padding-bottom: calc(4.5rem + env(safe-area-inset-bottom)) !important;
             }
 
             body {
