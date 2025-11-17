@@ -153,8 +153,8 @@ export function renderCompactHeader(teamData, gwNumber) {
                 margin: 0;
             "
         >
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem; padding: 0 0.75rem;">
-                <div style="flex: 1; display: grid; gap: 0.2rem;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; padding: 0;">
+                <div style="flex: 1; display: grid; gap: 0.2rem; padding-left: 0.5rem;">
                     <div style="display: flex; align-items: center; gap: 0.4rem;">
                         <button
                             id="change-team-btn"
@@ -200,7 +200,7 @@ export function renderCompactHeader(teamData, gwNumber) {
                     </div>
                 </div>
 
-                <div style="display: grid; gap: 0.3rem; flex-shrink: 0; min-width: 90px;">
+                <div style="display: grid; gap: 0.3rem; flex-shrink: 0; min-width: 90px; padding-right: 0.5rem;">
                     <!-- League Selector Dropdown -->
                     <select
                         id="mobile-league-selector"
@@ -323,8 +323,8 @@ export function renderCompactTeamList(players, gwNumber) {
             grid-template-columns: 2.5fr 1fr 0.7fr 0.6fr 0.6fr 0.7fr 0.6fr;
             gap: 0.25rem;
             padding: 0.4rem 0;
-            background: var(--primary-color);
-            color: white;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
             font-size: 0.7rem;
             font-weight: 700;
             text-transform: capitalize;

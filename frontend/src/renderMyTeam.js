@@ -1176,9 +1176,9 @@ function renderLeagueStandings(leagueData) {
                 display: grid;
                 grid-template-columns: 0.7fr 2fr 0.7fr 0.8fr 0.8fr;
                 gap: 0.25rem;
-                padding: 0.4rem 0.5rem;
-                background: var(--primary-color);
-                color: white;
+                padding: 0.4rem 0;
+                background: var(--bg-secondary);
+                color: var(--text-primary);
                 font-size: 0.7rem;
                 font-weight: 700;
                 text-transform: capitalize;
@@ -1186,11 +1186,11 @@ function renderLeagueStandings(leagueData) {
                 top: calc(3.5rem + 8rem + env(safe-area-inset-top));
                 z-index: 50;
             ">
-                <div style="text-align: center;">Rank</div>
+                <div style="text-align: center; padding-left: 0.5rem;">Rank</div>
                 <div>Manager</div>
                 <div style="text-align: center;">GW</div>
                 <div style="text-align: center;">Total</div>
-                <div style="text-align: center;">Gap</div>
+                <div style="text-align: center; padding-right: 0.5rem;">Gap</div>
             </div>
         `;
 
@@ -1232,14 +1232,14 @@ function renderLeagueStandings(leagueData) {
                     display: grid;
                     grid-template-columns: 0.7fr 2fr 0.7fr 0.8fr 0.8fr;
                     gap: 0.25rem;
-                    padding: 0.1rem 0.4rem;
+                    padding: 0.1rem 0;
                     background: ${bgColor};
                     border-bottom: 1px solid var(--border-color);
                     ${isUser ? 'border-left: 3px solid var(--primary-color);' : ''}
                     font-size: 0.75rem;
                     align-items: center;
                 ">
-                    <div style="text-align: center;">
+                    <div style="text-align: center; padding-left: 0.5rem;">
                         <div style="font-weight: 600;">${entry.rank}</div>
                         <div style="font-size: 0.6rem; color: ${rankChangeColor};">
                             ${rankChangeIcon}
@@ -1253,7 +1253,7 @@ function renderLeagueStandings(leagueData) {
                         ${gwPoints}
                     </div>
                     <div style="text-align: center; font-weight: 600;">${entry.total.toLocaleString()}</div>
-                    <div style="text-align: center; font-weight: 600; color: ${gapColor}; font-size: 0.7rem;">
+                    <div style="text-align: center; font-weight: 600; color: ${gapColor}; font-size: 0.7rem; padding-right: 0.5rem;">
                         ${gapText}
                     </div>
                 </div>
@@ -1261,7 +1261,7 @@ function renderLeagueStandings(leagueData) {
         }).join('');
 
         return `
-            <div style="margin-bottom: 1rem; padding: 0.5rem 0.75rem; background: var(--bg-secondary); border-radius: 0.5rem;">
+            <div style="margin-bottom: 1rem; padding: 0.5rem; background: var(--bg-secondary); border-radius: 0;">
                 <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.25rem;">
                     <i class="fas fa-trophy"></i> ${escapeHtml(league.name)}
                 </h4>
