@@ -148,12 +148,12 @@ export function renderCompactHeader(teamData, gwNumber) {
                 top: calc(3.5rem + env(safe-area-inset-top)); /* Keeps this box sticky just below the top app bar */
                 background: var(--bg-primary);
                 z-index: 100;
-                padding: 0.5rem 0.75rem;
+                padding: 0.5rem 0;
                 border-bottom: 2px solid var(--border-color);
                 margin: 0;
             "
         >
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; padding: 0 0.75rem;">
                 <div style="flex: 1; display: grid; gap: 0.2rem; padding-left: 0;">
                     <div style="display: flex; align-items: center; gap: 0.4rem;">
                         <button
@@ -205,7 +205,7 @@ export function renderCompactHeader(teamData, gwNumber) {
                         background: var(--bg-secondary);
                         border: 1px solid var(--border-color);
                         border-radius: 6px;
-                        padding: 0.4rem 0.5rem;
+                        padding: 0.4rem 0.75rem;
                     ">
                         <div style="font-size: 1rem; font-weight: 700; color: ${gwTextColor}; line-height: 1.2;">
                             GW${gwNumber}: ${gwPoints}
@@ -266,7 +266,7 @@ export function renderCompactPlayerRow(pick, player, gwNumber) {
             display: grid;
             grid-template-columns: 2.5fr 1fr 0.7fr 0.6fr 0.6fr 0.7fr 0.6fr;
             gap: 0.25rem;
-            padding: 0.4rem 0.5rem;
+            padding: 0.4rem 0.75rem;
             background: ${finalBg};
             border-bottom: 1px solid var(--border-color);
             font-size: 0.75rem;
@@ -305,7 +305,7 @@ export function renderCompactTeamList(players, gwNumber) {
             display: grid;
             grid-template-columns: 2.5fr 1fr 0.7fr 0.6fr 0.6fr 0.7fr 0.6fr;
             gap: 0.25rem;
-            padding: 0.4rem 0.5rem;
+            padding: 0.4rem 0.75rem;
             background: var(--primary-color);
             color: white;
             font-size: 0.7rem;
@@ -337,7 +337,7 @@ export function renderCompactTeamList(players, gwNumber) {
     }).join('');
 
     return `
-        <div style="margin-top: 0.5rem;">
+        <div>
             ${headerRow}
             ${startersHtml}
             ${benchHtml}
@@ -390,7 +390,7 @@ export function renderMatchSchedule(players, gwNumber) {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                padding: 0.5rem;
+                padding: 0.5rem 0;
                 border-bottom: 1px solid var(--border-color);
                 font-size: 0.75rem;
             ">
@@ -401,14 +401,14 @@ export function renderMatchSchedule(players, gwNumber) {
     }).join('');
 
     return `
-        <div style="margin-top: 0.5rem;">
+        <div>
             <details style="
                 background: var(--bg-secondary);
-                border-radius: 0.5rem;
+                border-radius: 0;
                 overflow: hidden;
             ">
                 <summary style="
-                    padding: 0.5rem;
+                    padding: 0.5rem 0.75rem;
                     cursor: pointer;
                     font-weight: 600;
                     font-size: 0.8rem;
@@ -418,7 +418,7 @@ export function renderMatchSchedule(players, gwNumber) {
                     <i class="fas fa-calendar-alt" style="margin-right: 0.5rem;"></i>
                     GW${gwNumber} Fixtures (SGT)
                 </summary>
-                <div style="padding: 0 0.5rem 0.5rem 0.5rem;">
+                <div style="padding: 0 0.75rem 0.5rem 0.75rem;">
                     ${fixturesHtml}
                 </div>
             </details>

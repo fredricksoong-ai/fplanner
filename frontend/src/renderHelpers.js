@@ -57,7 +57,7 @@ export function renderPlayerTable(players, fixtureMode = 'next5', myTeamPlayerId
     }
 
     let html = `
-        <div style="overflow-x: auto; overflow-y: visible; background: var(--bg-primary); border-radius: 12px; box-shadow: 0 2px 8px var(--shadow); padding-top: 120px; margin-top: -120px;">
+        <div style="overflow-x: auto; overflow-y: visible; background: var(--bg-primary); border-radius: 12px; box-shadow: 0 2px 8px var(--shadow);">
             <table style="width: 100%; font-size: 0.875rem; border-collapse: collapse;">
                 <thead style="background: var(--primary-color); color: white;">
                     <tr>
