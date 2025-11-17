@@ -241,6 +241,23 @@ body {
     font-size: 1.25rem !important;
   }
 
+  /* PWA-specific adjustments for standalone display mode */
+  @media (display-mode: standalone) {
+    /* In PWA mode, ensure consistent spacing since safe-area-inset-top may be 0 */
+    nav {
+      padding-top: 0.75rem !important;
+      margin-top: 0 !important;
+    }
+
+    body {
+      padding-top: 0;
+    }
+
+    #compact-header {
+      top: 3.5rem !important;
+    }
+  }
+
   /* Hide full countdown text on very small screens */
   @media (max-width: 380px) {
     #gw-countdown {
