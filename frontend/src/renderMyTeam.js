@@ -451,24 +451,7 @@ export function renderMyTeam(teamData, subTab = 'overview') {
         });
     }
 
-    // Add event listener for expand stats button (mobile)
-    const expandStatsBtn = document.getElementById('expand-stats-btn');
-    if (expandStatsBtn) {
-        expandStatsBtn.addEventListener('click', () => {
-            const expandedSection = document.getElementById('expanded-stats');
-            const icon = expandStatsBtn.querySelector('i');
-
-            if (expandedSection.style.display === 'none' || !expandedSection.style.display) {
-                expandedSection.style.display = 'block';
-                icon.classList.remove('fa-chevron-down');
-                icon.classList.add('fa-chevron-up');
-            } else {
-                expandedSection.style.display = 'none';
-                icon.classList.remove('fa-chevron-up');
-                icon.classList.add('fa-chevron-down');
-            }
-        });
-    }
+    // Removed: expand stats button event listener (expandable section removed from compact header)
 
     // Add skeleton styles for loading states
     if (shouldUseMobileLayout()) {
