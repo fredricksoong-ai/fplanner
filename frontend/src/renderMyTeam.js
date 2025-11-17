@@ -1732,10 +1732,12 @@ function renderManagerInfo(teamData) {
     const { team, picks } = teamData;
     const entry = picks.entry_history;
 
-    // Handle optional fields safely
-    const overallRank = team.summary_overall_rank || team.current_event_points || 0;
+    // Use team.summary_* fields (most accurate, from /api/entry/{teamId}/)
+    const overallRank = team.summary_overall_rank || 0;
     const totalPlayers = team.last_deadline_total_players || team.total_players || 0;
-    const overallPoints = team.summary_overall_points || team.overall_points || 0;
+    const overallPoints = team.summary_overall_points || 0;
+    const gwPoints = team.summary_event_points || 0;
+    const gwRank = team.summary_event_rank || 0;
 
     return `
         <div style="
@@ -1759,7 +1761,7 @@ function renderManagerInfo(teamData) {
                 <div>
                     <div style="font-size: 0.875rem; opacity: 0.9; margin-bottom: 0.25rem;">Total Points</div>
                     <div style="font-size: 1.5rem; font-weight: 700;">${overallPoints.toLocaleString()}</div>
-                    <div style="font-size: 0.875rem; opacity: 0.8; margin-top: 0.25rem;">GW${teamData.gameweek}: ${entry.total_points} pts</div>
+                    <div style="font-size: 0.875rem; opacity: 0.8; margin-top: 0.25rem;">GW${teamData.gameweek}: ${gwPoints} pts (Rank: ${gwRank.toLocaleString()})</div>
                 </div>
                 <div>
                     <div style="font-size: 0.875rem; opacity: 0.9; margin-bottom: 0.25rem;">Team Value</div>
