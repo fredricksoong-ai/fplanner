@@ -14,7 +14,7 @@ export function createMobileNav(currentPage, onNavigate) {
         { id: 'league', label: 'League', icon: 'fa-trophy', action: 'league' },
         { id: 'my-team', label: 'Team', icon: 'fa-users' },
         { id: 'refresh', label: 'Refresh', icon: 'fa-sync-alt', action: 'refresh', isGreen: true },
-        { id: 'fixtures', label: 'Fixtures', icon: 'fa-calendar-alt', disabled: true },
+        { id: 'fixtures', label: 'Fixtures', icon: 'fa-calendar-alt', action: 'fixtures' },
         { id: 'stats', label: 'Stats', icon: 'fa-chart-bar', disabled: true }
     ];
 
@@ -98,12 +98,18 @@ export function initMobileNav(navigateCallback) {
         item.addEventListener('click', (e) => {
             e.preventDefault();
 
-            // Handle action buttons (League, Refresh)
+            // Handle action buttons (League, Fixtures, Refresh)
             const action = item.dataset.action;
             if (action === 'league') {
                 console.log('🏆 League button clicked - navigating to leagues tab');
                 // Navigate to leagues tab in my-team page
                 navigateCallback('my-team', 'leagues');
+                return;
+            }
+            if (action === 'fixtures') {
+                console.log('📅 Fixtures button clicked - navigating to fixtures tab');
+                // Navigate to fixtures tab in my-team page
+                navigateCallback('my-team', 'fixtures');
                 return;
             }
             if (action === 'refresh') {
@@ -174,9 +180,11 @@ export function updateMobileNav(activePage, subTab = 'overview') {
         const page = item.dataset.page;
         const action = item.dataset.action;
 
-        // Special case: highlight 'league' button when on my-team/leagues
+        // Special case: highlight action buttons when on their respective tabs
         let isActive = false;
         if (action === 'league' && activePage === 'my-team' && subTab === 'leagues') {
+            isActive = true;
+        } else if (action === 'fixtures' && activePage === 'my-team' && subTab === 'fixtures') {
             isActive = true;
         } else if (page === activePage && subTab === 'overview') {
             isActive = true;
