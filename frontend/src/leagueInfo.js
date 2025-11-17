@@ -34,51 +34,50 @@ export async function loadAndRenderLeagueInfo() {
 
         const position = userEntry.rank;
         const totalEntries = leagueData.standings.results.length;
-        const leagueName = leagueData.league.name;
 
-        // Calculate gaps
+        // Calculate gaps - F1 style (positive = ahead, negative = behind)
         const aboveEntry = leagueData.standings.results.find(e => e.rank === position - 1);
         const belowEntry = leagueData.standings.results.find(e => e.rank === position + 1);
 
-        const gapAbove = aboveEntry ? userEntry.total - aboveEntry.total : 0;
-        const gapBelow = belowEntry ? belowEntry.total - userEntry.total : 0;
+        // Gap to person above (negative if behind)
+        const gapAbove = aboveEntry ? userEntry.total - aboveEntry.total : null;
+        // Gap to person below (positive if ahead)
+        const gapBelow = belowEntry ? userEntry.total - belowEntry.total : null;
 
-        // Build gap display - always show gaps if they exist
+        // Build gap display with F1-style +/- format
         let gapDisplay = '';
-        if (position > 1 && gapAbove < 0) {
-            // Chase gap (points behind leader)
-            gapDisplay += `<span style="color: #ef4444;">↑${Math.abs(gapAbove)}</span>`;
+        if (gapAbove !== null) {
+            const gapAboveStr = gapAbove >= 0 ? `+${gapAbove}` : `${gapAbove}`;
+            const gapAboveColor = gapAbove >= 0 ? '#22c55e' : '#ef4444';
+            gapDisplay += `<span style="color: ${gapAboveColor};">${gapAboveStr}</span>`;
         }
-        if (position < totalEntries && gapBelow > 0) {
-            // Buffer gap (points ahead of person below)
+        if (gapBelow !== null) {
+            const gapBelowStr = gapBelow >= 0 ? `+${gapBelow}` : `${gapBelow}`;
+            const gapBelowColor = gapBelow >= 0 ? '#22c55e' : '#ef4444';
             if (gapDisplay) gapDisplay += ' / ';
-            gapDisplay += `<span style="color: #22c55e;">↓${gapBelow}</span>`;
-        }
-        if (position === 1 && gapBelow > 0) {
-            // In first place - show how far ahead of 2nd place
-            gapDisplay = `<span style="color: #22c55e;">↓${gapBelow} ahead</span>`;
+            gapDisplay += `<span style="color: ${gapBelowColor};">${gapBelowStr}</span>`;
         }
         if (!gapDisplay) {
             gapDisplay = '-';
         }
 
-        // Calculate league average
-        const totalPoints = leagueData.standings.results.reduce((sum, e) => sum + e.total, 0);
-        const leagueAvg = Math.round(totalPoints / totalEntries);
-        const vsAvg = userEntry.total - leagueAvg;
-        const vsAvgDisplay = vsAvg >= 0
-            ? `<span style="color: #22c55e;">+${vsAvg}</span>`
-            : `<span style="color: #ef4444;">${vsAvg}</span>`;
+        // Get ordinal suffix for position
+        const getOrdinalSuffix = (n) => {
+            const s = ['th', 'st', 'nd', 'rd'];
+            const v = n % 100;
+            return s[(v - 20) % 10] || s[v] || s[0];
+        };
+        const ordinal = getOrdinalSuffix(position);
+        const positionDisplay = `${position}<sup style="font-size: 0.5rem;">${ordinal}</sup>`;
 
         // Render league info
         placeholder.innerHTML = `
-            <div style="font-size: 0.65rem; color: var(--text-secondary); line-height: 1.3;">
-                <div style="margin-bottom: 0.1rem; font-weight: 600; color: var(--text-primary);">
-                    ${escapeHtml(leagueName.length > 18 ? leagueName.substring(0, 18) + '...' : leagueName)}: ${position}/${totalEntries}
+            <div style="font-size: 0.65rem; color: var(--text-secondary); line-height: 1.4;">
+                <div style="margin-bottom: 0.15rem; font-weight: 600; color: var(--text-primary);">
+                    League Pos: ${positionDisplay}/${totalEntries}
                 </div>
-                <div style="display: flex; gap: 0.75rem;">
-                    <span>Gap: ${gapDisplay}</span>
-                    <span>Avg: ${vsAvgDisplay}</span>
+                <div>
+                    Point Gap: ${gapDisplay}
                 </div>
             </div>
         `;
