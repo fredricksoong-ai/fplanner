@@ -21,7 +21,7 @@ export function createMobileNav(currentPage, onNavigate) {
     const navHtml = `
         <nav
             id="mobile-bottom-nav"
-            class="hide-desktop bottom-nav"
+            class="hide-desktop"
             style="
                 position: fixed;
                 bottom: 0;
@@ -33,7 +33,7 @@ export function createMobileNav(currentPage, onNavigate) {
                 justify-content: space-around;
                 align-items: center;
                 padding: 0.5rem 0;
-                padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
+                padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
                 box-shadow: 0 -2px 10px var(--shadow);
                 z-index: 1000;
             "
