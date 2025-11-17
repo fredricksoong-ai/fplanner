@@ -118,7 +118,7 @@ export function initMobileNav(navigateCallback) {
             if (action === 'league') {
                 console.log('🏆 League button clicked');
                 // Get team ID from window or localStorage
-                const teamId = window.currentTeamId || localStorage.getItem('teamId');
+                const teamId = window.currentTeamId || localStorage.getItem('fplanner_team_id');
                 console.log('Team ID:', teamId);
 
                 if (teamId) {
