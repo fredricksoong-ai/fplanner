@@ -29,35 +29,18 @@ export function createMobileNav(currentPage, onNavigate) {
                 bottom: 0;
                 left: 0;
                 right: 0;
-                background: #37003c;
-                border-top: 1px solid rgba(255,255,255,0.1);
+                background: var(--bg-secondary);
+                border-top: 1px solid var(--border-color);
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                padding: 0.25rem 0;
-                padding-bottom: max(0.25rem, env(safe-area-inset-bottom));
+                padding: 0.4rem 0.5rem;
+                padding-bottom: max(0.4rem, env(safe-area-inset-bottom));
                 z-index: 1000;
+                gap: 0.25rem;
             "
         >
             ${navItems.map(item => {
-                // Determine icon and text color
-                let iconColor = 'white';
-                let textColor = 'white';
-                let itemBg = currentPage === item.id ? 'rgba(255,255,255,0.2)' : 'transparent';
-                
-                if (item.disabled) {
-                    iconColor = 'rgba(255,255,255,0.4)';
-                    textColor = 'rgba(255,255,255,0.4)';
-                } else if (item.isGreen) {
-                    // NEW STYLING: Green background with primary text/icon color for contrast
-                    iconColor = 'var(--primary-color)'; // Dark purple/primary color for icon
-                    textColor = 'var(--primary-color)'; // Dark purple/primary color for text
-                    itemBg = '#00ff87'; // FPL Green for background
-                } else if (currentPage === item.id) {
-                    // Active style for non-refresh buttons
-                    itemBg = 'rgba(255,255,255,0.2)';
-                }
-
                 return `
                 <button
                     class="mobile-nav-item no-select touch-target"
@@ -68,23 +51,25 @@ export function createMobileNav(currentPage, onNavigate) {
                         display: flex;
                         flex-direction: column;
                         align-items: center;
-                        gap: 0.15rem;
-                        background: ${item.isGreen ? '#00ff87' : (currentPage === item.id ? 'rgba(255,255,255,0.15)' : 'transparent')};
+                        justify-content: center;
+                        gap: 0.25rem;
+                        background: ${item.isGreen ? 'var(--secondary-color)' : (currentPage === item.id ? 'var(--bg-tertiary)' : 'transparent')};
                         border: none;
-                        padding: 0.3rem 0.35rem;
-                        border-radius: 0.4rem;
-                        color: ${item.isGreen ? '#37003c' : (item.disabled ? 'rgba(255,255,255,0.4)' : 'white')};
+                        padding: 0.5rem 0.4rem;
+                        border-radius: 0.5rem;
+                        color: ${item.isGreen ? 'var(--bg-primary)' : (item.disabled ? 'var(--text-tertiary)' : 'var(--text-primary)')};
                         cursor: ${item.disabled ? 'not-allowed' : 'pointer'};
                         transition: all 0.2s;
                         flex: 1;
-                        max-width: 70px;
+                        min-height: 60px;
                         opacity: ${item.disabled ? '0.5' : '1'};
                     "
                 >
-                    <i class="fas ${item.icon}" style="font-size: 1.1rem; color: ${item.isGreen ? '#37003c' : (item.disabled ? 'rgba(255,255,255,0.4)' : 'white')};"></i>
+                    <i class="fas ${item.icon}" style="font-size: 1.3rem;"></i>
                     <span style="
-                        font-size: 0.65rem;
+                        font-size: 0.7rem;
                         font-weight: ${currentPage === item.id || item.isGreen ? '700' : '500'};
+                        white-space: nowrap;
                     ">${item.label}</span>
                 </button>
             `;
@@ -175,7 +160,10 @@ export function initMobileNav(navigateCallback) {
         // Add touch feedback
         item.addEventListener('touchstart', () => {
             if (!item.disabled) {
-                item.style.background = 'rgba(255,255,255,0.25)';
+                const isRefresh = item.dataset.action === 'refresh';
+                if (!isRefresh) {
+                    item.style.background = 'var(--border-dark)';
+                }
             }
         });
 
@@ -184,7 +172,7 @@ export function initMobileNav(navigateCallback) {
                 const page = item.dataset.page;
                 const currentPage = getCurrentPage();
                 const isRefresh = item.dataset.action === 'refresh';
-                item.style.background = isRefresh ? '#00ff87' : (currentPage === page ? 'rgba(255,255,255,0.15)' : 'transparent');
+                item.style.background = isRefresh ? 'var(--secondary-color)' : (currentPage === page ? 'var(--bg-tertiary)' : 'transparent');
             }
         });
     });
@@ -204,7 +192,7 @@ export function updateMobileNav(activePage) {
         const isActive = page === activePage;
         const isRefresh = item.dataset.action === 'refresh';
 
-        item.style.background = isRefresh ? '#00ff87' : (isActive ? 'rgba(255,255,255,0.15)' : 'transparent');
+        item.style.background = isRefresh ? 'var(--secondary-color)' : (isActive ? 'var(--bg-tertiary)' : 'transparent');
         const label = item.querySelector('span');
         if (label) {
             label.style.fontWeight = isActive || item.dataset.action === 'refresh' ? '700' : '500';
@@ -221,7 +209,7 @@ function addMainContentPadding() {
     style.textContent = `
         @media (max-width: 767px) {
             #app-container {
-                padding-bottom: calc(4.5rem + env(safe-area-inset-bottom)) !important;
+                padding-bottom: calc(5rem + env(safe-area-inset-bottom)) !important;
             }
 
             body {

@@ -248,17 +248,17 @@ function updateCountdown() {
 }
 
 /**
- * Load saved theme preference
+ * Load saved theme preference (defaults to dark mode)
  */
 function loadTheme() {
-    const savedTheme = localStorage.getItem('theme') || 'light';
+    const savedTheme = localStorage.getItem('theme') || 'dark';
     document.documentElement.setAttribute('data-theme', savedTheme);
-    
+
     const button = document.getElementById('theme-toggle');
     if (savedTheme === 'dark') {
         button.innerHTML = '<i class="fas fa-sun"></i>';
     }
-    
+
     console.log(`🎨 Theme loaded: ${savedTheme}`);
 }
 
