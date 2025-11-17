@@ -88,7 +88,7 @@ export function renderCompactHeader(teamData, gwNumber) {
         const captainPlayer = getPlayerById(captainPick.element);
         if (captainPlayer) {
             const captainOpp = getGWOpponent(captainPlayer.team, gwNumber);
-            const oppBadge = `<span class="${getDifficultyClass(captainOpp.difficulty)}" style="padding: 0.05rem 0.2rem; border-radius: 0.2rem; font-weight: 600; font-size: 0.6rem; min-width: 2.5rem; display: inline-block; text-align: center;">${captainOpp.name} (${captainOpp.isHome ? 'H' : 'A'})</span>`;
+            const oppBadge = `<span class="${getDifficultyClass(captainOpp.difficulty)}" style="padding: 0.1rem 0.3rem; border-radius: 0.3rem; font-weight: 600; font-size: 0.65rem; min-width: 3.5rem; display: inline-block; text-align: center;">${captainOpp.name} (${captainOpp.isHome ? 'H' : 'A'})</span>`;
             captainInfo = `${captainPlayer.web_name} vs. ${oppBadge}`;
         }
     }
@@ -97,7 +97,7 @@ export function renderCompactHeader(teamData, gwNumber) {
         const vicePlayer = getPlayerById(vicePick.element);
         if (vicePlayer) {
             const viceOpp = getGWOpponent(vicePlayer.team, gwNumber);
-            const oppBadge = `<span class="${getDifficultyClass(viceOpp.difficulty)}" style="padding: 0.05rem 0.2rem; border-radius: 0.2rem; font-weight: 600; font-size: 0.6rem; min-width: 2.5rem; display: inline-block; text-align: center;">${viceOpp.name} (${viceOpp.isHome ? 'H' : 'A'})</span>`;
+            const oppBadge = `<span class="${getDifficultyClass(viceOpp.difficulty)}" style="padding: 0.1rem 0.3rem; border-radius: 0.3rem; font-weight: 600; font-size: 0.65rem; min-width: 3.5rem; display: inline-block; text-align: center;">${viceOpp.name} (${viceOpp.isHome ? 'H' : 'A'})</span>`;
             viceInfo = `${vicePlayer.web_name} vs. ${oppBadge}`;
         }
     }
@@ -195,42 +195,40 @@ export function renderCompactHeader(teamData, gwNumber) {
                         GW Captain: ${captainInfo}
                     </div>
 
-                    <div style="font-size: 0.7rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.5rem;">
-                        <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 50%;">GW Vice Captain: ${viceInfo}</span>
-
-                        <!-- League Selector Dropdown -->
-                        <select
-                            id="mobile-league-selector"
-                            style="
-                                flex: 1;
-                                min-width: 0;
-                                max-width: 120px;
-                                padding: 0.2rem 0.3rem;
-                                font-size: 0.65rem;
-                                background: var(--bg-secondary);
-                                border: 1px solid var(--border-color);
-                                border-radius: 0.25rem;
-                                color: var(--text-primary);
-                                cursor: pointer;
-                            "
-                        >
-                            <option value="">🏆 League</option>
-                        </select>
+                    <div style="font-size: 0.7rem; color: var(--text-secondary);">
+                        GW Vice Captain: ${viceInfo}
                     </div>
                 </div>
 
-                <div style="
-                    background: var(--bg-secondary);
-                    border: 1px solid var(--border-color);
-                    border-radius: 6px;
-                    padding: 0.4rem 0.5rem;
-                    min-width: 90px;
-                    flex-shrink: 0;
-                ">
-                    <div style="font-size: 1rem; font-weight: 700; color: ${gwTextColor}; line-height: 1.2;">
-                        GW${gwNumber}: ${gwPoints}
+                <div style="display: grid; gap: 0.3rem; flex-shrink: 0; min-width: 90px;">
+                    <!-- League Selector Dropdown -->
+                    <select
+                        id="mobile-league-selector"
+                        style="
+                            width: 100%;
+                            padding: 0.2rem 0.3rem;
+                            font-size: 0.65rem;
+                            background: var(--bg-secondary);
+                            border: 1px solid var(--border-color);
+                            border-radius: 0.25rem;
+                            color: var(--text-primary);
+                            cursor: pointer;
+                        "
+                    >
+                        <option value="">🏆 League</option>
+                    </select>
+
+                    <div style="
+                        background: var(--bg-secondary);
+                        border: 1px solid var(--border-color);
+                        border-radius: 6px;
+                        padding: 0.4rem 0.5rem;
+                    ">
+                        <div style="font-size: 1rem; font-weight: 700; color: ${gwTextColor}; line-height: 1.2;">
+                            GW${gwNumber}: ${gwPoints}
+                        </div>
+                        ${leagueInfo}
                     </div>
-                    ${leagueInfo}
                 </div>
             </div>
         </div>
@@ -291,12 +289,11 @@ export function renderCompactPlayerRow(pick, player, gwNumber) {
             align-items: center;
         ">
             <div style="font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                <span style="color: var(--text-secondary); font-size: 0.65rem; margin-right: 0.2rem;">${getPositionShort(player)}</span>
                 ${escapeHtml(player.web_name)}${captainBadge}
                 ${hasHighSeverity ? '<i class="fas fa-exclamation-triangle" style="color: var(--danger-color); font-size: 0.65rem; margin-left: 0.2rem;"></i>' : ''}
             </div>
             <div style="text-align: center;">
-                <span class="${getDifficultyClass(gwOpp.difficulty)}" style="padding: 0.05rem 0.2rem; border-radius: 0.2rem; font-weight: 600; font-size: 0.6rem; min-width: 2.5rem; display: inline-block; text-align: center;">
+                <span class="${getDifficultyClass(gwOpp.difficulty)}" style="padding: 0.1rem 0.3rem; border-radius: 0.3rem; font-weight: 600; font-size: 0.65rem; min-width: 3.5rem; display: inline-block; text-align: center;">
                     ${gwOpp.name} (${gwOpp.isHome ? 'H' : 'A'})
                 </span>
             </div>
