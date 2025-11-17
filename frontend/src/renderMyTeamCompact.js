@@ -33,40 +33,64 @@ import {
 } from './risk.js';
 
 /**
- * Render ultra-compact header (minimal, focused on key stats)
+ * Render ultra-compact header with team info and GW card
  */
 export function renderCompactHeader(teamData, gwNumber) {
-    const { picks } = teamData;
-    const gwPoints = picks.entry_history.event_points || 0;
-    const totalPoints = picks.entry_history.total_points || 0;
-    const gwRank = picks.entry_history.rank ? picks.entry_history.rank.toLocaleString() : 'N/A';
-    const overallRank = picks.entry_history.overall_rank ? picks.entry_history.overall_rank.toLocaleString() : 'N/A';
+    const { picks, team } = teamData;
+    const entry = picks.entry_history;
 
-    const rankChange = picks.entry_history.rank_sort || 0;
-    const rankIcon = rankChange > 0 ? '↓' : rankChange < 0 ? '↑' : '→';
+    const gwPoints = entry.event_points || 0;
+    const totalPoints = entry.total_points || 0;
+    const overallRank = entry.overall_rank ? entry.overall_rank.toLocaleString() : 'N/A';
+    const teamValue = ((entry.value || 0) / 10).toFixed(1);
+    const bank = ((entry.bank || 0) / 10).toFixed(1);
+    const freeTransfers = entry.event_transfers || 0;
+    const transferCost = entry.event_transfers_cost || 0;
+
+    // Calculate GW card color based on points (simplified - can add average comparison later)
+    let gwCardBg = 'var(--bg-secondary)';
+    let gwCardColor = 'var(--text-primary)';
+    if (gwPoints >= 60) {
+        gwCardBg = 'rgba(34, 197, 94, 0.15)'; // Green
+        gwCardColor = '#22c55e';
+    } else if (gwPoints >= 45) {
+        gwCardBg = 'rgba(59, 130, 246, 0.15)'; // Blue
+        gwCardColor = '#3b82f6';
+    } else if (gwPoints < 30 && gwPoints > 0) {
+        gwCardBg = 'rgba(239, 68, 68, 0.15)'; // Red
+        gwCardColor = '#ef4444';
+    }
 
     return `
-        <div style="
-            position: sticky;
-            top: 0;
-            background: var(--bg-primary);
-            z-index: 100;
-            padding: 0.5rem 1rem;
-            padding-top: calc(0.5rem + env(safe-area-inset-top));
-            border-bottom: 2px solid var(--border-color);
-            margin: -1rem -1rem 0.75rem -1rem;
-        ">
-            <!-- Top row: GW + Actions -->
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                <div style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">
-                    GW${gwNumber} • ${gwPoints}pts
+        <div
+            id="compact-header"
+            style="
+                position: sticky;
+                top: 0;
+                background: var(--bg-primary);
+                z-index: 100;
+                padding: 0.75rem 1rem;
+                padding-top: calc(0.75rem + env(safe-area-inset-top));
+                border-bottom: 2px solid var(--border-color);
+                margin: -1rem -1rem 0 -1rem;
+            "
+        >
+            <!-- Row 1: Team name + Action buttons + GW Card -->
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
+                <div style="flex: 1;">
+                    <div style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">
+                        ${escapeHtml(team.name)}
+                    </div>
                 </div>
-                <div style="display: flex; gap: 0.5rem;">
+
+                <!-- Action Buttons -->
+                <div style="display: flex; gap: 0.5rem; margin: 0 0.75rem;">
                     <button
                         id="change-team-btn-mobile"
+                        class="touch-target"
                         style="
-                            width: 32px;
-                            height: 32px;
+                            width: 44px;
+                            height: 44px;
                             border-radius: 50%;
                             background: var(--bg-secondary);
                             border: 1px solid var(--border-color);
@@ -79,13 +103,14 @@ export function renderCompactHeader(teamData, gwNumber) {
                         "
                         title="Change Team"
                     >
-                        <i class="fas fa-arrow-left" style="font-size: 0.8rem;"></i>
+                        <i class="fas fa-arrow-left" style="font-size: 1rem;"></i>
                     </button>
                     <button
                         id="refresh-team-btn-mobile"
+                        class="touch-target"
                         style="
-                            width: 32px;
-                            height: 32px;
+                            width: 44px;
+                            height: 44px;
                             border-radius: 50%;
                             background: var(--secondary-color);
                             border: none;
@@ -98,17 +123,73 @@ export function renderCompactHeader(teamData, gwNumber) {
                         "
                         title="Refresh"
                     >
-                        <i class="fas fa-sync-alt" style="font-size: 0.8rem;"></i>
+                        <i class="fas fa-sync-alt" style="font-size: 1rem;"></i>
                     </button>
                 </div>
+
+                <!-- GW Points Card -->
+                <div style="
+                    background: ${gwCardBg};
+                    border: 2px solid ${gwCardColor};
+                    border-radius: 8px;
+                    padding: 0.5rem 0.75rem;
+                    text-align: center;
+                    min-width: 85px;
+                ">
+                    <div style="font-size: 1.75rem; font-weight: 700; color: ${gwCardColor}; line-height: 1;">
+                        ${gwPoints}
+                    </div>
+                    <div style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                        GW${gwNumber}
+                    </div>
+                </div>
             </div>
-            <!-- Stats row -->
-            <div style="display: flex; gap: 0.75rem; font-size: 0.7rem; color: var(--text-secondary);">
-                <span>Rank ${gwRank} ${rankIcon}</span>
-                <span>|</span>
-                <span>Overall: ${totalPoints}pts</span>
-                <span>|</span>
-                <span>${overallRank}</span>
+
+            <!-- Row 2: Stats -->
+            <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
+                ${totalPoints.toLocaleString()} pts • £${teamValue}m • ${overallRank}
+            </div>
+
+            <!-- Row 3: Transfers -->
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-size: 0.8rem; color: var(--text-secondary);">
+                    ${freeTransfers} FT${transferCost > 0 ? ` (${transferCost})` : ' (0)'}
+                </div>
+
+                <!-- Expand arrow -->
+                <button
+                    id="expand-stats-btn"
+                    style="
+                        background: none;
+                        border: none;
+                        color: var(--text-secondary);
+                        cursor: pointer;
+                        padding: 0.25rem;
+                        font-size: 0.9rem;
+                    "
+                    title="More Stats"
+                >
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+            </div>
+
+            <!-- Expandable Section (hidden by default) -->
+            <div
+                id="expanded-stats"
+                style="
+                    display: none;
+                    margin-top: 0.75rem;
+                    padding-top: 0.75rem;
+                    border-top: 1px solid var(--border-color);
+                    font-size: 0.75rem;
+                    color: var(--text-secondary);
+                "
+            >
+                <div style="display: grid; gap: 0.5rem;">
+                    <div>Squad Value: £${((entry.value || 0) / 10 - (entry.bank || 0) / 10).toFixed(1)}m + £${bank}m bank</div>
+                    ${team.years_active ? `<div>FPL History: ${team.years_active} Season${team.years_active > 1 ? 's' : ''}</div>` : ''}
+                    <div>Manager: ${escapeHtml(team.player_first_name)} ${escapeHtml(team.player_last_name)}</div>
+                </div>
             </div>
         </div>
     `;
@@ -142,37 +223,6 @@ export function renderCompactPlayerRow(pick, player, gwNumber, isInTemplate) {
     const gwPoints = hasGWStats ? player.github_gw.total_points : (player.event_points || 0);
     const displayPoints = isCaptain ? (gwPoints * 2) : gwPoints;
 
-    // Position-specific metrics
-    let metricValue = '';
-    if (posType === 'GKP' || posType === 'DEF') {
-        const xGC = player.expected_goals_conceded_per_90 || 0;
-        metricValue = formatDecimal(xGC);
-    } else {
-        const xGI = player.expected_goal_involvements_per_90 || 0;
-        metricValue = formatDecimal(xGI);
-    }
-
-    const defCon = player.github_season?.defensive_contribution_per_90 || 0;
-    const defConFormatted = formatDecimal(defCon);
-
-    const ppm = calculatePPM(player);
-    const ownership = parseFloat(player.selected_by_percent) || 0;
-
-    // Transfer momentum
-    let transferNet = '—';
-    let transferColor = 'inherit';
-    if (player.github_transfers) {
-        const netTransfers = player.github_transfers.transfers_in - player.github_transfers.transfers_out;
-        const prefix = netTransfers > 0 ? '+' : '';
-        transferNet = `${prefix}${(netTransfers / 1000).toFixed(0)}k`;
-        transferColor = netTransfers > 0 ? '#22c55e' : netTransfers < 0 ? '#ef4444' : 'inherit';
-    } else if (player.transfers_in_event !== undefined && player.transfers_out_event !== undefined) {
-        const netTransfers = player.transfers_in_event - player.transfers_out_event;
-        const prefix = netTransfers > 0 ? '+' : '';
-        transferNet = `${prefix}${(netTransfers / 1000).toFixed(0)}k`;
-        transferColor = netTransfers > 0 ? '#22c55e' : netTransfers < 0 ? '#ef4444' : 'inherit';
-    }
-
     // Background color
     const bgColor = isInTemplate
         ? 'rgba(0, 255, 136, 0.08)'  // Green for template
@@ -183,29 +233,28 @@ export function renderCompactPlayerRow(pick, player, gwNumber, isInTemplate) {
     return `
         <div style="
             display: grid;
-            grid-template-columns: 0.5fr 2fr 1fr 1fr 1fr 1fr 1fr 1fr;
-            gap: 0.25rem;
-            padding: 0.4rem 0.5rem;
+            grid-template-columns: 2.5fr 1.2fr 0.8fr 0.8fr 0.8fr;
+            gap: 0.3rem;
+            padding: 0.5rem 0.75rem;
             background: ${finalBg};
             border-bottom: 1px solid var(--border-color);
-            font-size: 0.7rem;
+            font-size: 0.8rem;
             align-items: center;
+            min-height: 44px;
         ">
-            <div style="font-weight: 600; color: var(--text-secondary);">${getPositionShort(player)}</div>
             <div style="font-weight: 600; color: var(--text-primary);">
+                <span style="color: var(--text-secondary); font-size: 0.7rem; margin-right: 0.25rem;">${getPositionShort(player)}</span>
                 ${escapeHtml(player.web_name)}${captainBadge}
-                ${hasHighSeverity ? '<i class="fas fa-exclamation-triangle" style="color: var(--danger-color); font-size: 0.6rem; margin-left: 0.25rem;"></i>' : ''}
+                ${hasHighSeverity ? '<i class="fas fa-exclamation-triangle" style="color: var(--danger-color); font-size: 0.7rem; margin-left: 0.25rem;"></i>' : ''}
             </div>
-            <div style="color: var(--text-secondary);">${getTeamShortName(player.team)}</div>
             <div style="text-align: center;">
-                <span class="${getDifficultyClass(gwOpp.difficulty)}" style="padding: 0.15rem 0.3rem; border-radius: 0.2rem; font-weight: 600; font-size: 0.65rem;">
-                    ${gwOpp.name}${gwOpp.isHome ? 'H' : 'A'}
+                <span class="${getDifficultyClass(gwOpp.difficulty)}" style="padding: 0.2rem 0.4rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.75rem;">
+                    ${gwOpp.name} (${gwOpp.isHome ? 'H' : 'A'})
                 </span>
             </div>
-            <div style="text-align: center; font-size: 0.65rem; color: var(--text-secondary);">${gwMinutes}</div>
-            <div style="text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 700; padding: 0.25rem; border-radius: 0.2rem;">${displayPoints}</div>
-            <div style="text-align: center; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 600; padding: 0.25rem; border-radius: 0.2rem;">${formatDecimal(player.form)}</div>
-            <div style="text-align: center; font-size: 0.65rem; color: ${transferColor}; font-weight: 600;">${transferNet}</div>
+            <div style="text-align: center; font-size: 0.75rem; color: var(--text-secondary);">${gwMinutes}</div>
+            <div style="text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 700; padding: 0.3rem; border-radius: 0.25rem; font-size: 0.85rem;">${displayPoints}</div>
+            <div style="text-align: center; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 600; padding: 0.3rem; border-radius: 0.25rem; font-size: 0.8rem;">${formatDecimal(player.form)}</div>
         </div>
     `;
 }
@@ -221,26 +270,23 @@ export function renderCompactTeamList(players, gwNumber, templatePlayerIds = new
     const headerRow = `
         <div style="
             display: grid;
-            grid-template-columns: 0.5fr 2fr 1fr 1fr 1fr 1fr 1fr 1fr;
-            gap: 0.25rem;
-            padding: 0.4rem 0.5rem;
+            grid-template-columns: 2.5fr 1.2fr 0.8fr 0.8fr 0.8fr;
+            gap: 0.3rem;
+            padding: 0.6rem 0.75rem;
             background: var(--primary-color);
             color: white;
-            font-size: 0.65rem;
+            font-size: 0.8rem;
             font-weight: 700;
             text-transform: uppercase;
             position: sticky;
-            top: calc(4.5rem + env(safe-area-inset-top));
+            top: calc(10rem + env(safe-area-inset-top));
             z-index: 90;
         ">
-            <div>Pos</div>
             <div>Player</div>
-            <div>Team</div>
             <div style="text-align: center;">Opp</div>
             <div style="text-align: center;">Min</div>
             <div style="text-align: center;">Pts</div>
             <div style="text-align: center;">Form</div>
-            <div style="text-align: center;">ΔT</div>
         </div>
     `;
 
@@ -248,160 +294,134 @@ export function renderCompactTeamList(players, gwNumber, templatePlayerIds = new
     const startersHtml = starters.map(player => {
         const fullPlayer = getPlayerById(player.element);
         if (!fullPlayer) return '';
+
         const isInTemplate = templatePlayerIds.has(player.element);
         return renderCompactPlayerRow(player, fullPlayer, gwNumber, isInTemplate);
     }).join('');
 
     // Bench
-    const benchPoints = bench.reduce((sum, p) => {
-        const player = getPlayerById(p.element);
-        return sum + (player?.event_points || 0);
-    }, 0);
-
     const benchHtml = bench.map(player => {
         const fullPlayer = getPlayerById(player.element);
         if (!fullPlayer) return '';
+
         const isInTemplate = templatePlayerIds.has(player.element);
         return renderCompactPlayerRow(player, fullPlayer, gwNumber, isInTemplate);
     }).join('');
 
-    // Separator between starters and bench
+    // Purple separator between starters and bench (matches desktop)
     const separator = `
-        <div style="
-            padding: 0;
-            background: linear-gradient(90deg, #37003c, #2a002e);
-            height: 2px;
-            margin: 0.25rem 0;
-        "></div>
+        <div style="background: linear-gradient(90deg, #37003c, #2a002e); height: 2px; margin: 0.5rem 0;"></div>
     `;
 
-    return `
-        <div style="background: var(--bg-secondary); border-radius: 0.5rem; overflow: hidden; margin-bottom: 1rem;">
-            ${headerRow}
-            ${startersHtml}
-            ${separator}
-            ${benchHtml}
-        </div>
-
-        <!-- Color legend -->
-        <div style="display: flex; gap: 1rem; justify-content: center; font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 1rem;">
+    // Color legend
+    const legend = `
+        <div style="
+            display: flex;
+            gap: 1rem;
+            padding: 0.75rem;
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            background: var(--bg-secondary);
+            border-radius: 0.5rem;
+            margin-top: 0.5rem;
+        ">
             <div style="display: flex; align-items: center; gap: 0.25rem;">
-                <div style="width: 12px; height: 12px; background: rgba(0, 255, 136, 0.2); border-radius: 2px;"></div>
+                <div style="width: 12px; height: 12px; background: rgba(0, 255, 136, 0.3); border-radius: 2px;"></div>
                 <span>Template</span>
             </div>
             <div style="display: flex; align-items: center; gap: 0.25rem;">
-                <div style="width: 12px; height: 12px; background: rgba(107, 25, 112, 0.2); border-radius: 2px;"></div>
+                <div style="width: 12px; height: 12px; background: rgba(107, 25, 112, 0.3); border-radius: 2px;"></div>
                 <span>Differential</span>
             </div>
         </div>
     `;
+
+    return `
+        ${headerRow}
+        ${startersHtml}
+        ${separator}
+        ${benchHtml}
+        ${legend}
+    `;
 }
 
 /**
- * Render match schedule (collapsible)
+ * Render match schedule section (collapsible)
  */
 export function renderMatchSchedule(players, gwNumber) {
-    const matchGroups = new Map();
+    const fixtures = getFixtures();
+    const gwFixtures = fixtures.filter(f => f.event === gwNumber);
 
-    players.forEach(pick => {
-        const player = getPlayerById(pick.element);
-        if (!player) return;
+    // Get unique team IDs from player squad
+    const teamIds = new Set(players.map(p => {
+        const player = getPlayerById(p.element);
+        return player ? player.team : null;
+    }).filter(Boolean));
 
-        const opponent = getGWOpponent(player.team, gwNumber);
-        if (!opponent || !opponent.kickoffTime) return;
+    // Filter fixtures for squad teams
+    const squadFixtures = gwFixtures.filter(f =>
+        teamIds.has(f.team_h) || teamIds.has(f.team_a)
+    );
 
-        // Convert to SGT (UTC+8)
-        const kickoffDate = new Date(opponent.kickoffTime);
-        const sgtTime = new Date(kickoffDate.getTime() + (8 * 60 * 60 * 1000));
-
-        const dayKey = sgtTime.toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short' });
-        const timeKey = sgtTime.toLocaleTimeString('en-SG', { hour: '2-digit', minute: '2-digit', hour12: false });
-        const sortKey = sgtTime.getTime();
-
-        if (!matchGroups.has(sortKey)) {
-            matchGroups.set(sortKey, {
-                day: dayKey,
-                time: timeKey,
-                players: []
-            });
-        }
-
-        matchGroups.get(sortKey).players.push({
-            name: player.web_name,
-            opponent: `${getTeamShortName(opponent.opponentTeam)}`,
-            isHome: opponent.isHome,
-            isCaptain: pick.is_captain,
-            isViceCaptain: pick.is_vice_captain
-        });
-    });
-
-    const sortedGroups = Array.from(matchGroups.entries())
-        .sort((a, b) => a[0] - b[0]);
-
-    if (sortedGroups.length === 0) {
+    if (squadFixtures.length === 0) {
         return '';
     }
 
-    let currentDay = null;
-    const scheduleHtml = sortedGroups.map(([_, group]) => {
-        const dayHeader = currentDay !== group.day ? `
-            <div style="
-                padding: 0.4rem 0.5rem;
-                background: var(--bg-tertiary);
-                font-weight: 600;
-                font-size: 0.7rem;
-                text-transform: uppercase;
-                color: var(--text-secondary);
-            ">
-                📅 ${group.day}
-            </div>
-        ` : '';
+    // Sort by kickoff time
+    squadFixtures.sort((a, b) => new Date(a.kickoff_time) - new Date(b.kickoff_time));
 
-        currentDay = group.day;
+    const fixturesHtml = squadFixtures.map(fixture => {
+        const homeTeam = getTeamShortName(fixture.team_h);
+        const awayTeam = getTeamShortName(fixture.team_a);
 
-        const playersHtml = group.players.map(p => {
-            const fontWeight = (p.isCaptain || p.isViceCaptain) ? '700' : '500';
-            const badge = p.isCaptain ? '(C)' : p.isViceCaptain ? '(VC)' : '';
-            return `
-                <div style="padding: 0.4rem 0.75rem; border-bottom: 1px solid var(--border-color); font-size: 0.75rem;">
-                    <span style="font-weight: ${fontWeight};">• ${p.name} ${badge}</span>
-                    <span style="color: var(--text-secondary);"> vs ${p.opponent} (${p.isHome ? 'H' : 'A'})</span>
-                </div>
-            `;
-        }).join('');
+        // Convert to SGT (UTC+8)
+        const kickoffDate = new Date(fixture.kickoff_time);
+        const sgtTime = new Date(kickoffDate.getTime() + (8 * 60 * 60 * 1000));
+        const timeStr = sgtTime.toLocaleString('en-SG', {
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        });
 
         return `
-            ${dayHeader}
             <div style="
-                padding: 0.4rem 0.5rem;
-                background: var(--primary-color);
-                color: white;
-                font-weight: 600;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 0.5rem;
+                border-bottom: 1px solid var(--border-color);
                 font-size: 0.75rem;
             ">
-                ${group.time} SGT
+                <span style="color: var(--text-secondary); min-width: 100px;">${timeStr}</span>
+                <span style="font-weight: 600;">${homeTeam} vs ${awayTeam}</span>
             </div>
-            ${playersHtml}
         `;
     }).join('');
 
     return `
-        <details style="margin-bottom: 1rem;">
-            <summary style="
-                padding: 0.6rem;
+        <div style="margin-top: 1rem;">
+            <details style="
                 background: var(--bg-secondary);
-                border: 1px solid var(--border-color);
                 border-radius: 0.5rem;
-                cursor: pointer;
-                font-weight: 600;
-                font-size: 0.85rem;
-                color: var(--text-primary);
+                overflow: hidden;
             ">
-                📅 Match Schedule
-            </summary>
-            <div style="margin-top: 0.5rem; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 0.5rem; overflow: hidden;">
-                ${scheduleHtml}
-            </div>
-        </details>
+                <summary style="
+                    padding: 0.75rem;
+                    cursor: pointer;
+                    font-weight: 600;
+                    font-size: 0.85rem;
+                    color: var(--text-primary);
+                    user-select: none;
+                ">
+                    <i class="fas fa-calendar-alt" style="margin-right: 0.5rem;"></i>
+                    GW${gwNumber} Fixtures (SGT)
+                </summary>
+                <div style="padding: 0 0.5rem 0.5rem 0.5rem;">
+                    ${fixturesHtml}
+                </div>
+            </details>
+        </div>
     `;
 }
