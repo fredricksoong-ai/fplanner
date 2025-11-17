@@ -545,8 +545,15 @@ function renderTeamOverviewTab(teamData) {
 
     if (useMobile) {
         // Mobile ultra-compact layout
-        // TODO: Get template player IDs from selected league
+        // Get selected league (if any) for template player comparison
+        const teamId = teamData.team.id;
+        const selectedLeagueId = localStorage.getItem(`fpl_selected_league_${teamId}`);
+
+        // TODO: Fetch league members and calculate template players (>50% ownership)
+        // For now, empty set until league template calculation is implemented
         const templatePlayerIds = new Set();
+
+        console.log('Selected league for comparison:', selectedLeagueId || 'Overall (no league)');
 
         return `
             ${renderCompactHeader(teamData, gameweek)}

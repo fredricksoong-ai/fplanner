@@ -3,6 +3,8 @@
  * Bottom navigation bar for mobile devices
  */
 
+import { showLeagueSelector } from './leagueSelector.js';
+
 /**
  * Create mobile bottom navigation bar
  * @param {string} currentPage - Currently active page
@@ -11,7 +13,7 @@
  */
 export function createMobileNav(currentPage, onNavigate) {
     const navItems = [
-        { id: 'league', label: 'League', icon: 'fa-trophy', action: 'league', disabled: true },
+        { id: 'league', label: 'League', icon: 'fa-trophy', action: 'league' },
         { id: 'my-team', label: 'Team', icon: 'fa-users' },
         { id: 'refresh', label: 'Refresh', icon: 'fa-sync-alt', action: 'refresh', isGreen: true },
         { id: 'fixtures', label: 'Fixtures', icon: 'fa-calendar-alt', disabled: true },
@@ -101,8 +103,19 @@ export function initMobileNav(navigateCallback) {
             // Handle action buttons (League, Refresh)
             const action = item.dataset.action;
             if (action === 'league') {
-                // TODO: Open league selector modal
-                console.log('League selector - to be implemented');
+                // Get team ID from window or localStorage
+                const teamId = window.currentTeamId || localStorage.getItem('teamId');
+                if (teamId) {
+                    showLeagueSelector(parseInt(teamId, 10), (leagueId) => {
+                        console.log('✅ League selected:', leagueId);
+                        // Trigger refresh to update template players
+                        if (window.handleTeamRefresh) {
+                            window.handleTeamRefresh();
+                        }
+                    });
+                } else {
+                    console.error('❌ No team ID found');
+                }
                 return;
             }
             if (action === 'refresh') {
