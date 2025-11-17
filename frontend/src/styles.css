@@ -231,9 +231,9 @@ body {
     z-index: 900;
   }
 
-  /* Extend purple background to top of screen */
+  /* Extend background to top of screen - match card color scheme */
   body {
-    background: var(--primary-color) !important;
+    background: var(--bg-primary) !important;
     padding-top: env(safe-area-inset-top);
   }
 
@@ -243,9 +243,9 @@ body {
 
   /* PWA-specific adjustments for standalone display mode */
   @media (display-mode: standalone) {
-    /* In PWA mode, ensure consistent spacing since safe-area-inset-top may be 0 */
+    /* In PWA mode, add consistent top spacing to match Safari experience */
     nav {
-      padding-top: 0.75rem !important;
+      padding-top: 1.5rem !important;
       margin-top: 0 !important;
     }
 
@@ -254,7 +254,7 @@ body {
     }
 
     #compact-header {
-      top: 3.5rem !important;
+      top: 4.25rem !important;
     }
   }
 

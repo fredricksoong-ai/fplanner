@@ -816,7 +816,7 @@ function renderTeamTable(teamAnalysis) {
     const fixtureHeaders = getFixtureHeaders(5, 1);
 
     let html = `
-        <div style="overflow-x: auto; background: var(--bg-primary); border-radius: 12px; box-shadow: 0 2px 8px var(--shadow);">
+        <div style="overflow-x: auto; background: var(--bg-secondary); border-radius: 12px; box-shadow: 0 2px 8px var(--shadow);">
             <table style="width: 100%; font-size: 0.875rem; border-collapse: collapse;">
                 <thead style="background: var(--primary-color); color: white;">
                     <tr>
@@ -845,7 +845,7 @@ function renderTeamTable(teamAnalysis) {
         const next5 = getFixtures(ta.team.id, 10, false).filter(f => f.event > currentGW).slice(0, 5);
 
         html += `
-            <tr style="background: ${rowBg};">
+            <tr style="background: ${rowBg}; border-bottom: 1px solid var(--border-color);">
                 <td style="padding: 0.75rem 0.5rem;"><strong>${escapeHtml(ta.team.name)}</strong></td>
                 <td style="padding: 0.75rem 0.5rem;">${bestPlayerName}</td>
                 <td style="padding: 0.75rem 0.5rem; text-align: center;">${bestPlayerPrice}</td>
@@ -908,7 +908,7 @@ function renderPositionSpecificTable(players, position = 'all') {
 
     // Build table based on position
     let html = `
-        <div style="overflow-x: auto; background: var(--bg-primary); border-radius: 12px; box-shadow: 0 2px 8px var(--shadow);">
+        <div style="overflow-x: auto; background: var(--bg-secondary); border-radius: 12px; box-shadow: 0 2px 8px var(--shadow);">
             <table style="width: 100%; font-size: 0.875rem; border-collapse: collapse;">
                 <thead style="background: var(--primary-color); color: white;">
                     <tr>
@@ -1036,7 +1036,7 @@ function renderPositionSpecificTable(players, position = 'all') {
         // Get fixtures
         const next5 = getFixtures(player.team, 10, false).filter(f => f.event > currentGW).slice(0, 5);
 
-        html += `<tr style="background: ${rowBg};">`;
+        html += `<tr style="background: ${rowBg}; border-bottom: 1px solid var(--border-color);">`;
 
         // Position-specific columns
         if (position === 'GKP') {

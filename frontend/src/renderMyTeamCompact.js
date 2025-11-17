@@ -256,8 +256,8 @@ export function renderCompactPlayerRow(pick, player, gwNumber) {
     const netTransfers = transfersIn - transfersOut;
     const transferColor = netTransfers > 0 ? '#22c55e' : netTransfers < 0 ? '#ef4444' : 'var(--text-secondary)';
 
-    // Background color - lighter grey for bench (always apply for bench, even with high risk)
-    const bgColor = isBench ? 'var(--bg-tertiary)' : 'transparent';
+    // Background color - primary for starters (lighter), tertiary for bench (darker)
+    const bgColor = isBench ? 'var(--bg-tertiary)' : 'var(--bg-primary)';
     // High risk overlay only for non-bench players
     const finalBg = (hasHighSeverity && !isBench) ? 'rgba(220, 38, 38, 0.08)' : bgColor;
 
@@ -338,7 +338,7 @@ export function renderCompactTeamList(players, gwNumber) {
     }).join('');
 
     return `
-        <div>
+        <div style="background: var(--bg-secondary);">
             ${headerRow}
             ${startersHtml}
             ${benchHtml}
