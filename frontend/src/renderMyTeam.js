@@ -1133,15 +1133,13 @@ function renderMobileFixturesTab() {
                         display: grid;
                         grid-template-columns: 0.8fr 2fr 1fr 2fr 0.6fr;
                         gap: 0.25rem;
-                        padding: 0.5rem 0;
+                        padding: 0.4rem 0.5rem;
                         background: ${isStarted && !isFinished ? 'rgba(239, 68, 68, 0.05)' : 'transparent'};
                         border-bottom: 1px solid var(--border-color);
                         font-size: 0.75rem;
                         align-items: center;
-                        width: 100vw;
-                        margin-left: calc(-50vw + 50%);
                     ">
-                        <div style="color: var(--text-secondary); font-size: 0.65rem; padding-left: 0.5rem;">${timeStr.split(',')[1] || timeStr}</div>
+                        <div style="color: var(--text-secondary); font-size: 0.65rem;">${timeStr.split(',')[1] || timeStr}</div>
                         <div style="text-align: right; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                             ${homeTeam?.short_name || 'TBD'}
                         </div>
@@ -1151,7 +1149,7 @@ function renderMobileFixturesTab() {
                         <div style="text-align: left; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                             ${awayTeam?.short_name || 'TBD'}
                         </div>
-                        <div style="text-align: center; padding-right: 0.5rem;">
+                        <div style="text-align: center;">
                             ${statusBadge}
                         </div>
                     </div>
@@ -1164,7 +1162,7 @@ function renderMobileFixturesTab() {
                     display: grid;
                     grid-template-columns: 0.8fr 2fr 1fr 2fr 0.6fr;
                     gap: 0.25rem;
-                    padding: 0.4rem 0;
+                    padding: 0.4rem 0.5rem;
                     background: var(--primary-color);
                     color: white;
                     font-size: 0.7rem;
@@ -1172,14 +1170,12 @@ function renderMobileFixturesTab() {
                     position: sticky;
                     top: calc(3.5rem + env(safe-area-inset-top));
                     z-index: 50;
-                    width: 100vw;
-                    margin-left: calc(-50vw + 50%);
                 ">
-                    <div style="padding-left: 0.5rem;">Time</div>
+                    <div>Time</div>
                     <div style="text-align: right;">Home</div>
                     <div style="text-align: center;">Score</div>
                     <div style="text-align: left;">Away</div>
-                    <div style="text-align: center; padding-right: 0.5rem;">Status</div>
+                    <div style="text-align: center;">Status</div>
                 </div>
             `;
 
@@ -1456,7 +1452,7 @@ function renderLeagueStandings(leagueData) {
                 display: grid;
                 grid-template-columns: 0.7fr 2fr 0.7fr 0.8fr 0.8fr;
                 gap: 0.25rem;
-                padding: 0.4rem 0;
+                padding: 0.4rem 0.5rem;
                 background: var(--primary-color);
                 color: white;
                 font-size: 0.7rem;
@@ -1465,14 +1461,12 @@ function renderLeagueStandings(leagueData) {
                 position: sticky;
                 top: calc(3.5rem + 8rem + env(safe-area-inset-top));
                 z-index: 50;
-                width: 100vw;
-                margin-left: calc(-50vw + 50%);
             ">
-                <div style="text-align: center; padding-left: 0.5rem;">Rank</div>
+                <div style="text-align: center;">Rank</div>
                 <div>Manager</div>
                 <div style="text-align: center;">GW</div>
                 <div style="text-align: center;">Total</div>
-                <div style="text-align: center; padding-right: 0.5rem;">Gap</div>
+                <div style="text-align: center;">Gap</div>
             </div>
         `;
 
@@ -1514,16 +1508,14 @@ function renderLeagueStandings(leagueData) {
                     display: grid;
                     grid-template-columns: 0.7fr 2fr 0.7fr 0.8fr 0.8fr;
                     gap: 0.25rem;
-                    padding: 0.1rem 0;
+                    padding: 0.4rem 0.5rem;
                     background: ${bgColor};
                     border-bottom: 1px solid var(--border-color);
                     ${isUser ? 'border-left: 3px solid var(--primary-color);' : ''}
                     font-size: 0.75rem;
                     align-items: center;
-                    width: 100vw;
-                    margin-left: calc(-50vw + 50%);
                 ">
-                    <div style="text-align: center; padding-left: 0.5rem;">
+                    <div style="text-align: center;">
                         <div style="font-weight: 600;">${entry.rank}</div>
                         <div style="font-size: 0.6rem; color: ${rankChangeColor};">
                             ${rankChangeIcon}
@@ -1537,7 +1529,7 @@ function renderLeagueStandings(leagueData) {
                         ${gwPoints}
                     </div>
                     <div style="text-align: center; font-weight: 600;">${entry.total.toLocaleString()}</div>
-                    <div style="text-align: center; font-weight: 600; color: ${gapColor}; font-size: 0.7rem; padding-right: 0.5rem;">
+                    <div style="text-align: center; font-weight: 600; color: ${gapColor}; font-size: 0.7rem;">
                         ${gapText}
                     </div>
                 </div>
