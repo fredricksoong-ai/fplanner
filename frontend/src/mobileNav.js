@@ -164,18 +164,30 @@ export function initMobileNav(navigateCallback) {
 /**
  * Update mobile navigation active state
  * @param {string} activePage - The currently active page
+ * @param {string} subTab - Optional subtab for pages with tabs
  */
-export function updateMobileNav(activePage) {
+export function updateMobileNav(activePage, subTab = 'overview') {
     const mobileNavItems = document.querySelectorAll('.mobile-nav-item');
     mobileNavItems.forEach(item => {
         const page = item.dataset.page;
-        const isActive = page === activePage;
-        const isRefresh = item.dataset.action === 'refresh';
+        const action = item.dataset.action;
+
+        // Special case: highlight 'league' button when on my-team/leagues
+        let isActive = false;
+        if (action === 'league' && activePage === 'my-team' && subTab === 'leagues') {
+            isActive = true;
+        } else if (page === activePage && subTab === 'overview') {
+            isActive = true;
+        } else {
+            isActive = false;
+        }
+
+        const isRefresh = action === 'refresh';
 
         item.style.background = isRefresh ? 'var(--secondary-color)' : (isActive ? 'var(--bg-tertiary)' : 'transparent');
         const label = item.querySelector('span');
         if (label) {
-            label.style.fontWeight = isActive || item.dataset.action === 'refresh' ? '700' : '500';
+            label.style.fontWeight = isActive || isRefresh ? '700' : '500';
         }
     });
 }

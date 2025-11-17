@@ -64,8 +64,8 @@ function updateNavLinks() {
         }
     });
 
-    // Update mobile navigation as well
-    updateMobileNav(currentPage);
+    // Update mobile navigation as well (pass subTab for proper highlighting)
+    updateMobileNav(currentPage, currentSubTab);
 }
 
 /**
