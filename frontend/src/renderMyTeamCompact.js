@@ -130,8 +130,8 @@ export function renderCompactHeader(teamData, gwNumber) {
     if (selectedLeagueId && selectedLeagueId !== 'null') {
         // Store league data in a data attribute for later rendering
         leagueInfo = `
-            <div id="league-info-placeholder" data-team-id="${team.id}" data-league-id="${selectedLeagueId}" style="margin-top: 0.35rem; padding-top: 0.35rem; border-top: 1px solid var(--border-color);">
-                <div style="font-size: 0.65rem; color: var(--text-secondary);">Loading league...</div>
+            <div id="league-info-placeholder" data-team-id="${team.id}" data-league-id="${selectedLeagueId}" style="margin-top: 0.35rem; padding-top: 0.35rem; border-top: 1px solid rgba(255,255,255,0.3);">
+                <div style="font-size: 0.65rem; color: rgba(255,255,255,0.8);">Loading league...</div>
             </div>
         `;
     }
@@ -202,12 +202,12 @@ export function renderCompactHeader(teamData, gwNumber) {
 
                 <div style="display: grid; gap: 0.3rem; flex-shrink: 0; min-width: 90px; padding-right: 0;">
                     <div style="
-                        background: var(--bg-secondary);
-                        border: 1px solid var(--border-color);
+                        background: var(--primary-color);
+                        border: 1px solid var(--primary-color);
                         border-radius: 6px;
                         padding: 0.4rem 0.5rem;
                     ">
-                        <div style="font-size: 1rem; font-weight: 700; color: ${gwTextColor}; line-height: 1.2;">
+                        <div style="font-size: 1rem; font-weight: 700; color: white; line-height: 1.2;">
                             GW${gwNumber}: ${gwPoints}
                         </div>
                         ${leagueInfo}
@@ -306,8 +306,8 @@ export function renderCompactTeamList(players, gwNumber) {
             grid-template-columns: 2.5fr 1fr 0.7fr 0.6fr 0.6fr 0.7fr 0.6fr;
             gap: 0.25rem;
             padding: 0.4rem 0;
-            background: var(--bg-secondary);
-            color: var(--text-primary);
+            background: var(--primary-color);
+            color: white;
             font-size: 0.7rem;
             font-weight: 700;
             text-transform: capitalize;

@@ -1175,8 +1175,8 @@ function renderLeagueStandings(leagueData) {
                 grid-template-columns: 0.7fr 2fr 0.7fr 0.8fr 0.8fr;
                 gap: 0.25rem;
                 padding: 0.4rem 0;
-                background: var(--bg-secondary);
-                color: var(--text-primary);
+                background: var(--primary-color);
+                color: white;
                 font-size: 0.7rem;
                 font-weight: 700;
                 text-transform: capitalize;
@@ -1184,11 +1184,11 @@ function renderLeagueStandings(leagueData) {
                 top: calc(3.5rem + 8rem + env(safe-area-inset-top));
                 z-index: 50;
             ">
-                <div style="text-align: center; padding-left: 0.5rem;">Rank</div>
+                <div style="text-align: center; padding-left: 0;">Rank</div>
                 <div>Manager</div>
                 <div style="text-align: center;">GW</div>
                 <div style="text-align: center;">Total</div>
-                <div style="text-align: center; padding-right: 0.5rem;">Gap</div>
+                <div style="text-align: center; padding-right: 0;">Gap</div>
             </div>
         `;
 
@@ -1237,7 +1237,7 @@ function renderLeagueStandings(leagueData) {
                     font-size: 0.75rem;
                     align-items: center;
                 ">
-                    <div style="text-align: center; padding-left: 0.5rem;">
+                    <div style="text-align: center; padding-left: 0;">
                         <div style="font-weight: 600;">${entry.rank}</div>
                         <div style="font-size: 0.6rem; color: ${rankChangeColor};">
                             ${rankChangeIcon}
@@ -1251,7 +1251,7 @@ function renderLeagueStandings(leagueData) {
                         ${gwPoints}
                     </div>
                     <div style="text-align: center; font-weight: 600;">${entry.total.toLocaleString()}</div>
-                    <div style="text-align: center; font-weight: 600; color: ${gapColor}; font-size: 0.7rem; padding-right: 0.5rem;">
+                    <div style="text-align: center; font-weight: 600; color: ${gapColor}; font-size: 0.7rem; padding-right: 0;">
                         ${gapText}
                     </div>
                 </div>
