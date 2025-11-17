@@ -198,9 +198,10 @@ body {
 
   /* Make main content full width on mobile */
   #app-container {
-    padding: 1rem !important;
+    padding: 0.5rem !important;
     padding-top: 0 !important;
-    margin: 0 auto 1rem auto !important;
+    padding-bottom: 4rem !important; /* Space for bottom nav */
+    margin: 0 auto !important;
   }
 
   /* Compact header on mobile with safe area support */

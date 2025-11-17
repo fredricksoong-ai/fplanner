@@ -89,7 +89,7 @@ export function renderCompactHeader(teamData, gwNumber) {
         if (captainPlayer) {
             const captainOpp = getGWOpponent(captainPlayer.team, gwNumber);
             const oppBadge = `<span class="${getDifficultyClass(captainOpp.difficulty)}" style="padding: 0.15rem 0.3rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.7rem;">${captainOpp.name} (${captainOpp.isHome ? 'H' : 'A'})</span>`;
-            captainInfo = `${captainPlayer.web_name} ${oppBadge}`;
+            captainInfo = `${captainPlayer.web_name} vs. ${oppBadge}`;
         }
     }
 
@@ -98,7 +98,7 @@ export function renderCompactHeader(teamData, gwNumber) {
         if (vicePlayer) {
             const viceOpp = getGWOpponent(vicePlayer.team, gwNumber);
             const oppBadge = `<span class="${getDifficultyClass(viceOpp.difficulty)}" style="padding: 0.15rem 0.3rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.7rem;">${viceOpp.name} (${viceOpp.isHome ? 'H' : 'A'})</span>`;
-            viceInfo = `${vicePlayer.web_name} ${oppBadge}`;
+            viceInfo = `${vicePlayer.web_name} vs. ${oppBadge}`;
         }
     }
 
@@ -136,41 +136,41 @@ export function renderCompactHeader(teamData, gwNumber) {
                 top: calc(3.5rem + env(safe-area-inset-top));
                 background: var(--bg-primary);
                 z-index: 100;
-                padding: 0.75rem 1rem;
+                padding: 0.5rem 0.75rem;
                 border-bottom: 2px solid var(--border-color);
-                margin: -1rem -1rem 0 -1rem;
+                margin: -0.5rem -0.5rem 0 -0.5rem;
             "
         >
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem;">
                 <!-- Left: Team Info -->
-                <div style="flex: 1; display: grid; gap: 0.3rem;">
+                <div style="flex: 1; display: grid; gap: 0.2rem;">
                     <!-- Team Name -->
-                    <div style="font-size: 1rem; font-weight: 700; color: var(--text-primary); line-height: 1.2;">
+                    <div style="font-size: 0.95rem; font-weight: 700; color: var(--text-primary); line-height: 1.2;">
                         ${escapeHtml(team.name)}
                     </div>
 
                     <!-- Overall Rank & Points -->
-                    <div style="font-size: 0.75rem; color: var(--text-secondary);">
+                    <div style="font-size: 0.7rem; color: var(--text-secondary);">
                         <span style="color: ${rankColor};">${overallRank}</span> • ${totalPoints.toLocaleString()} pts
                     </div>
 
                     <!-- Transfers -->
-                    <div style="font-size: 0.75rem; color: var(--text-secondary);">
+                    <div style="font-size: 0.7rem; color: var(--text-secondary);">
                         Transfers: ${freeTransfers} FT${transferCost > 0 ? ` (-${transferCost} pts)` : ''}
                     </div>
 
                     <!-- Squad Value -->
-                    <div style="font-size: 0.75rem; color: var(--text-secondary);">
+                    <div style="font-size: 0.7rem; color: var(--text-secondary);">
                         Squad Value: £${squadValue}m + £${bank}m bank
                     </div>
 
                     <!-- GW Captain -->
-                    <div style="font-size: 0.75rem; color: var(--text-secondary);">
+                    <div style="font-size: 0.7rem; color: var(--text-secondary);">
                         GW Captain: ${captainInfo}
                     </div>
 
                     <!-- GW Vice Captain -->
-                    <div style="font-size: 0.75rem; color: var(--text-secondary);">
+                    <div style="font-size: 0.7rem; color: var(--text-secondary);">
                         GW Vice Captain: ${viceInfo}
                     </div>
                 </div>
@@ -312,7 +312,7 @@ export function renderCompactTeamList(players, gwNumber, templatePlayerIds = new
 
     // Purple separator between starters and bench (matches desktop)
     const separator = `
-        <div style="background: linear-gradient(90deg, #37003c, #2a002e); height: 2px; margin: 0.5rem 0;"></div>
+        <div style="background: linear-gradient(90deg, #37003c, #2a002e); height: 2px; margin: 0.3rem 0;"></div>
     `;
 
     // Color legend
@@ -320,19 +320,20 @@ export function renderCompactTeamList(players, gwNumber, templatePlayerIds = new
         <div style="
             display: flex;
             gap: 1rem;
-            padding: 0.75rem;
-            font-size: 0.7rem;
+            padding: 0.5rem;
+            font-size: 0.65rem;
             color: var(--text-secondary);
             background: var(--bg-secondary);
             border-radius: 0.5rem;
-            margin-top: 0.5rem;
+            margin-top: 0.3rem;
+            margin-bottom: 0.5rem;
         ">
             <div style="display: flex; align-items: center; gap: 0.25rem;">
-                <div style="width: 12px; height: 12px; background: rgba(0, 255, 136, 0.3); border-radius: 2px;"></div>
+                <div style="width: 10px; height: 10px; background: rgba(0, 255, 136, 0.3); border-radius: 2px;"></div>
                 <span>Template</span>
             </div>
             <div style="display: flex; align-items: center; gap: 0.25rem;">
-                <div style="width: 12px; height: 12px; background: rgba(107, 25, 112, 0.3); border-radius: 2px;"></div>
+                <div style="width: 10px; height: 10px; background: rgba(107, 25, 112, 0.3); border-radius: 2px;"></div>
                 <span>Differential</span>
             </div>
         </div>
@@ -403,17 +404,17 @@ export function renderMatchSchedule(players, gwNumber) {
     }).join('');
 
     return `
-        <div style="margin-top: 1rem;">
+        <div style="margin-top: 0.5rem;">
             <details style="
                 background: var(--bg-secondary);
                 border-radius: 0.5rem;
                 overflow: hidden;
             ">
                 <summary style="
-                    padding: 0.75rem;
+                    padding: 0.5rem;
                     cursor: pointer;
                     font-weight: 600;
-                    font-size: 0.85rem;
+                    font-size: 0.8rem;
                     color: var(--text-primary);
                     user-select: none;
                 ">
