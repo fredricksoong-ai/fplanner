@@ -39,9 +39,13 @@ export function renderCompactHeader(teamData, gwNumber) {
     const { picks, team } = teamData;
     const entry = picks.entry_history;
 
-    const gwPoints = entry.event_points || 0;
-    const totalPoints = entry.total_points || 0;
-    const overallRank = entry.overall_rank ? entry.overall_rank.toLocaleString() : 'N/A';
+    // Use team.summary_* fields (most accurate, from /api/entry/{teamId}/)
+    const gwPoints = team.summary_event_points || 0;
+    const totalPoints = team.summary_overall_points || 0;
+    const overallRank = team.summary_overall_rank ? team.summary_overall_rank.toLocaleString() : 'N/A';
+    const gwRank = team.summary_event_rank ? team.summary_event_rank.toLocaleString() : 'N/A';
+
+    // Team value and bank from entry_history (GW-specific)
     const teamValue = ((entry.value || 0) / 10).toFixed(1);
     const bank = ((entry.bank || 0) / 10).toFixed(1);
     const freeTransfers = entry.event_transfers || 0;
