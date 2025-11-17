@@ -40,12 +40,6 @@ export function createMobileNav(currentPage, onNavigate) {
             "
         >
             ${navItems.map(item => {
-                // FPL green background with purple text for Refresh button
-                const isRefresh = item.isGreen;
-                const buttonBg = isRefresh ? '#00ff87' : (currentPage === item.id ? 'rgba(255,255,255,0.15)' : 'transparent');
-                const iconColor = isRefresh ? '#37003c' : (item.disabled ? 'rgba(255,255,255,0.4)' : 'white');
-                const textColor = isRefresh ? '#37003c' : (item.disabled ? 'rgba(255,255,255,0.4)' : 'white');
-
                 return `
                 <button
                     class="mobile-nav-item no-select touch-target"
@@ -57,11 +51,11 @@ export function createMobileNav(currentPage, onNavigate) {
                         flex-direction: column;
                         align-items: center;
                         gap: 0.15rem;
-                        background: ${buttonBg};
+                        background: ${item.isGreen ? '#00ff87' : (currentPage === item.id ? 'rgba(255,255,255,0.15)' : 'transparent')};
                         border: none;
                         padding: 0.3rem 0.35rem;
                         border-radius: 0.4rem;
-                        color: ${textColor};
+                        color: ${item.isGreen ? '#37003c' : (item.disabled ? 'rgba(255,255,255,0.4)' : 'white')};
                         cursor: ${item.disabled ? 'not-allowed' : 'pointer'};
                         transition: all 0.2s;
                         flex: 1;
@@ -69,7 +63,7 @@ export function createMobileNav(currentPage, onNavigate) {
                         opacity: ${item.disabled ? '0.5' : '1'};
                     "
                 >
-                    <i class="fas ${item.icon}" style="font-size: 1.1rem; color: ${iconColor};"></i>
+                    <i class="fas ${item.icon}" style="font-size: 1.1rem; color: ${item.isGreen ? '#37003c' : (item.disabled ? 'rgba(255,255,255,0.4)' : 'white')};"></i>
                     <span style="
                         font-size: 0.65rem;
                         font-weight: ${currentPage === item.id ? '700' : '500'};
