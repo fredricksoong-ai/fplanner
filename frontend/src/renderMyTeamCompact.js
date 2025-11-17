@@ -195,26 +195,25 @@ export function renderCompactHeader(teamData, gwNumber) {
                         GW Captain: ${captainInfo}
                     </div>
 
-                    <div style="font-size: 0.7rem; color: var(--text-secondary);">
-                        GW Vice Captain: ${viceInfo}
-                    </div>
+                    <div style="font-size: 0.7rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="white-space: nowrap;">GW Vice Captain: ${viceInfo}</span>
 
-                    <!-- League Selector Dropdown -->
-                    <div id="league-selector-dropdown" style="margin-top: 0.3rem;">
+                        <!-- League Selector Dropdown -->
                         <select
                             id="mobile-league-selector"
                             style="
-                                width: 100%;
-                                padding: 0.3rem 0.5rem;
-                                font-size: 0.7rem;
+                                flex: 1;
+                                min-width: 0;
+                                padding: 0.2rem 0.3rem;
+                                font-size: 0.65rem;
                                 background: var(--bg-secondary);
                                 border: 1px solid var(--border-color);
-                                border-radius: 0.3rem;
+                                border-radius: 0.25rem;
                                 color: var(--text-primary);
                                 cursor: pointer;
                             "
                         >
-                            <option value="">Loading leagues...</option>
+                            <option value="">🏆 League</option>
                         </select>
                     </div>
                 </div>

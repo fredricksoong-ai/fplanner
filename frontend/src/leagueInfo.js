@@ -34,36 +34,50 @@ export async function loadAndRenderLeagueInfo() {
 
         const position = userEntry.rank;
         const totalEntries = leagueData.standings.results.length;
-        const leagueName = leagueData.league.name;
 
-        // Calculate gaps
+        // Calculate gaps - F1 style (positive = ahead, negative = behind)
         const aboveEntry = leagueData.standings.results.find(e => e.rank === position - 1);
         const belowEntry = leagueData.standings.results.find(e => e.rank === position + 1);
 
-        const gapAbove = aboveEntry ? userEntry.total - aboveEntry.total : 0;
-        const gapBelow = belowEntry ? belowEntry.total - userEntry.total : 0;
+        // Gap to person above (negative if behind)
+        const gapAbove = aboveEntry ? userEntry.total - aboveEntry.total : null;
+        // Gap to person below (positive if ahead)
+        const gapBelow = belowEntry ? userEntry.total - belowEntry.total : null;
 
-        // Build gap display
+        // Build gap display with F1-style +/- format
         let gapDisplay = '';
-        if (position > 1 && gapAbove < 0) {
-            gapDisplay += `<span style="color: #ef4444;">↑${Math.abs(gapAbove)}</span>`;
+        if (gapAbove !== null) {
+            const gapAboveStr = gapAbove >= 0 ? `+${gapAbove}` : `${gapAbove}`;
+            const gapAboveColor = gapAbove >= 0 ? '#22c55e' : '#ef4444';
+            gapDisplay += `<span style="color: ${gapAboveColor};">${gapAboveStr}</span>`;
         }
-        if (position < totalEntries && gapBelow > 0) {
+        if (gapBelow !== null) {
+            const gapBelowStr = gapBelow >= 0 ? `+${gapBelow}` : `${gapBelow}`;
+            const gapBelowColor = gapBelow >= 0 ? '#22c55e' : '#ef4444';
             if (gapDisplay) gapDisplay += ' / ';
-            gapDisplay += `<span style="color: #22c55e;">↓${gapBelow}</span>`;
+            gapDisplay += `<span style="color: ${gapBelowColor};">${gapBelowStr}</span>`;
         }
         if (!gapDisplay) {
-            gapDisplay = position === 1 ? '<span style="color: #22c55e;">1st place!</span>' : '-';
+            gapDisplay = '-';
         }
+
+        // Get ordinal suffix for position
+        const getOrdinalSuffix = (n) => {
+            const s = ['th', 'st', 'nd', 'rd'];
+            const v = n % 100;
+            return s[(v - 20) % 10] || s[v] || s[0];
+        };
+        const ordinal = getOrdinalSuffix(position);
+        const positionDisplay = `${position}<sup style="font-size: 0.5rem;">${ordinal}</sup>`;
 
         // Render league info
         placeholder.innerHTML = `
-            <div style="font-size: 0.65rem; color: var(--text-secondary); line-height: 1.3;">
-                <div style="margin-bottom: 0.1rem; font-weight: 600; color: var(--text-primary);">
-                    ${escapeHtml(leagueName.length > 18 ? leagueName.substring(0, 18) + '...' : leagueName)}: ${position}/${totalEntries}
+            <div style="font-size: 0.65rem; color: var(--text-secondary); line-height: 1.4;">
+                <div style="margin-bottom: 0.15rem; font-weight: 600; color: var(--text-primary);">
+                    League Pos: ${positionDisplay}/${totalEntries}
                 </div>
                 <div>
-                    Gap: ${gapDisplay}
+                    Point Gap: ${gapDisplay}
                 </div>
             </div>
         `;
