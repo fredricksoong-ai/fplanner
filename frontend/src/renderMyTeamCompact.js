@@ -200,35 +200,18 @@ export function renderCompactHeader(teamData, gwNumber) {
                     </div>
                 </div>
 
-                <div style="display: grid; gap: 0.3rem; flex-shrink: 0; min-width: 90px;">
-                    <!-- League Selector Dropdown -->
-                    <select
-                        id="mobile-league-selector"
-                        style="
-                            width: 100%;
-                            padding: 0.2rem 0.3rem;
-                            font-size: 0.65rem;
-                            background: var(--bg-secondary);
-                            border: 1px solid var(--border-color);
-                            border-radius: 0.25rem;
-                            color: var(--text-primary);
-                            cursor: pointer;
-                        "
-                    >
-                        <option value="">🏆 League</option>
-                    </select>
-
-                    <div style="
-                        background: var(--bg-secondary);
-                        border: 1px solid var(--border-color);
-                        border-radius: 6px;
-                        padding: 0.4rem 0.5rem;
-                    ">
-                        <div style="font-size: 1rem; font-weight: 700; color: ${gwTextColor}; line-height: 1.2;">
-                            GW${gwNumber}: ${gwPoints}
-                        </div>
-                        ${leagueInfo}
+                <div style="
+                    background: var(--bg-secondary);
+                    border: 1px solid var(--border-color);
+                    border-radius: 6px;
+                    padding: 0.4rem 0.5rem;
+                    min-width: 90px;
+                    flex-shrink: 0;
+                ">
+                    <div style="font-size: 1rem; font-weight: 700; color: ${gwTextColor}; line-height: 1.2;">
+                        GW${gwNumber}: ${gwPoints}
                     </div>
+                    ${leagueInfo}
                 </div>
             </div>
         </div>
