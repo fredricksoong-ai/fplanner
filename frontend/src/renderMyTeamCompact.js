@@ -200,15 +200,19 @@ export function renderCompactHeader(teamData, gwNumber) {
                     </div>
                 </div>
 
-                <div style="display: grid; gap: 0.3rem; flex-shrink: 0; min-width: 90px; padding-right: 0.5rem;">
+                <div style="display: grid; gap: 0.3rem; flex-shrink: 0; min-width: 110px; padding-right: 0.5rem;">
                     <div style="
                         background: var(--bg-secondary);
                         border: 1px solid var(--border-color);
                         border-radius: 6px;
-                        padding: 0.4rem 0.75rem;
+                        padding: 0.5rem 0.75rem;
+                        text-align: center;
                     ">
-                        <div style="font-size: 1rem; font-weight: 700; color: ${gwTextColor}; line-height: 1.2;">
-                            GW${gwNumber}: ${gwPoints}
+                        <div style="font-size: 1.75rem; font-weight: 800; color: ${gwTextColor}; line-height: 1.1;">
+                            ${gwPoints}
+                        </div>
+                        <div style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.15rem; font-weight: 600;">
+                            GW ${gwNumber}
                         </div>
                         ${leagueInfo}
                     </div>
