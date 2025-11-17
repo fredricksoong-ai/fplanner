@@ -453,6 +453,19 @@ export function renderMyTeam(teamData, subTab = 'overview') {
 
     // Removed: expand stats button event listener (expandable section removed from compact header)
 
+    // Set sticky table header position dynamically on mobile
+    if (shouldUseMobileLayout()) {
+        requestAnimationFrame(() => {
+            const compactHeader = document.getElementById('compact-header');
+            if (compactHeader) {
+                const headerHeight = compactHeader.offsetHeight;
+                const pwaHeaderHeight = 56; // 3.5rem = 56px
+                const totalTop = pwaHeaderHeight + headerHeight;
+                document.documentElement.style.setProperty('--compact-header-height', `${totalTop}px`);
+            }
+        });
+    }
+
     // Add skeleton styles for loading states
     if (shouldUseMobileLayout()) {
         addSkeletonStyles();
