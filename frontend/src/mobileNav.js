@@ -41,9 +41,23 @@ export function createMobileNav(currentPage, onNavigate) {
             "
         >
             ${navItems.map(item => {
-                // FPL green color for Refresh button
-                const iconColor = item.isGreen ? '#00ff87' : (item.disabled ? 'rgba(255,255,255,0.4)' : 'white');
-                const textColor = item.disabled ? 'rgba(255,255,255,0.4)' : 'white';
+                // Determine icon and text color
+                let iconColor = 'white';
+                let textColor = 'white';
+                let itemBg = currentPage === item.id ? 'rgba(255,255,255,0.2)' : 'transparent';
+                
+                if (item.disabled) {
+                    iconColor = 'rgba(255,255,255,0.4)';
+                    textColor = 'rgba(255,255,255,0.4)';
+                } else if (item.isGreen) {
+                    // NEW STYLING: Green background with primary text/icon color for contrast
+                    iconColor = 'var(--primary-color)'; // Dark purple/primary color for icon
+                    textColor = 'var(--primary-color)'; // Dark purple/primary color for text
+                    itemBg = '#00ff87'; // FPL Green for background
+                } else if (currentPage === item.id) {
+                    // Active style for non-refresh buttons
+                    itemBg = 'rgba(255,255,255,0.2)';
+                }
 
                 return `
                 <button
@@ -56,11 +70,11 @@ export function createMobileNav(currentPage, onNavigate) {
                         flex-direction: column;
                         align-items: center;
                         gap: 0.15rem;
-                        background: ${currentPage === item.id ? 'rgba(255,255,255,0.2)' : 'transparent'};
+                        background: ${itemBg}; /* Use determined background */
                         border: none;
                         padding: 0.3rem 0.5rem;
                         border-radius: 0.5rem;
-                        color: ${textColor};
+                        color: ${textColor}; /* Use determined text color */
                         cursor: ${item.disabled ? 'not-allowed' : 'pointer'};
                         transition: all 0.2s;
                         flex: 1;
@@ -71,7 +85,7 @@ export function createMobileNav(currentPage, onNavigate) {
                     <i class="fas ${item.icon}" style="font-size: 1.1rem; color: ${iconColor};"></i>
                     <span style="
                         font-size: 0.65rem;
-                        font-weight: ${currentPage === item.id ? '700' : '500'};
+                        font-weight: ${currentPage === item.id || item.isGreen ? '700' : '500'};
                     ">${item.label}</span>
                 </button>
             `;
@@ -162,7 +176,12 @@ export function initMobileNav(navigateCallback) {
         // Add touch feedback
         item.addEventListener('touchstart', () => {
             if (!item.disabled) {
-                item.style.background = 'rgba(255,255,255,0.3)';
+                // If it's the green refresh button, use a slightly darker green for touch feedback
+                if (item.dataset.action === 'refresh') {
+                    item.style.background = '#00e676'; // Slightly darker green
+                } else {
+                    item.style.background = 'rgba(255,255,255,0.3)';
+                }
             }
         });
 
@@ -170,7 +189,14 @@ export function initMobileNav(navigateCallback) {
             if (!item.disabled) {
                 const page = item.dataset.page;
                 const currentPage = getCurrentPage();
-                item.style.background = currentPage === page ? 'rgba(255,255,255,0.2)' : 'transparent';
+                
+                if (item.dataset.action === 'refresh') {
+                    // Green refresh button always returns to its green background
+                    item.style.background = '#00ff87'; 
+                } else {
+                    // Other buttons return to transparent or active state background
+                    item.style.background = currentPage === page ? 'rgba(255,255,255,0.2)' : 'transparent';
+                }
             }
         });
     });
@@ -189,10 +215,16 @@ export function updateMobileNav(activePage) {
         const page = item.dataset.page;
         const isActive = page === activePage;
 
-        item.style.background = isActive ? 'rgba(255,255,255,0.2)' : 'transparent';
+        // Apply new background color logic
+        if (item.dataset.action === 'refresh') {
+             item.style.background = '#00ff87'; // Always green
+        } else {
+            item.style.background = isActive ? 'rgba(255,255,255,0.2)' : 'transparent';
+        }
+        
         const label = item.querySelector('span');
         if (label) {
-            label.style.fontWeight = isActive ? '700' : '500';
+            label.style.fontWeight = isActive || item.dataset.action === 'refresh' ? '700' : '500';
         }
     });
 }
@@ -206,7 +238,8 @@ function addMainContentPadding() {
     style.textContent = `
         @media (max-width: 767px) {
             #app-container {
-                padding-bottom: calc(5rem + env(safe-area-inset-bottom)) !important;
+                /* Reduced from 5rem to 3.5rem to fix overlap while maintaining safe space */
+                padding-bottom: calc(3.5rem + env(safe-area-inset-bottom)) !important;
             }
 
             body {
