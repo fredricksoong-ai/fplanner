@@ -306,11 +306,12 @@ export function renderCompactTeamList(players, gwNumber) {
             grid-template-columns: 2.5fr 1fr 0.7fr 0.6fr 0.6fr 0.7fr 0.6fr;
             gap: 0.25rem;
             padding: 0.4rem 0.75rem;
-            background: var(--primary-color);
-            color: white;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
             font-size: 0.7rem;
             font-weight: 700;
             text-transform: capitalize;
+            border-top: 2px solid var(--border-color);
         ">
             <div>Player</div>
             <div style="text-align: center;">Opp</div>

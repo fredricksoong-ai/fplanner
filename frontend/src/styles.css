@@ -218,7 +218,6 @@ body {
 
   /* Ensure app wrapper doesn't interfere with scrolling */
   #app {
-    min-height: 100vh;
     display: flex;
     flex-direction: column;
     position: relative;
@@ -241,7 +240,7 @@ body {
 
   #app-container {
     background: var(--bg-primary);
-    flex: 1;
+    min-height: 100vh;
   }
 
   nav h1 {
