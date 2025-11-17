@@ -142,9 +142,7 @@ export function renderCompactHeader(teamData, gwNumber) {
             "
         >
             <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem;">
-                <!-- Left: Team Info -->
                 <div style="flex: 1; display: grid; gap: 0.2rem;">
-                    <!-- Team Name with Change Team Button -->
                     <div style="display: flex; align-items: center; gap: 0.4rem;">
                         <button
                             id="change-team-btn"
@@ -169,46 +167,40 @@ export function renderCompactHeader(teamData, gwNumber) {
                         </div>
                     </div>
 
-                    <!-- Overall Rank & Points -->
                     <div style="font-size: 0.7rem; color: var(--text-secondary);">
                         <span style="color: ${rankColor};">${overallRank}</span> • ${totalPoints.toLocaleString()} pts
                     </div>
 
-                    <!-- Transfers -->
                     <div style="font-size: 0.7rem; color: var(--text-secondary);">
                         Transfers: ${freeTransfers} FT${transferCost > 0 ? ` (-${transferCost} pts)` : ''}
                     </div>
 
-                    <!-- Squad Value -->
                     <div style="font-size: 0.7rem; color: var(--text-secondary);">
                         Squad Value: £${squadValue}m + £${bank}m bank
                     </div>
 
-                    <!-- GW Captain -->
                     <div style="font-size: 0.7rem; color: var(--text-secondary);">
                         GW Captain: ${captainInfo}
                     </div>
 
-                    <!-- GW Vice Captain -->
                     <div style="font-size: 0.7rem; color: var(--text-secondary);">
                         GW Vice Captain: ${viceInfo}
                     </div>
                 </div>
 
-                <!-- Right: GW Points Card -->
                 <div style="
                     background: ${gwCardBg};
-                    border: 1px solid ${gwCardColor};
-                    border-radius: 6px;
-                    padding: 0.3rem 0.5rem;
+                    border: 1px solid ${gwCardColor}; /* Decreased from 2px */
+                    border-radius: 6px; /* Slightly reduced */
+                    padding: 0.3rem 0.5rem; /* Decreased from 0.5rem 0.75rem */
                     text-align: center;
-                    min-width: 70px;
+                    min-width: 70px; /* Reduced from 85px */
                     flex-shrink: 0;
                 ">
-                    <div style="font-size: 1.25rem; font-weight: 700; color: ${gwCardColor}; line-height: 1;">
+                    <div style="font-size: 1.25rem; font-weight: 700; color: ${gwCardColor}; line-height: 1;"> /* Reduced from 1.75rem */
                         ${gwPoints}
                     </div>
-                    <div style="font-size: 0.6rem; color: var(--text-secondary); margin-top: 0.15rem;">
+                    <div style="font-size: 0.6rem; color: var(--text-secondary); margin-top: 0.15rem;"> /* Reduced font size and margin */
                         GW${gwNumber}
                     </div>
                 </div>
@@ -218,7 +210,7 @@ export function renderCompactHeader(teamData, gwNumber) {
 }
 
 /**
- * Render compact player row (matches desktop exactly)
+ * Render compact player row (matches desktop exactly) - REDUCED VERTICAL PADDING
  */
 export function renderCompactPlayerRow(pick, player, gwNumber, isInTemplate) {
     const isCaptain = pick.is_captain;
@@ -258,7 +250,7 @@ export function renderCompactPlayerRow(pick, player, gwNumber, isInTemplate) {
             display: grid;
             grid-template-columns: 2.5fr 1.2fr 0.8fr 0.8fr 0.8fr;
             gap: 0.25rem;
-            padding: 0.2rem 0.4rem;
+            padding: 0.1rem 0.4rem; /* REDUCED VERTICAL PADDING for density */
             background: ${finalBg};
             border-bottom: 1px solid var(--border-color);
             font-size: 0.75rem;
@@ -270,13 +262,13 @@ export function renderCompactPlayerRow(pick, player, gwNumber, isInTemplate) {
                 ${hasHighSeverity ? '<i class="fas fa-exclamation-triangle" style="color: var(--danger-color); font-size: 0.65rem; margin-left: 0.2rem;"></i>' : ''}
             </div>
             <div style="text-align: center;">
-                <span class="${getDifficultyClass(gwOpp.difficulty)}" style="padding: 0.1rem 0.25rem; border-radius: 0.2rem; font-weight: 600; font-size: 0.65rem;">
+                <span class="${getDifficultyClass(gwOpp.difficulty)}" style="padding: 0.05rem 0.25rem; border-radius: 0.2rem; font-weight: 600; font-size: 0.65rem;"> /* REDUCED OPONENT BADGE PADDING */
                     ${gwOpp.name} (${gwOpp.isHome ? 'H' : 'A'})
                 </span>
             </div>
             <div style="text-align: center; font-size: 0.65rem; color: var(--text-secondary);">${gwMinutes}</div>
-            <div style="text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 700; padding: 0.15rem; border-radius: 0.2rem; font-size: 0.75rem;">${displayPoints}</div>
-            <div style="text-align: center; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 600; padding: 0.15rem; border-radius: 0.2rem; font-size: 0.7rem;">${formatDecimal(player.form)}</div>
+            <div style="text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 700; padding: 0.05rem; border-radius: 0.2rem; font-size: 0.75rem;">${displayPoints}</div> /* REDUCED HEATMAP PADDING */
+            <div style="text-align: center; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 600; padding: 0.05rem; border-radius: 0.2rem; font-size: 0.7rem;">${formatDecimal(player.form)}</div> /* REDUCED HEATMAP PADDING */
         </div>
     `;
 }
