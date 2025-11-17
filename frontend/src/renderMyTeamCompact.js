@@ -54,17 +54,30 @@ export function renderCompactHeader(teamData, gwNumber) {
     const freeTransfers = entry.event_transfers || 0;
     const transferCost = entry.event_transfers_cost || 0;
 
-    // Rank change arrow (TODO: need to find the rank change field from API)
-    // For now, using a placeholder - we can hook this up when we identify the field
-    const rankChange = 0; // Placeholder: positive = rank improved (went down in number), negative = rank worsened
+    // Rank change arrow using localStorage cache comparison
+    const cacheKey = `fpl_rank_${team.id}`;
+    const cachedRank = localStorage.getItem(cacheKey);
     let rankArrow = '';
-    if (rankChange > 0) {
-        rankArrow = ' <span style="color: #22c55e;">↑</span>';
-    } else if (rankChange < 0) {
-        rankArrow = ' <span style="color: #ef4444;">↓</span>';
+
+    if (cachedRank && overallRankNum > 0) {
+        const previousRank = parseInt(cachedRank, 10);
+        const rankChange = previousRank - overallRankNum;
+
+        if (rankChange > 0) {
+            // Rank improved (number went down)
+            rankArrow = ' <span style="color: #22c55e;">↑</span>';
+        } else if (rankChange < 0) {
+            // Rank worsened (number went up)
+            rankArrow = ' <span style="color: #ef4444;">↓</span>';
+        }
     }
 
-    // Find captain and vice captain
+    // Store current rank for next comparison
+    if (overallRankNum > 0) {
+        localStorage.setItem(cacheKey, overallRankNum.toString());
+    }
+
+    // Find captain and vice captain using getPlayerById
     const captainPick = picks.picks.find(p => p.is_captain);
     const vicePick = picks.picks.find(p => p.is_vice_captain);
 
@@ -72,18 +85,16 @@ export function renderCompactHeader(teamData, gwNumber) {
     let viceInfo = 'None';
 
     if (captainPick) {
-        const captainPlayer = window.fplData?.elements?.find(el => el.id === captainPick.element);
+        const captainPlayer = getPlayerById(captainPick.element);
         if (captainPlayer) {
-            const captainTeam = window.fplData?.teams?.find(t => t.id === captainPlayer.team);
-            captainInfo = `${captainPlayer.web_name} • ${captainTeam?.short_name || 'N/A'}`;
+            captainInfo = `${captainPlayer.web_name} • ${getTeamShortName(captainPlayer.team)}`;
         }
     }
 
     if (vicePick) {
-        const vicePlayer = window.fplData?.elements?.find(el => el.id === vicePick.element);
+        const vicePlayer = getPlayerById(vicePick.element);
         if (vicePlayer) {
-            const viceTeam = window.fplData?.teams?.find(t => t.id === vicePlayer.team);
-            viceInfo = `${vicePlayer.web_name} • ${viceTeam?.short_name || 'N/A'}`;
+            viceInfo = `${vicePlayer.web_name} • ${getTeamShortName(vicePlayer.team)}`;
         }
     }
 
@@ -126,15 +137,41 @@ export function renderCompactHeader(teamData, gwNumber) {
                 margin: -1rem -1rem 0 -1rem;
             "
         >
-            <!-- Row 1: Team name • Overall Rank + GW Card -->
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
-                <div style="flex: 1;">
-                    <div style="font-size: 1rem; font-weight: 700; color: var(--text-primary); line-height: 1.3;">
-                        ${escapeHtml(team.name)} • ${overallRank}${rankArrow}
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
+                <!-- Left: Team Info -->
+                <div style="flex: 1; display: grid; gap: 0.3rem;">
+                    <!-- Team Name -->
+                    <div style="font-size: 1rem; font-weight: 700; color: var(--text-primary); line-height: 1.2;">
+                        ${escapeHtml(team.name)}
+                    </div>
+
+                    <!-- Overall Rank & Points -->
+                    <div style="font-size: 0.75rem; color: var(--text-secondary);">
+                        ${overallRank}${rankArrow} • ${totalPoints.toLocaleString()} pts
+                    </div>
+
+                    <!-- Transfers -->
+                    <div style="font-size: 0.75rem; color: var(--text-secondary);">
+                        Transfers: ${freeTransfers} FT${transferCost > 0 ? ` (-${transferCost} pts)` : ''}
+                    </div>
+
+                    <!-- Squad Value -->
+                    <div style="font-size: 0.75rem; color: var(--text-secondary);">
+                        Squad Value: £${squadValue}m + £${bank}m bank
+                    </div>
+
+                    <!-- GW Captain -->
+                    <div style="font-size: 0.75rem; color: var(--text-secondary);">
+                        GW Captain: ${captainInfo}
+                    </div>
+
+                    <!-- GW Vice Captain -->
+                    <div style="font-size: 0.75rem; color: var(--text-secondary);">
+                        GW Vice Captain: ${viceInfo}
                     </div>
                 </div>
 
-                <!-- GW Points Card -->
+                <!-- Right: GW Points Card -->
                 <div style="
                     background: ${gwCardBg};
                     border: 2px solid ${gwCardColor};
@@ -142,6 +179,7 @@ export function renderCompactHeader(teamData, gwNumber) {
                     padding: 0.5rem 0.75rem;
                     text-align: center;
                     min-width: 85px;
+                    flex-shrink: 0;
                 ">
                     <div style="font-size: 1.75rem; font-weight: 700; color: ${gwCardColor}; line-height: 1;">
                         ${gwPoints}
@@ -150,15 +188,6 @@ export function renderCompactHeader(teamData, gwNumber) {
                         GW${gwNumber}
                     </div>
                 </div>
-            </div>
-
-            <!-- Stats Grid -->
-            <div style="font-size: 0.75rem; color: var(--text-secondary); display: grid; gap: 0.35rem;">
-                <div><strong style="color: var(--text-primary);">Overall Points:</strong> ${totalPoints.toLocaleString()}</div>
-                <div><strong style="color: var(--text-primary);">Transfers:</strong> ${freeTransfers} FT${transferCost > 0 ? ` (-${transferCost} pts)` : ''}</div>
-                <div><strong style="color: var(--text-primary);">Squad Value:</strong> £${squadValue}m + £${bank}m bank</div>
-                <div><strong style="color: var(--text-primary);">GW Captain:</strong> ${captainInfo}</div>
-                <div><strong style="color: var(--text-primary);">GW Vice Captain:</strong> ${viceInfo}</div>
             </div>
         </div>
     `;
@@ -249,7 +278,7 @@ export function renderCompactTeamList(players, gwNumber, templatePlayerIds = new
             font-weight: 700;
             text-transform: uppercase;
             position: sticky;
-            top: calc(9rem + env(safe-area-inset-top));
+            top: calc(11.5rem + env(safe-area-inset-top));
             z-index: 90;
         ">
             <div>Player</div>
