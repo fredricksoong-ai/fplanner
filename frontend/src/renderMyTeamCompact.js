@@ -54,10 +54,10 @@ export function renderCompactHeader(teamData, gwNumber) {
     const freeTransfers = entry.event_transfers || 0;
     const transferCost = entry.event_transfers_cost || 0;
 
-    // Rank change arrow using localStorage cache comparison
+    // Rank color based on localStorage cache comparison
     const cacheKey = `fpl_rank_${team.id}`;
     const cachedRank = localStorage.getItem(cacheKey);
-    let rankArrow = '';
+    let rankColor = 'var(--text-secondary)';
 
     if (cachedRank && overallRankNum > 0) {
         const previousRank = parseInt(cachedRank, 10);
@@ -65,10 +65,10 @@ export function renderCompactHeader(teamData, gwNumber) {
 
         if (rankChange > 0) {
             // Rank improved (number went down)
-            rankArrow = ' <span style="color: #22c55e;">↑</span>';
+            rankColor = '#22c55e';
         } else if (rankChange < 0) {
             // Rank worsened (number went up)
-            rankArrow = ' <span style="color: #ef4444;">↓</span>';
+            rankColor = '#ef4444';
         }
     }
 
@@ -87,14 +87,18 @@ export function renderCompactHeader(teamData, gwNumber) {
     if (captainPick) {
         const captainPlayer = getPlayerById(captainPick.element);
         if (captainPlayer) {
-            captainInfo = `${captainPlayer.web_name} • ${getTeamShortName(captainPlayer.team)}`;
+            const captainOpp = getGWOpponent(captainPlayer.team, gwNumber);
+            const oppBadge = `<span class="${getDifficultyClass(captainOpp.difficulty)}" style="padding: 0.15rem 0.3rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.7rem;">${captainOpp.name} (${captainOpp.isHome ? 'H' : 'A'})</span>`;
+            captainInfo = `${captainPlayer.web_name} ${oppBadge}`;
         }
     }
 
     if (vicePick) {
         const vicePlayer = getPlayerById(vicePick.element);
         if (vicePlayer) {
-            viceInfo = `${vicePlayer.web_name} • ${getTeamShortName(vicePlayer.team)}`;
+            const viceOpp = getGWOpponent(vicePlayer.team, gwNumber);
+            const oppBadge = `<span class="${getDifficultyClass(viceOpp.difficulty)}" style="padding: 0.15rem 0.3rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.7rem;">${viceOpp.name} (${viceOpp.isHome ? 'H' : 'A'})</span>`;
+            viceInfo = `${vicePlayer.web_name} ${oppBadge}`;
         }
     }
 
@@ -147,7 +151,7 @@ export function renderCompactHeader(teamData, gwNumber) {
 
                     <!-- Overall Rank & Points -->
                     <div style="font-size: 0.75rem; color: var(--text-secondary);">
-                        ${overallRank}${rankArrow} • ${totalPoints.toLocaleString()} pts
+                        <span style="color: ${rankColor};">${overallRank}</span> • ${totalPoints.toLocaleString()} pts
                     </div>
 
                     <!-- Transfers -->
@@ -234,26 +238,25 @@ export function renderCompactPlayerRow(pick, player, gwNumber, isInTemplate) {
             display: grid;
             grid-template-columns: 2.5fr 1.2fr 0.8fr 0.8fr 0.8fr;
             gap: 0.3rem;
-            padding: 0.5rem 0.75rem;
+            padding: 0.3rem 0.5rem;
             background: ${finalBg};
             border-bottom: 1px solid var(--border-color);
             font-size: 0.8rem;
             align-items: center;
-            min-height: 44px;
         ">
-            <div style="font-weight: 600; color: var(--text-primary);">
+            <div style="font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                 <span style="color: var(--text-secondary); font-size: 0.7rem; margin-right: 0.25rem;">${getPositionShort(player)}</span>
                 ${escapeHtml(player.web_name)}${captainBadge}
                 ${hasHighSeverity ? '<i class="fas fa-exclamation-triangle" style="color: var(--danger-color); font-size: 0.7rem; margin-left: 0.25rem;"></i>' : ''}
             </div>
             <div style="text-align: center;">
-                <span class="${getDifficultyClass(gwOpp.difficulty)}" style="padding: 0.2rem 0.4rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.75rem;">
+                <span class="${getDifficultyClass(gwOpp.difficulty)}" style="padding: 0.15rem 0.3rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.7rem;">
                     ${gwOpp.name} (${gwOpp.isHome ? 'H' : 'A'})
                 </span>
             </div>
-            <div style="text-align: center; font-size: 0.75rem; color: var(--text-secondary);">${gwMinutes}</div>
-            <div style="text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 700; padding: 0.3rem; border-radius: 0.25rem; font-size: 0.85rem;">${displayPoints}</div>
-            <div style="text-align: center; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 600; padding: 0.3rem; border-radius: 0.25rem; font-size: 0.8rem;">${formatDecimal(player.form)}</div>
+            <div style="text-align: center; font-size: 0.7rem; color: var(--text-secondary);">${gwMinutes}</div>
+            <div style="text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 700; padding: 0.2rem; border-radius: 0.25rem; font-size: 0.8rem;">${displayPoints}</div>
+            <div style="text-align: center; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 600; padding: 0.2rem; border-radius: 0.25rem; font-size: 0.75rem;">${formatDecimal(player.form)}</div>
         </div>
     `;
 }
@@ -271,14 +274,14 @@ export function renderCompactTeamList(players, gwNumber, templatePlayerIds = new
             display: grid;
             grid-template-columns: 2.5fr 1.2fr 0.8fr 0.8fr 0.8fr;
             gap: 0.3rem;
-            padding: 0.6rem 0.75rem;
+            padding: 0.4rem 0.5rem;
             background: var(--primary-color);
             color: white;
-            font-size: 0.8rem;
+            font-size: 0.7rem;
             font-weight: 700;
             text-transform: uppercase;
             position: sticky;
-            top: calc(11.5rem + env(safe-area-inset-top));
+            top: var(--compact-header-height, 11.5rem);
             z-index: 90;
         ">
             <div>Player</div>
