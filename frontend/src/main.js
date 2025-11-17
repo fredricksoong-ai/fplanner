@@ -242,8 +242,16 @@ function updateCountdown() {
         } else {
             timeString = `${seconds}s`;
         }
-        
-        countdownText.textContent = `GW${gwNumber}: ${timeString}`;
+
+        // Determine urgency color
+        let urgencyColor = 'white'; // Default for >3 days
+        if (days < 1) {
+            urgencyColor = '#ef4444'; // Red for <1 day
+        } else if (days < 3) {
+            urgencyColor = '#f59e0b'; // Yellow for <3 days
+        }
+
+        countdownText.innerHTML = `<span style="color: ${urgencyColor};">GW${gwNumber}: ${timeString}</span>`;
     });
 }
 
