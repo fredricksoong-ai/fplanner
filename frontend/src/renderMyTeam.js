@@ -107,12 +107,17 @@ export function renderMyTeamForm() {
             </div>
         `;
 
+        // Check URL hash for subtab (e.g., #my-team/leagues)
+        const hash = window.location.hash.slice(1);
+        const [page, subTab] = hash.split('/');
+        const targetSubTab = subTab || 'overview';
+
         // Auto-load the cached team
         setTimeout(() => {
             loadMyTeam(cachedTeamId)
                 .then(teamData => {
                     window.currentTeamId = cachedTeamId; // Expose globally for mobile nav
-                    renderMyTeam(teamData);
+                    renderMyTeam(teamData, targetSubTab);
                 })
                 .catch(err => {
                     console.error('Failed to auto-load team:', err);
@@ -1043,6 +1048,115 @@ function renderLeagueStandings(leagueData) {
     const userPoints = userEntry?.total || 0;
     const avgGWPoints = results.reduce((sum, r) => sum + (r.event_total || 0), 0) / results.length;
 
+    // Check if mobile layout
+    const useMobile = shouldUseMobileLayout();
+
+    if (useMobile) {
+        // Compact grid-based layout for mobile (matching team table)
+        const headerRow = `
+            <div style="
+                display: grid;
+                grid-template-columns: 0.7fr 2fr 0.7fr 0.8fr 0.8fr;
+                gap: 0.25rem;
+                padding: 0.4rem 0.5rem;
+                background: var(--primary-color);
+                color: white;
+                font-size: 0.7rem;
+                font-weight: 700;
+                text-transform: capitalize;
+                position: sticky;
+                top: calc(3.5rem + 8rem + env(safe-area-inset-top));
+                z-index: 50;
+            ">
+                <div style="text-align: center;">Rank</div>
+                <div>Manager</div>
+                <div style="text-align: center;">GW</div>
+                <div style="text-align: center;">Total</div>
+                <div style="text-align: center;">Gap</div>
+            </div>
+        `;
+
+        const rowsHtml = results.slice(0, 50).map((entry, index) => {
+            const isUser = entry.entry === userTeamId;
+            const bgColor = isUser ? 'rgba(56, 189, 248, 0.1)' : (index % 2 === 0 ? 'var(--bg-tertiary)' : 'transparent');
+            const rankChange = entry.last_rank - entry.rank;
+            const rankChangeIcon = rankChange > 0 ? '▲' : rankChange < 0 ? '▼' : '━';
+            const rankChangeColor = rankChange > 0 ? '#22c55e' : rankChange < 0 ? '#ef4444' : 'var(--text-secondary)';
+
+            // Calculate gap to user
+            let gapText = '—';
+            let gapColor = 'var(--text-secondary)';
+            if (!isUser && userEntry) {
+                const gap = entry.total - userPoints;
+                if (gap > 0) {
+                    gapText = `+${gap}`;
+                    gapColor = '#ef4444';
+                } else if (gap < 0) {
+                    gapText = gap.toString();
+                    gapColor = '#22c55e';
+                }
+            }
+
+            // Color-code GW points
+            const gwPoints = entry.event_total || 0;
+            let gwBgColor = 'transparent';
+            let gwTextColor = 'var(--text-primary)';
+            if (gwPoints > avgGWPoints + 10) {
+                gwBgColor = 'rgba(34, 197, 94, 0.2)';
+                gwTextColor = '#22c55e';
+            } else if (gwPoints < avgGWPoints - 10) {
+                gwBgColor = 'rgba(239, 68, 68, 0.2)';
+                gwTextColor = '#ef4444';
+            }
+
+            return `
+                <div style="
+                    display: grid;
+                    grid-template-columns: 0.7fr 2fr 0.7fr 0.8fr 0.8fr;
+                    gap: 0.25rem;
+                    padding: 0.1rem 0.4rem;
+                    background: ${bgColor};
+                    border-bottom: 1px solid var(--border-color);
+                    ${isUser ? 'border-left: 3px solid var(--primary-color);' : ''}
+                    font-size: 0.75rem;
+                    align-items: center;
+                ">
+                    <div style="text-align: center;">
+                        <div style="font-weight: 600;">${entry.rank}</div>
+                        <div style="font-size: 0.6rem; color: ${rankChangeColor};">
+                            ${rankChangeIcon}
+                        </div>
+                    </div>
+                    <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                        <div style="font-weight: 600; color: var(--text-primary);">${escapeHtml(entry.player_name)}${isUser ? ' (You)' : ''}</div>
+                        <div style="font-size: 0.65rem; color: var(--text-secondary);">${escapeHtml(entry.entry_name)}</div>
+                    </div>
+                    <div style="text-align: center; background: ${gwBgColor}; color: ${gwTextColor}; font-weight: 700; padding: 0.05rem; border-radius: 0.2rem;">
+                        ${gwPoints}
+                    </div>
+                    <div style="text-align: center; font-weight: 600;">${entry.total.toLocaleString()}</div>
+                    <div style="text-align: center; font-weight: 600; color: ${gapColor}; font-size: 0.7rem;">
+                        ${gapText}
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        return `
+            <div style="margin-bottom: 1rem; padding: 0.5rem 0.75rem; background: var(--bg-secondary); border-radius: 0.5rem;">
+                <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.25rem;">
+                    <i class="fas fa-trophy"></i> ${escapeHtml(league.name)}
+                </h4>
+                <p style="font-size: 0.7rem; color: var(--text-secondary);">
+                    ${standings.has_next ? `Top ${results.length}` : `${results.length} entries`}
+                </p>
+            </div>
+            ${headerRow}
+            ${rowsHtml}
+        `;
+    }
+
+    // Desktop: Traditional table layout
     return `
         <div style="background: var(--bg-primary); padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px var(--shadow); margin-bottom: 2rem;">
             <div style="margin-bottom: 1rem;">
@@ -1075,33 +1189,30 @@ function renderLeagueStandings(leagueData) {
                             const rankChangeIcon = rankChange > 0 ? '▲' : rankChange < 0 ? '▼' : '━';
                             const rankChangeColor = rankChange > 0 ? '#22c55e' : rankChange < 0 ? '#ef4444' : 'var(--text-secondary)';
 
-                            // Calculate points from leader
                             const fromLeader = entry.total - leaderPoints;
                             const fromLeaderText = fromLeader === 0 ? '—' : fromLeader.toLocaleString();
 
-                            // Calculate gap to user
                             let gapText = '—';
                             let gapColor = 'var(--text-secondary)';
                             if (!isUser && userEntry) {
                                 const gap = entry.total - userPoints;
                                 if (gap > 0) {
                                     gapText = `+${gap}`;
-                                    gapColor = '#ef4444'; // Red = ahead of you
+                                    gapColor = '#ef4444';
                                 } else if (gap < 0) {
                                     gapText = gap.toString();
-                                    gapColor = '#22c55e'; // Green = behind you
+                                    gapColor = '#22c55e';
                                 }
                             }
 
-                            // Color-code GW points based on league average
                             const gwPoints = entry.event_total || 0;
                             let gwBgColor = 'transparent';
                             let gwTextColor = 'inherit';
                             if (gwPoints > avgGWPoints + 10) {
-                                gwBgColor = 'rgba(34, 197, 94, 0.15)'; // Green
+                                gwBgColor = 'rgba(34, 197, 94, 0.15)';
                                 gwTextColor = '#22c55e';
                             } else if (gwPoints < avgGWPoints - 10) {
-                                gwBgColor = 'rgba(239, 68, 68, 0.15)'; // Red
+                                gwBgColor = 'rgba(239, 68, 68, 0.15)';
                                 gwTextColor = '#ef4444';
                             }
 

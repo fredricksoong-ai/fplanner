@@ -196,7 +196,7 @@ export function renderCompactHeader(teamData, gwNumber) {
                     </div>
 
                     <div style="font-size: 0.7rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.5rem;">
-                        <span style="white-space: nowrap;">GW Vice Captain: ${viceInfo}</span>
+                        <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 50%;">GW Vice Captain: ${viceInfo}</span>
 
                         <!-- League Selector Dropdown -->
                         <select
@@ -204,6 +204,7 @@ export function renderCompactHeader(teamData, gwNumber) {
                             style="
                                 flex: 1;
                                 min-width: 0;
+                                max-width: 120px;
                                 padding: 0.2rem 0.3rem;
                                 font-size: 0.65rem;
                                 background: var(--bg-secondary);
