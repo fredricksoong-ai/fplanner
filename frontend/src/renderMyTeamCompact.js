@@ -92,56 +92,12 @@ export function renderCompactHeader(teamData, gwNumber) {
                 margin: -1rem -1rem 0 -1rem;
             "
         >
-            <!-- Row 1: Team name + Action buttons + GW Card -->
+            <!-- Row 1: Team name + GW Card -->
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
                 <div style="flex: 1;">
                     <div style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">
                         ${escapeHtml(team.name)}
                     </div>
-                </div>
-
-                <!-- Action Buttons -->
-                <div style="display: flex; gap: 0.5rem; margin: 0 0.75rem;">
-                    <button
-                        id="change-team-btn-mobile"
-                        class="touch-target"
-                        style="
-                            width: 44px;
-                            height: 44px;
-                            border-radius: 50%;
-                            background: var(--bg-secondary);
-                            border: 1px solid var(--border-color);
-                            color: var(--text-secondary);
-                            cursor: pointer;
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            padding: 0;
-                        "
-                        title="Change Team"
-                    >
-                        <i class="fas fa-arrow-left" style="font-size: 1rem;"></i>
-                    </button>
-                    <button
-                        id="refresh-team-btn-mobile"
-                        class="touch-target"
-                        style="
-                            width: 44px;
-                            height: 44px;
-                            border-radius: 50%;
-                            background: var(--secondary-color);
-                            border: none;
-                            color: var(--primary-color);
-                            cursor: pointer;
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            padding: 0;
-                        "
-                        title="Refresh"
-                    >
-                        <i class="fas fa-sync-alt" style="font-size: 1rem;"></i>
-                    </button>
                 </div>
 
                 <!-- GW Points Card -->
