@@ -464,6 +464,16 @@ export function renderMyTeam(teamData, subTab = 'overview') {
                 document.documentElement.style.setProperty('--compact-header-height', `${totalTop}px`);
             }
         });
+
+        // Add event listener for change team button
+        const changeTeamBtn = document.getElementById('change-team-btn');
+        if (changeTeamBtn) {
+            changeTeamBtn.addEventListener('click', () => {
+                if (window.resetMyTeam) {
+                    window.resetMyTeam();
+                }
+            });
+        }
     }
 
     // Add skeleton styles for loading states

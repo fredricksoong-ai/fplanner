@@ -144,9 +144,29 @@ export function renderCompactHeader(teamData, gwNumber) {
             <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem;">
                 <!-- Left: Team Info -->
                 <div style="flex: 1; display: grid; gap: 0.2rem;">
-                    <!-- Team Name -->
-                    <div style="font-size: 0.95rem; font-weight: 700; color: var(--text-primary); line-height: 1.2;">
-                        ${escapeHtml(team.name)}
+                    <!-- Team Name with Change Team Button -->
+                    <div style="display: flex; align-items: center; gap: 0.4rem;">
+                        <div style="font-size: 0.95rem; font-weight: 700; color: var(--text-primary); line-height: 1.2; flex: 1;">
+                            ${escapeHtml(team.name)}
+                        </div>
+                        <button
+                            id="change-team-btn"
+                            style="
+                                background: transparent;
+                                border: 1px solid var(--border-color);
+                                border-radius: 0.3rem;
+                                padding: 0.2rem 0.35rem;
+                                color: var(--text-secondary);
+                                cursor: pointer;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                transition: all 0.2s;
+                            "
+                            title="Change Team"
+                        >
+                            <i class="fas fa-exchange-alt" style="font-size: 0.7rem;"></i>
+                        </button>
                     </div>
 
                     <!-- Overall Rank & Points -->
