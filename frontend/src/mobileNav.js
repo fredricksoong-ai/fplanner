@@ -40,9 +40,11 @@ export function createMobileNav(currentPage, onNavigate) {
             "
         >
             ${navItems.map(item => {
-                // FPL green color for Refresh button
-                const iconColor = item.isGreen ? '#00ff87' : (item.disabled ? 'rgba(255,255,255,0.4)' : 'white');
-                const textColor = item.disabled ? 'rgba(255,255,255,0.4)' : 'white';
+                // FPL green background with purple text for Refresh button
+                const isRefresh = item.isGreen;
+                const buttonBg = isRefresh ? '#00ff87' : (currentPage === item.id ? 'rgba(255,255,255,0.15)' : 'transparent');
+                const iconColor = isRefresh ? '#37003c' : (item.disabled ? 'rgba(255,255,255,0.4)' : 'white');
+                const textColor = isRefresh ? '#37003c' : (item.disabled ? 'rgba(255,255,255,0.4)' : 'white');
 
                 return `
                 <button
@@ -55,7 +57,7 @@ export function createMobileNav(currentPage, onNavigate) {
                         flex-direction: column;
                         align-items: center;
                         gap: 0.15rem;
-                        background: ${currentPage === item.id ? 'rgba(255,255,255,0.15)' : 'transparent'};
+                        background: ${buttonBg};
                         border: none;
                         padding: 0.3rem 0.35rem;
                         border-radius: 0.4rem;
@@ -169,7 +171,8 @@ export function initMobileNav(navigateCallback) {
             if (!item.disabled) {
                 const page = item.dataset.page;
                 const currentPage = getCurrentPage();
-                item.style.background = currentPage === page ? 'rgba(255,255,255,0.15)' : 'transparent';
+                const isRefresh = item.dataset.action === 'refresh';
+                item.style.background = isRefresh ? '#00ff87' : (currentPage === page ? 'rgba(255,255,255,0.15)' : 'transparent');
             }
         });
     });
@@ -187,8 +190,9 @@ export function updateMobileNav(activePage) {
     mobileNavItems.forEach(item => {
         const page = item.dataset.page;
         const isActive = page === activePage;
+        const isRefresh = item.dataset.action === 'refresh';
 
-        item.style.background = isActive ? 'rgba(255,255,255,0.15)' : 'transparent';
+        item.style.background = isRefresh ? '#00ff87' : (isActive ? 'rgba(255,255,255,0.15)' : 'transparent');
         const label = item.querySelector('span');
         if (label) {
             label.style.fontWeight = isActive ? '700' : '500';
@@ -205,11 +209,12 @@ function addMainContentPadding() {
     style.textContent = `
         @media (max-width: 767px) {
             #app-container {
-                padding-bottom: calc(5rem + env(safe-area-inset-bottom)) !important;
+                padding-bottom: calc(4rem + env(safe-area-inset-bottom)) !important;
             }
 
             body {
-                padding-bottom: env(safe-area-inset-bottom);
+                padding-bottom: 0;
+                margin-bottom: 0;
             }
         }
     `;

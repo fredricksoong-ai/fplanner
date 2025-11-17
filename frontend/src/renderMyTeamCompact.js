@@ -88,7 +88,7 @@ export function renderCompactHeader(teamData, gwNumber) {
         const captainPlayer = getPlayerById(captainPick.element);
         if (captainPlayer) {
             const captainOpp = getGWOpponent(captainPlayer.team, gwNumber);
-            const oppBadge = `<span class="${getDifficultyClass(captainOpp.difficulty)}" style="padding: 0.15rem 0.3rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.7rem;">${captainOpp.name} (${captainOpp.isHome ? 'H' : 'A'})</span>`;
+            const oppBadge = `<span class="${getDifficultyClass(captainOpp.difficulty)}" style="padding: 0.1rem 0.25rem; border-radius: 0.2rem; font-weight: 600; font-size: 0.65rem;">${captainOpp.name} (${captainOpp.isHome ? 'H' : 'A'})</span>`;
             captainInfo = `${captainPlayer.web_name} vs. ${oppBadge}`;
         }
     }
@@ -97,7 +97,7 @@ export function renderCompactHeader(teamData, gwNumber) {
         const vicePlayer = getPlayerById(vicePick.element);
         if (vicePlayer) {
             const viceOpp = getGWOpponent(vicePlayer.team, gwNumber);
-            const oppBadge = `<span class="${getDifficultyClass(viceOpp.difficulty)}" style="padding: 0.15rem 0.3rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.7rem;">${viceOpp.name} (${viceOpp.isHome ? 'H' : 'A'})</span>`;
+            const oppBadge = `<span class="${getDifficultyClass(viceOpp.difficulty)}" style="padding: 0.1rem 0.25rem; border-radius: 0.2rem; font-weight: 600; font-size: 0.65rem;">${viceOpp.name} (${viceOpp.isHome ? 'H' : 'A'})</span>`;
             viceInfo = `${vicePlayer.web_name} vs. ${oppBadge}`;
         }
     }
@@ -138,7 +138,7 @@ export function renderCompactHeader(teamData, gwNumber) {
                 z-index: 100;
                 padding: 0.5rem 0.75rem;
                 border-bottom: 2px solid var(--border-color);
-                margin: -0.5rem -1rem 0 -1rem;
+                margin: 0;
             "
         >
             <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem;">
