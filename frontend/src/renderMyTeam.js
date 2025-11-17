@@ -594,9 +594,7 @@ function renderTeamOverviewTab(teamData) {
         // Mobile ultra-compact layout
         return `
             ${renderCompactHeader(teamData, gameweek)}
-
             ${renderCompactTeamList(allPlayers, gameweek)}
-
             ${renderMatchSchedule(allPlayers, gameweek)}
         `;
     } else {
@@ -1143,7 +1141,7 @@ function renderMobileFixturesTab() {
                         width: 100vw;
                         margin-left: calc(-50vw + 50%);
                     ">
-                        <div style="color: var(--text-secondary); font-size: 0.65rem;">${timeStr.split(',')[1] || timeStr}</div>
+                        <div style="color: var(--text-secondary); font-size: 0.65rem; padding-left: 0.5rem;">${timeStr.split(',')[1] || timeStr}</div>
                         <div style="text-align: right; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                             ${homeTeam?.short_name || 'TBD'}
                         </div>
@@ -1153,7 +1151,7 @@ function renderMobileFixturesTab() {
                         <div style="text-align: left; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                             ${awayTeam?.short_name || 'TBD'}
                         </div>
-                        <div style="text-align: center;">
+                        <div style="text-align: center; padding-right: 0.5rem;">
                             ${statusBadge}
                         </div>
                     </div>
@@ -1177,11 +1175,11 @@ function renderMobileFixturesTab() {
                     width: 100vw;
                     margin-left: calc(-50vw + 50%);
                 ">
-                    <div>Time</div>
+                    <div style="padding-left: 0.5rem;">Time</div>
                     <div style="text-align: right;">Home</div>
                     <div style="text-align: center;">Score</div>
                     <div style="text-align: left;">Away</div>
-                    <div style="text-align: center;">Status</div>
+                    <div style="text-align: center; padding-right: 0.5rem;">Status</div>
                 </div>
             `;
 
@@ -1470,11 +1468,11 @@ function renderLeagueStandings(leagueData) {
                 width: 100vw;
                 margin-left: calc(-50vw + 50%);
             ">
-                <div style="text-align: center; padding-left: 0;">Rank</div>
+                <div style="text-align: center; padding-left: 0.5rem;">Rank</div>
                 <div>Manager</div>
                 <div style="text-align: center;">GW</div>
                 <div style="text-align: center;">Total</div>
-                <div style="text-align: center; padding-right: 0;">Gap</div>
+                <div style="text-align: center; padding-right: 0.5rem;">Gap</div>
             </div>
         `;
 
@@ -1525,7 +1523,7 @@ function renderLeagueStandings(leagueData) {
                     width: 100vw;
                     margin-left: calc(-50vw + 50%);
                 ">
-                    <div style="text-align: center; padding-left: 0;">
+                    <div style="text-align: center; padding-left: 0.5rem;">
                         <div style="font-weight: 600;">${entry.rank}</div>
                         <div style="font-size: 0.6rem; color: ${rankChangeColor};">
                             ${rankChangeIcon}
@@ -1539,7 +1537,7 @@ function renderLeagueStandings(leagueData) {
                         ${gwPoints}
                     </div>
                     <div style="text-align: center; font-weight: 600;">${entry.total.toLocaleString()}</div>
-                    <div style="text-align: center; font-weight: 600; color: ${gapColor}; font-size: 0.7rem; padding-right: 0;">
+                    <div style="text-align: center; font-weight: 600; color: ${gapColor}; font-size: 0.7rem; padding-right: 0.5rem;">
                         ${gapText}
                     </div>
                 </div>
