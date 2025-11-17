@@ -27,6 +27,7 @@ export function createMobileNav(currentPage, onNavigate) {
                 bottom: 0;
                 left: 0;
                 right: 0;
+                width: 100%;
                 background: var(--bg-secondary);
                 border-top: 1px solid var(--border-color);
                 display: flex;
@@ -36,6 +37,7 @@ export function createMobileNav(currentPage, onNavigate) {
                 padding-bottom: max(0.4rem, env(safe-area-inset-bottom));
                 z-index: 1000;
                 gap: 0.25rem;
+                box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
             "
         >
             ${navItems.map(item => {
@@ -164,18 +166,30 @@ export function initMobileNav(navigateCallback) {
 /**
  * Update mobile navigation active state
  * @param {string} activePage - The currently active page
+ * @param {string} subTab - Optional subtab for pages with tabs
  */
-export function updateMobileNav(activePage) {
+export function updateMobileNav(activePage, subTab = 'overview') {
     const mobileNavItems = document.querySelectorAll('.mobile-nav-item');
     mobileNavItems.forEach(item => {
         const page = item.dataset.page;
-        const isActive = page === activePage;
-        const isRefresh = item.dataset.action === 'refresh';
+        const action = item.dataset.action;
+
+        // Special case: highlight 'league' button when on my-team/leagues
+        let isActive = false;
+        if (action === 'league' && activePage === 'my-team' && subTab === 'leagues') {
+            isActive = true;
+        } else if (page === activePage && subTab === 'overview') {
+            isActive = true;
+        } else {
+            isActive = false;
+        }
+
+        const isRefresh = action === 'refresh';
 
         item.style.background = isRefresh ? 'var(--secondary-color)' : (isActive ? 'var(--bg-tertiary)' : 'transparent');
         const label = item.querySelector('span');
         if (label) {
-            label.style.fontWeight = isActive || item.dataset.action === 'refresh' ? '700' : '500';
+            label.style.fontWeight = isActive || isRefresh ? '700' : '500';
         }
     });
 }
@@ -195,6 +209,11 @@ function addMainContentPadding() {
             body {
                 padding-bottom: 0;
                 margin-bottom: 0;
+            }
+
+            /* Ensure smooth scrolling on iOS */
+            body {
+                -webkit-overflow-scrolling: touch;
             }
         }
     `;
