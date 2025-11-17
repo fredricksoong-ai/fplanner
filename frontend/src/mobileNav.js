@@ -40,11 +40,23 @@ export function createMobileNav(currentPage, onNavigate) {
             "
         >
             ${navItems.map(item => {
-                // FPL green background with purple text for Refresh button
-                const isRefresh = item.isGreen;
-                const buttonBg = isRefresh ? '#00ff87' : (currentPage === item.id ? 'rgba(255,255,255,0.15)' : 'transparent');
-                const iconColor = isRefresh ? '#37003c' : (item.disabled ? 'rgba(255,255,255,0.4)' : 'white');
-                const textColor = isRefresh ? '#37003c' : (item.disabled ? 'rgba(255,255,255,0.4)' : 'white');
+                // Determine icon and text color
+                let iconColor = 'white';
+                let textColor = 'white';
+                let itemBg = currentPage === item.id ? 'rgba(255,255,255,0.2)' : 'transparent';
+                
+                if (item.disabled) {
+                    iconColor = 'rgba(255,255,255,0.4)';
+                    textColor = 'rgba(255,255,255,0.4)';
+                } else if (item.isGreen) {
+                    // NEW STYLING: Green background with primary text/icon color for contrast
+                    iconColor = 'var(--primary-color)'; // Dark purple/primary color for icon
+                    textColor = 'var(--primary-color)'; // Dark purple/primary color for text
+                    itemBg = '#00ff87'; // FPL Green for background
+                } else if (currentPage === item.id) {
+                    // Active style for non-refresh buttons
+                    itemBg = 'rgba(255,255,255,0.2)';
+                }
 
                 return `
                 <button
@@ -72,7 +84,7 @@ export function createMobileNav(currentPage, onNavigate) {
                     <i class="fas ${item.icon}" style="font-size: 1.1rem; color: ${iconColor};"></i>
                     <span style="
                         font-size: 0.65rem;
-                        font-weight: ${currentPage === item.id ? '700' : '500'};
+                        font-weight: ${currentPage === item.id || item.isGreen ? '700' : '500'};
                     ">${item.label}</span>
                 </button>
             `;
@@ -195,7 +207,7 @@ export function updateMobileNav(activePage) {
         item.style.background = isRefresh ? '#00ff87' : (isActive ? 'rgba(255,255,255,0.15)' : 'transparent');
         const label = item.querySelector('span');
         if (label) {
-            label.style.fontWeight = isActive ? '700' : '500';
+            label.style.fontWeight = isActive || item.dataset.action === 'refresh' ? '700' : '500';
         }
     });
 }
@@ -209,7 +221,8 @@ function addMainContentPadding() {
     style.textContent = `
         @media (max-width: 767px) {
             #app-container {
-                padding-bottom: calc(4rem + env(safe-area-inset-bottom)) !important;
+                /* Reduced from 5rem to 3.5rem to fix overlap while maintaining safe space */
+                padding-bottom: calc(3.5rem + env(safe-area-inset-bottom)) !important;
             }
 
             body {
