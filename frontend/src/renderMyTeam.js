@@ -106,6 +106,7 @@ export function renderMyTeamForm() {
         setTimeout(() => {
             loadMyTeam(cachedTeamId)
                 .then(teamData => {
+                    window.currentTeamId = cachedTeamId; // Expose globally for mobile nav
                     renderMyTeam(teamData);
                 })
                 .catch(err => {
@@ -244,6 +245,9 @@ async function handleTeamRefresh() {
 
     console.log('✅ Team data refreshed');
 }
+
+// Expose handleTeamRefresh globally for mobile nav and other components
+window.handleTeamRefresh = handleTeamRefresh;
 
 /**
  * Render My Team page with loaded data
@@ -1995,6 +1999,7 @@ window.loadAndRenderTeam = async function() {
 
         // CACHE TEAM ID ← ADD THIS
         localStorage.setItem('fplanner_team_id', teamId);
+        window.currentTeamId = teamId; // Expose globally for mobile nav
 
         renderMyTeam(teamData);
     } catch (err) {
