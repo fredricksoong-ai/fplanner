@@ -214,17 +214,18 @@ export function renderCompactPlayerRow(pick, player, gwNumber, isInTemplate) {
     const risks = analyzePlayerRisks(player);
     const hasHighSeverity = hasHighRisk(risks);
 
-    const ptsHeatmap = getPtsHeatmap(player.total_points, 'pts');
-    const ptsStyle = getHeatmapStyle(ptsHeatmap);
-
-    const formHeatmap = getFormHeatmap(player.form);
-    const formStyle = getHeatmapStyle(formHeatmap);
-
     // Get GW-specific stats
     const hasGWStats = player.github_gw && player.github_gw.gw === gwNumber;
     const gwMinutes = hasGWStats ? player.github_gw.minutes : '—';
     const gwPoints = hasGWStats ? player.github_gw.total_points : (player.event_points || 0);
     const displayPoints = isCaptain ? (gwPoints * 2) : gwPoints;
+
+    // Use GW points for heatmap (not season total)
+    const ptsHeatmap = getPtsHeatmap(displayPoints, 'gw_pts');
+    const ptsStyle = getHeatmapStyle(ptsHeatmap);
+
+    const formHeatmap = getFormHeatmap(player.form);
+    const formStyle = getHeatmapStyle(formHeatmap);
 
     // Background color
     const bgColor = isInTemplate
@@ -269,7 +270,7 @@ export function renderCompactTeamList(players, gwNumber, templatePlayerIds = new
     const starters = players.filter(p => p.position <= 11).sort((a, b) => a.position - b.position);
     const bench = players.filter(p => p.position > 11).sort((a, b) => a.position - b.position);
 
-    // Compact header row
+    // Compact header row (freezes below team info when scrolling)
     const headerRow = `
         <div style="
             display: grid;
@@ -282,7 +283,7 @@ export function renderCompactTeamList(players, gwNumber, templatePlayerIds = new
             font-weight: 700;
             text-transform: uppercase;
             position: sticky;
-            top: calc(9rem + env(safe-area-inset-top));
+            top: calc(10.5rem + env(safe-area-inset-top));
             z-index: 90;
         ">
             <div>Player</div>
