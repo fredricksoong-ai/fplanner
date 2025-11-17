@@ -11,11 +11,11 @@
  */
 export function createMobileNav(currentPage, onNavigate) {
     const navItems = [
+        { id: 'change-team', label: 'Change', icon: 'fa-arrow-left', action: 'change-team' },
+        { id: 'refresh', label: 'Refresh', icon: 'fa-sync-alt', action: 'refresh' },
         { id: 'my-team', label: 'Team', icon: 'fa-users' },
-        { id: 'data-analysis', label: 'Analysis', icon: 'fa-chart-bar' },
-        { id: 'team-builder', label: 'Builder', icon: 'fa-chess' },
-        { id: 'charts', label: 'Charts', icon: 'fa-chart-line' },
-        { id: 'search', label: 'Search', icon: 'fa-search' }
+        { id: 'fixtures', label: 'Fixtures', icon: 'fa-calendar-alt', disabled: true },
+        { id: 'stats', label: 'Stats', icon: 'fa-chart-bar', disabled: true }
     ];
 
     const navHtml = `
@@ -42,6 +42,8 @@ export function createMobileNav(currentPage, onNavigate) {
                 <button
                     class="mobile-nav-item no-select touch-target"
                     data-page="${item.id}"
+                    ${item.action ? `data-action="${item.action}"` : ''}
+                    ${item.disabled ? 'disabled' : ''}
                     style="
                         display: flex;
                         flex-direction: column;
@@ -51,11 +53,12 @@ export function createMobileNav(currentPage, onNavigate) {
                         border: none;
                         padding: 0.5rem 0.75rem;
                         border-radius: 0.5rem;
-                        color: white;
-                        cursor: pointer;
+                        color: ${item.disabled ? 'rgba(255,255,255,0.4)' : 'white'};
+                        cursor: ${item.disabled ? 'not-allowed' : 'pointer'};
                         transition: all 0.2s;
                         flex: 1;
                         max-width: 80px;
+                        opacity: ${item.disabled ? '0.5' : '1'};
                     "
                 >
                     <i class="fas ${item.icon}" style="font-size: 1.25rem;"></i>
@@ -88,19 +91,61 @@ export function initMobileNav(navigateCallback) {
     mobileNavItems.forEach(item => {
         item.addEventListener('click', (e) => {
             e.preventDefault();
+
+            // Handle action buttons (Change Team, Refresh)
+            const action = item.dataset.action;
+            if (action === 'change-team') {
+                if (window.resetMyTeam) {
+                    window.resetMyTeam();
+                }
+                return;
+            }
+            if (action === 'refresh') {
+                const icon = item.querySelector('i');
+                const originalIcon = icon.className;
+                icon.className = 'fas fa-sync-alt fa-spin';
+                item.disabled = true;
+
+                // Trigger refresh
+                if (window.handleTeamRefresh) {
+                    window.handleTeamRefresh()
+                        .then(() => {
+                            console.log('✅ Team refreshed from bottom nav');
+                        })
+                        .catch((error) => {
+                            console.error('❌ Refresh failed:', error);
+                        })
+                        .finally(() => {
+                            icon.className = originalIcon;
+                            item.disabled = false;
+                        });
+                } else {
+                    // Fallback: reload page
+                    window.location.reload();
+                }
+                return;
+            }
+
+            // Regular navigation
             const page = item.dataset.page;
-            navigateCallback(page);
+            if (!item.disabled) {
+                navigateCallback(page);
+            }
         });
 
         // Add touch feedback
         item.addEventListener('touchstart', () => {
-            item.style.background = 'rgba(255,255,255,0.3)';
+            if (!item.disabled) {
+                item.style.background = 'rgba(255,255,255,0.3)';
+            }
         });
 
         item.addEventListener('touchend', () => {
-            const page = item.dataset.page;
-            const currentPage = getCurrentPage();
-            item.style.background = currentPage === page ? 'rgba(255,255,255,0.2)' : 'transparent';
+            if (!item.disabled) {
+                const page = item.dataset.page;
+                const currentPage = getCurrentPage();
+                item.style.background = currentPage === page ? 'rgba(255,255,255,0.2)' : 'transparent';
+            }
         });
     });
 
