@@ -42,8 +42,10 @@ export function renderCompactHeader(teamData, gwNumber) {
     // Use team.summary_* fields (most accurate, from /api/entry/{teamId}/)
     const gwPoints = team.summary_event_points || 0;
     const totalPoints = team.summary_overall_points || 0;
-    const overallRank = team.summary_overall_rank ? team.summary_overall_rank.toLocaleString() : 'N/A';
-    const gwRank = team.summary_event_rank ? team.summary_event_rank.toLocaleString() : 'N/A';
+    const overallRankNum = team.summary_overall_rank || 0;
+    const gwRankNum = team.summary_event_rank || 0;
+    const overallRank = overallRankNum ? overallRankNum.toLocaleString() : 'N/A';
+    const gwRank = gwRankNum ? gwRankNum.toLocaleString() : 'N/A';
 
     // Team value and bank from entry_history (GW-specific)
     const teamValue = ((entry.value || 0) / 10).toFixed(1);
@@ -51,18 +53,30 @@ export function renderCompactHeader(teamData, gwNumber) {
     const freeTransfers = entry.event_transfers || 0;
     const transferCost = entry.event_transfers_cost || 0;
 
-    // Calculate GW card color based on points (simplified - can add average comparison later)
+    // Calculate GW card color based on rank performance (relative to overall rank)
     let gwCardBg = 'var(--bg-secondary)';
     let gwCardColor = 'var(--text-primary)';
-    if (gwPoints >= 60) {
-        gwCardBg = 'rgba(34, 197, 94, 0.15)'; // Green
-        gwCardColor = '#22c55e';
-    } else if (gwPoints >= 45) {
-        gwCardBg = 'rgba(59, 130, 246, 0.15)'; // Blue
-        gwCardColor = '#3b82f6';
-    } else if (gwPoints < 30 && gwPoints > 0) {
-        gwCardBg = 'rgba(239, 68, 68, 0.15)'; // Red
-        gwCardColor = '#ef4444';
+
+    if (overallRankNum > 0 && gwRankNum > 0) {
+        const rankRatio = gwRankNum / overallRankNum;
+
+        if (rankRatio <= 0.5) {
+            // Exceptional: GW rank is 50% or better than overall rank
+            gwCardBg = 'rgba(147, 51, 234, 0.15)'; // Purple
+            gwCardColor = '#9333ea';
+        } else if (rankRatio < 1.0) {
+            // Outperforming: GW rank is better than overall rank
+            gwCardBg = 'rgba(34, 197, 94, 0.15)'; // Green
+            gwCardColor = '#22c55e';
+        } else if (rankRatio <= 1.2) {
+            // On par: Within 20% of overall rank
+            gwCardBg = 'rgba(234, 179, 8, 0.15)'; // Yellow
+            gwCardColor = '#eab308';
+        } else {
+            // Underperforming: Worse than 20% of overall rank
+            gwCardBg = 'rgba(239, 68, 68, 0.15)'; // Red
+            gwCardColor = '#ef4444';
+        }
     }
 
     return `
