@@ -29,14 +29,13 @@ export function createMobileNav(currentPage, onNavigate) {
                 bottom: 0;
                 left: 0;
                 right: 0;
-                background: var(--primary-color);
+                background: #37003c;
                 border-top: 1px solid rgba(255,255,255,0.1);
                 display: flex;
                 justify-content: space-around;
                 align-items: center;
                 padding: 0.25rem 0;
                 padding-bottom: max(0.25rem, env(safe-area-inset-bottom));
-                box-shadow: 0 -2px 10px var(--shadow);
                 z-index: 1000;
             "
         >
@@ -56,15 +55,15 @@ export function createMobileNav(currentPage, onNavigate) {
                         flex-direction: column;
                         align-items: center;
                         gap: 0.15rem;
-                        background: ${currentPage === item.id ? 'rgba(255,255,255,0.2)' : 'transparent'};
+                        background: ${currentPage === item.id ? 'rgba(255,255,255,0.15)' : 'transparent'};
                         border: none;
-                        padding: 0.3rem 0.5rem;
-                        border-radius: 0.5rem;
+                        padding: 0.3rem 0.35rem;
+                        border-radius: 0.4rem;
                         color: ${textColor};
                         cursor: ${item.disabled ? 'not-allowed' : 'pointer'};
                         transition: all 0.2s;
                         flex: 1;
-                        max-width: 80px;
+                        max-width: 70px;
                         opacity: ${item.disabled ? '0.5' : '1'};
                     "
                 >
@@ -162,7 +161,7 @@ export function initMobileNav(navigateCallback) {
         // Add touch feedback
         item.addEventListener('touchstart', () => {
             if (!item.disabled) {
-                item.style.background = 'rgba(255,255,255,0.3)';
+                item.style.background = 'rgba(255,255,255,0.25)';
             }
         });
 
@@ -170,7 +169,7 @@ export function initMobileNav(navigateCallback) {
             if (!item.disabled) {
                 const page = item.dataset.page;
                 const currentPage = getCurrentPage();
-                item.style.background = currentPage === page ? 'rgba(255,255,255,0.2)' : 'transparent';
+                item.style.background = currentPage === page ? 'rgba(255,255,255,0.15)' : 'transparent';
             }
         });
     });
@@ -189,7 +188,7 @@ export function updateMobileNav(activePage) {
         const page = item.dataset.page;
         const isActive = page === activePage;
 
-        item.style.background = isActive ? 'rgba(255,255,255,0.2)' : 'transparent';
+        item.style.background = isActive ? 'rgba(255,255,255,0.15)' : 'transparent';
         const label = item.querySelector('span');
         if (label) {
             label.style.fontWeight = isActive ? '700' : '500';

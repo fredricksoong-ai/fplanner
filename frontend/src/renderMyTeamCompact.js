@@ -138,7 +138,7 @@ export function renderCompactHeader(teamData, gwNumber) {
                 z-index: 100;
                 padding: 0.5rem 0.75rem;
                 border-bottom: 2px solid var(--border-color);
-                margin: -0.5rem -0.5rem 0 -0.5rem;
+                margin: -0.5rem -1rem 0 -1rem;
             "
         >
             <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem;">
@@ -288,7 +288,7 @@ export function renderCompactTeamList(players, gwNumber, templatePlayerIds = new
     const starters = players.filter(p => p.position <= 11).sort((a, b) => a.position - b.position);
     const bench = players.filter(p => p.position > 11).sort((a, b) => a.position - b.position);
 
-    // Compact header row (freezes below team info when scrolling)
+    // Compact header row (scrolls with content)
     const headerRow = `
         <div style="
             display: grid;
@@ -300,9 +300,6 @@ export function renderCompactTeamList(players, gwNumber, templatePlayerIds = new
             font-size: 0.7rem;
             font-weight: 700;
             text-transform: uppercase;
-            position: sticky;
-            top: var(--compact-header-height, 11.5rem);
-            z-index: 90;
         ">
             <div>Player</div>
             <div style="text-align: center;">Opp</div>
