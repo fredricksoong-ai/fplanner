@@ -3,6 +3,8 @@
  * Bottom navigation bar for mobile devices
  */
 
+import { showLeagueSelector } from './leagueSelector.js';
+
 /**
  * Create mobile bottom navigation bar
  * @param {string} currentPage - Currently active page
@@ -11,9 +13,9 @@
  */
 export function createMobileNav(currentPage, onNavigate) {
     const navItems = [
-        { id: 'change-team', label: 'Change', icon: 'fa-arrow-left', action: 'change-team' },
-        { id: 'refresh', label: 'Refresh', icon: 'fa-sync-alt', action: 'refresh' },
+        { id: 'league', label: 'League', icon: 'fa-trophy', action: 'league' },
         { id: 'my-team', label: 'Team', icon: 'fa-users' },
+        { id: 'refresh', label: 'Refresh', icon: 'fa-sync-alt', action: 'refresh', isGreen: true },
         { id: 'fixtures', label: 'Fixtures', icon: 'fa-calendar-alt', disabled: true },
         { id: 'stats', label: 'Stats', icon: 'fa-chart-bar', disabled: true }
     ];
@@ -38,7 +40,12 @@ export function createMobileNav(currentPage, onNavigate) {
                 z-index: 1000;
             "
         >
-            ${navItems.map(item => `
+            ${navItems.map(item => {
+                // FPL green color for Refresh button
+                const iconColor = item.isGreen ? '#00ff87' : (item.disabled ? 'rgba(255,255,255,0.4)' : 'white');
+                const textColor = item.disabled ? 'rgba(255,255,255,0.4)' : 'white';
+
+                return `
                 <button
                     class="mobile-nav-item no-select touch-target"
                     data-page="${item.id}"
@@ -53,7 +60,7 @@ export function createMobileNav(currentPage, onNavigate) {
                         border: none;
                         padding: 0.3rem 0.5rem;
                         border-radius: 0.5rem;
-                        color: ${item.disabled ? 'rgba(255,255,255,0.4)' : 'white'};
+                        color: ${textColor};
                         cursor: ${item.disabled ? 'not-allowed' : 'pointer'};
                         transition: all 0.2s;
                         flex: 1;
@@ -61,13 +68,14 @@ export function createMobileNav(currentPage, onNavigate) {
                         opacity: ${item.disabled ? '0.5' : '1'};
                     "
                 >
-                    <i class="fas ${item.icon}" style="font-size: 1.1rem;"></i>
+                    <i class="fas ${item.icon}" style="font-size: 1.1rem; color: ${iconColor};"></i>
                     <span style="
                         font-size: 0.65rem;
                         font-weight: ${currentPage === item.id ? '700' : '500'};
                     ">${item.label}</span>
                 </button>
-            `).join('')}
+            `;
+            }).join('')}
         </nav>
     `;
 
@@ -92,11 +100,21 @@ export function initMobileNav(navigateCallback) {
         item.addEventListener('click', (e) => {
             e.preventDefault();
 
-            // Handle action buttons (Change Team, Refresh)
+            // Handle action buttons (League, Refresh)
             const action = item.dataset.action;
-            if (action === 'change-team') {
-                if (window.resetMyTeam) {
-                    window.resetMyTeam();
+            if (action === 'league') {
+                // Get team ID from window or localStorage
+                const teamId = window.currentTeamId || localStorage.getItem('teamId');
+                if (teamId) {
+                    showLeagueSelector(parseInt(teamId, 10), (leagueId) => {
+                        console.log('✅ League selected:', leagueId);
+                        // Trigger refresh to update template players
+                        if (window.handleTeamRefresh) {
+                            window.handleTeamRefresh();
+                        }
+                    });
+                } else {
+                    console.error('❌ No team ID found');
                 }
                 return;
             }
