@@ -38,38 +38,38 @@
 }
 
 [data-theme="dark"] {
-    /* Dark Mode Colors - Obsidian-inspired */
-    --bg-primary: #1e1e1e;
-    --bg-secondary: #2a2a2a;
-    --bg-tertiary: #363636;
-    --text-primary: #dcddde;
-    --text-secondary: #a0a0a0;
-    --text-tertiary: #6e6e6e;
-    --border-color: #3a3a3a;
-    --border-dark: #4a4a4a;
-    --primary-color: #8b5cf6;
-    --primary-hover: #7c3aed;
-    --secondary-color: #00ff88;
-    --secondary-hover: #00d970;
-    --accent-color: #a78bfa;
+    /* Dark Mode Colors - Soft Claude-style */
+    --bg-primary: #1a1815;
+    --bg-secondary: #2a2522;
+    --bg-tertiary: #352f2c;
+    --text-primary: #d4d0c8;
+    --text-secondary: #9b968e;
+    --text-tertiary: #6e6a64;
+    --border-color: #3a3530;
+    --border-dark: #4a4540;
+    --primary-color: #4a1a4f;
+    --primary-hover: #5a2a5f;
+    --secondary-color: #00d97e;
+    --secondary-hover: #00b968;
+    --accent-color: #7a4a7f;
     --shadow: rgba(0, 0, 0, 0.3);
 
-    /* Success/Alert Colors */
-    --success-color: #00ff88;
-    --danger-color: #ef4444;
-    --warning-color: #f59e0b;
+    /* Success/Alert Colors - Softer */
+    --success-color: #00d97e;
+    --danger-color: #e85d5d;
+    --warning-color: #f0b449;
 
     /* Soft Heatmap Colors - Dark Mode */
-    --heat-red-bg: #3f2020;
-    --heat-red-text: #fca5a5;
-    --heat-yellow-bg: #3f3520;
-    --heat-yellow-text: #fcd34d;
-    --heat-light-green-bg: #1f3f2f;
-    --heat-light-green-text: #86efac;
-    --heat-dark-green-bg: #1f4f2f;
-    --heat-dark-green-text: #4ade80;
-    --heat-gray-bg: #2a2a2a;
-    --heat-gray-text: #a0a0a0;
+    --heat-red-bg: #4a2828;
+    --heat-red-text: #e89999;
+    --heat-yellow-bg: #4a3f28;
+    --heat-yellow-text: #e8cf88;
+    --heat-light-green-bg: #2a4035;
+    --heat-light-green-text: #88d9a8;
+    --heat-dark-green-bg: #2e4a3a;
+    --heat-dark-green-text: #a8e8b8;
+    --heat-gray-bg: #2a2522;
+    --heat-gray-text: #9b968e;
 }
 
 /* Base styles */
