@@ -151,6 +151,8 @@ export function renderCompactHeader(teamData, gwNumber) {
                 padding: 0.5rem 0;
                 border-bottom: 2px solid var(--border-color);
                 margin: 0;
+                width: 100vw;
+                margin-left: calc(-50vw + 50%);
             "
         >
             <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; padding: 0;">
@@ -271,6 +273,8 @@ export function renderCompactPlayerRow(pick, player, gwNumber) {
             border-bottom: 1px solid var(--border-color);
             font-size: 0.75rem;
             align-items: center;
+            width: 100vw;
+            margin-left: calc(-50vw + 50%);
         ">
             <div style="font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-left: 0;">
                 ${escapeHtml(player.web_name)}${captainBadge}
@@ -311,6 +315,8 @@ export function renderCompactTeamList(players, gwNumber) {
             font-size: 0.7rem;
             font-weight: 700;
             text-transform: capitalize;
+            width: 100vw;
+            margin-left: calc(-50vw + 50%);
         ">
             <div style="padding-left: 0;">Player</div>
             <div style="text-align: center;">Opp</div>

@@ -1140,6 +1140,8 @@ function renderMobileFixturesTab() {
                         border-bottom: 1px solid var(--border-color);
                         font-size: 0.75rem;
                         align-items: center;
+                        width: 100vw;
+                        margin-left: calc(-50vw + 50%);
                     ">
                         <div style="color: var(--text-secondary); font-size: 0.65rem;">${timeStr.split(',')[1] || timeStr}</div>
                         <div style="text-align: right; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
@@ -1172,6 +1174,8 @@ function renderMobileFixturesTab() {
                     position: sticky;
                     top: calc(3.5rem + env(safe-area-inset-top));
                     z-index: 50;
+                    width: 100vw;
+                    margin-left: calc(-50vw + 50%);
                 ">
                     <div>Time</div>
                     <div style="text-align: right;">Home</div>
@@ -1463,6 +1467,8 @@ function renderLeagueStandings(leagueData) {
                 position: sticky;
                 top: calc(3.5rem + 8rem + env(safe-area-inset-top));
                 z-index: 50;
+                width: 100vw;
+                margin-left: calc(-50vw + 50%);
             ">
                 <div style="text-align: center; padding-left: 0;">Rank</div>
                 <div>Manager</div>
@@ -1516,6 +1522,8 @@ function renderLeagueStandings(leagueData) {
                     ${isUser ? 'border-left: 3px solid var(--primary-color);' : ''}
                     font-size: 0.75rem;
                     align-items: center;
+                    width: 100vw;
+                    margin-left: calc(-50vw + 50%);
                 ">
                     <div style="text-align: center; padding-left: 0;">
                         <div style="font-weight: 600;">${entry.rank}</div>
