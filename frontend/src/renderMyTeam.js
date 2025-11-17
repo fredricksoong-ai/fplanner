@@ -529,8 +529,6 @@ function renderTeamOverviewTab(teamData) {
             ${renderCompactTeamList(allPlayers, gameweek, templatePlayerIds)}
 
             ${renderMatchSchedule(allPlayers, gameweek)}
-
-            ${problemPlayersSection}
         `;
     } else {
         // Desktop layout (original)

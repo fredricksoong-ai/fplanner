@@ -51,22 +51,23 @@ export function renderCompactHeader(teamData, gwNumber) {
             top: 0;
             background: var(--bg-primary);
             z-index: 100;
-            padding: 0.5rem 1rem;
-            padding-top: calc(0.5rem + env(safe-area-inset-top));
+            padding: 0.75rem 1rem;
+            padding-top: calc(0.75rem + env(safe-area-inset-top));
             border-bottom: 2px solid var(--border-color);
-            margin: -1rem -1rem 0.75rem -1rem;
+            margin: -1rem -1rem 0 -1rem;
         ">
             <!-- Top row: GW + Actions -->
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                <div style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">
+                <div style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary);">
                     GW${gwNumber} • ${gwPoints}pts
                 </div>
                 <div style="display: flex; gap: 0.5rem;">
                     <button
                         id="change-team-btn-mobile"
+                        class="touch-target"
                         style="
-                            width: 32px;
-                            height: 32px;
+                            width: 44px;
+                            height: 44px;
                             border-radius: 50%;
                             background: var(--bg-secondary);
                             border: 1px solid var(--border-color);
@@ -79,13 +80,14 @@ export function renderCompactHeader(teamData, gwNumber) {
                         "
                         title="Change Team"
                     >
-                        <i class="fas fa-arrow-left" style="font-size: 0.8rem;"></i>
+                        <i class="fas fa-arrow-left" style="font-size: 1rem;"></i>
                     </button>
                     <button
                         id="refresh-team-btn-mobile"
+                        class="touch-target"
                         style="
-                            width: 32px;
-                            height: 32px;
+                            width: 44px;
+                            height: 44px;
                             border-radius: 50%;
                             background: var(--secondary-color);
                             border: none;
@@ -98,12 +100,12 @@ export function renderCompactHeader(teamData, gwNumber) {
                         "
                         title="Refresh"
                     >
-                        <i class="fas fa-sync-alt" style="font-size: 0.8rem;"></i>
+                        <i class="fas fa-sync-alt" style="font-size: 1rem;"></i>
                     </button>
                 </div>
             </div>
             <!-- Stats row -->
-            <div style="display: flex; gap: 0.75rem; font-size: 0.7rem; color: var(--text-secondary);">
+            <div style="display: flex; gap: 0.75rem; font-size: 0.8rem; color: var(--text-secondary); flex-wrap: wrap;">
                 <span>Rank ${gwRank} ${rankIcon}</span>
                 <span>|</span>
                 <span>Overall: ${totalPoints}pts</span>
@@ -180,32 +182,35 @@ export function renderCompactPlayerRow(pick, player, gwNumber, isInTemplate) {
 
     const finalBg = hasHighSeverity ? 'rgba(220, 38, 38, 0.08)' : bgColor;
 
+    // League differential placeholder (will be calculated when league is selected)
+    const lgDiff = '—';
+
     return `
         <div style="
             display: grid;
-            grid-template-columns: 0.5fr 2fr 1fr 1fr 1fr 1fr 1fr 1fr;
-            gap: 0.25rem;
-            padding: 0.4rem 0.5rem;
+            grid-template-columns: 2.5fr 1.2fr 0.8fr 0.8fr 0.8fr 1fr;
+            gap: 0.3rem;
+            padding: 0.5rem 0.75rem;
             background: ${finalBg};
             border-bottom: 1px solid var(--border-color);
-            font-size: 0.7rem;
+            font-size: 0.8rem;
             align-items: center;
+            min-height: 44px;
         ">
-            <div style="font-weight: 600; color: var(--text-secondary);">${getPositionShort(player)}</div>
             <div style="font-weight: 600; color: var(--text-primary);">
+                <span style="color: var(--text-secondary); font-size: 0.7rem; margin-right: 0.25rem;">${getPositionShort(player)}</span>
                 ${escapeHtml(player.web_name)}${captainBadge}
-                ${hasHighSeverity ? '<i class="fas fa-exclamation-triangle" style="color: var(--danger-color); font-size: 0.6rem; margin-left: 0.25rem;"></i>' : ''}
+                ${hasHighSeverity ? '<i class="fas fa-exclamation-triangle" style="color: var(--danger-color); font-size: 0.7rem; margin-left: 0.25rem;"></i>' : ''}
             </div>
-            <div style="color: var(--text-secondary);">${getTeamShortName(player.team)}</div>
             <div style="text-align: center;">
-                <span class="${getDifficultyClass(gwOpp.difficulty)}" style="padding: 0.15rem 0.3rem; border-radius: 0.2rem; font-weight: 600; font-size: 0.65rem;">
-                    ${gwOpp.name}${gwOpp.isHome ? 'H' : 'A'}
+                <span class="${getDifficultyClass(gwOpp.difficulty)}" style="padding: 0.2rem 0.4rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.75rem;">
+                    ${gwOpp.name} (${gwOpp.isHome ? 'H' : 'A'})
                 </span>
             </div>
-            <div style="text-align: center; font-size: 0.65rem; color: var(--text-secondary);">${gwMinutes}</div>
-            <div style="text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 700; padding: 0.25rem; border-radius: 0.2rem;">${displayPoints}</div>
-            <div style="text-align: center; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 600; padding: 0.25rem; border-radius: 0.2rem;">${formatDecimal(player.form)}</div>
-            <div style="text-align: center; font-size: 0.65rem; color: ${transferColor}; font-weight: 600;">${transferNet}</div>
+            <div style="text-align: center; font-size: 0.75rem; color: var(--text-secondary);">${gwMinutes}</div>
+            <div style="text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 700; padding: 0.3rem; border-radius: 0.25rem; font-size: 0.85rem;">${displayPoints}</div>
+            <div style="text-align: center; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 600; padding: 0.3rem; border-radius: 0.25rem; font-size: 0.8rem;">${formatDecimal(player.form)}</div>
+            <div style="text-align: center; font-size: 0.75rem; color: var(--text-secondary); font-weight: 600;">${lgDiff}</div>
         </div>
     `;
 }
@@ -221,26 +226,24 @@ export function renderCompactTeamList(players, gwNumber, templatePlayerIds = new
     const headerRow = `
         <div style="
             display: grid;
-            grid-template-columns: 0.5fr 2fr 1fr 1fr 1fr 1fr 1fr 1fr;
-            gap: 0.25rem;
-            padding: 0.4rem 0.5rem;
+            grid-template-columns: 2.5fr 1.2fr 0.8fr 0.8fr 0.8fr 1fr;
+            gap: 0.3rem;
+            padding: 0.6rem 0.75rem;
             background: var(--primary-color);
             color: white;
-            font-size: 0.65rem;
+            font-size: 0.8rem;
             font-weight: 700;
             text-transform: uppercase;
             position: sticky;
-            top: calc(4.5rem + env(safe-area-inset-top));
+            top: calc(5.5rem + env(safe-area-inset-top));
             z-index: 90;
         ">
-            <div>Pos</div>
             <div>Player</div>
-            <div>Team</div>
             <div style="text-align: center;">Opp</div>
             <div style="text-align: center;">Min</div>
             <div style="text-align: center;">Pts</div>
             <div style="text-align: center;">Form</div>
-            <div style="text-align: center;">ΔT</div>
+            <div style="text-align: center;">Lg Diff</div>
         </div>
     `;
 
