@@ -238,11 +238,6 @@ body {
     padding-top: env(safe-area-inset-top);
   }
 
-  #app-container {
-    background: var(--bg-primary);
-    min-height: 100vh;
-  }
-
   nav h1 {
     font-size: 1.25rem !important;
   }
