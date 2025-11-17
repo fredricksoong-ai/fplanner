@@ -57,7 +57,7 @@ export function renderPlayerTable(players, fixtureMode = 'next5', myTeamPlayerId
     }
 
     let html = `
-        <div style="overflow-x: auto; overflow-y: visible; background: var(--bg-primary); border-radius: 12px; box-shadow: 0 2px 8px var(--shadow);">
+        <div style="overflow-x: auto; overflow-y: visible; background: var(--bg-secondary); border-radius: 12px; box-shadow: 0 2px 8px var(--shadow);">
             <table style="width: 100%; font-size: 0.875rem; border-collapse: collapse;">
                 <thead style="background: var(--primary-color); color: white;">
                     <tr>
@@ -114,7 +114,7 @@ export function renderPlayerTable(players, fixtureMode = 'next5', myTeamPlayerId
         }
 
         html += `
-            <tr style="background: ${hasHighSeverity ? 'rgba(220, 38, 38, 0.05)' : rowBg};">
+            <tr style="background: ${hasHighSeverity ? 'rgba(220, 38, 38, 0.05)' : rowBg}; border-bottom: 1px solid var(--border-color);">
                 <td style="padding: 0.75rem 1rem; position: relative;">
                     <strong>${escapeHtml(player.web_name)}</strong>
                     ${riskTooltip ? `<span style="margin-left: 0.5rem;">${riskTooltip}</span>` : ''}
