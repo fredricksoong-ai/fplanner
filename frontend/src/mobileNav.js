@@ -34,7 +34,7 @@ export function createMobileNav(currentPage, onNavigate) {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                padding: 0.25rem 0.5rem;
+                padding: 0.25rem 0;
                 padding-bottom: max(0.25rem, env(safe-area-inset-bottom));
                 z-index: 1000;
             "
