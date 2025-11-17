@@ -88,7 +88,7 @@ export function renderCompactHeader(teamData, gwNumber) {
         const captainPlayer = getPlayerById(captainPick.element);
         if (captainPlayer) {
             const captainOpp = getGWOpponent(captainPlayer.team, gwNumber);
-            const oppBadge = `<span class="${getDifficultyClass(captainOpp.difficulty)}" style="padding: 0.1rem 0.3rem; border-radius: 0.3rem; font-weight: 600; font-size: 0.65rem; min-width: 3.5rem; display: inline-block; text-align: center;">${captainOpp.name} (${captainOpp.isHome ? 'H' : 'A'})</span>`;
+            const oppBadge = `<span class="${getDifficultyClass(captainOpp.difficulty)}" style="padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.62rem; min-width: 3rem; display: inline-block; text-align: center;">${captainOpp.name} (${captainOpp.isHome ? 'H' : 'A'})</span>`;
             captainInfo = `${captainPlayer.web_name} vs. ${oppBadge}`;
         }
     }
@@ -97,7 +97,7 @@ export function renderCompactHeader(teamData, gwNumber) {
         const vicePlayer = getPlayerById(vicePick.element);
         if (vicePlayer) {
             const viceOpp = getGWOpponent(vicePlayer.team, gwNumber);
-            const oppBadge = `<span class="${getDifficultyClass(viceOpp.difficulty)}" style="padding: 0.1rem 0.3rem; border-radius: 0.3rem; font-weight: 600; font-size: 0.65rem; min-width: 3.5rem; display: inline-block; text-align: center;">${viceOpp.name} (${viceOpp.isHome ? 'H' : 'A'})</span>`;
+            const oppBadge = `<span class="${getDifficultyClass(viceOpp.difficulty)}" style="padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.62rem; min-width: 3rem; display: inline-block; text-align: center;">${viceOpp.name} (${viceOpp.isHome ? 'H' : 'A'})</span>`;
             viceInfo = `${vicePlayer.web_name} vs. ${oppBadge}`;
         }
     }
@@ -148,13 +148,13 @@ export function renderCompactHeader(teamData, gwNumber) {
                 top: calc(3.5rem + env(safe-area-inset-top)); /* Keeps this box sticky just below the top app bar */
                 background: var(--bg-primary);
                 z-index: 100;
-                padding: 0.5rem 0;
+                padding: 0.5rem 0.75rem;
                 border-bottom: 2px solid var(--border-color);
                 margin: 0;
             "
         >
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem; padding: 0 0.75rem;">
-                <div style="flex: 1; display: grid; gap: 0.2rem;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;">
+                <div style="flex: 1; display: grid; gap: 0.2rem; padding-left: 0;">
                     <div style="display: flex; align-items: center; gap: 0.4rem;">
                         <button
                             id="change-team-btn"
@@ -200,24 +200,7 @@ export function renderCompactHeader(teamData, gwNumber) {
                     </div>
                 </div>
 
-                <div style="display: grid; gap: 0.3rem; flex-shrink: 0; min-width: 90px;">
-                    <!-- League Selector Dropdown -->
-                    <select
-                        id="mobile-league-selector"
-                        style="
-                            width: 100%;
-                            padding: 0.2rem 0.3rem;
-                            font-size: 0.65rem;
-                            background: var(--bg-secondary);
-                            border: 1px solid var(--border-color);
-                            border-radius: 0.25rem;
-                            color: var(--text-primary);
-                            cursor: pointer;
-                        "
-                    >
-                        <option value="">🏆 League</option>
-                    </select>
-
+                <div style="display: grid; gap: 0.3rem; flex-shrink: 0; min-width: 90px; padding-right: 0.5rem;">
                     <div style="
                         background: var(--bg-secondary);
                         border: 1px solid var(--border-color);
@@ -283,18 +266,18 @@ export function renderCompactPlayerRow(pick, player, gwNumber) {
             display: grid;
             grid-template-columns: 2.5fr 1fr 0.7fr 0.6fr 0.6fr 0.7fr 0.6fr;
             gap: 0.25rem;
-            padding: 0.1rem 0;
+            padding: 0.4rem 0.5rem;
             background: ${finalBg};
             border-bottom: 1px solid var(--border-color);
             font-size: 0.75rem;
             align-items: center;
         ">
-            <div style="font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-left: 0.5rem;">
+            <div style="font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                 ${escapeHtml(player.web_name)}${captainBadge}
                 ${hasHighSeverity ? '<i class="fas fa-exclamation-triangle" style="color: var(--danger-color); font-size: 0.65rem; margin-left: 0.2rem;"></i>' : ''}
             </div>
             <div style="text-align: center;">
-                <span class="${getDifficultyClass(gwOpp.difficulty)}" style="padding: 0.1rem 0.3rem; border-radius: 0.3rem; font-weight: 600; font-size: 0.65rem; min-width: 3.5rem; display: inline-block; text-align: center;">
+                <span class="${getDifficultyClass(gwOpp.difficulty)}" style="padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.62rem; min-width: 3rem; display: inline-block; text-align: center;">
                     ${gwOpp.name} (${gwOpp.isHome ? 'H' : 'A'})
                 </span>
             </div>
@@ -302,7 +285,7 @@ export function renderCompactPlayerRow(pick, player, gwNumber) {
             <div style="text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 700; padding: 0.05rem; border-radius: 0.2rem; font-size: 0.7rem;">${displayPoints}</div>
             <div style="text-align: center; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 600; padding: 0.05rem; border-radius: 0.2rem; font-size: 0.65rem;">${formatDecimal(player.form)}</div>
             <div style="text-align: center; font-size: 0.65rem; color: var(--text-secondary);">${ownership.toFixed(1)}%</div>
-            <div style="text-align: center; font-size: 0.65rem; font-weight: 600; color: ${transferColor}; padding-right: 0.5rem;">
+            <div style="text-align: center; font-size: 0.65rem; font-weight: 600; color: ${transferColor};">
                 ${netTransfers > 0 ? '+' : ''}${(netTransfers / 1000).toFixed(0)}k
             </div>
         </div>
@@ -322,20 +305,20 @@ export function renderCompactTeamList(players, gwNumber) {
             display: grid;
             grid-template-columns: 2.5fr 1fr 0.7fr 0.6fr 0.6fr 0.7fr 0.6fr;
             gap: 0.25rem;
-            padding: 0.4rem 0;
+            padding: 0.4rem 0.5rem;
             background: var(--primary-color);
             color: white;
             font-size: 0.7rem;
             font-weight: 700;
             text-transform: capitalize;
         ">
-            <div style="padding-left: 0.5rem;">Player</div>
+            <div>Player</div>
             <div style="text-align: center;">Opp</div>
             <div style="text-align: center;">Mins</div>
             <div style="text-align: center;">Pts</div>
             <div style="text-align: center;">Form</div>
             <div style="text-align: center;">Own%</div>
-            <div style="text-align: center; padding-right: 0.5rem;">ΔT</div>
+            <div style="text-align: center;">ΔT</div>
         </div>
     `;
 
@@ -354,9 +337,11 @@ export function renderCompactTeamList(players, gwNumber) {
     }).join('');
 
     return `
-        ${headerRow}
-        ${startersHtml}
-        ${benchHtml}
+        <div style="margin-top: 0.5rem;">
+            ${headerRow}
+            ${startersHtml}
+            ${benchHtml}
+        </div>
     `;
 }
 
