@@ -189,7 +189,7 @@ function addMainContentPadding() {
     style.textContent = `
         @media (max-width: 767px) {
             #app-container {
-                padding-bottom: calc(5rem + env(safe-area-inset-bottom)) !important;
+                padding-bottom: calc(4rem + env(safe-area-inset-bottom)) !important;
             }
 
             body {

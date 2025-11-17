@@ -148,12 +148,12 @@ export function renderCompactHeader(teamData, gwNumber) {
                 top: calc(3.5rem + env(safe-area-inset-top)); /* Keeps this box sticky just below the top app bar */
                 background: var(--bg-primary);
                 z-index: 100;
-                padding: 0.5rem 0.75rem;
+                padding: 0.5rem 0;
                 border-bottom: 2px solid var(--border-color);
                 margin: 0;
             "
         >
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem; padding: 0 0.75rem;">
                 <div style="flex: 1; display: grid; gap: 0.2rem;">
                     <div style="display: flex; align-items: center; gap: 0.4rem;">
                         <button
@@ -273,22 +273,23 @@ export function renderCompactPlayerRow(pick, player, gwNumber) {
     const netTransfers = transfersIn - transfersOut;
     const transferColor = netTransfers > 0 ? '#22c55e' : netTransfers < 0 ? '#ef4444' : 'var(--text-secondary)';
 
-    // Background color - lighter grey for bench
+    // Background color - lighter grey for bench (always apply for bench, even with high risk)
     const bgColor = isBench ? 'var(--bg-tertiary)' : 'transparent';
-    const finalBg = hasHighSeverity ? 'rgba(220, 38, 38, 0.08)' : bgColor;
+    // High risk overlay only for non-bench players
+    const finalBg = (hasHighSeverity && !isBench) ? 'rgba(220, 38, 38, 0.08)' : bgColor;
 
     return `
         <div style="
             display: grid;
             grid-template-columns: 2.5fr 1fr 0.7fr 0.6fr 0.6fr 0.7fr 0.6fr;
             gap: 0.25rem;
-            padding: 0.1rem 0.4rem;
+            padding: 0.1rem 0;
             background: ${finalBg};
             border-bottom: 1px solid var(--border-color);
             font-size: 0.75rem;
             align-items: center;
         ">
-            <div style="font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            <div style="font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-left: 0.5rem;">
                 ${escapeHtml(player.web_name)}${captainBadge}
                 ${hasHighSeverity ? '<i class="fas fa-exclamation-triangle" style="color: var(--danger-color); font-size: 0.65rem; margin-left: 0.2rem;"></i>' : ''}
             </div>
@@ -301,7 +302,7 @@ export function renderCompactPlayerRow(pick, player, gwNumber) {
             <div style="text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 700; padding: 0.05rem; border-radius: 0.2rem; font-size: 0.7rem;">${displayPoints}</div>
             <div style="text-align: center; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 600; padding: 0.05rem; border-radius: 0.2rem; font-size: 0.65rem;">${formatDecimal(player.form)}</div>
             <div style="text-align: center; font-size: 0.65rem; color: var(--text-secondary);">${ownership.toFixed(1)}%</div>
-            <div style="text-align: center; font-size: 0.65rem; font-weight: 600; color: ${transferColor};">
+            <div style="text-align: center; font-size: 0.65rem; font-weight: 600; color: ${transferColor}; padding-right: 0.5rem;">
                 ${netTransfers > 0 ? '+' : ''}${(netTransfers / 1000).toFixed(0)}k
             </div>
         </div>
@@ -321,20 +322,20 @@ export function renderCompactTeamList(players, gwNumber) {
             display: grid;
             grid-template-columns: 2.5fr 1fr 0.7fr 0.6fr 0.6fr 0.7fr 0.6fr;
             gap: 0.25rem;
-            padding: 0.4rem 0.5rem;
+            padding: 0.4rem 0;
             background: var(--primary-color);
             color: white;
             font-size: 0.7rem;
             font-weight: 700;
             text-transform: capitalize;
         ">
-            <div>Player</div>
+            <div style="padding-left: 0.5rem;">Player</div>
             <div style="text-align: center;">Opp</div>
             <div style="text-align: center;">Mins</div>
             <div style="text-align: center;">Pts</div>
             <div style="text-align: center;">Form</div>
             <div style="text-align: center;">Own%</div>
-            <div style="text-align: center;">ΔT</div>
+            <div style="text-align: center; padding-right: 0.5rem;">ΔT</div>
         </div>
     `;
 
