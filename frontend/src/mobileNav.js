@@ -32,8 +32,8 @@ export function createMobileNav(currentPage, onNavigate) {
                 display: flex;
                 justify-content: space-around;
                 align-items: center;
-                padding: 0.5rem 0;
-                padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+                padding: 0.25rem 0;
+                padding-bottom: max(0.25rem, env(safe-area-inset-bottom));
                 box-shadow: 0 -2px 10px var(--shadow);
                 z-index: 1000;
             "
@@ -48,10 +48,10 @@ export function createMobileNav(currentPage, onNavigate) {
                         display: flex;
                         flex-direction: column;
                         align-items: center;
-                        gap: 0.25rem;
+                        gap: 0.15rem;
                         background: ${currentPage === item.id ? 'rgba(255,255,255,0.2)' : 'transparent'};
                         border: none;
-                        padding: 0.5rem 0.75rem;
+                        padding: 0.3rem 0.5rem;
                         border-radius: 0.5rem;
                         color: ${item.disabled ? 'rgba(255,255,255,0.4)' : 'white'};
                         cursor: ${item.disabled ? 'not-allowed' : 'pointer'};
@@ -61,9 +61,9 @@ export function createMobileNav(currentPage, onNavigate) {
                         opacity: ${item.disabled ? '0.5' : '1'};
                     "
                 >
-                    <i class="fas ${item.icon}" style="font-size: 1.25rem;"></i>
+                    <i class="fas ${item.icon}" style="font-size: 1.1rem;"></i>
                     <span style="
-                        font-size: 0.7rem;
+                        font-size: 0.65rem;
                         font-weight: ${currentPage === item.id ? '700' : '500'};
                     ">${item.label}</span>
                 </button>
