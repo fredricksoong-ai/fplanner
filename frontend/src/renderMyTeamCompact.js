@@ -130,8 +130,8 @@ export function renderCompactHeader(teamData, gwNumber) {
     if (selectedLeagueId && selectedLeagueId !== 'null') {
         // Store league data in a data attribute for later rendering
         leagueInfo = `
-            <div id="league-info-placeholder" data-team-id="${team.id}" data-league-id="${selectedLeagueId}" style="margin-top: 0.35rem; padding-top: 0.35rem; border-top: 1px solid rgba(255,255,255,0.3);">
-                <div style="font-size: 0.65rem; color: rgba(255,255,255,0.8);">Loading league...</div>
+            <div id="league-info-placeholder" data-team-id="${team.id}" data-league-id="${selectedLeagueId}" style="margin-top: 0.35rem; padding-top: 0.35rem; border-top: 1px solid var(--border-color);">
+                <div style="font-size: 0.65rem; color: var(--text-secondary);">Loading league...</div>
             </div>
         `;
     }
@@ -204,12 +204,12 @@ export function renderCompactHeader(teamData, gwNumber) {
 
                 <div style="display: grid; gap: 0.3rem; flex-shrink: 0; min-width: 90px; padding-right: 0.5rem;">
                     <div style="
-                        background: var(--primary-color);
-                        border: 1px solid var(--primary-color);
+                        background: var(--bg-secondary);
+                        border: 1px solid var(--border-color);
                         border-radius: 6px;
                         padding: 0.4rem 0.5rem;
                     ">
-                        <div style="font-size: 1rem; font-weight: 700; color: white; line-height: 1.2;">
+                        <div style="font-size: 1rem; font-weight: 700; color: ${gwTextColor}; line-height: 1.2;">
                             GW${gwNumber}: ${gwPoints}
                         </div>
                         ${leagueInfo}
