@@ -127,18 +127,23 @@ export function renderCompactHeader(teamData, gwNumber) {
             gwCardColor = '#ef4444';
         }
     }
+    
+    // --- FIX: Add CSS variable to dynamically set header height
+    const headerHeightStyle = `--compact-header-height: calc(3.5rem + 8rem + env(safe-area-inset-top));`;
+
 
     return `
         <div
             id="compact-header"
             style="
                 position: sticky;
-                top: calc(3.5rem + env(safe-area-inset-top));
+                top: calc(3.5rem + env(safe-area-inset-top)); /* Keeps this box sticky just below the top app bar */
                 background: var(--bg-primary);
                 z-index: 100;
                 padding: 0.5rem 0.75rem;
                 border-bottom: 2px solid var(--border-color);
                 margin: -0.5rem -0.5rem 0 -0.5rem;
+                ${headerHeightStyle} /* Inject variable for team list header to use */
             "
         >
             <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem;">
@@ -197,10 +202,10 @@ export function renderCompactHeader(teamData, gwNumber) {
                     min-width: 70px; /* Reduced from 85px */
                     flex-shrink: 0;
                 ">
-                    <div style="font-size: 1.25rem; font-weight: 700; color: ${gwCardColor}; line-height: 1;"> /* Reduced from 1.75rem */
+                    <div style="font-size: 1.25rem; font-weight: 700; color: ${gwCardColor}; line-height: 1;">
                         ${gwPoints}
                     </div>
-                    <div style="font-size: 0.6rem; color: var(--text-secondary); margin-top: 0.15rem;"> /* Reduced font size and margin */
+                    <div style="font-size: 0.6rem; color: var(--text-secondary); margin-top: 0.15rem;">
                         GW${gwNumber}
                     </div>
                 </div>
@@ -250,7 +255,7 @@ export function renderCompactPlayerRow(pick, player, gwNumber, isInTemplate) {
             display: grid;
             grid-template-columns: 2.5fr 1.2fr 0.8fr 0.8fr 0.8fr;
             gap: 0.25rem;
-            padding: 0.1rem 0.4rem; /* REDUCED VERTICAL PADDING for density */
+            padding: 0.1rem 0.4rem; 
             background: ${finalBg};
             border-bottom: 1px solid var(--border-color);
             font-size: 0.75rem;
@@ -262,13 +267,13 @@ export function renderCompactPlayerRow(pick, player, gwNumber, isInTemplate) {
                 ${hasHighSeverity ? '<i class="fas fa-exclamation-triangle" style="color: var(--danger-color); font-size: 0.65rem; margin-left: 0.2rem;"></i>' : ''}
             </div>
             <div style="text-align: center;">
-                <span class="${getDifficultyClass(gwOpp.difficulty)}" style="padding: 0.05rem 0.25rem; border-radius: 0.2rem; font-weight: 600; font-size: 0.65rem;"> /* REDUCED OPONENT BADGE PADDING */
+                <span class="${getDifficultyClass(gwOpp.difficulty)}" style="padding: 0.05rem 0.25rem; border-radius: 0.2rem; font-weight: 600; font-size: 0.65rem;">
                     ${gwOpp.name} (${gwOpp.isHome ? 'H' : 'A'})
                 </span>
             </div>
             <div style="text-align: center; font-size: 0.65rem; color: var(--text-secondary);">${gwMinutes}</div>
-            <div style="text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 700; padding: 0.05rem; border-radius: 0.2rem; font-size: 0.75rem;">${displayPoints}</div> /* REDUCED HEATMAP PADDING */
-            <div style="text-align: center; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 600; padding: 0.05rem; border-radius: 0.2rem; font-size: 0.7rem;">${formatDecimal(player.form)}</div> /* REDUCED HEATMAP PADDING */
+            <div style="text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 700; padding: 0.05rem; border-radius: 0.2rem; font-size: 0.75rem;">${displayPoints}</div>
+            <div style="text-align: center; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 600; padding: 0.05rem; border-radius: 0.2rem; font-size: 0.7rem;">${formatDecimal(player.form)}</div>
         </div>
     `;
 }
@@ -293,7 +298,7 @@ export function renderCompactTeamList(players, gwNumber, templatePlayerIds = new
             font-weight: 700;
             text-transform: capitalize;
             position: sticky;
-            top: var(--compact-header-height, 11.5rem);
+            top: var(--compact-header-height, 12rem); 
             z-index: 90;
         ">
             <div>Player</div>
