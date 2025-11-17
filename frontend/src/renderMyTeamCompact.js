@@ -293,7 +293,7 @@ export function renderCompactTeamList(players, gwNumber, templatePlayerIds = new
         <div style="
             display: grid;
             grid-template-columns: 2.5fr 1.2fr 0.8fr 0.8fr 0.8fr;
-            gap: 0.3rem;
+            gap: 0.25rem;
             padding: 0.4rem 0.5rem;
             background: var(--primary-color);
             color: white;
