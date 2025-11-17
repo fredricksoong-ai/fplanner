@@ -27,6 +27,7 @@ export function createMobileNav(currentPage, onNavigate) {
                 bottom: 0;
                 left: 0;
                 right: 0;
+                width: 100%;
                 background: var(--bg-secondary);
                 border-top: 1px solid var(--border-color);
                 display: flex;
@@ -36,6 +37,7 @@ export function createMobileNav(currentPage, onNavigate) {
                 padding-bottom: max(0.4rem, env(safe-area-inset-bottom));
                 z-index: 1000;
                 gap: 0.25rem;
+                box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
             "
         >
             ${navItems.map(item => {
@@ -201,12 +203,17 @@ function addMainContentPadding() {
     style.textContent = `
         @media (max-width: 767px) {
             #app-container {
-                padding-bottom: calc(5rem + env(safe-area-inset-bottom)) !important;
+                padding-bottom: calc(80px + env(safe-area-inset-bottom)) !important;
             }
 
             body {
                 padding-bottom: 0;
                 margin-bottom: 0;
+            }
+
+            /* Ensure smooth scrolling on iOS */
+            body {
+                -webkit-overflow-scrolling: touch;
             }
         }
     `;
