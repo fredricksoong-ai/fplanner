@@ -10,7 +10,7 @@
  */
 export async function fetchUserLeagues(teamId) {
     try {
-        const response = await fetch(`/api/entry/${teamId}/`);
+        const response = await fetch(`/api/team/${teamId}`);
         if (!response.ok) {
             throw new Error('Failed to fetch team data');
         }
@@ -18,7 +18,7 @@ export async function fetchUserLeagues(teamId) {
         const data = await response.json();
 
         // Extract classic leagues only (not head-to-head)
-        const leagues = data.leagues?.classic || [];
+        const leagues = data.team?.leagues?.classic || [];
 
         // Store in localStorage for quick access
         localStorage.setItem(`fpl_leagues_${teamId}`, JSON.stringify(leagues));
