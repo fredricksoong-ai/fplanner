@@ -1858,12 +1858,6 @@ function renderTeamRows(players, gameweek, next5GWs) {
         const riskTooltip = renderRiskTooltip(risks);
         const hasHighSeverity = hasHighRisk(risks);
 
-        const ptsHeatmap = getPtsHeatmap(player.total_points, 'pts');
-        const ptsStyle = getHeatmapStyle(ptsHeatmap);
-
-        const formHeatmap = getFormHeatmap(player.form);
-        const formStyle = getHeatmapStyle(formHeatmap);
-
         // Get GW-specific stats from GitHub (only if matches current GW)
         const hasGWStats = player.github_gw && player.github_gw.gw === gameweek;
 
@@ -1872,6 +1866,13 @@ function renderTeamRows(players, gameweek, next5GWs) {
 
         // Points: use GitHub if available, otherwise FPL API event_points
         const gwPoints = hasGWStats ? player.github_gw.total_points : (player.event_points || 0);
+
+        // Use GW points for heatmap (not season total)
+        const ptsHeatmap = getPtsHeatmap(gwPoints, 'gw_pts');
+        const ptsStyle = getHeatmapStyle(ptsHeatmap);
+
+        const formHeatmap = getFormHeatmap(player.form);
+        const formStyle = getHeatmapStyle(formHeatmap);
 
         // Get next 5 fixtures for this player
         const next5Fixtures = getFixtures(player.team, 5, false);

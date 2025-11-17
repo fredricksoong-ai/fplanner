@@ -146,16 +146,25 @@ export function formatMinutes(minutes, gw = null) {
  */
 export function getPtsHeatmap(points, metric = 'pts') {
     if (points === null || points === undefined) return 'heat-gray';
-    
+
     if (metric === 'pts') {
-        // Total points heatmap
+        // Total points heatmap (season-long)
         if (points >= 80) return 'heat-dark-green';
         if (points >= 60) return 'heat-light-green';
         if (points >= 40) return 'heat-yellow';
         if (points >= 20) return 'heat-red';
         return 'heat-gray';
     }
-    
+
+    if (metric === 'gw_pts') {
+        // Gameweek points heatmap
+        if (points >= 10) return 'heat-dark-green';
+        if (points >= 7) return 'heat-light-green';
+        if (points >= 4) return 'heat-yellow';
+        if (points >= 1) return 'heat-red';
+        return 'heat-gray';
+    }
+
     if (metric === 'form') {
         // Form heatmap (per game average)
         if (points >= 7) return 'heat-dark-green';
@@ -164,7 +173,7 @@ export function getPtsHeatmap(points, metric = 'pts') {
         if (points >= 1) return 'heat-red';
         return 'heat-gray';
     }
-    
+
     if (metric === 'value') {
         // Points per million heatmap
         if (points >= 15) return 'heat-dark-green';
@@ -173,7 +182,7 @@ export function getPtsHeatmap(points, metric = 'pts') {
         if (points >= 4) return 'heat-red';
         return 'heat-gray';
     }
-    
+
     return 'heat-gray';
 }
 
