@@ -126,11 +126,11 @@ export function renderCompactHeader(teamData, gwNumber) {
                 margin: -1rem -1rem 0 -1rem;
             "
         >
-            <!-- Row 1: Team name + GW Card -->
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
+            <!-- Row 1: Team name • Overall Rank + GW Card -->
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
                 <div style="flex: 1;">
-                    <div style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">
-                        ${escapeHtml(team.name)}
+                    <div style="font-size: 1rem; font-weight: 700; color: var(--text-primary); line-height: 1.3;">
+                        ${escapeHtml(team.name)} • ${overallRank}${rankArrow}
                     </div>
                 </div>
 
@@ -152,51 +152,13 @@ export function renderCompactHeader(teamData, gwNumber) {
                 </div>
             </div>
 
-            <!-- Row 2: Stats -->
-            <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
-                ${totalPoints.toLocaleString()} pts • £${teamValue}m • ${overallRank}
-            </div>
-
-            <!-- Row 3: Transfers -->
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div style="font-size: 0.8rem; color: var(--text-secondary);">
-                    ${freeTransfers} FT${transferCost > 0 ? ` (${transferCost})` : ' (0)'}
-                </div>
-
-                <!-- Expand arrow -->
-                <button
-                    id="expand-stats-btn"
-                    style="
-                        background: none;
-                        border: none;
-                        color: var(--text-secondary);
-                        cursor: pointer;
-                        padding: 0.25rem;
-                        font-size: 0.9rem;
-                    "
-                    title="More Stats"
-                >
-                    <i class="fas fa-chevron-down"></i>
-                </button>
-            </div>
-
-            <!-- Expandable Section (hidden by default) -->
-            <div
-                id="expanded-stats"
-                style="
-                    display: none;
-                    margin-top: 0.75rem;
-                    padding-top: 0.75rem;
-                    border-top: 1px solid var(--border-color);
-                    font-size: 0.75rem;
-                    color: var(--text-secondary);
-                "
-            >
-                <div style="display: grid; gap: 0.5rem;">
-                    <div>Squad Value: £${((entry.value || 0) / 10 - (entry.bank || 0) / 10).toFixed(1)}m + £${bank}m bank</div>
-                    ${team.years_active ? `<div>FPL History: ${team.years_active} Season${team.years_active > 1 ? 's' : ''}</div>` : ''}
-                    <div>Manager: ${escapeHtml(team.player_first_name)} ${escapeHtml(team.player_last_name)}</div>
-                </div>
+            <!-- Stats Grid -->
+            <div style="font-size: 0.75rem; color: var(--text-secondary); display: grid; gap: 0.35rem;">
+                <div><strong style="color: var(--text-primary);">Overall Points:</strong> ${totalPoints.toLocaleString()}</div>
+                <div><strong style="color: var(--text-primary);">Transfers:</strong> ${freeTransfers} FT${transferCost > 0 ? ` (-${transferCost} pts)` : ''}</div>
+                <div><strong style="color: var(--text-primary);">Squad Value:</strong> £${squadValue}m + £${bank}m bank</div>
+                <div><strong style="color: var(--text-primary);">GW Captain:</strong> ${captainInfo}</div>
+                <div><strong style="color: var(--text-primary);">GW Vice Captain:</strong> ${viceInfo}</div>
             </div>
         </div>
     `;
@@ -287,7 +249,7 @@ export function renderCompactTeamList(players, gwNumber, templatePlayerIds = new
             font-weight: 700;
             text-transform: uppercase;
             position: sticky;
-            top: calc(10.5rem + env(safe-area-inset-top));
+            top: calc(9rem + env(safe-area-inset-top));
             z-index: 90;
         ">
             <div>Player</div>
