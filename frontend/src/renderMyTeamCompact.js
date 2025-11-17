@@ -294,19 +294,19 @@ export function renderCompactTeamList(players, gwNumber, templatePlayerIds = new
             display: grid;
             grid-template-columns: 2.5fr 1.2fr 0.8fr 0.8fr 0.8fr;
             gap: 0.3rem;
-            padding: 0.4rem 0.5rem;
+            padding: 0.4rem 0.4rem;
             background: var(--primary-color);
             color: white;
             font-size: 0.7rem;
             font-weight: 700;
-            text-transform: uppercase;
+            text-transform: capitalize;
             position: sticky;
             top: var(--compact-header-height, 11.5rem);
             z-index: 90;
         ">
             <div>Player</div>
             <div style="text-align: center;">Opp</div>
-            <div style="text-align: center;">Min</div>
+            <div style="text-align: center;">Mins</div>
             <div style="text-align: center;">Pts</div>
             <div style="text-align: center;">Form</div>
         </div>
