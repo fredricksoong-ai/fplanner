@@ -200,7 +200,7 @@ body {
   #app-container {
     padding: 0.5rem !important;
     padding-top: 0 !important;
-    padding-bottom: 4rem !important; /* Space for bottom nav */
+    padding-bottom: 2rem !important; /* Space for bottom nav */
     margin: 0 auto !important;
   }
 

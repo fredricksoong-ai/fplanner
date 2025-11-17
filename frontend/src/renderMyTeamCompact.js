@@ -146,9 +146,6 @@ export function renderCompactHeader(teamData, gwNumber) {
                 <div style="flex: 1; display: grid; gap: 0.2rem;">
                     <!-- Team Name with Change Team Button -->
                     <div style="display: flex; align-items: center; gap: 0.4rem;">
-                        <div style="font-size: 0.95rem; font-weight: 700; color: var(--text-primary); line-height: 1.2; flex: 1;">
-                            ${escapeHtml(team.name)}
-                        </div>
                         <button
                             id="change-team-btn"
                             style="
@@ -167,6 +164,9 @@ export function renderCompactHeader(teamData, gwNumber) {
                         >
                             <i class="fas fa-exchange-alt" style="font-size: 0.7rem;"></i>
                         </button>
+                        <div style="font-size: 0.95rem; font-weight: 700; color: var(--text-primary); line-height: 1.2; flex: 1;">
+                            ${escapeHtml(team.name)}
+                        </div>
                     </div>
 
                     <!-- Overall Rank & Points -->
@@ -257,26 +257,26 @@ export function renderCompactPlayerRow(pick, player, gwNumber, isInTemplate) {
         <div style="
             display: grid;
             grid-template-columns: 2.5fr 1.2fr 0.8fr 0.8fr 0.8fr;
-            gap: 0.3rem;
-            padding: 0.3rem 0.5rem;
+            gap: 0.25rem;
+            padding: 0.2rem 0.4rem;
             background: ${finalBg};
             border-bottom: 1px solid var(--border-color);
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             align-items: center;
         ">
             <div style="font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                <span style="color: var(--text-secondary); font-size: 0.7rem; margin-right: 0.25rem;">${getPositionShort(player)}</span>
+                <span style="color: var(--text-secondary); font-size: 0.65rem; margin-right: 0.2rem;">${getPositionShort(player)}</span>
                 ${escapeHtml(player.web_name)}${captainBadge}
-                ${hasHighSeverity ? '<i class="fas fa-exclamation-triangle" style="color: var(--danger-color); font-size: 0.7rem; margin-left: 0.25rem;"></i>' : ''}
+                ${hasHighSeverity ? '<i class="fas fa-exclamation-triangle" style="color: var(--danger-color); font-size: 0.65rem; margin-left: 0.2rem;"></i>' : ''}
             </div>
             <div style="text-align: center;">
-                <span class="${getDifficultyClass(gwOpp.difficulty)}" style="padding: 0.15rem 0.3rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.7rem;">
+                <span class="${getDifficultyClass(gwOpp.difficulty)}" style="padding: 0.1rem 0.25rem; border-radius: 0.2rem; font-weight: 600; font-size: 0.65rem;">
                     ${gwOpp.name} (${gwOpp.isHome ? 'H' : 'A'})
                 </span>
             </div>
-            <div style="text-align: center; font-size: 0.7rem; color: var(--text-secondary);">${gwMinutes}</div>
-            <div style="text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 700; padding: 0.2rem; border-radius: 0.25rem; font-size: 0.8rem;">${displayPoints}</div>
-            <div style="text-align: center; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 600; padding: 0.2rem; border-radius: 0.25rem; font-size: 0.75rem;">${formatDecimal(player.form)}</div>
+            <div style="text-align: center; font-size: 0.65rem; color: var(--text-secondary);">${gwMinutes}</div>
+            <div style="text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 700; padding: 0.15rem; border-radius: 0.2rem; font-size: 0.75rem;">${displayPoints}</div>
+            <div style="text-align: center; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 600; padding: 0.15rem; border-radius: 0.2rem; font-size: 0.7rem;">${formatDecimal(player.form)}</div>
         </div>
     `;
 }
@@ -332,7 +332,7 @@ export function renderCompactTeamList(players, gwNumber, templatePlayerIds = new
 
     // Purple separator between starters and bench (matches desktop)
     const separator = `
-        <div style="background: linear-gradient(90deg, #37003c, #2a002e); height: 2px; margin: 0.3rem 0;"></div>
+        <div style="background: linear-gradient(90deg, #37003c, #2a002e); height: 2px; margin: 0.2rem 0;"></div>
     `;
 
     // Color legend
@@ -340,20 +340,20 @@ export function renderCompactTeamList(players, gwNumber, templatePlayerIds = new
         <div style="
             display: flex;
             gap: 1rem;
-            padding: 0.5rem;
-            font-size: 0.65rem;
+            padding: 0.35rem 0.4rem;
+            font-size: 0.6rem;
             color: var(--text-secondary);
             background: var(--bg-secondary);
-            border-radius: 0.5rem;
-            margin-top: 0.3rem;
-            margin-bottom: 0.5rem;
+            border-radius: 0.4rem;
+            margin-top: 0.2rem;
+            margin-bottom: 0.25rem;
         ">
-            <div style="display: flex; align-items: center; gap: 0.25rem;">
-                <div style="width: 10px; height: 10px; background: rgba(0, 255, 136, 0.3); border-radius: 2px;"></div>
+            <div style="display: flex; align-items: center; gap: 0.2rem;">
+                <div style="width: 8px; height: 8px; background: rgba(0, 255, 136, 0.3); border-radius: 2px;"></div>
                 <span>Template</span>
             </div>
-            <div style="display: flex; align-items: center; gap: 0.25rem;">
-                <div style="width: 10px; height: 10px; background: rgba(107, 25, 112, 0.3); border-radius: 2px;"></div>
+            <div style="display: flex; align-items: center; gap: 0.2rem;">
+                <div style="width: 8px; height: 8px; background: rgba(107, 25, 112, 0.3); border-radius: 2px;"></div>
                 <span>Differential</span>
             </div>
         </div>
