@@ -199,7 +199,8 @@ body {
   /* Make main content full width on mobile */
   #app-container {
     padding: 1rem !important;
-    margin: 1rem auto !important;
+    padding-top: 0 !important;
+    margin: 0 auto 1rem auto !important;
   }
 
   /* Compact header on mobile with safe area support */
