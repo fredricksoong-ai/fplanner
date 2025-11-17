@@ -43,18 +43,32 @@ export async function loadAndRenderLeagueInfo() {
         const gapAbove = aboveEntry ? userEntry.total - aboveEntry.total : 0;
         const gapBelow = belowEntry ? belowEntry.total - userEntry.total : 0;
 
-        // Build gap display
+        // Build gap display - always show gaps if they exist
         let gapDisplay = '';
         if (position > 1 && gapAbove < 0) {
+            // Chase gap (points behind leader)
             gapDisplay += `<span style="color: #ef4444;">↑${Math.abs(gapAbove)}</span>`;
         }
         if (position < totalEntries && gapBelow > 0) {
+            // Buffer gap (points ahead of person below)
             if (gapDisplay) gapDisplay += ' / ';
             gapDisplay += `<span style="color: #22c55e;">↓${gapBelow}</span>`;
         }
-        if (!gapDisplay) {
-            gapDisplay = position === 1 ? '<span style="color: #22c55e;">1st place!</span>' : '-';
+        if (position === 1 && gapBelow > 0) {
+            // In first place - show how far ahead of 2nd place
+            gapDisplay = `<span style="color: #22c55e;">↓${gapBelow} ahead</span>`;
         }
+        if (!gapDisplay) {
+            gapDisplay = '-';
+        }
+
+        // Calculate league average
+        const totalPoints = leagueData.standings.results.reduce((sum, e) => sum + e.total, 0);
+        const leagueAvg = Math.round(totalPoints / totalEntries);
+        const vsAvg = userEntry.total - leagueAvg;
+        const vsAvgDisplay = vsAvg >= 0
+            ? `<span style="color: #22c55e;">+${vsAvg}</span>`
+            : `<span style="color: #ef4444;">${vsAvg}</span>`;
 
         // Render league info
         placeholder.innerHTML = `
@@ -62,8 +76,9 @@ export async function loadAndRenderLeagueInfo() {
                 <div style="margin-bottom: 0.1rem; font-weight: 600; color: var(--text-primary);">
                     ${escapeHtml(leagueName.length > 18 ? leagueName.substring(0, 18) + '...' : leagueName)}: ${position}/${totalEntries}
                 </div>
-                <div>
-                    Gap: ${gapDisplay}
+                <div style="display: flex; gap: 0.75rem;">
+                    <span>Gap: ${gapDisplay}</span>
+                    <span>Avg: ${vsAvgDisplay}</span>
                 </div>
             </div>
         `;

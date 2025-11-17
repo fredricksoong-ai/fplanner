@@ -99,19 +99,9 @@ export function initMobileNav(navigateCallback) {
             // Handle action buttons (League, Refresh)
             const action = item.dataset.action;
             if (action === 'league') {
-                console.log('🏆 League button clicked - navigating to leagues');
-                // Navigate to leagues page/view
-                // The league selector is now in the compact header, so the button should navigate
-                const page = 'my-team'; // Could create dedicated league page later
-                navigateCallback(page);
-
-                // Scroll to league info if available
-                setTimeout(() => {
-                    const leagueInfo = document.getElementById('league-info-placeholder');
-                    if (leagueInfo) {
-                        leagueInfo.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                    }
-                }, 300);
+                console.log('🏆 League button clicked - navigating to leagues tab');
+                // Navigate to leagues tab in my-team page
+                navigateCallback('my-team', 'leagues');
                 return;
             }
             if (action === 'refresh') {
