@@ -291,8 +291,12 @@ export function renderMyTeam(teamData, subTab = 'overview') {
     // Render content based on layout
     let contentHTML = '';
     if (useMobile) {
-        // Mobile: Skip header/tabs, go straight to compact view
-        contentHTML = renderTeamOverviewTab(teamData);
+        // Mobile: Render based on subTab
+        if (subTab === 'leagues') {
+            contentHTML = renderMobileLeaguesTab(teamData);
+        } else {
+            contentHTML = renderTeamOverviewTab(teamData);
+        }
         container.innerHTML = contentHTML;
     } else {
         // Desktop: Show header and tabs
@@ -589,6 +593,120 @@ function renderTeamOverviewTab(teamData) {
 
             <div class="mb-8">
                 ${renderTeamTable(allPlayers, gameweek)}
+            </div>
+        `;
+    }
+}
+
+/**
+ * Render mobile-optimized leagues tab (simplified view)
+ */
+function renderMobileLeaguesTab(teamData) {
+    const { team } = teamData;
+
+    // Check if user has leagues
+    if (!team.leagues || !team.leagues.classic || team.leagues.classic.length === 0) {
+        return `
+            <div style="padding: 2rem; text-align: center;">
+                <i class="fas fa-trophy" style="font-size: 3rem; color: var(--text-secondary); margin-bottom: 1rem; display: block;"></i>
+                <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem;">
+                    No Leagues Found
+                </h3>
+                <p style="color: var(--text-secondary);">
+                    Join a league to view standings here!
+                </p>
+            </div>
+        `;
+    }
+
+    const leagues = team.leagues.classic;
+
+    // Get selected league from localStorage or default to first league
+    const teamId = team.id;
+    const selectedLeagueId = localStorage.getItem(`fpl_selected_league_${teamId}`) || leagues[0].id.toString();
+
+    // Render league selector dropdown and standings
+    const html = `
+        <div style="padding: 0.75rem;">
+            <!-- League Selector -->
+            <div style="margin-bottom: 1rem;">
+                <label style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-bottom: 0.25rem;">
+                    Select League
+                </label>
+                <select
+                    id="mobile-leagues-dropdown"
+                    style="
+                        width: 100%;
+                        padding: 0.5rem;
+                        font-size: 0.85rem;
+                        background: var(--bg-secondary);
+                        border: 1px solid var(--border-color);
+                        border-radius: 0.5rem;
+                        color: var(--text-primary);
+                        cursor: pointer;
+                    "
+                >
+                    ${leagues.map(league => `
+                        <option value="${league.id}" ${league.id.toString() === selectedLeagueId ? 'selected' : ''}>
+                            ${escapeHtml(league.name)} (Rank: ${league.entry_rank || 'N/A'})
+                        </option>
+                    `).join('')}
+                </select>
+            </div>
+
+            <!-- League Standings Container -->
+            <div id="mobile-league-standings">
+                <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                    <i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                    <p>Loading league standings...</p>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Load standings after DOM is ready
+    requestAnimationFrame(() => {
+        loadMobileLeagueStandings(selectedLeagueId);
+
+        // Add event listener for league selector
+        const dropdown = document.getElementById('mobile-leagues-dropdown');
+        if (dropdown) {
+            dropdown.addEventListener('change', (e) => {
+                const leagueId = e.target.value;
+                localStorage.setItem(`fpl_selected_league_${teamId}`, leagueId);
+                loadMobileLeagueStandings(leagueId);
+            });
+        }
+    });
+
+    return html;
+}
+
+/**
+ * Load and render league standings for mobile view
+ */
+async function loadMobileLeagueStandings(leagueId) {
+    const container = document.getElementById('mobile-league-standings');
+    if (!container) return;
+
+    // Show loading state
+    container.innerHTML = `
+        <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+            <i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+            <p>Loading standings...</p>
+        </div>
+    `;
+
+    try {
+        const leagueData = await loadLeagueStandings(leagueId);
+        container.innerHTML = renderLeagueStandings(leagueData);
+    } catch (err) {
+        console.error('Failed to load league standings:', err);
+        container.innerHTML = `
+            <div style="text-align: center; padding: 2rem;">
+                <i class="fas fa-exclamation-triangle" style="font-size: 2rem; color: var(--danger-color); margin-bottom: 1rem; display: block;"></i>
+                <p style="color: var(--text-secondary);">Failed to load standings</p>
+                <p style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 0.5rem;">${escapeHtml(err.message)}</p>
             </div>
         `;
     }

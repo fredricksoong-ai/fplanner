@@ -195,42 +195,40 @@ export function renderCompactHeader(teamData, gwNumber) {
                         GW Captain: ${captainInfo}
                     </div>
 
-                    <div style="font-size: 0.7rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.5rem;">
-                        <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 50%;">GW Vice Captain: ${viceInfo}</span>
-
-                        <!-- League Selector Dropdown -->
-                        <select
-                            id="mobile-league-selector"
-                            style="
-                                flex: 1;
-                                min-width: 0;
-                                max-width: 120px;
-                                padding: 0.2rem 0.3rem;
-                                font-size: 0.65rem;
-                                background: var(--bg-secondary);
-                                border: 1px solid var(--border-color);
-                                border-radius: 0.25rem;
-                                color: var(--text-primary);
-                                cursor: pointer;
-                            "
-                        >
-                            <option value="">🏆 League</option>
-                        </select>
+                    <div style="font-size: 0.7rem; color: var(--text-secondary);">
+                        GW Vice Captain: ${viceInfo}
                     </div>
                 </div>
 
-                <div style="
-                    background: var(--bg-secondary);
-                    border: 1px solid var(--border-color);
-                    border-radius: 6px;
-                    padding: 0.4rem 0.5rem;
-                    min-width: 90px;
-                    flex-shrink: 0;
-                ">
-                    <div style="font-size: 1rem; font-weight: 700; color: ${gwTextColor}; line-height: 1.2;">
-                        GW${gwNumber}: ${gwPoints}
+                <div style="display: grid; gap: 0.3rem; flex-shrink: 0; min-width: 90px;">
+                    <!-- League Selector Dropdown -->
+                    <select
+                        id="mobile-league-selector"
+                        style="
+                            width: 100%;
+                            padding: 0.2rem 0.3rem;
+                            font-size: 0.65rem;
+                            background: var(--bg-secondary);
+                            border: 1px solid var(--border-color);
+                            border-radius: 0.25rem;
+                            color: var(--text-primary);
+                            cursor: pointer;
+                        "
+                    >
+                        <option value="">🏆 League</option>
+                    </select>
+
+                    <div style="
+                        background: var(--bg-secondary);
+                        border: 1px solid var(--border-color);
+                        border-radius: 6px;
+                        padding: 0.4rem 0.5rem;
+                    ">
+                        <div style="font-size: 1rem; font-weight: 700; color: ${gwTextColor}; line-height: 1.2;">
+                            GW${gwNumber}: ${gwPoints}
+                        </div>
+                        ${leagueInfo}
                     </div>
-                    ${leagueInfo}
                 </div>
             </div>
         </div>
