@@ -35,7 +35,7 @@ import {
 /**
  * Render ultra-compact header with team info and GW card
  */
-export function renderCompactHeader(teamData, gwNumber) {
+export async function renderCompactHeader(teamData, gwNumber) {
     const { picks, team } = teamData;
     const entry = picks.entry_history;
 
@@ -102,32 +102,40 @@ export function renderCompactHeader(teamData, gwNumber) {
         }
     }
 
-    // Calculate GW card color based on rank performance (relative to overall rank)
-    let gwCardBg = 'var(--bg-secondary)';
-    let gwCardColor = 'var(--text-primary)';
+    // Calculate GW text color based on rank performance (relative to overall rank)
+    let gwTextColor = 'var(--text-primary)';
 
     if (overallRankNum > 0 && gwRankNum > 0) {
         const rankRatio = gwRankNum / overallRankNum;
 
         if (rankRatio <= 0.5) {
             // Exceptional: GW rank is 50% or better than overall rank
-            gwCardBg = 'rgba(147, 51, 234, 0.15)'; // Purple
-            gwCardColor = '#9333ea';
+            gwTextColor = '#9333ea'; // Purple
         } else if (rankRatio < 1.0) {
             // Outperforming: GW rank is better than overall rank
-            gwCardBg = 'rgba(34, 197, 94, 0.15)'; // Green
-            gwCardColor = '#22c55e';
+            gwTextColor = '#22c55e'; // Green
         } else if (rankRatio <= 1.2) {
             // On par: Within 20% of overall rank
-            gwCardBg = 'rgba(234, 179, 8, 0.15)'; // Yellow
-            gwCardColor = '#eab308';
+            gwTextColor = '#eab308'; // Yellow
         } else {
             // Underperforming: Worse than 20% of overall rank
-            gwCardBg = 'rgba(239, 68, 68, 0.15)'; // Red
-            gwCardColor = '#ef4444';
+            gwTextColor = '#ef4444'; // Red
         }
     }
-    
+
+    // Get selected league info
+    const selectedLeagueId = localStorage.getItem(`fpl_selected_league_${team.id}`);
+    let leagueInfo = '';
+
+    if (selectedLeagueId && selectedLeagueId !== 'null') {
+        // Store league data in a data attribute for later rendering
+        leagueInfo = `
+            <div id="league-info-placeholder" data-team-id="${team.id}" data-league-id="${selectedLeagueId}" style="margin-top: 0.35rem; padding-top: 0.35rem; border-top: 1px solid var(--border-color);">
+                <div style="font-size: 0.65rem; color: var(--text-secondary);">Loading league...</div>
+            </div>
+        `;
+    }
+
     // --- FIX: Add CSS variable to dynamically set header height
     const headerHeightStyle = `--compact-header-height: calc(3.5rem + 8rem + env(safe-area-inset-top));`;
 
@@ -190,23 +198,39 @@ export function renderCompactHeader(teamData, gwNumber) {
                     <div style="font-size: 0.7rem; color: var(--text-secondary);">
                         GW Vice Captain: ${viceInfo}
                     </div>
+
+                    <!-- League Selector Dropdown -->
+                    <div id="league-selector-dropdown" style="margin-top: 0.3rem;">
+                        <select
+                            id="mobile-league-selector"
+                            style="
+                                width: 100%;
+                                padding: 0.3rem 0.5rem;
+                                font-size: 0.7rem;
+                                background: var(--bg-secondary);
+                                border: 1px solid var(--border-color);
+                                border-radius: 0.3rem;
+                                color: var(--text-primary);
+                                cursor: pointer;
+                            "
+                        >
+                            <option value="">Loading leagues...</option>
+                        </select>
+                    </div>
                 </div>
 
                 <div style="
-                    background: ${gwCardBg};
-                    border: 1px solid ${gwCardColor}; /* Decreased from 2px */
-                    border-radius: 6px; /* Slightly reduced */
-                    padding: 0.3rem 0.5rem; /* Decreased from 0.5rem 0.75rem */
-                    text-align: center;
-                    min-width: 70px; /* Reduced from 85px */
+                    background: var(--bg-secondary);
+                    border: 1px solid var(--border-color);
+                    border-radius: 6px;
+                    padding: 0.4rem 0.5rem;
+                    min-width: 90px;
                     flex-shrink: 0;
                 ">
-                    <div style="font-size: 1.25rem; font-weight: 700; color: ${gwCardColor}; line-height: 1;">
-                        ${gwPoints}
+                    <div style="font-size: 1rem; font-weight: 700; color: ${gwTextColor}; line-height: 1.2;">
+                        GW${gwNumber}: ${gwPoints}
                     </div>
-                    <div style="font-size: 0.6rem; color: var(--text-secondary); margin-top: 0.15rem;">
-                        GW${gwNumber}
-                    </div>
+                    ${leagueInfo}
                 </div>
             </div>
         </div>
