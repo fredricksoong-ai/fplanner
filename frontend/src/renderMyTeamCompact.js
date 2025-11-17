@@ -198,17 +198,17 @@ export function renderCompactHeader(teamData, gwNumber) {
                 <!-- Right: GW Points Card -->
                 <div style="
                     background: ${gwCardBg};
-                    border: 2px solid ${gwCardColor};
-                    border-radius: 8px;
-                    padding: 0.5rem 0.75rem;
+                    border: 1px solid ${gwCardColor};
+                    border-radius: 6px;
+                    padding: 0.3rem 0.5rem;
                     text-align: center;
-                    min-width: 85px;
+                    min-width: 70px;
                     flex-shrink: 0;
                 ">
-                    <div style="font-size: 1.75rem; font-weight: 700; color: ${gwCardColor}; line-height: 1;">
+                    <div style="font-size: 1.25rem; font-weight: 700; color: ${gwCardColor}; line-height: 1;">
                         ${gwPoints}
                     </div>
-                    <div style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                    <div style="font-size: 0.6rem; color: var(--text-secondary); margin-top: 0.15rem;">
                         GW${gwNumber}
                     </div>
                 </div>
