@@ -142,8 +142,7 @@ export function renderCompactHeader(teamData, gwNumber) {
                 z-index: 100;
                 padding: 0.5rem 0.75rem;
                 border-bottom: 2px solid var(--border-color);
-                margin: -0.5rem -0.5rem 0 -0.5rem;
-                ${headerHeightStyle} /* Inject variable for team list header to use */
+                margin: -0.5rem -1rem 0 -1rem;
             "
         >
             <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem;">
@@ -285,21 +284,18 @@ export function renderCompactTeamList(players, gwNumber, templatePlayerIds = new
     const starters = players.filter(p => p.position <= 11).sort((a, b) => a.position - b.position);
     const bench = players.filter(p => p.position > 11).sort((a, b) => a.position - b.position);
 
-    // Compact header row (freezes below team info when scrolling)
+    // Compact header row (scrolls with content)
     const headerRow = `
         <div style="
             display: grid;
             grid-template-columns: 2.5fr 1.2fr 0.8fr 0.8fr 0.8fr;
-            gap: 0.3rem;
-            padding: 0.4rem 0.4rem;
+            gap: 0.25rem;
+            padding: 0.4rem 0.5rem;
             background: var(--primary-color);
             color: white;
             font-size: 0.7rem;
             font-weight: 700;
-            text-transform: capitalize;
-            position: sticky;
-            top: var(--compact-header-height, 12rem); 
-            z-index: 90;
+            text-transform: uppercase;
         ">
             <div>Player</div>
             <div style="text-align: center;">Opp</div>
