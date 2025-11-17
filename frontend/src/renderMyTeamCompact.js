@@ -35,7 +35,7 @@ import {
 /**
  * Render ultra-compact header with team info and GW card
  */
-export async function renderCompactHeader(teamData, gwNumber) {
+export function renderCompactHeader(teamData, gwNumber) {
     const { picks, team } = teamData;
     const entry = picks.entry_history;
 
