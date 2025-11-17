@@ -154,7 +154,7 @@ export function renderCompactHeader(teamData, gwNumber) {
             "
         >
             <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; padding: 0;">
-                <div style="flex: 1; display: grid; gap: 0.2rem; padding-left: 0.5rem;">
+                <div style="flex: 1; display: grid; gap: 0.2rem; padding-left: 0;">
                     <div style="display: flex; align-items: center; gap: 0.4rem;">
                         <button
                             id="change-team-btn"
@@ -200,24 +200,7 @@ export function renderCompactHeader(teamData, gwNumber) {
                     </div>
                 </div>
 
-                <div style="display: grid; gap: 0.3rem; flex-shrink: 0; min-width: 90px; padding-right: 0.5rem;">
-                    <!-- League Selector Dropdown -->
-                    <select
-                        id="mobile-league-selector"
-                        style="
-                            width: 100%;
-                            padding: 0.2rem 0.3rem;
-                            font-size: 0.65rem;
-                            background: var(--bg-secondary);
-                            border: 1px solid var(--border-color);
-                            border-radius: 0.25rem;
-                            color: var(--text-primary);
-                            cursor: pointer;
-                        "
-                    >
-                        <option value="">🏆 League</option>
-                    </select>
-
+                <div style="display: grid; gap: 0.3rem; flex-shrink: 0; min-width: 90px; padding-right: 0;">
                     <div style="
                         background: var(--bg-secondary);
                         border: 1px solid var(--border-color);
@@ -229,7 +212,6 @@ export function renderCompactHeader(teamData, gwNumber) {
                         </div>
                         ${leagueInfo}
                     </div>
-                    ${leagueInfo}
                 </div>
             </div>
         </div>
@@ -290,7 +272,7 @@ export function renderCompactPlayerRow(pick, player, gwNumber) {
             font-size: 0.75rem;
             align-items: center;
         ">
-            <div style="font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-left: 0.5rem;">
+            <div style="font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-left: 0;">
                 ${escapeHtml(player.web_name)}${captainBadge}
                 ${hasHighSeverity ? '<i class="fas fa-exclamation-triangle" style="color: var(--danger-color); font-size: 0.65rem; margin-left: 0.2rem;"></i>' : ''}
             </div>
@@ -303,7 +285,7 @@ export function renderCompactPlayerRow(pick, player, gwNumber) {
             <div style="text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 700; padding: 0.05rem; border-radius: 0.2rem; font-size: 0.7rem;">${displayPoints}</div>
             <div style="text-align: center; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 600; padding: 0.05rem; border-radius: 0.2rem; font-size: 0.65rem;">${formatDecimal(player.form)}</div>
             <div style="text-align: center; font-size: 0.65rem; color: var(--text-secondary);">${ownership.toFixed(1)}%</div>
-            <div style="text-align: center; font-size: 0.65rem; font-weight: 600; color: ${transferColor}; padding-right: 0.5rem;">
+            <div style="text-align: center; font-size: 0.65rem; font-weight: 600; color: ${transferColor}; padding-right: 0;">
                 ${netTransfers > 0 ? '+' : ''}${(netTransfers / 1000).toFixed(0)}k
             </div>
         </div>
@@ -330,13 +312,13 @@ export function renderCompactTeamList(players, gwNumber) {
             font-weight: 700;
             text-transform: capitalize;
         ">
-            <div style="padding-left: 0.5rem;">Player</div>
+            <div style="padding-left: 0;">Player</div>
             <div style="text-align: center;">Opp</div>
             <div style="text-align: center;">Mins</div>
             <div style="text-align: center;">Pts</div>
             <div style="text-align: center;">Form</div>
             <div style="text-align: center;">Own%</div>
-            <div style="text-align: center; padding-right: 0.5rem;">ΔT</div>
+            <div style="text-align: center; padding-right: 0;">ΔT</div>
         </div>
     `;
 
