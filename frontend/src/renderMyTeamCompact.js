@@ -88,7 +88,7 @@ export function renderCompactHeader(teamData, gwNumber) {
         const captainPlayer = getPlayerById(captainPick.element);
         if (captainPlayer) {
             const captainOpp = getGWOpponent(captainPlayer.team, gwNumber);
-            const oppBadge = `<span class="${getDifficultyClass(captainOpp.difficulty)}" style="padding: 0.1rem 0.25rem; border-radius: 0.2rem; font-weight: 600; font-size: 0.65rem; min-width: 3.5rem; display: inline-block; text-align: center;">${captainOpp.name} (${captainOpp.isHome ? 'H' : 'A'})</span>`;
+            const oppBadge = `<span class="${getDifficultyClass(captainOpp.difficulty)}" style="padding: 0.05rem 0.2rem; border-radius: 0.2rem; font-weight: 600; font-size: 0.6rem; min-width: 2.5rem; display: inline-block; text-align: center;">${captainOpp.name} (${captainOpp.isHome ? 'H' : 'A'})</span>`;
             captainInfo = `${captainPlayer.web_name} vs. ${oppBadge}`;
         }
     }
@@ -97,7 +97,7 @@ export function renderCompactHeader(teamData, gwNumber) {
         const vicePlayer = getPlayerById(vicePick.element);
         if (vicePlayer) {
             const viceOpp = getGWOpponent(vicePlayer.team, gwNumber);
-            const oppBadge = `<span class="${getDifficultyClass(viceOpp.difficulty)}" style="padding: 0.1rem 0.25rem; border-radius: 0.2rem; font-weight: 600; font-size: 0.65rem; min-width: 3.5rem; display: inline-block; text-align: center;">${viceOpp.name} (${viceOpp.isHome ? 'H' : 'A'})</span>`;
+            const oppBadge = `<span class="${getDifficultyClass(viceOpp.difficulty)}" style="padding: 0.05rem 0.2rem; border-radius: 0.2rem; font-weight: 600; font-size: 0.6rem; min-width: 2.5rem; display: inline-block; text-align: center;">${viceOpp.name} (${viceOpp.isHome ? 'H' : 'A'})</span>`;
             viceInfo = `${vicePlayer.web_name} vs. ${oppBadge}`;
         }
     }
@@ -196,7 +196,7 @@ export function renderCompactHeader(teamData, gwNumber) {
                     </div>
 
                     <div style="font-size: 0.7rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.5rem;">
-                        <span style="white-space: nowrap;">GW Vice Captain: ${viceInfo}</span>
+                        <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 50%;">GW Vice Captain: ${viceInfo}</span>
 
                         <!-- League Selector Dropdown -->
                         <select
@@ -204,6 +204,7 @@ export function renderCompactHeader(teamData, gwNumber) {
                             style="
                                 flex: 1;
                                 min-width: 0;
+                                max-width: 120px;
                                 padding: 0.2rem 0.3rem;
                                 font-size: 0.65rem;
                                 background: var(--bg-secondary);
@@ -237,18 +238,18 @@ export function renderCompactHeader(teamData, gwNumber) {
 }
 
 /**
- * Render compact player row (matches desktop exactly) - REDUCED VERTICAL PADDING
+ * Render compact player row with ownership and transfer momentum
  */
-export function renderCompactPlayerRow(pick, player, gwNumber, isInTemplate) {
+export function renderCompactPlayerRow(pick, player, gwNumber) {
     const isCaptain = pick.is_captain;
     const isVice = pick.is_vice_captain;
+    const isBench = pick.position > 11;
 
     let captainBadge = '';
     if (isCaptain) captainBadge = ' <span style="color: var(--primary-color); font-weight: 700; font-size: 0.7rem;">(C)</span>';
     if (isVice) captainBadge = ' <span style="color: var(--text-secondary); font-weight: 700; font-size: 0.7rem;">(VC)</span>';
 
     const gwOpp = getGWOpponent(player.team, gwNumber);
-    const posType = getPositionType(player);
     const risks = analyzePlayerRisks(player);
     const hasHighSeverity = hasHighRisk(risks);
 
@@ -265,19 +266,25 @@ export function renderCompactPlayerRow(pick, player, gwNumber, isInTemplate) {
     const formHeatmap = getFormHeatmap(player.form);
     const formStyle = getHeatmapStyle(formHeatmap);
 
-    // Background color
-    const bgColor = isInTemplate
-        ? 'rgba(0, 255, 136, 0.08)'  // Green for template
-        : 'rgba(107, 25, 112, 0.08)'; // Purple for differential
+    // Ownership
+    const ownership = parseFloat(player.selected_by_percent) || 0;
 
+    // Transfer momentum (net transfers)
+    const transfersIn = player.transfers_in_event || 0;
+    const transfersOut = player.transfers_out_event || 0;
+    const netTransfers = transfersIn - transfersOut;
+    const transferColor = netTransfers > 0 ? '#22c55e' : netTransfers < 0 ? '#ef4444' : 'var(--text-secondary)';
+
+    // Background color - lighter grey for bench
+    const bgColor = isBench ? 'var(--bg-tertiary)' : 'transparent';
     const finalBg = hasHighSeverity ? 'rgba(220, 38, 38, 0.08)' : bgColor;
 
     return `
         <div style="
             display: grid;
-            grid-template-columns: 2.5fr 1.2fr 0.8fr 0.8fr 0.8fr;
+            grid-template-columns: 2.5fr 1fr 0.7fr 0.6fr 0.6fr 0.7fr 0.6fr;
             gap: 0.25rem;
-            padding: 0.1rem 0.4rem; 
+            padding: 0.1rem 0.4rem;
             background: ${finalBg};
             border-bottom: 1px solid var(--border-color);
             font-size: 0.75rem;
@@ -289,13 +296,17 @@ export function renderCompactPlayerRow(pick, player, gwNumber, isInTemplate) {
                 ${hasHighSeverity ? '<i class="fas fa-exclamation-triangle" style="color: var(--danger-color); font-size: 0.65rem; margin-left: 0.2rem;"></i>' : ''}
             </div>
             <div style="text-align: center;">
-                <span class="${getDifficultyClass(gwOpp.difficulty)}" style="padding: 0.05rem 0.25rem; border-radius: 0.2rem; font-weight: 600; font-size: 0.65rem; min-width: 3.5rem; display: inline-block; text-align: center;">
+                <span class="${getDifficultyClass(gwOpp.difficulty)}" style="padding: 0.05rem 0.2rem; border-radius: 0.2rem; font-weight: 600; font-size: 0.6rem; min-width: 2.5rem; display: inline-block; text-align: center;">
                     ${gwOpp.name} (${gwOpp.isHome ? 'H' : 'A'})
                 </span>
             </div>
             <div style="text-align: center; font-size: 0.65rem; color: var(--text-secondary);">${gwMinutes}</div>
-            <div style="text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 700; padding: 0.05rem; border-radius: 0.2rem; font-size: 0.75rem;">${displayPoints}</div>
-            <div style="text-align: center; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 600; padding: 0.05rem; border-radius: 0.2rem; font-size: 0.7rem;">${formatDecimal(player.form)}</div>
+            <div style="text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 700; padding: 0.05rem; border-radius: 0.2rem; font-size: 0.7rem;">${displayPoints}</div>
+            <div style="text-align: center; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 600; padding: 0.05rem; border-radius: 0.2rem; font-size: 0.65rem;">${formatDecimal(player.form)}</div>
+            <div style="text-align: center; font-size: 0.65rem; color: var(--text-secondary);">${ownership.toFixed(1)}%</div>
+            <div style="text-align: center; font-size: 0.65rem; font-weight: 600; color: ${transferColor};">
+                ${netTransfers > 0 ? '+' : ''}${(netTransfers / 1000).toFixed(0)}k
+            </div>
         </div>
     `;
 }
@@ -303,7 +314,7 @@ export function renderCompactPlayerRow(pick, player, gwNumber, isInTemplate) {
 /**
  * Render compact team list
  */
-export function renderCompactTeamList(players, gwNumber, templatePlayerIds = new Set()) {
+export function renderCompactTeamList(players, gwNumber) {
     const starters = players.filter(p => p.position <= 11).sort((a, b) => a.position - b.position);
     const bench = players.filter(p => p.position > 11).sort((a, b) => a.position - b.position);
 
@@ -311,20 +322,22 @@ export function renderCompactTeamList(players, gwNumber, templatePlayerIds = new
     const headerRow = `
         <div style="
             display: grid;
-            grid-template-columns: 2.5fr 1.2fr 0.8fr 0.8fr 0.8fr;
+            grid-template-columns: 2.5fr 1fr 0.7fr 0.6fr 0.6fr 0.7fr 0.6fr;
             gap: 0.25rem;
             padding: 0.4rem 0.5rem;
             background: var(--primary-color);
             color: white;
             font-size: 0.7rem;
             font-weight: 700;
-            text-transform: uppercase;
+            text-transform: capitalize;
         ">
             <div>Player</div>
             <div style="text-align: center;">Opp</div>
             <div style="text-align: center;">Mins</div>
             <div style="text-align: center;">Pts</div>
             <div style="text-align: center;">Form</div>
+            <div style="text-align: center;">Own%</div>
+            <div style="text-align: center;">ΔT</div>
         </div>
     `;
 
@@ -332,55 +345,20 @@ export function renderCompactTeamList(players, gwNumber, templatePlayerIds = new
     const startersHtml = starters.map(player => {
         const fullPlayer = getPlayerById(player.element);
         if (!fullPlayer) return '';
-
-        const isInTemplate = templatePlayerIds.has(player.element);
-        return renderCompactPlayerRow(player, fullPlayer, gwNumber, isInTemplate);
+        return renderCompactPlayerRow(player, fullPlayer, gwNumber);
     }).join('');
 
     // Bench
     const benchHtml = bench.map(player => {
         const fullPlayer = getPlayerById(player.element);
         if (!fullPlayer) return '';
-
-        const isInTemplate = templatePlayerIds.has(player.element);
-        return renderCompactPlayerRow(player, fullPlayer, gwNumber, isInTemplate);
+        return renderCompactPlayerRow(player, fullPlayer, gwNumber);
     }).join('');
-
-    // Purple separator between starters and bench (matches desktop)
-    const separator = `
-        <div style="background: linear-gradient(90deg, #37003c, #2a002e); height: 2px; margin: 0.2rem 0;"></div>
-    `;
-
-    // Color legend
-    const legend = `
-        <div style="
-            display: flex;
-            gap: 1rem;
-            padding: 0.35rem 0.4rem;
-            font-size: 0.6rem;
-            color: var(--text-secondary);
-            background: var(--bg-secondary);
-            border-radius: 0.4rem;
-            margin-top: 0.2rem;
-            margin-bottom: 0.25rem;
-        ">
-            <div style="display: flex; align-items: center; gap: 0.2rem;">
-                <div style="width: 8px; height: 8px; background: rgba(0, 255, 136, 0.3); border-radius: 2px;"></div>
-                <span>Template</span>
-            </div>
-            <div style="display: flex; align-items: center; gap: 0.2rem;">
-                <div style="width: 8px; height: 8px; background: rgba(107, 25, 112, 0.3); border-radius: 2px;"></div>
-                <span>Differential</span>
-            </div>
-        </div>
-    `;
 
     return `
         ${headerRow}
         ${startersHtml}
-        ${separator}
         ${benchHtml}
-        ${legend}
     `;
 }
 
