@@ -231,9 +231,9 @@ body {
     z-index: 900;
   }
 
-  /* Extend purple background to top of screen */
+  /* Extend background to top of screen - match card color scheme */
   body {
-    background: var(--primary-color) !important;
+    background: var(--bg-primary) !important;
     padding-top: env(safe-area-inset-top);
   }
 
