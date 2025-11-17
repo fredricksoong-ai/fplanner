@@ -646,9 +646,9 @@ function renderMobileLeaguesTab(teamData) {
 
     // Render league selector dropdown and standings
     const html = `
-        <div style="padding: 0.75rem;">
+        <div style="padding: 0;">
             <!-- League Selector -->
-            <div style="margin-bottom: 1rem;">
+            <div style="margin-bottom: 1rem; padding: 0 0.75rem;">
                 <label style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-bottom: 0.25rem;">
                     Select League
                 </label>
@@ -1133,7 +1133,7 @@ function renderMobileFixturesTab() {
                         display: grid;
                         grid-template-columns: 0.8fr 2fr 1fr 2fr 0.6fr;
                         gap: 0.25rem;
-                        padding: 0.4rem 0.5rem;
+                        padding: 0.4rem 0.75rem;
                         background: ${isStarted && !isFinished ? 'rgba(239, 68, 68, 0.05)' : 'transparent'};
                         border-bottom: 1px solid var(--border-color);
                         font-size: 0.75rem;
@@ -1162,7 +1162,7 @@ function renderMobileFixturesTab() {
                     display: grid;
                     grid-template-columns: 0.8fr 2fr 1fr 2fr 0.6fr;
                     gap: 0.25rem;
-                    padding: 0.4rem 0.5rem;
+                    padding: 0.4rem 0.75rem;
                     background: var(--primary-color);
                     color: white;
                     font-size: 0.7rem;
@@ -1452,12 +1452,13 @@ function renderLeagueStandings(leagueData) {
                 display: grid;
                 grid-template-columns: 0.7fr 2fr 0.7fr 0.8fr 0.8fr;
                 gap: 0.25rem;
-                padding: 0.4rem 0.5rem;
-                background: var(--primary-color);
-                color: white;
+                padding: 0.4rem 0.75rem;
+                background: var(--bg-secondary);
+                color: var(--text-primary);
                 font-size: 0.7rem;
                 font-weight: 700;
                 text-transform: capitalize;
+                border-top: 2px solid var(--border-color);
                 position: sticky;
                 top: calc(3.5rem + 8rem + env(safe-area-inset-top));
                 z-index: 50;
@@ -1472,7 +1473,7 @@ function renderLeagueStandings(leagueData) {
 
         const rowsHtml = results.slice(0, 50).map((entry, index) => {
             const isUser = entry.entry === userTeamId;
-            const bgColor = isUser ? 'rgba(56, 189, 248, 0.1)' : (index % 2 === 0 ? 'var(--bg-tertiary)' : 'transparent');
+            const bgColor = isUser ? 'rgba(56, 189, 248, 0.1)' : (index % 2 === 0 ? 'var(--bg-primary)' : 'var(--bg-secondary)');
             const rankChange = entry.last_rank - entry.rank;
             const rankChangeIcon = rankChange > 0 ? '▲' : rankChange < 0 ? '▼' : '━';
             const rankChangeColor = rankChange > 0 ? '#22c55e' : rankChange < 0 ? '#ef4444' : 'var(--text-secondary)';
@@ -1508,7 +1509,7 @@ function renderLeagueStandings(leagueData) {
                     display: grid;
                     grid-template-columns: 0.7fr 2fr 0.7fr 0.8fr 0.8fr;
                     gap: 0.25rem;
-                    padding: 0.4rem 0.5rem;
+                    padding: 0.4rem 0.75rem;
                     background: ${bgColor};
                     border-bottom: 1px solid var(--border-color);
                     ${isUser ? 'border-left: 3px solid var(--primary-color);' : ''}
@@ -1537,7 +1538,7 @@ function renderLeagueStandings(leagueData) {
         }).join('');
 
         return `
-            <div style="margin-bottom: 1rem; padding: 0.5rem; background: var(--bg-secondary); border-radius: 0;">
+            <div style="margin-bottom: 1rem; padding: 0.5rem 0.75rem; background: var(--bg-secondary); border-radius: 0;">
                 <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.25rem;">
                     <i class="fas fa-trophy"></i> ${escapeHtml(league.name)}
                 </h4>
