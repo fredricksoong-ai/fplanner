@@ -48,10 +48,11 @@ export function renderCompactHeader(teamData, gwNumber) {
     return `
         <div style="
             position: sticky;
-            top: calc(env(safe-area-inset-top) + 3.5rem);
+            top: 0;
             background: var(--bg-primary);
             z-index: 100;
             padding: 0.5rem 1rem;
+            padding-top: calc(0.5rem + env(safe-area-inset-top));
             border-bottom: 2px solid var(--border-color);
             margin: -1rem -1rem 0.75rem -1rem;
         ">
@@ -229,7 +230,7 @@ export function renderCompactTeamList(players, gwNumber, templatePlayerIds = new
             font-weight: 700;
             text-transform: uppercase;
             position: sticky;
-            top: calc(env(safe-area-inset-top) + 7rem);
+            top: calc(4.5rem + env(safe-area-inset-top));
             z-index: 90;
         ">
             <div>Pos</div>
