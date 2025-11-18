@@ -156,7 +156,7 @@ export function renderCompactHeader(teamData, gwNumber) {
             "
         >
             <div style="display: flex; justify-content: space-between; align-items: stretch; gap: 0.5rem;">
-                <div style="flex: 1; display: grid; gap: 0.2rem; padding-left: 0.75rem;">
+                <div style="flex: 1; display: grid; gap: 0.2rem;">
                     <div style="display: flex; align-items: center; gap: 0.4rem;">
                         <button
                             id="change-team-btn"
@@ -198,7 +198,7 @@ export function renderCompactHeader(teamData, gwNumber) {
                     </div>
                 </div>
 
-                <div style="display: flex; align-items: stretch; padding-right: 0.75rem;">
+                <div style="display: flex; align-items: stretch;">
                     <div style="
                         background: var(--bg-secondary);
                         border: 1px solid var(--border-color);
@@ -314,7 +314,7 @@ export function renderCompactPlayerRow(pick, player, gwNumber) {
             display: grid;
             grid-template-columns: 2.5fr 1fr 1fr 0.8fr 0.8fr;
             gap: 0.25rem;
-            padding: 0.4rem 0.75rem;
+            padding: 0.4rem 0;
             background: ${bgColor};
             border-bottom: ${borderStyle};
             font-size: 0.75rem;
@@ -350,7 +350,7 @@ export function renderCompactTeamList(players, gwNumber) {
             display: grid;
             grid-template-columns: 2.5fr 1fr 1fr 0.8fr 0.8fr;
             gap: 0.25rem;
-            padding: 0.4rem 0.75rem;
+            padding: 0.4rem 0;
             background: var(--bg-secondary);
             color: var(--text-primary);
             font-size: 0.7rem;
