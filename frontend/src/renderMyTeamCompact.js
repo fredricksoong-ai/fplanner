@@ -182,11 +182,19 @@ export function renderCompactHeader(teamData, gwNumber) {
                     </div>
 
                     <div style="font-size: 0.7rem; color: var(--text-secondary);">
-                        <span style="color: ${rankColor};">${overallRank}</span> • ${totalPoints.toLocaleString()} pts
+                        Overall Rank: <span style="color: ${rankColor};">${overallRank}</span>
                     </div>
 
                     <div style="font-size: 0.7rem; color: var(--text-secondary);">
-                        Transfers: ${freeTransfers} FT${transferCost > 0 ? ` (-${transferCost} pts)` : ''}  •  Squad: £${squadValue}m + £${bank}m
+                        Overall Points: ${totalPoints.toLocaleString()}
+                    </div>
+
+                    <div style="font-size: 0.7rem; color: var(--text-secondary);">
+                        Squad Value: £${squadValue}m + £${bank}m
+                    </div>
+
+                    <div style="font-size: 0.7rem; color: var(--text-secondary);">
+                        Transfers: ${freeTransfers} FT${transferCost > 0 ? ` (-${transferCost} pts)` : ''}
                     </div>
                 </div>
 
@@ -195,7 +203,7 @@ export function renderCompactHeader(teamData, gwNumber) {
                         background: var(--bg-secondary);
                         border: 1px solid var(--border-color);
                         border-radius: 6px;
-                        padding: 0.6rem 0.75rem;
+                        padding: 0.5rem 0.75rem;
                         text-align: center;
                         min-width: 90px;
                         display: flex;
