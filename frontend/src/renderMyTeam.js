@@ -646,9 +646,9 @@ function renderMobileLeaguesTab(teamData) {
 
     // Render league selector dropdown and standings
     const html = `
-        <div style="padding: 0.75rem 0 0 0;">
+        <div>
             <!-- League Selector -->
-            <div style="margin-bottom: 1rem; padding: 0 0.75rem;">
+            <div style="margin-bottom: 0.75rem; padding: 0.75rem 0.75rem 0 0.75rem;">
                 <label style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-bottom: 0.25rem;">
                     Select League
                 </label>
@@ -1457,7 +1457,6 @@ function renderLeagueStandings(leagueData) {
                 color: var(--text-primary);
                 font-size: 0.7rem;
                 font-weight: 700;
-                text-transform: capitalize;
                 border-top: 2px solid var(--border-color);
                 position: sticky;
                 top: calc(3.5rem + 8rem + env(safe-area-inset-top));
@@ -1465,8 +1464,8 @@ function renderLeagueStandings(leagueData) {
             ">
                 <div style="text-align: center;">Rank</div>
                 <div>Manager</div>
-                <div style="text-align: center;">GW</div>
-                <div style="text-align: center;">Total</div>
+                <div style="text-align: center;">GW Pts</div>
+                <div style="text-align: center;">Total Pts</div>
                 <div style="text-align: center;">Gap</div>
             </div>
         `;
@@ -1478,17 +1477,17 @@ function renderLeagueStandings(leagueData) {
             const rankChangeIcon = rankChange > 0 ? '▲' : rankChange < 0 ? '▼' : '━';
             const rankChangeColor = rankChange > 0 ? '#22c55e' : rankChange < 0 ? '#ef4444' : 'var(--text-secondary)';
 
-            // Calculate gap to user
+            // Calculate gap to user (+ if user is above, - if user is below)
             let gapText = '—';
             let gapColor = 'var(--text-secondary)';
             if (!isUser && userEntry) {
-                const gap = entry.total - userPoints;
+                const gap = userPoints - entry.total; // Inverted: user's points - their points
                 if (gap > 0) {
                     gapText = `+${gap}`;
-                    gapColor = '#ef4444';
+                    gapColor = '#22c55e'; // Green when user is ahead
                 } else if (gap < 0) {
                     gapText = gap.toString();
-                    gapColor = '#22c55e';
+                    gapColor = '#ef4444'; // Red when user is behind
                 }
             }
 
@@ -1538,13 +1537,15 @@ function renderLeagueStandings(leagueData) {
         }).join('');
 
         return `
-            <div style="margin-bottom: 1rem; padding: 0.5rem 0.75rem; background: var(--bg-secondary); border-radius: 0;">
-                <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.25rem;">
-                    <i class="fas fa-trophy"></i> ${escapeHtml(league.name)}
-                </h4>
-                <p style="font-size: 0.7rem; color: var(--text-secondary);">
-                    ${standings.has_next ? `Top ${results.length}` : `${results.length} entries`}
-                </p>
+            <div style="margin-bottom: 0.75rem; background: var(--bg-secondary);">
+                <div style="padding: 0.5rem 0.75rem;">
+                    <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.25rem;">
+                        <i class="fas fa-trophy"></i> ${escapeHtml(league.name)}
+                    </h4>
+                    <p style="font-size: 0.7rem; color: var(--text-secondary);">
+                        ${standings.has_next ? `Top ${results.length}` : `${results.length} entries`}
+                    </p>
+                </div>
             </div>
             ${headerRow}
             ${rowsHtml}
