@@ -36,7 +36,7 @@ export function createMobileNav(currentPage, onNavigate) {
                 padding: 0.3rem 0.5rem;
                 padding-bottom: max(0.3rem, env(safe-area-inset-bottom));
                 z-index: 1000;
-                gap: 0.25rem;
+                gap: 1.75rem;
                 box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
             "
         >
@@ -53,11 +53,13 @@ export function createMobileNav(currentPage, onNavigate) {
                         align-items: center;
                         justify-content: center;
                         gap: 0.2rem;
-                        background: ${item.isGreen ? 'var(--secondary-color)' : (currentPage === item.id ? 'var(--bg-tertiary)' : 'transparent')};
+                        background: ${(currentPage === item.id ? 'var(--bg-tertiary)' : 'transparent')};
                         border: none;
                         padding: 0.35rem 0.4rem;
                         border-radius: 0.5rem;
-                        color: ${item.isGreen ? 'var(--bg-primary)' : (item.disabled ? 'var(--text-tertiary)' : 'var(--text-primary)')};
+                        color: ${(item.isGreen || item.action === 'refresh') 
+                            ? 'var(--secondary-color)' /* Use the green color for the text/icon */
+                            : (item.disabled ? 'var(--text-tertiary)' : 'var(--text-primary)')};                        
                         cursor: ${item.disabled ? 'not-allowed' : 'pointer'};
                         transition: all 0.2s;
                         flex: 1;
@@ -68,7 +70,7 @@ export function createMobileNav(currentPage, onNavigate) {
                     <i class="fas ${item.icon}" style="font-size: 1.3rem;"></i>
                     <span style="
                         font-size: 0.7rem;
-                        font-weight: ${currentPage === item.id || item.isGreen ? '700' : '500'};
+                        font-weight: ${(currentPage === item.id || item.action === 'refresh') ? '700' : '500'};                       
                         white-space: nowrap;
                     ">${item.label}</span>
                 </button>
@@ -128,7 +130,7 @@ export function initMobileNav(navigateCallback) {
                 if (window.handleTeamRefresh) {
                     window.handleTeamRefresh()
                         .then(() => {
-                            console.log('✅ Team refreshed from bottom nav');
+                            console.log('✅ Team refreshed');
                         })
                         .catch((error) => {
                             console.error('❌ Refresh failed:', error);
