@@ -234,7 +234,7 @@ export function renderCompactPlayerRow(pick, player, gwNumber) {
     const isBench = pick.position > 11;
 
     let captainBadge = '';
-    if (isCaptain) captainBadge = ' <span style="color: var(--text-secondary); font-weight: 700; font-size: 0.7rem;">(VC)</span>';
+    if (isCaptain) captainBadge = ' <span style="color: var(--text-secondary); font-weight: 700; font-size: 0.7rem;">(C)</span>';
     if (isVice) captainBadge = ' <span style="color: var(--text-secondary); font-weight: 700; font-size: 0.7rem;">(VC)</span>';
 
     const gwOpp = getGWOpponent(player.team, gwNumber);
