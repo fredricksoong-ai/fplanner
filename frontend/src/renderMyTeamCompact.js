@@ -146,7 +146,7 @@ export function renderCompactHeader(teamData, gwNumber) {
             <div style="padding: 0 0.75rem;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem;">
                     <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--text-primary); margin: 0;">
-                        ${escapeHtml(team.name)}
+                        <span style="background: green; color: white; padding: 0.2rem; font-size: 0.5rem; margin-right: 0.3rem;">NEW-v5</span>${escapeHtml(team.name)}
                     </h4>
                     <div style="
                         background: var(--bg-primary);
