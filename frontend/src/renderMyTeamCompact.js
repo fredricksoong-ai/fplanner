@@ -464,7 +464,12 @@ export function showPlayerModal(playerId) {
     const player = getPlayerById(playerId);
     if (!player) return;
 
-    // Simple modal for testing
+    const currentGW = getCurrentGW();
+    const team = getTeamShortName(player.team);
+    const position = getPositionShort(player.element_type);
+    const price = (player.now_cost / 10).toFixed(1);
+
+    // Enhanced modal with player details
     const modalHTML = `
         <div id="player-modal" style="
             position: fixed;
@@ -482,33 +487,58 @@ export function showPlayerModal(playerId) {
             <div style="
                 background: var(--bg-primary);
                 border-radius: 12px;
-                max-width: 400px;
+                max-width: 500px;
                 width: 100%;
-                padding: 2rem;
+                max-height: 80vh;
+                overflow-y: auto;
                 box-shadow: 0 4px 20px rgba(0,0,0,0.3);
             ">
-                <h2 style="margin: 0 0 1rem 0; color: var(--text-primary);">
-                    ${escapeHtml(player.web_name)}
-                </h2>
-                <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
-                    Player ID: ${playerId}
-                </p>
-                <button
-                    id="close-player-modal"
-                    style="
-                        background: var(--primary-color);
-                        color: white;
-                        border: none;
-                        padding: 0.75rem 1.5rem;
-                        border-radius: 6px;
-                        cursor: pointer;
-                        width: 100%;
-                        font-size: 1rem;
-                        font-weight: 600;
-                    "
-                >
-                    Close
-                </button>
+                <!-- Header -->
+                <div style="
+                    padding: 1rem;
+                    border-bottom: 2px solid var(--border-color);
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                ">
+                    <div style="flex: 1;">
+                        <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin: 0 0 0.3rem 0;">
+                            ${escapeHtml(player.web_name)}
+                        </h3>
+                        <div style="display: flex; gap: 0.5rem; align-items: center; font-size: 0.875rem; color: var(--text-secondary);">
+                            <span>${team}</span>
+                            <span>•</span>
+                            <span>${position}</span>
+                            <span>•</span>
+                            <span style="font-weight: 600; color: var(--text-primary);">£${price}m</span>
+                        </div>
+                    </div>
+                    <button
+                        id="close-player-modal"
+                        style="
+                            background: transparent;
+                            border: none;
+                            font-size: 1.5rem;
+                            color: var(--text-secondary);
+                            cursor: pointer;
+                            padding: 0;
+                            width: 2rem;
+                            height: 2rem;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                        "
+                    >
+                        ×
+                    </button>
+                </div>
+
+                <!-- Content -->
+                <div style="padding: 1rem;">
+                    <div style="text-align: center; color: var(--text-secondary); padding: 2rem;">
+                        More stats coming soon...
+                    </div>
+                </div>
             </div>
         </div>
     `;
