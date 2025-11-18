@@ -1461,7 +1461,7 @@ function renderLeagueStandings(leagueData) {
                 display: grid;
                 grid-template-columns: 0.7fr 2fr 0.7fr 0.8fr 0.8fr;
                 gap: 0.25rem;
-                padding: 0.4rem 0.75rem;
+                padding: 0.4rem 0;
                 background: var(--bg-secondary);
                 color: var(--text-primary);
                 font-size: 0.7rem;
@@ -1517,7 +1517,7 @@ function renderLeagueStandings(leagueData) {
                     display: grid;
                     grid-template-columns: 0.7fr 2fr 0.7fr 0.8fr 0.8fr;
                     gap: 0.25rem;
-                    padding: 0.4rem 0.75rem;
+                    padding: 0.4rem 0;
                     background: ${bgColor};
                     border-bottom: 1px solid var(--border-color);
                     ${isUser ? 'border-left: 3px solid var(--primary-color);' : ''}
@@ -1547,7 +1547,7 @@ function renderLeagueStandings(leagueData) {
 
         return `
             <div style="margin-bottom: 0.75rem; background: var(--bg-secondary);">
-                <div style="padding: 0.5rem 0.75rem;">
+                <div style="padding: 0.5rem 0;">
                     <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.25rem;">
                         <i class="fas fa-trophy"></i> ${escapeHtml(league.name)}
                     </h4>
