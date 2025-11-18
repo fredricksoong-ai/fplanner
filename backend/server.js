@@ -778,11 +778,11 @@ app.post('/api/ai-insights', async (req, res) => {
   console.log(`📥 POST /api/ai-insights [${page}/${tab}/${position}]`);
 
   // Validate required fields
-  if (!page || !tab || !gameweek) {
+  if (!page || !tab || !gameweek || !data) {
     console.warn('⚠️ Missing required fields');
     return res.status(400).json({
       error: 'Missing required fields',
-      message: 'page, tab, and gameweek are required'
+      message: 'page, tab, gameweek, and data are required'
     });
   }
 
