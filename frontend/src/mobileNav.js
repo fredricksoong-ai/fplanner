@@ -54,11 +54,11 @@ export function createMobileNav(currentPage, onNavigate) {
                         align-items: center;
                         justify-content: center;
                         gap: 0.2rem;
-                        background: ${(currentPage === item.id ? 'var(--bg-tertiary)' : 'transparent')};
+                        background: ${item.isGreen ? 'var(--secondary-color)' : (currentPage === item.id ? 'var(--bg-tertiary)' : 'transparent')};
                         border: none;
                         padding: 0.35rem 0.4rem;
                         border-radius: 0.5rem;
-                        color: var(--secondary-color);
+                        color: ${item.isGreen ? 'var(--bg-primary)' : (item.disabled ? 'var(--text-tertiary)' : 'var(--text-primary)')};
                         cursor: ${item.disabled ? 'not-allowed' : 'pointer'};
                         transition: all 0.2s;
                         flex: 1;
