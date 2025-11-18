@@ -126,8 +126,8 @@ body {
   /* Mobile container */
   .container-mobile {
     width: 100%;
-    padding-left: 1rem;
-    padding-right: 1rem;
+    padding-left: 0;
+    padding-right: 0;
   }
 
   /* Desktop container */
@@ -260,6 +260,13 @@ body {
   #app-container {
     max-width: 768px;
     padding: 1.5rem !important;
+  }
+}
+
+/* Desktop padding */
+@media (min-width: 1024px) {
+  #app-container {
+    padding: 0 2rem !important;
   }
 }
 
