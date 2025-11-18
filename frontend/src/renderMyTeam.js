@@ -145,17 +145,14 @@ function renderMyTeamFormContent() {
 
     container.innerHTML = `
         <div style="text-align: center; padding: 3rem;">
-            <h1 style="font-size: 2rem; font-weight: 700; color: var(--primary-color); margin-bottom: 1rem;">
-                <i class="fas fa-users"></i> My Team Analysis
+            <h1 style="font-size: 2rem; font-weight: 700; color: var(--secondary-color); margin-bottom: 1rem;">
+            Welcome to Hell
             </h1>
-            <p style="color: var(--text-secondary); margin-bottom: 2rem;">
-                Enter your FPL Team ID to see detailed analysis with fixture difficulty, risk assessment, and recommendations
-            </p>
             <div style="max-width: 500px; margin: 0 auto;">
                 <input
                     type="text"
                     id="team-id-input"
-                    placeholder="Enter your Team ID (e.g., 123456)"
+                    placeholder="Enter Team ID (e.g., 123456)"
                     style="
                         width: 100%;
                         padding: 1rem;
@@ -187,12 +184,12 @@ function renderMyTeamFormContent() {
 
                 <div style="margin-top: 2rem; padding: 1rem; background: var(--bg-secondary); border-radius: 8px; text-align: left;">
                     <p style="font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">
-                        <i class="fas fa-info-circle"></i> How to find your Team ID:
+                        <i class="fas fa-info-circle"></i> How to locate your Team ID:
                     </p>
-                    <ol style="margin: 0; padding-left: 1.5rem; color: var(--text-secondary); font-size: 0.9rem;">
-                        <li>Go to the FPL website and log in</li>
+                    <ol style="margin: 0; padding-left: 1.5rem; color: var(--text-secondary); font-size: 0.9rem; word-break: break-word;">
+                        <li>1. Visit FPL Website</li>
                         <li>Click on "Points" or "My Team"</li>
-                        <li>Check your browser URL: https://fantasy.premierleague.com/entry/<strong>YOUR_ID</strong>/event/X</li>
+                        <li>Check browser URL: ...com/entry/<strong>YOUR_TEAM_ID</strong>/event/X</li>
                         <li>Copy the number between "/entry/" and "/event/"</li>
                     </ol>
                 </div>
