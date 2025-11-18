@@ -241,22 +241,6 @@ body {
     font-size: 1.25rem !important;
   }
 
-  /* PWA-specific adjustments for standalone display mode */
-  @media (display-mode: standalone) {
-    /* In PWA mode, add consistent top spacing to match Safari experience */
-    nav {
-      padding-top: 2.75rem !important;
-      margin-top: 0 !important;
-    }
-
-    body {
-      padding-top: 0;
-    }
-
-    #compact-header {
-      top: 5.5rem !important;
-    }
-  }
 
   /* Hide full countdown text on very small screens */
   @media (max-width: 380px) {

@@ -119,27 +119,73 @@ export function getGWOpponent(teamId, gameweek) {
     if (!fplFixtures || !fplBootstrap || !teamId || !gameweek) {
         return { name: 'TBD', difficulty: 3, isHome: false };
     }
-    
+
     // Find fixture for this team in this gameweek
-    const fixture = fplFixtures.find(f => 
+    const fixture = fplFixtures.find(f =>
         f.event === gameweek && (f.team_h === teamId || f.team_a === teamId)
     );
-    
+
     if (!fixture) {
         return { name: 'TBD', difficulty: 3, isHome: false };
     }
-    
+
     const isHome = fixture.team_h === teamId;
     const opponentId = isHome ? fixture.team_a : fixture.team_h;
     const opponent = fplBootstrap.teams.find(t => t.id === opponentId);
     const difficulty = isHome ? fixture.team_h_difficulty : fixture.team_a_difficulty;
-    
+
     return {
         name: opponent ? opponent.short_name : 'TBD',
         difficulty: difficulty || 3,
-        isHome: isHome
+        isHome: isHome,
+        fixture: fixture // Include fixture object for status checks
     };
 }
+
+/**
+ * Get match status display for a player
+ * @param {number} teamId - Player's team ID
+ * @param {number} gameweek - Gameweek number
+ * @param {Object} player - Player object (with github_gw data if available)
+ * @returns {string} Status display string
+ */
+export function getMatchStatus(teamId, gameweek, player) {
+    const oppInfo = getGWOpponent(teamId, gameweek);
+    const fixture = oppInfo.fixture;
+
+    if (!fixture) {
+        return '—';
+    }
+
+    // Check GitHub GW data for minutes (available after match finishes)
+    const hasGWStats = player && player.github_gw && player.github_gw.gw === gameweek;
+    const gwMinutes = hasGWStats ? player.github_gw.minutes : null;
+
+    // 1. Match FINISHED
+    if (fixture.finished) {
+        if (gwMinutes !== null && gwMinutes !== undefined) {
+            return `FT (${gwMinutes})`;
+        }
+        return 'FT';
+    }
+
+    // 2. Match LIVE (started but not finished)
+    if (fixture.started && !fixture.finished) {
+        return 'LIVE';
+    }
+
+    // 3. Match UPCOMING (not started)
+    const kickoffDate = new Date(fixture.kickoff_time);
+    const dayStr = kickoffDate.toLocaleString('en-GB', { weekday: 'short' });
+    const timeStr = kickoffDate.toLocaleString('en-GB', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+    }).replace(':', '');
+
+    return `${dayStr} ${timeStr}`;
+}
+
 
 // ============================================================================
 // FIXTURE DIFFICULTY ANALYSIS

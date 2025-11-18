@@ -23,7 +23,8 @@ import {
 
 import {
     getGWOpponent,
-    getFixtures
+    getFixtures,
+    getMatchStatus
 } from './fixtures.js';
 
 import {
@@ -190,28 +191,20 @@ export function renderCompactHeader(teamData, gwNumber) {
                     <div style="font-size: 0.7rem; color: var(--text-secondary);">
                         Squad Value: £${squadValue}m + £${bank}m bank
                     </div>
-
-                    <div style="font-size: 0.7rem; color: var(--text-secondary);">
-                        GW Captain: ${captainInfo}
-                    </div>
-
-                    <div style="font-size: 0.7rem; color: var(--text-secondary);">
-                        GW Vice Captain: ${viceInfo}
-                    </div>
                 </div>
 
-                <div style="display: grid; gap: 0.3rem; flex-shrink: 0; min-width: 110px; padding-right: 0.5rem;">
+                <div style="display: grid; gap: 0.3rem; flex: 1; max-width: 180px;">
                     <div style="
                         background: var(--bg-secondary);
                         border: 1px solid var(--border-color);
                         border-radius: 6px;
-                        padding: 0.5rem 0.75rem;
+                        padding: 0.75rem 1rem;
                         text-align: center;
                     ">
-                        <div style="font-size: 1.75rem; font-weight: 800; color: ${gwTextColor}; line-height: 1.1;">
+                        <div style="font-size: 2.25rem; font-weight: 800; color: ${gwTextColor}; line-height: 1;">
                             ${gwPoints}
                         </div>
-                        <div style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.15rem; font-weight: 600;">
+                        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem; font-weight: 600;">
                             GW ${gwNumber}
                         </div>
                         ${leagueInfo}
@@ -236,11 +229,15 @@ export function renderCompactPlayerRow(pick, player, gwNumber) {
 
     const gwOpp = getGWOpponent(player.team, gwNumber);
     const risks = analyzePlayerRisks(player);
-    const hasHighSeverity = hasHighRisk(risks);
+    const riskTooltip = renderRiskTooltip(risks);
+
+    // Get match status display
+    const matchStatus = getMatchStatus(player.team, gwNumber, player);
+    const isLive = matchStatus === 'LIVE';
+    const isFinished = matchStatus.startsWith('FT');
 
     // Get GW-specific stats
     const hasGWStats = player.github_gw && player.github_gw.gw === gwNumber;
-    const gwMinutes = hasGWStats ? player.github_gw.minutes : '—';
     const gwPoints = hasGWStats ? player.github_gw.total_points : (player.event_points || 0);
     const displayPoints = isCaptain ? (gwPoints * 2) : gwPoints;
 
@@ -260,10 +257,13 @@ export function renderCompactPlayerRow(pick, player, gwNumber) {
     const netTransfers = transfersIn - transfersOut;
     const transferColor = netTransfers > 0 ? '#22c55e' : netTransfers < 0 ? '#ef4444' : 'var(--text-secondary)';
 
-    // Background color - primary for starters (lighter), tertiary for bench (darker)
-    const bgColor = isBench ? 'var(--bg-tertiary)' : 'var(--bg-primary)';
-    // High risk overlay only for non-bench players
-    const finalBg = (hasHighSeverity && !isBench) ? 'rgba(220, 38, 38, 0.08)' : bgColor;
+    // Background color - captain/vice get purple highlights, bench gets tertiary
+    let bgColor = isBench ? 'var(--bg-tertiary)' : 'var(--bg-primary)';
+    if (isCaptain && !isBench) {
+        bgColor = 'rgba(147, 51, 234, 0.12)'; // Purple for captain
+    } else if (isVice && !isBench) {
+        bgColor = 'rgba(147, 51, 234, 0.06)'; // Lighter purple for vice
+    }
 
     return `
         <div style="
@@ -271,21 +271,21 @@ export function renderCompactPlayerRow(pick, player, gwNumber) {
             grid-template-columns: 2.5fr 1fr 0.7fr 0.6fr 0.6fr 0.7fr 0.6fr;
             gap: 0.25rem;
             padding: 0.4rem 0.75rem;
-            background: ${finalBg};
+            background: ${bgColor};
             border-bottom: 1px solid var(--border-color);
             font-size: 0.75rem;
             align-items: center;
         ">
             <div style="font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                 ${escapeHtml(player.web_name)}${captainBadge}
-                ${hasHighSeverity ? '<i class="fas fa-exclamation-triangle" style="color: var(--danger-color); font-size: 0.65rem; margin-left: 0.2rem;"></i>' : ''}
+                ${riskTooltip ? `${riskTooltip}` : ''}
             </div>
             <div style="text-align: center;">
                 <span class="${getDifficultyClass(gwOpp.difficulty)}" style="padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.62rem; min-width: 3rem; display: inline-block; text-align: center;">
                     ${gwOpp.name} (${gwOpp.isHome ? 'H' : 'A'})
                 </span>
             </div>
-            <div style="text-align: center; font-size: 0.65rem; color: var(--text-secondary);">${gwMinutes}</div>
+            <div style="text-align: center; font-size: 0.6rem; font-weight: ${isLive || isFinished ? '700' : '400'}; color: ${isLive ? '#ef4444' : isFinished ? '#22c55e' : 'var(--text-secondary)'};">${matchStatus}</div>
             <div style="text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 700; padding: 0.05rem; border-radius: 0.2rem; font-size: 0.7rem;">${displayPoints}</div>
             <div style="text-align: center; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 600; padding: 0.05rem; border-radius: 0.2rem; font-size: 0.65rem;">${formatDecimal(player.form)}</div>
             <div style="text-align: center; font-size: 0.65rem; color: var(--text-secondary);">${ownership.toFixed(1)}%</div>
@@ -319,7 +319,7 @@ export function renderCompactTeamList(players, gwNumber) {
         ">
             <div>Player</div>
             <div style="text-align: center;">Opp</div>
-            <div style="text-align: center;">Mins</div>
+            <div style="text-align: center;">Status</div>
             <div style="text-align: center;">Pts</div>
             <div style="text-align: center;">Form</div>
             <div style="text-align: center;">Own%</div>

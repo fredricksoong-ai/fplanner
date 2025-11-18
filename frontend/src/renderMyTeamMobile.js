@@ -37,19 +37,11 @@ export function isMobileDevice() {
     // Check viewport width
     const isMobileWidth = window.innerWidth <= 767;
 
-    // Check if running in standalone mode (PWA)
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches
-        || window.navigator.standalone
-        || document.referrer.includes('android-app://');
-
     // Check user agent for mobile devices
     const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-    // Use mobile layout if:
-    // 1. Width is mobile size, OR
-    // 2. Running as PWA (standalone), OR
-    // 3. Mobile user agent detected
-    return isMobileWidth || isStandalone || isMobileUA;
+    // Use mobile layout if width is mobile size OR mobile user agent detected
+    return isMobileWidth || isMobileUA;
 }
 
 /**
