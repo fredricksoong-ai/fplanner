@@ -217,6 +217,7 @@ export function renderCompactHeader(teamData, gwNumber) {
                         <div style="font-size: 0.6rem; color: var(--text-secondary); margin-top: 0.1rem; font-weight: 600;">
                             GW ${gwNumber}
                         </div>
+                        ${leagueInfo}
                     </div>
                 </div>
                 <div style="font-size: 0.65rem; color: var(--text-secondary); display: flex; flex-wrap: wrap; gap: 0.5rem;">
