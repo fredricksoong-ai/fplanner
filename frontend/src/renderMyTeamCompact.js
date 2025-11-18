@@ -211,7 +211,7 @@ export function renderCompactHeader(teamData, gwNumber) {
                         justify-content: right;
                         box-shadow: 0 1px 3px var(--shadow);
                     ">
-                        <div style="font-size: 1.2rem; font-weight: 800; color: ${gwTextColor}; line-height: 1;">
+                        <div style="font-size: 2rem; font-weight: 800; color: ${gwTextColor}; line-height: 1;">
                             ${gwPoints}
                         </div>
                         <div style="font-size: 0.6rem; color: var(--text-secondary); margin-top: 0.1rem; font-weight: 600;">
@@ -219,13 +219,6 @@ export function renderCompactHeader(teamData, gwNumber) {
                         </div>
                         ${leagueInfo}
                     </div>
-                </div>
-                <div style="font-size: 0.65rem; color: var(--text-secondary); display: flex; flex-wrap: wrap; gap: 0.5rem;">
-                    <span style="color: ${rankColor};">Rank: ${overallRank}</span>
-                    <span>•</span>
-                    <span>Pts: ${totalPoints.toLocaleString()}</span>
-                    <span>•</span>
-                    <span>Value: £${squadValue}m</span>
                 </div>
             </div>
         </div>
