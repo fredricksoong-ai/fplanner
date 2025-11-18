@@ -26,7 +26,7 @@ export async function loadAndRenderLeagueInfo() {
         if (!userEntry) {
             placeholder.innerHTML = `
                 <div style="font-size: 0.65rem; color: var(--text-secondary);">
-                    Not in this league
+                    Not good enough bro
                 </div>
             `;
             return;
@@ -74,10 +74,10 @@ export async function loadAndRenderLeagueInfo() {
         placeholder.innerHTML = `
             <div style="font-size: 0.65rem; color: var(--text-secondary); line-height: 1.4;">
                 <div style="margin-bottom: 0.15rem; font-weight: 600; color: var(--text-primary);">
-                    League Pos: ${positionDisplay}/${totalEntries}
+                    League Position: ${positionDisplay} out of ${totalEntries}
                 </div>
                 <div>
-                    Point Gap: ${gapDisplay}
+                    Points Gap: ${gapDisplay}
                 </div>
             </div>
         `;
