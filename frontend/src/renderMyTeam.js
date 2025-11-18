@@ -44,6 +44,22 @@ import {
 } from './risk.js';
 
 import {
+    calculateBenchPoints,
+    calculateSquadAverages,
+    classifyFixtureDifficulty,
+    classifyRiskLevel,
+    classifyMinutesPercentage,
+    classifyOwnership,
+    classifyBenchPoints
+} from './myTeam/teamSummaryHelpers.js';
+
+import {
+    analyzeDifferentials,
+    compareCaptains,
+    extractPlayerIds
+} from './myTeam/teamComparisonHelpers.js';
+
+import {
     attachRiskTooltipListeners
 } from './renderHelpers.js';
 
@@ -1769,18 +1785,22 @@ function renderTeamComparison(myTeamData, rivalTeamData) {
     const { picks: myPicks, team: myTeam, gameweek } = myTeamData;
     const { picks: rivalPicks, team: rivalTeam } = rivalTeamData;
 
-    // Get player IDs for both teams
-    const myPlayerIds = new Set(myPicks.picks.map(p => p.element));
-    const rivalPlayerIds = new Set(rivalPicks.picks.map(p => p.element));
+    // Use extracted helper functions
+    const myPlayerIdsArray = extractPlayerIds(myPicks);
+    const rivalPlayerIdsArray = extractPlayerIds(rivalPicks);
+    const analysis = analyzeDifferentials(myPlayerIdsArray, rivalPlayerIdsArray);
+    const captainComparison = compareCaptains(myPicks, rivalPicks);
 
-    // Find differentials
+    // Convert back to Sets for filtering
+    const myPlayerIds = new Set(myPlayerIdsArray);
+    const rivalPlayerIds = new Set(rivalPlayerIdsArray);
+
+    // Filter picks for rendering
     const myDifferentials = myPicks.picks.filter(p => !rivalPlayerIds.has(p.element));
     const rivalDifferentials = rivalPicks.picks.filter(p => !myPlayerIds.has(p.element));
     const sharedPlayers = myPicks.picks.filter(p => rivalPlayerIds.has(p.element));
 
-    // Find captains
-    const myCaptain = myPicks.picks.find(p => p.is_captain);
-    const rivalCaptain = rivalPicks.picks.find(p => p.is_captain);
+    const { myCaptain, rivalCaptain, captainsMatch } = captainComparison;
 
     return `
         <div style="padding: 2rem;">
@@ -1842,8 +1862,8 @@ function renderTeamComparison(myTeamData, rivalTeamData) {
             </div>
             <div style="background: var(--bg-primary); padding: 1rem; border-radius: 8px; box-shadow: 0 2px 4px var(--shadow);">
                 <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 0.5rem;">Captain Match</div>
-                <div style="font-size: 1.5rem; font-weight: 700; color: ${myCaptain?.element === rivalCaptain?.element ? '#22c55e' : '#fb923c'};">
-                    ${myCaptain?.element === rivalCaptain?.element ? 'Same' : 'Different'}
+                <div style="font-size: 1.5rem; font-weight: 700; color: ${captainsMatch ? '#22c55e' : '#fb923c'};">
+                    ${captainsMatch ? 'Same' : 'Different'}
                 </div>
             </div>
         </div>
@@ -2040,52 +2060,16 @@ window.toggleProblemPlayers = function() {
  * Render team summary cards
  */
 function renderTeamSummary(players, gameweek, entryHistory) {
-    // Calculate bench statistics
-    const bench = players.filter(p => p.position > 11);
-    let benchPoints = 0;
+    // Use extracted helper functions
+    const benchPoints = calculateBenchPoints(players, gameweek);
+    const { avgPPM, avgOwnership, avgMinPercent, avgFDR, highRiskCount } = calculateSquadAverages(players, gameweek);
 
-    bench.forEach(pick => {
-        const player = getPlayerById(pick.element);
-        if (player) {
-            const hasGWStats = player.github_gw && player.github_gw.gw === gameweek;
-            const gwPoints = hasGWStats ? player.github_gw.total_points : player.event_points;
-            benchPoints += gwPoints || 0;
-        }
-    });
-
-    // Calculate squad averages
-    let totalPPM = 0;
-    let totalOwnership = 0;
-    let totalMinPercent = 0;
-    let highRiskCount = 0;
-
-    players.forEach(pick => {
-        const player = getPlayerById(pick.element);
-        if (player) {
-            totalPPM += calculatePPM(player);
-            totalOwnership += parseFloat(player.selected_by_percent) || 0;
-            totalMinPercent += calculateMinutesPercentage(player, gameweek);
-
-            const risks = analyzePlayerRisks(player);
-            if (hasHighRisk(risks)) {
-                highRiskCount++;
-            }
-        }
-    });
-
-    const avgPPM = totalPPM / players.length;
-    const avgOwnership = totalOwnership / players.length;
-    const avgMinPercent = totalMinPercent / players.length;
-
-    // Calculate fixture difficulty for next 5 GWs
-    let totalFDR = 0;
-    players.forEach(pick => {
-        const player = getPlayerById(pick.element);
-        if (player) {
-            totalFDR += calculateFixtureDifficulty(player.team, 5);
-        }
-    });
-    const avgFDR = totalFDR / players.length;
+    // Get classifications
+    const benchClass = classifyBenchPoints(benchPoints);
+    const ownershipClass = classifyOwnership(avgOwnership);
+    const fdrClass = classifyFixtureDifficulty(avgFDR);
+    const riskClass = classifyRiskLevel(highRiskCount);
+    const minutesClass = classifyMinutesPercentage(avgMinPercent);
 
     return `
         <div>
@@ -2099,17 +2083,17 @@ function renderTeamSummary(players, gameweek, entryHistory) {
                     background: var(--bg-primary);
                     padding: 1.5rem;
                     border-radius: 12px;
-                    border-left: 4px solid ${benchPoints > 0 ? '#ef4444' : '#22c55e'};
+                    border-left: 4px solid ${benchClass.color};
                     box-shadow: 0 2px 8px var(--shadow);
                 ">
                     <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">
                         Bench Points
                     </div>
-                    <div style="font-size: 2rem; font-weight: 700; color: ${benchPoints > 0 ? '#ef4444' : 'var(--text-primary)'};">
+                    <div style="font-size: 2rem; font-weight: 700; color: ${benchClass.hasWarning ? '#ef4444' : 'var(--text-primary)'};">
                         ${benchPoints}
                     </div>
                     <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">
-                        ${benchPoints > 0 ? '⚠️ Points wasted' : '✓ No wasted points'}
+                        ${benchClass.label}
                     </div>
                 </div>
 
@@ -2137,7 +2121,7 @@ function renderTeamSummary(players, gameweek, entryHistory) {
                     background: var(--bg-primary);
                     padding: 1.5rem;
                     border-radius: 12px;
-                    border-left: 4px solid ${avgOwnership > 50 ? '#fb923c' : '#22c55e'};
+                    border-left: 4px solid ${ownershipClass.color};
                     box-shadow: 0 2px 8px var(--shadow);
                 ">
                     <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">
@@ -2147,7 +2131,7 @@ function renderTeamSummary(players, gameweek, entryHistory) {
                         ${avgOwnership.toFixed(1)}%
                     </div>
                     <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">
-                        ${avgOwnership > 50 ? 'Template heavy' : 'Differential picks'}
+                        ${ownershipClass.label}
                     </div>
                 </div>
 
@@ -2156,7 +2140,7 @@ function renderTeamSummary(players, gameweek, entryHistory) {
                     background: var(--bg-primary);
                     padding: 1.5rem;
                     border-radius: 12px;
-                    border-left: 4px solid ${avgFDR <= 2.5 ? '#22c55e' : avgFDR <= 3.5 ? '#fb923c' : '#ef4444'};
+                    border-left: 4px solid ${fdrClass.color};
                     box-shadow: 0 2px 8px var(--shadow);
                 ">
                     <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">
@@ -2166,7 +2150,7 @@ function renderTeamSummary(players, gameweek, entryHistory) {
                         ${avgFDR.toFixed(2)}
                     </div>
                     <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">
-                        ${avgFDR <= 2.5 ? '✓ Excellent fixtures' : avgFDR <= 3.5 ? 'Average fixtures' : '⚠️ Tough fixtures'}
+                        ${fdrClass.label}
                     </div>
                 </div>
 
@@ -2175,17 +2159,17 @@ function renderTeamSummary(players, gameweek, entryHistory) {
                     background: var(--bg-primary);
                     padding: 1.5rem;
                     border-radius: 12px;
-                    border-left: 4px solid ${highRiskCount > 2 ? '#ef4444' : highRiskCount > 0 ? '#fb923c' : '#22c55e'};
+                    border-left: 4px solid ${riskClass.color};
                     box-shadow: 0 2px 8px var(--shadow);
                 ">
                     <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">
                         High Risk Players
                     </div>
-                    <div style="font-size: 2rem; font-weight: 700; color: ${highRiskCount > 2 ? '#ef4444' : 'var(--text-primary)'};">
+                    <div style="font-size: 2rem; font-weight: 700; color: ${riskClass.severity === 'action' ? '#ef4444' : 'var(--text-primary)'};">
                         ${highRiskCount}
                     </div>
                     <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">
-                        ${highRiskCount > 2 ? '⚠️ Action needed' : highRiskCount > 0 ? 'Monitor closely' : '✓ Squad stable'}
+                        ${riskClass.label}
                     </div>
                 </div>
 
@@ -2194,7 +2178,7 @@ function renderTeamSummary(players, gameweek, entryHistory) {
                     background: var(--bg-primary);
                     padding: 1.5rem;
                     border-radius: 12px;
-                    border-left: 4px solid ${avgMinPercent >= 70 ? '#22c55e' : avgMinPercent >= 50 ? '#fb923c' : '#ef4444'};
+                    border-left: 4px solid ${minutesClass.color};
                     box-shadow: 0 2px 8px var(--shadow);
                 ">
                     <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">
@@ -2204,7 +2188,7 @@ function renderTeamSummary(players, gameweek, entryHistory) {
                         ${avgMinPercent.toFixed(0)}%
                     </div>
                     <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">
-                        ${avgMinPercent >= 70 ? '✓ Regular starters' : avgMinPercent >= 50 ? 'Mixed rotation' : '⚠️ High rotation risk'}
+                        ${minutesClass.label}
                     </div>
                 </div>
             </div>
