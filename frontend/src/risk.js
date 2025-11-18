@@ -232,7 +232,7 @@ export function renderRiskTooltip(risks) {
             class="risk-indicator"
             style="
                 cursor: help;
-                font-size: 1rem;
+                font-size: 0.7rem;
                 position: relative;
                 display: inline-block;
                 margin-left: 4px;

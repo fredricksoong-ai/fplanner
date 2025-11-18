@@ -63,7 +63,8 @@ import {
 import {
     renderCompactHeader,
     renderCompactTeamList,
-    renderMatchSchedule
+    renderMatchSchedule,
+    attachPlayerRowListeners
 } from './renderMyTeamCompact.js';
 
 import {
@@ -302,6 +303,13 @@ export function renderMyTeam(teamData, subTab = 'overview') {
             contentHTML = renderTeamOverviewTab(teamData);
         }
         container.innerHTML = contentHTML;
+
+        // Attach player row click listeners for team overview
+        if (subTab === 'overview') {
+            requestAnimationFrame(() => {
+                attachPlayerRowListeners();
+            });
+        }
     } else {
         // Desktop: Show header and tabs
         const tabHTML = `
