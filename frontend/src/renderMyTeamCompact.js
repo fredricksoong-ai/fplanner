@@ -299,9 +299,9 @@ export function renderCompactPlayerRow(pick, player, gwNumber) {
     // Background color - captain/vice get purple highlights, no bench highlight
     let bgColor = 'var(--bg-primary)';
     if (isCaptain && !isBench) {
-        bgColor = 'rgb(85, 107, 47)';
+        bgColor = 'rgb(104, 98, 132)';
     } else if (isVice && !isBench) {
-        bgColor = 'rgb(85, 107, 47)';
+        bgColor = 'rgb(104, 98, 132)';
     }
 
     // Add thick border after row 11 (last starter)
