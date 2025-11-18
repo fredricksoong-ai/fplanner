@@ -263,6 +263,13 @@ body {
   }
 }
 
+/* Desktop padding */
+@media (min-width: 1024px) {
+  #app-container {
+    padding: 0 2rem !important;
+  }
+}
+
 /* Mobile interaction polish */
 @media (max-width: 767px) {
   /* Smooth button interactions */
