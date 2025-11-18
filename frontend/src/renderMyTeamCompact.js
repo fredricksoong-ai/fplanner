@@ -429,6 +429,11 @@ export function showPlayerModal(playerId) {
     const player = getPlayerById(playerId);
     if (!player) return;
 
+    const currentGW = getCurrentGW();
+    const team = getTeamShortName(player.team);
+    const position = getPositionShort(player.element_type);
+    const price = (player.now_cost / 10).toFixed(1);
+
     // Create modal overlay
     const modalHTML = `
         <div id="player-modal" style="
@@ -437,7 +442,7 @@ export function showPlayerModal(playerId) {
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0,0,0,0.7);
             z-index: 10000;
             display: flex;
             align-items: center;
@@ -453,16 +458,26 @@ export function showPlayerModal(playerId) {
                 overflow-y: auto;
                 box-shadow: 0 4px 20px rgba(0,0,0,0.3);
             ">
+                <!-- Header -->
                 <div style="
                     padding: 1rem;
-                    border-bottom: 1px solid var(--border-color);
+                    border-bottom: 2px solid var(--border-color);
                     display: flex;
                     justify-content: space-between;
-                    align-items: center;
+                    align-items: flex-start;
                 ">
-                    <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin: 0;">
-                        ${escapeHtml(player.web_name)}
-                    </h3>
+                    <div style="flex: 1;">
+                        <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin: 0 0 0.3rem 0;">
+                            ${escapeHtml(player.web_name)}
+                        </h3>
+                        <div style="display: flex; gap: 0.5rem; align-items: center; font-size: 0.875rem; color: var(--text-secondary);">
+                            <span>${team}</span>
+                            <span>•</span>
+                            <span>${position}</span>
+                            <span>•</span>
+                            <span style="font-weight: 600; color: var(--text-primary);">£${price}m</span>
+                        </div>
+                    </div>
                     <button
                         id="close-player-modal"
                         style="
@@ -482,13 +497,12 @@ export function showPlayerModal(playerId) {
                         ×
                     </button>
                 </div>
-                <div style="padding: 1.5rem; text-align: center;">
-                    <p style="color: var(--text-secondary); font-size: 1rem; margin: 0;">
-                        Player details coming soon!
-                    </p>
-                    <p style="color: var(--text-tertiary); font-size: 0.875rem; margin-top: 0.5rem;">
-                        This modal will show detailed player stats, fixtures, and analysis.
-                    </p>
+
+                <!-- Content -->
+                <div style="padding: 1rem;">
+                    <div style="text-align: center; color: var(--text-secondary); padding: 2rem;">
+                        More stats coming soon...
+                    </div>
                 </div>
             </div>
         </div>
