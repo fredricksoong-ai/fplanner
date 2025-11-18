@@ -18,7 +18,8 @@ import {
     getDifficultyClass,
     getTeamShortName,
     calculatePPM,
-    escapeHtml
+    escapeHtml,
+    getCurrentGW
 } from './utils.js';
 
 import {
@@ -469,6 +470,145 @@ export function showPlayerModal(playerId) {
     const player = getPlayerById(playerId);
     if (!player) return;
 
+    const gwNumber = getCurrentGW();
+    const teamShort = getTeamShortName(player.team);
+    const position = getPositionShort(player.element_type);
+    const price = (player.now_cost / 10).toFixed(1);
+
+    // Get current GW opponent and match status
+    const oppInfo = getGWOpponent(player.team, gwNumber);
+    const matchStatus = getMatchStatus(player.team, gwNumber, player);
+
+    // Get GW stats if available
+    const hasGWStats = player.github_gw && player.github_gw.gw === gwNumber;
+    const gwStats = hasGWStats ? player.github_gw : null;
+
+    // Build GW points breakdown
+    let gwBreakdown = '';
+    if (gwStats) {
+        const breakdown = [];
+
+        // Minutes
+        if (gwStats.minutes > 0) {
+            const minsPts = gwStats.minutes >= 60 ? 2 : (gwStats.minutes > 0 ? 1 : 0);
+            breakdown.push({ label: `Played ${gwStats.minutes} min`, pts: minsPts });
+        }
+
+        // Goals
+        if (gwStats.goals_scored > 0) {
+            const goalPts = position === 'GKP' || position === 'DEF' ? 6 : (position === 'MID' ? 5 : 4);
+            breakdown.push({ label: `${gwStats.goals_scored} goal${gwStats.goals_scored > 1 ? 's' : ''}`, pts: goalPts * gwStats.goals_scored });
+        }
+
+        // Assists
+        if (gwStats.assists > 0) {
+            breakdown.push({ label: `${gwStats.assists} assist${gwStats.assists > 1 ? 's' : ''}`, pts: 3 * gwStats.assists });
+        }
+
+        // Clean sheets
+        if (gwStats.clean_sheets > 0 && (position === 'GKP' || position === 'DEF' || position === 'MID')) {
+            const csPts = position === 'GKP' || position === 'DEF' ? 4 : 1;
+            breakdown.push({ label: `Clean sheet`, pts: csPts });
+        }
+
+        // Goals conceded (for GKP/DEF)
+        if ((position === 'GKP' || position === 'DEF') && gwStats.goals_conceded > 0) {
+            const gcPts = Math.floor(gwStats.goals_conceded / 2) * -1;
+            if (gcPts < 0) {
+                breakdown.push({ label: `${gwStats.goals_conceded} goal${gwStats.goals_conceded > 1 ? 's' : ''} conceded`, pts: gcPts });
+            }
+        }
+
+        // Saves (for GKP)
+        if (position === 'GKP' && gwStats.saves > 0) {
+            const savesPts = Math.floor(gwStats.saves / 3);
+            if (savesPts > 0) {
+                breakdown.push({ label: `${gwStats.saves} saves`, pts: savesPts });
+            }
+        }
+
+        // Bonus
+        if (gwStats.bonus > 0) {
+            breakdown.push({ label: `Bonus`, pts: gwStats.bonus });
+        } else if (gwStats.bps !== undefined) {
+            breakdown.push({ label: `Bonus (${gwStats.bps} bps)`, pts: 0 });
+        }
+
+        // Yellow/Red cards
+        if (gwStats.yellow_cards > 0) {
+            breakdown.push({ label: `${gwStats.yellow_cards} yellow card${gwStats.yellow_cards > 1 ? 's' : ''}`, pts: -1 * gwStats.yellow_cards });
+        }
+        if (gwStats.red_cards > 0) {
+            breakdown.push({ label: `${gwStats.red_cards} red card${gwStats.red_cards > 1 ? 's' : ''}`, pts: -3 * gwStats.red_cards });
+        }
+
+        // Own goals
+        if (gwStats.own_goals > 0) {
+            breakdown.push({ label: `${gwStats.own_goals} own goal${gwStats.own_goals > 1 ? 's' : ''}`, pts: -2 * gwStats.own_goals });
+        }
+
+        // Penalties
+        if (gwStats.penalties_saved > 0) {
+            breakdown.push({ label: `${gwStats.penalties_saved} penalty saved`, pts: 5 * gwStats.penalties_saved });
+        }
+        if (gwStats.penalties_missed > 0) {
+            breakdown.push({ label: `${gwStats.penalties_missed} penalty missed`, pts: -2 * gwStats.penalties_missed });
+        }
+
+        gwBreakdown = breakdown.map(item => `
+            <div style="display: flex; justify-content: space-between; padding: 0.3rem 0; font-size: 0.85rem;">
+                <span style="color: var(--text-secondary);">${item.label}:</span>
+                <span style="color: ${item.pts >= 0 ? '#22c55e' : '#ef4444'}; font-weight: 600;">
+                    ${item.pts >= 0 ? '+' : ''}${item.pts}
+                </span>
+            </div>
+        `).join('');
+    } else {
+        gwBreakdown = `
+            <div style="padding: 0.5rem 0; font-size: 0.85rem; color: var(--text-secondary); text-align: center;">
+                No stats available for GW ${gwNumber}
+            </div>
+        `;
+    }
+
+    // Get ownership and form
+    const ownership = player.selected_by_percent || 0;
+    const form = player.form || 0;
+
+    // Get upcoming fixtures (next 5)
+    const upcomingFixtures = getFixtures(player.team, 5, gwNumber + 1);
+    const fixturesHTML = upcomingFixtures.map(fx => {
+        const diffDots = '●'.repeat(fx.difficulty) + '○'.repeat(5 - fx.difficulty);
+        const diffColor = fx.difficulty >= 4 ? '#ef4444' : (fx.difficulty >= 3 ? '#eab308' : '#22c55e');
+        return `
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.4rem 0; font-size: 0.85rem; border-bottom: 1px solid var(--border-color);">
+                <span style="color: var(--text-primary); min-width: 50px;">GW ${fx.gw}</span>
+                <span style="color: var(--text-secondary); flex: 1;">${fx.opponent} ${fx.isHome ? '(H)' : '(A)'}</span>
+                <span style="color: ${diffColor}; font-size: 0.7rem; letter-spacing: -1px;">${diffDots}</span>
+                <span style="color: var(--text-tertiary); font-size: 0.75rem; min-width: 30px; text-align: right;">${fx.xPts.toFixed(1)}</span>
+            </div>
+        `;
+    }).join('');
+
+    // Season stats
+    const totalPoints = player.total_points || 0;
+    const minutes = player.minutes || 0;
+    const goalsScored = player.goals_scored || 0;
+    const assists = player.assists || 0;
+    const cleanSheets = player.clean_sheets || 0;
+    const saves = player.saves || 0;
+
+    // Get risk analysis
+    const risks = analyzePlayerRisks(player, gwNumber);
+    const riskHTML = risks.length > 0 ? `
+        <div style="padding: 0.75rem; background: rgba(251, 191, 36, 0.1); border-radius: 6px; margin-top: 0.75rem;">
+            <div style="font-size: 0.75rem; font-weight: 600; color: #f59e0b; margin-bottom: 0.3rem;">⚠️ RISKS</div>
+            <div style="font-size: 0.75rem; color: var(--text-secondary);">
+                ${risks.map(r => r.emoji + ' ' + r.reason).join(' • ')}
+            </div>
+        </div>
+    ` : '';
+
     // Create modal overlay
     const modalHTML = `
         <div id="player-modal" style="
@@ -487,22 +627,29 @@ export function showPlayerModal(playerId) {
             <div style="
                 background: var(--bg-primary);
                 border-radius: 12px;
-                max-width: 500px;
+                max-width: 420px;
                 width: 100%;
-                max-height: 80vh;
+                max-height: 85vh;
                 overflow-y: auto;
                 box-shadow: 0 4px 20px rgba(0,0,0,0.3);
             ">
+                <!-- Header -->
                 <div style="
-                    padding: 1rem;
-                    border-bottom: 1px solid var(--border-color);
+                    padding: 0.85rem 1rem;
+                    border-bottom: 2px solid var(--border-color);
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
+                    background: var(--bg-secondary);
                 ">
-                    <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin: 0;">
-                        ${escapeHtml(player.web_name)}
-                    </h3>
+                    <div>
+                        <div style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">
+                            ${escapeHtml(player.web_name)} (${teamShort})
+                        </div>
+                        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.15rem;">
+                            ${position} • £${price}m
+                        </div>
+                    </div>
                     <button
                         id="close-player-modal"
                         style="
@@ -522,13 +669,78 @@ export function showPlayerModal(playerId) {
                         ×
                     </button>
                 </div>
-                <div style="padding: 1.5rem; text-align: center;">
-                    <p style="color: var(--text-secondary); font-size: 1rem; margin: 0;">
-                        Player details coming soon!
-                    </p>
-                    <p style="color: var(--text-tertiary); font-size: 0.875rem; margin-top: 0.5rem;">
-                        This modal will show detailed player stats, fixtures, and analysis.
-                    </p>
+
+                <!-- Current GW Section -->
+                <div style="padding: 1rem; border-bottom: 1px solid var(--border-color);">
+                    <div style="font-size: 0.8rem; font-weight: 600; color: var(--text-tertiary); margin-bottom: 0.5rem;">
+                        GW ${gwNumber} vs ${oppInfo.name} ${oppInfo.isHome ? '(H)' : '(A)'}
+                    </div>
+                    <div style="border: 1px solid var(--border-color); border-radius: 6px; padding: 0.75rem; background: var(--bg-secondary);">
+                        ${gwBreakdown}
+                        <div style="display: flex; justify-content: space-between; padding-top: 0.5rem; margin-top: 0.5rem; border-top: 2px solid var(--border-color); font-size: 0.9rem; font-weight: 700;">
+                            <span style="color: var(--text-primary);">Total Points:</span>
+                            <span style="color: var(--text-primary);">${gwStats ? gwStats.total_points : 0}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ownership & Form -->
+                <div style="padding: 0.75rem 1rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-around; background: var(--bg-secondary);">
+                    <div style="text-align: center;">
+                        <div style="font-size: 0.7rem; color: var(--text-tertiary);">Owned</div>
+                        <div style="font-size: 1rem; font-weight: 700; color: var(--text-primary); margin-top: 0.2rem;">${ownership}%</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 0.7rem; color: var(--text-tertiary);">Form</div>
+                        <div style="font-size: 1rem; font-weight: 700; color: var(--text-primary); margin-top: 0.2rem;">${form}</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 0.7rem; color: var(--text-tertiary);">Total Pts</div>
+                        <div style="font-size: 1rem; font-weight: 700; color: var(--text-primary); margin-top: 0.2rem;">${totalPoints}</div>
+                    </div>
+                </div>
+
+                <!-- Upcoming Fixtures -->
+                <div style="padding: 1rem; border-bottom: 1px solid var(--border-color);">
+                    <div style="font-size: 0.8rem; font-weight: 600; color: var(--text-tertiary); margin-bottom: 0.5rem;">
+                        UPCOMING FIXTURES
+                    </div>
+                    <div>
+                        ${fixturesHTML}
+                    </div>
+                </div>
+
+                <!-- Season Stats -->
+                <div style="padding: 1rem;">
+                    <div style="font-size: 0.8rem; font-weight: 600; color: var(--text-tertiary); margin-bottom: 0.5rem;">
+                        SEASON STATS
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; font-size: 0.85rem;">
+                        <div>
+                            <span style="color: var(--text-secondary);">Minutes:</span>
+                            <span style="color: var(--text-primary); font-weight: 600; margin-left: 0.3rem;">${minutes}</span>
+                        </div>
+                        ${position !== 'GKP' ? `
+                            <div>
+                                <span style="color: var(--text-secondary);">Goals:</span>
+                                <span style="color: var(--text-primary); font-weight: 600; margin-left: 0.3rem;">${goalsScored}</span>
+                            </div>
+                            <div>
+                                <span style="color: var(--text-secondary);">Assists:</span>
+                                <span style="color: var(--text-primary); font-weight: 600; margin-left: 0.3rem;">${assists}</span>
+                            </div>
+                        ` : `
+                            <div>
+                                <span style="color: var(--text-secondary);">Saves:</span>
+                                <span style="color: var(--text-primary); font-weight: 600; margin-left: 0.3rem;">${saves}</span>
+                            </div>
+                        `}
+                        <div>
+                            <span style="color: var(--text-secondary);">Clean Sheets:</span>
+                            <span style="color: var(--text-primary); font-weight: 600; margin-left: 0.3rem;">${cleanSheets}</span>
+                        </div>
+                    </div>
+                    ${riskHTML}
                 </div>
             </div>
         </div>
