@@ -467,8 +467,13 @@ export function renderMatchSchedule(players, gwNumber) {
  * @param {number} playerId - Player ID
  */
 export function showPlayerModal(playerId) {
+    console.log('📊 showPlayerModal called with ID:', playerId);
     const player = getPlayerById(playerId);
-    if (!player) return;
+    if (!player) {
+        console.log('❌ Player not found for ID:', playerId);
+        return;
+    }
+    console.log('✅ Player found:', player.web_name);
 
     const gwNumber = getCurrentGW();
     const teamShort = getTeamShortName(player.team);
@@ -754,14 +759,23 @@ export function showPlayerModal(playerId) {
 
     // Add modal to DOM
     document.body.insertAdjacentHTML('beforeend', modalHTML);
+    console.log('✅ Modal added to DOM');
 
     // Add event listeners
-    document.getElementById('close-player-modal').addEventListener('click', closePlayerModal);
-    document.getElementById('player-modal').addEventListener('click', (e) => {
-        if (e.target.id === 'player-modal') {
-            closePlayerModal();
-        }
-    });
+    const closeBtn = document.getElementById('close-player-modal');
+    const modalOverlay = document.getElementById('player-modal');
+
+    if (closeBtn && modalOverlay) {
+        console.log('✅ Modal elements found, attaching listeners');
+        closeBtn.addEventListener('click', closePlayerModal);
+        modalOverlay.addEventListener('click', (e) => {
+            if (e.target.id === 'player-modal') {
+                closePlayerModal();
+            }
+        });
+    } else {
+        console.log('❌ Modal elements not found!', {closeBtn, modalOverlay});
+    }
 }
 
 /**
@@ -779,15 +793,21 @@ export function closePlayerModal() {
  */
 export function attachPlayerRowListeners() {
     const playerRows = document.querySelectorAll('.player-row');
+    console.log('🔧 Attaching listeners to', playerRows.length, 'player rows');
     playerRows.forEach(row => {
         row.addEventListener('click', (e) => {
+            console.log('👆 Player row clicked', row.dataset.playerId);
             // Don't trigger if clicking on risk indicator
             if (e.target.closest('.risk-indicator')) {
+                console.log('⚠️ Clicked on risk indicator, ignoring');
                 return;
             }
             const playerId = parseInt(row.dataset.playerId);
             if (playerId) {
+                console.log('🎯 Opening modal for player ID:', playerId);
                 showPlayerModal(playerId);
+            } else {
+                console.log('❌ No playerId found');
             }
         });
     });
