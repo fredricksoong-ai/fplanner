@@ -1138,16 +1138,7 @@ function renderMobileFixturesTab() {
                 }
 
                 return `
-                    <div style="
-                        display: grid;
-                        grid-template-columns: 0.8fr 2fr 1fr 2fr 0.6fr;
-                        gap: 0.25rem;
-                        padding: 0.3rem 0.75rem;
-                        background: ${isStarted && !isFinished ? 'rgba(239, 68, 68, 0.05)' : 'transparent'};
-                        border-bottom: 1px solid var(--border-color);
-                        font-size: 0.7rem;
-                        align-items: center;
-                    ">
+                    <div class="mobile-table-row mobile-table-fixtures" style="background: ${isStarted && !isFinished ? 'rgba(239, 68, 68, 0.05)' : 'transparent'};">
                         <div style="color: var(--text-secondary); font-size: 0.6rem; white-space: nowrap;">${timeStr.split(',')[1] || timeStr}</div>
                         <div style="text-align: right; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                             ${homeTeam?.short_name || 'TBD'}
@@ -1167,19 +1158,7 @@ function renderMobileFixturesTab() {
 
             // Mobile header row
             const headerRow = `
-                <div style="
-                    display: grid;
-                    grid-template-columns: 0.8fr 2fr 1fr 2fr 0.6fr;
-                    gap: 0.25rem;
-                    padding: 0.3rem 0.75rem;
-                    background: var(--primary-color);
-                    color: white;
-                    font-size: 0.65rem;
-                    font-weight: 700;
-                    position: sticky;
-                    top: calc(3.5rem + env(safe-area-inset-top));
-                    z-index: 50;
-                ">
+                <div class="mobile-table-header mobile-table-header-sticky mobile-table-header-purple mobile-table-fixtures" style="top: calc(3.5rem + env(safe-area-inset-top));">
                     <div>Time</div>
                     <div style="text-align: right;">Home</div>
                     <div style="text-align: center;">Score</div>
@@ -1190,7 +1169,7 @@ function renderMobileFixturesTab() {
 
             return `
                 <div style="margin-bottom: 1rem;">
-                    <div style="padding: 0.5rem 0; background: var(--bg-secondary); margin-bottom: 0.25rem;">
+                    <div style="padding: 0.5rem 0.75rem; background: var(--bg-secondary); margin-bottom: 0.25rem;">
                         <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--text-primary);">
                             <i class="fas fa-calendar-alt"></i> Gameweek ${gw}
                         </h4>
@@ -1457,20 +1436,7 @@ function renderLeagueStandings(leagueData) {
     if (useMobile) {
         // Compact grid-based layout for mobile (matching team table)
         const headerRow = `
-            <div style="
-                display: grid;
-                grid-template-columns: 0.7fr 2fr 0.7fr 0.8fr 0.8fr;
-                gap: 0.25rem;
-                padding: 0.4rem 0;
-                background: var(--bg-secondary);
-                color: var(--text-primary);
-                font-size: 0.7rem;
-                font-weight: 700;
-                border-top: 2px solid var(--border-color);
-                position: sticky;
-                top: calc(3.5rem + 8rem + env(safe-area-inset-top));
-                z-index: 50;
-            ">
+            <div class="mobile-table-header mobile-table-header-sticky mobile-table-league" style="top: calc(3.5rem + 8rem + env(safe-area-inset-top));">
                 <div style="text-align: center;">Rank</div>
                 <div>Manager</div>
                 <div style="text-align: center;">GW Pts</div>
@@ -1513,17 +1479,7 @@ function renderLeagueStandings(leagueData) {
             }
 
             return `
-                <div style="
-                    display: grid;
-                    grid-template-columns: 0.7fr 2fr 0.7fr 0.8fr 0.8fr;
-                    gap: 0.25rem;
-                    padding: 0.4rem 0;
-                    background: ${bgColor};
-                    border-bottom: 1px solid var(--border-color);
-                    ${isUser ? 'border-left: 3px solid var(--primary-color);' : ''}
-                    font-size: 0.75rem;
-                    align-items: center;
-                ">
+                <div class="mobile-table-row mobile-table-league" style="background: ${bgColor}; ${isUser ? 'border-left: 3px solid var(--primary-color);' : ''}">
                     <div style="text-align: center;">
                         <div style="font-weight: 600;">${entry.rank}</div>
                         <div style="font-size: 0.6rem; color: ${rankChangeColor};">
@@ -1546,15 +1502,13 @@ function renderLeagueStandings(leagueData) {
         }).join('');
 
         return `
-            <div style="margin-bottom: 0.75rem; background: var(--bg-secondary);">
-                <div style="padding: 0.5rem 0;">
-                    <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.25rem;">
-                        <i class="fas fa-trophy"></i> ${escapeHtml(league.name)}
-                    </h4>
-                    <p style="font-size: 0.7rem; color: var(--text-secondary);">
-                        ${standings.has_next ? `Top ${results.length}` : `${results.length} entries`}
-                    </p>
-                </div>
+            <div style="margin-bottom: 0.75rem; background: var(--bg-secondary); padding: 0.5rem 0.75rem;">
+                <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.25rem;">
+                    <i class="fas fa-trophy"></i> ${escapeHtml(league.name)}
+                </h4>
+                <p style="font-size: 0.7rem; color: var(--text-secondary);">
+                    ${standings.has_next ? `Top ${results.length}` : `${results.length} entries`}
+                </p>
             </div>
             ${headerRow}
             ${rowsHtml}

@@ -312,4 +312,62 @@ body {
   #app-container {
     transition: opacity 0.2s ease;
   }
+
+  /* ============================================================
+     STANDARDIZED MOBILE TABLE STYLES
+     Ensures consistent styling across Team, League, and Fixtures tables
+     ============================================================ */
+
+  /* Mobile Table Container */
+  .mobile-table {
+    background: var(--bg-secondary);
+    width: 100%;
+  }
+
+  /* Mobile Table Header - Base Styles */
+  .mobile-table-header {
+    display: grid;
+    gap: 0.25rem;
+    padding: 0.4rem 0.75rem;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 0.7rem;
+    font-weight: 700;
+    border-top: 2px solid var(--border-color);
+  }
+
+  /* Sticky Header Variant */
+  .mobile-table-header-sticky {
+    position: sticky;
+    z-index: 50;
+  }
+
+  /* Purple Header Variant (for Fixtures) */
+  .mobile-table-header-purple {
+    background: var(--primary-color);
+    color: white;
+  }
+
+  /* Mobile Table Row - Base Styles */
+  .mobile-table-row {
+    display: grid;
+    gap: 0.25rem;
+    padding: 0.4rem 0.75rem;
+    font-size: 0.75rem;
+    border-bottom: 1px solid var(--border-color);
+    align-items: center;
+  }
+
+  /* Specific Grid Layouts */
+  .mobile-table-team {
+    grid-template-columns: 2.5fr 1fr 1fr 0.8fr 0.8fr;
+  }
+
+  .mobile-table-league {
+    grid-template-columns: 0.7fr 2fr 0.7fr 0.8fr 0.8fr;
+  }
+
+  .mobile-table-fixtures {
+    grid-template-columns: 0.8fr 2fr 1fr 2fr 0.6fr;
+  }
 }
