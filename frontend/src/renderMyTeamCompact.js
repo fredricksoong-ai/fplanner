@@ -258,14 +258,14 @@ export function renderCompactPlayerRow(pick, player, gwNumber) {
             const mins = parseInt(minsMatch[1]);
             statusWeight = '700';
             if (mins >= 90) {
-                statusColor = '#166534'; // Soft green
-                statusBgColor = 'rgba(34, 197, 94, 0.15)';
+                statusColor = '#86efac'; // Soft green
+                statusBgColor = 'rgba(31, 77, 46, 1.0)';
             } else if (mins >= 60) {
-                statusColor = '#a16207'; // Soft yellow/orange
-                statusBgColor = 'rgba(234, 179, 8, 0.15)';
+                statusColor = '#fcd34d'; // Soft yellow/orange
+                statusBgColor = 'rgba(92, 74, 31, 1.0)';
             } else {
-                statusColor = '#991b1b'; // Soft red
-                statusBgColor = 'rgba(239, 68, 68, 0.15)';
+                statusColor = '#fca5a5'; // Soft red
+                statusBgColor = 'rgba(92, 31, 31, 1.0)';
             }
         } else {
             statusColor = '#22c55e'; // FT but no minutes data
