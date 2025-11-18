@@ -177,7 +177,7 @@ export function renderCompactHeader(teamData, gwNumber) {
                             <i class="fas fa-exchange-alt" style="font-size: 0.7rem;"></i>
                         </button>
                         <div style="font-size: 0.95rem; font-weight: 700; color: var(--text-primary); line-height: 1.2; flex: 1;">
-                            ${escapeHtml(team.name)}
+                            <span style="background: red; color: white; padding: 0.2rem; font-size: 0.6rem; margin-right: 0.3rem;">DEPLOY-TEST</span>${escapeHtml(team.name)}
                         </div>
                     </div>
 
