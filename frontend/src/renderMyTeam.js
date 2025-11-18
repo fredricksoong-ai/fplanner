@@ -646,7 +646,7 @@ function renderMobileLeaguesTab(teamData) {
 
     // Render league selector dropdown and standings
     const html = `
-        <div style="padding: 0;">
+        <div style="padding: 0.75rem 0 0 0;">
             <!-- League Selector -->
             <div style="margin-bottom: 1rem; padding: 0 0.75rem;">
                 <label style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-bottom: 0.25rem;">
