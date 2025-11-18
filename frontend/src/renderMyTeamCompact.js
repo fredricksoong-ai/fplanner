@@ -205,10 +205,11 @@ export function renderCompactHeader(teamData, gwNumber) {
                         border-radius: 6px;
                         padding: 0.3rem 0.6rem;
                         text-align: center;
-                        min-width: 90px;
+                        min-width: 85px;
                         display: flex;
                         flex-direction: column;
                         justify-content: center;
+                        box-shadow: 0 1px 3px var(--shadow);
                     ">
                         <div style="font-size: 1.2rem; font-weight: 800; color: ${gwTextColor}; line-height: 1;">
                             ${gwPoints}
