@@ -245,7 +245,7 @@ body {
   @media (display-mode: standalone) {
     /* In PWA mode, add consistent top spacing to match Safari experience */
     nav {
-      padding-top: 2.5rem !important;
+      padding-top: 2.75rem !important;
       margin-top: 0 !important;
     }
 
@@ -254,7 +254,7 @@ body {
     }
 
     #compact-header {
-      top: 5.25rem !important;
+      top: 5.5rem !important;
     }
   }
 

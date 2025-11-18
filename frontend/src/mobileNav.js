@@ -33,8 +33,8 @@ export function createMobileNav(currentPage, onNavigate) {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                padding: 0.4rem 0.5rem;
-                padding-bottom: max(0.4rem, env(safe-area-inset-bottom));
+                padding: 0.3rem 0.5rem;
+                padding-bottom: max(0.3rem, env(safe-area-inset-bottom));
                 z-index: 1000;
                 gap: 0.25rem;
                 box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
@@ -52,16 +52,16 @@ export function createMobileNav(currentPage, onNavigate) {
                         flex-direction: column;
                         align-items: center;
                         justify-content: center;
-                        gap: 0.25rem;
+                        gap: 0.2rem;
                         background: ${item.isGreen ? 'var(--secondary-color)' : (currentPage === item.id ? 'var(--bg-tertiary)' : 'transparent')};
                         border: none;
-                        padding: 0.5rem 0.4rem;
+                        padding: 0.35rem 0.4rem;
                         border-radius: 0.5rem;
                         color: ${item.isGreen ? 'var(--bg-primary)' : (item.disabled ? 'var(--text-tertiary)' : 'var(--text-primary)')};
                         cursor: ${item.disabled ? 'not-allowed' : 'pointer'};
                         transition: all 0.2s;
                         flex: 1;
-                        min-height: 60px;
+                        min-height: 52px;
                         opacity: ${item.disabled ? '0.5' : '1'};
                     "
                 >
@@ -211,7 +211,7 @@ function addMainContentPadding() {
     style.textContent = `
         @media (max-width: 767px) {
             #app-container {
-                padding-bottom: calc(5rem + env(safe-area-inset-bottom)) !important;
+                padding-bottom: calc(4rem + env(safe-area-inset-bottom)) !important;
             }
 
             body {
