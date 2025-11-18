@@ -80,11 +80,15 @@
     <!-- Mobile Debug Console (Temporary) -->
     <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
     <script>
-        // Only enable on mobile devices for debugging
-        if (/Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-            eruda.init();
-            console.log('🔍 Eruda mobile console enabled - tap the icon in bottom-right corner');
-        }
+        // Initialize Eruda console for debugging
+        window.addEventListener('load', function() {
+            if (typeof eruda !== 'undefined') {
+                eruda.init();
+                console.log('🔍 Eruda mobile console enabled - tap the icon in bottom-right corner');
+            } else {
+                console.log('❌ Eruda failed to load');
+            }
+        });
     </script>
 
     <!-- Service Worker Registration -->
