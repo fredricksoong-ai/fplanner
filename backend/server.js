@@ -15,6 +15,7 @@ import rateLimit from 'express-rate-limit';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import logger from './logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -107,7 +108,7 @@ function getCurrentEra() {
  */
 function shouldRefreshBootstrap() {
   if (!cache.bootstrap.data || !cache.bootstrap.timestamp) {
-    console.log('🔄 Bootstrap cache empty, needs fetch');
+    logger.log('🔄 Bootstrap cache empty, needs fetch');
     return true;
   }
 
@@ -120,19 +121,19 @@ function shouldRefreshBootstrap() {
       // GW finished or between gameweeks
       const shouldRefresh = age > TTL.GW_FINISHED;
       if (shouldRefresh) {
-        console.log(`🔄 Bootstrap cache stale (${Math.round(age / 1000 / 60)} min old, GW finished)`);
+        logger.log(`🔄 Bootstrap cache stale (${Math.round(age / 1000 / 60)} min old, GW finished)`);
       }
       return shouldRefresh;
     } else {
       // GW in progress
       const shouldRefresh = age > TTL.GW_LIVE;
       if (shouldRefresh) {
-        console.log(`🔄 Bootstrap cache stale (${Math.round(age / 1000 / 60)} min old, GW live)`);
+        logger.log(`🔄 Bootstrap cache stale (${Math.round(age / 1000 / 60)} min old, GW live)`);
       }
       return shouldRefresh;
     }
   } catch (err) {
-    console.error('❌ Error checking bootstrap status:', err.message);
+    logger.error('❌ Error checking bootstrap status:', err.message);
     return true; // Refresh on error
   }
 }
@@ -142,7 +143,7 @@ function shouldRefreshBootstrap() {
  */
 function shouldRefreshFixtures() {
   if (!cache.fixtures.data || !cache.fixtures.timestamp) {
-    console.log('🔄 Fixtures cache empty, needs fetch');
+    logger.log('🔄 Fixtures cache empty, needs fetch');
     return true;
   }
 
@@ -150,7 +151,7 @@ function shouldRefreshFixtures() {
   const shouldRefresh = age > TTL.FIXTURES;
   
   if (shouldRefresh) {
-    console.log(`🔄 Fixtures cache stale (${Math.round(age / 1000 / 60 / 60)} hours old)`);
+    logger.log(`🔄 Fixtures cache stale (${Math.round(age / 1000 / 60 / 60)} hours old)`);
   }
   
   return shouldRefresh;
@@ -161,7 +162,7 @@ function shouldRefreshFixtures() {
  */
 function shouldRefreshGithub() {
   if (!cache.github.data || !cache.github.timestamp) {
-    console.log('🔄 GitHub cache empty, needs fetch');
+    logger.log('🔄 GitHub cache empty, needs fetch');
     return true;
   }
 
@@ -169,7 +170,7 @@ function shouldRefreshGithub() {
   const shouldRefresh = cache.github.era !== currentEra;
 
   if (shouldRefresh) {
-    console.log(`🔄 GitHub cache stale (era changed: ${cache.github.era} → ${currentEra})`);
+    logger.log(`🔄 GitHub cache stale (era changed: ${cache.github.era} → ${currentEra})`);
   }
 
   return shouldRefresh;
@@ -212,7 +213,7 @@ function isValidGameweek(gw) {
  * Fetch FPL Bootstrap data
  */
 async function fetchBootstrap() {
-  console.log('📡 Fetching FPL Bootstrap...');
+  logger.log('📡 Fetching FPL Bootstrap...');
   
   try {
     const response = await axios.get(`${FPL_BASE_URL}/bootstrap-static/`, {
@@ -222,7 +223,7 @@ async function fetchBootstrap() {
       }
     });
     
-    console.log(`✅ Bootstrap fetched (${Math.round(JSON.stringify(response.data).length / 1024)}KB)`);
+    logger.log(`✅ Bootstrap fetched (${Math.round(JSON.stringify(response.data).length / 1024)}KB)`);
     
     cache.bootstrap.data = response.data;
     cache.bootstrap.timestamp = Date.now();
@@ -230,11 +231,11 @@ async function fetchBootstrap() {
     
     return response.data;
   } catch (err) {
-    console.error('❌ Failed to fetch bootstrap:', err.message);
+    logger.error('❌ Failed to fetch bootstrap:', err.message);
     
     // Return cached data if available, even if stale
     if (cache.bootstrap.data) {
-      console.log('⚠️ Using stale bootstrap cache as fallback');
+      logger.log('⚠️ Using stale bootstrap cache as fallback');
       return cache.bootstrap.data;
     }
     
@@ -246,7 +247,7 @@ async function fetchBootstrap() {
  * Fetch FPL Fixtures data
  */
 async function fetchFixtures() {
-  console.log('📡 Fetching FPL Fixtures...');
+  logger.log('📡 Fetching FPL Fixtures...');
   
   try {
     const response = await axios.get(`${FPL_BASE_URL}/fixtures/`, {
@@ -256,7 +257,7 @@ async function fetchFixtures() {
       }
     });
     
-    console.log(`✅ Fixtures fetched (${Math.round(JSON.stringify(response.data).length / 1024)}KB)`);
+    logger.log(`✅ Fixtures fetched (${Math.round(JSON.stringify(response.data).length / 1024)}KB)`);
     
     cache.fixtures.data = response.data;
     cache.fixtures.timestamp = Date.now();
@@ -264,11 +265,11 @@ async function fetchFixtures() {
     
     return response.data;
   } catch (err) {
-    console.error('❌ Failed to fetch fixtures:', err.message);
+    logger.error('❌ Failed to fetch fixtures:', err.message);
     
     // Return cached data if available
     if (cache.fixtures.data) {
-      console.log('⚠️ Using stale fixtures cache as fallback');
+      logger.log('⚠️ Using stale fixtures cache as fallback');
       return cache.fixtures.data;
     }
     
@@ -283,7 +284,7 @@ async function fetchFixtures() {
  * - Next GW stats (for transfers)
  */
 async function fetchGithubCSV() {
-  console.log('📡 Fetching GitHub CSV data...');
+  logger.log('📡 Fetching GitHub CSV data...');
   
   try {
     // Get current GW from bootstrap
@@ -299,7 +300,7 @@ async function fetchGithubCSV() {
     const currentGW = latestFinishedGW;
     const isFinished = true; // By definition, we're using a finished GW
 
-    console.log(`📊 Latest Finished GW: ${currentGW}`);
+    logger.log(`📊 Latest Finished GW: ${currentGW}`);
     
     const urls = getGithubUrls(currentGW, isFinished);
     
@@ -307,7 +308,7 @@ async function fetchGithubCSV() {
     const fetchPromises = [];
     
     // 1. Season stats (always fetch)
-    console.log(`📡 Fetching season stats...`);
+    logger.log(`📡 Fetching season stats...`);
     fetchPromises.push(
       axios.get(urls.seasonStats, {
         timeout: 15000,
@@ -315,14 +316,14 @@ async function fetchGithubCSV() {
       })
       .then(res => ({ type: 'season', data: res.data }))
       .catch(err => {
-        console.error(`❌ Failed to fetch season stats:`, err.message);
+        logger.error(`❌ Failed to fetch season stats:`, err.message);
         return null;
       })
     );
     
     // 2. Current GW stats (if finished)
     if (urls.currentGWStats) {
-      console.log(`📡 Fetching GW${currentGW} stats...`);
+      logger.log(`📡 Fetching GW${currentGW} stats...`);
       fetchPromises.push(
         axios.get(urls.currentGWStats, {
           timeout: 15000,
@@ -330,14 +331,14 @@ async function fetchGithubCSV() {
         })
         .then(res => ({ type: 'currentGW', data: res.data }))
         .catch(err => {
-          console.warn(`⚠️ GW${currentGW} stats not available yet:`, err.message);
+          logger.warn(`⚠️ GW${currentGW} stats not available yet:`, err.message);
           return null;
         })
       );
     }
     
     // 3. Next GW stats (for transfers)
-    console.log(`📡 Fetching GW${currentGW + 1} stats for transfers...`);
+    logger.log(`📡 Fetching GW${currentGW + 1} stats for transfers...`);
     fetchPromises.push(
       axios.get(urls.nextGWStats, {
         timeout: 15000,
@@ -345,7 +346,7 @@ async function fetchGithubCSV() {
       })
       .then(res => ({ type: 'nextGW', data: res.data }))
       .catch(err => {
-        console.warn(`⚠️ GW${currentGW + 1} stats not available yet:`, err.message);
+        logger.warn(`⚠️ GW${currentGW + 1} stats not available yet:`, err.message);
         return null;
       })
     );
@@ -363,11 +364,11 @@ async function fetchGithubCSV() {
       });
       
       if (parsed.errors.length > 0) {
-        console.warn(`⚠️ CSV parsing warnings for ${result.type}:`, parsed.errors.length);
+        logger.warn(`⚠️ CSV parsing warnings for ${result.type}:`, parsed.errors.length);
       }
       
       parsedData[result.type] = parsed.data;
-      console.log(`✅ Parsed ${result.type}: ${parsed.data.length} players`);
+      logger.log(`✅ Parsed ${result.type}: ${parsed.data.length} players`);
     }
     
     // Store in cache
@@ -384,18 +385,18 @@ async function fetchGithubCSV() {
     cache.github.currentGW = currentGW;
     cache.stats.totalFetches++;
     
-    console.log(`✅ GitHub data loaded:`);
-    console.log(`   Season stats: ${parsedData.season?.length || 0} players`);
-    console.log(`   GW${currentGW} stats: ${parsedData.currentGW?.length || 0} players`);
-    console.log(`   GW${currentGW + 1} stats: ${parsedData.nextGW?.length || 0} players`);
+    logger.log(`✅ GitHub data loaded:`);
+    logger.log(`   Season stats: ${parsedData.season?.length || 0} players`);
+    logger.log(`   GW${currentGW} stats: ${parsedData.currentGW?.length || 0} players`);
+    logger.log(`   GW${currentGW + 1} stats: ${parsedData.nextGW?.length || 0} players`);
     
     return cache.github.data;
     
   } catch (err) {
-    console.error('❌ Failed to fetch GitHub CSV:', err.message);
+    logger.error('❌ Failed to fetch GitHub CSV:', err.message);
     
     if (cache.github.data) {
-      console.log('⚠️ Using stale GitHub cache as fallback');
+      logger.log('⚠️ Using stale GitHub cache as fallback');
       return cache.github.data;
     }
     
@@ -406,7 +407,7 @@ async function fetchGithubCSV() {
  * Fetch user team data
  */
 async function fetchTeamData(teamId) {
-  console.log(`📡 Fetching team ${teamId}...`);
+  logger.log(`📡 Fetching team ${teamId}...`);
   
   try {
     const response = await axios.get(`${FPL_BASE_URL}/entry/${teamId}/`, {
@@ -416,10 +417,10 @@ async function fetchTeamData(teamId) {
       }
     });
     
-    console.log(`✅ Team ${teamId} fetched`);
+    logger.log(`✅ Team ${teamId} fetched`);
     return response.data;
   } catch (err) {
-    console.error(`❌ Failed to fetch team ${teamId}:`, err.message);
+    logger.error(`❌ Failed to fetch team ${teamId}:`, err.message);
     throw new Error(`Team data unavailable for team ${teamId}`);
   }
 }
@@ -428,7 +429,7 @@ async function fetchTeamData(teamId) {
  * Fetch user team picks for a specific gameweek
  */
 async function fetchTeamPicks(teamId, gameweek) {
-  console.log(`📡 Fetching picks for team ${teamId}, GW${gameweek}...`);
+  logger.log(`📡 Fetching picks for team ${teamId}, GW${gameweek}...`);
 
   try {
     const response = await axios.get(`${FPL_BASE_URL}/entry/${teamId}/event/${gameweek}/picks/`, {
@@ -438,10 +439,10 @@ async function fetchTeamPicks(teamId, gameweek) {
       }
     });
 
-    console.log(`✅ Picks fetched for team ${teamId}, GW${gameweek}`);
+    logger.log(`✅ Picks fetched for team ${teamId}, GW${gameweek}`);
     return response.data;
   } catch (err) {
-    console.error(`❌ Failed to fetch picks for team ${teamId}:`, err.message);
+    logger.error(`❌ Failed to fetch picks for team ${teamId}:`, err.message);
     throw new Error(`Picks unavailable for team ${teamId}, GW${gameweek}`);
   }
 }
@@ -452,7 +453,7 @@ async function fetchTeamPicks(teamId, gameweek) {
  * @param {number} page - Page number (default: 1)
  */
 async function fetchLeagueStandings(leagueId, page = 1) {
-  console.log(`📡 Fetching league ${leagueId} standings (page ${page})...`);
+  logger.log(`📡 Fetching league ${leagueId} standings (page ${page})...`);
 
   try {
     const response = await axios.get(`${FPL_BASE_URL}/leagues-classic/${leagueId}/standings/`, {
@@ -463,10 +464,10 @@ async function fetchLeagueStandings(leagueId, page = 1) {
       }
     });
 
-    console.log(`✅ League ${leagueId} standings fetched (${response.data.standings.results.length} entries)`);
+    logger.log(`✅ League ${leagueId} standings fetched (${response.data.standings.results.length} entries)`);
     return response.data;
   } catch (err) {
-    console.error(`❌ Failed to fetch league ${leagueId}:`, err.message);
+    logger.error(`❌ Failed to fetch league ${leagueId}:`, err.message);
     throw new Error(`League data unavailable for league ${leagueId}`);
   }
 }
@@ -487,19 +488,19 @@ function loadCacheFromDisk() {
       const backupAge = Date.now() - (backup.bootstrap?.timestamp || 0);
       if (backupAge < 24 * 60 * 60 * 1000) {
         cache = backup;
-        console.log('✅ Cache restored from disk');
-        console.log(`   Bootstrap: ${cache.bootstrap.data ? 'loaded' : 'empty'}`);
-        console.log(`   Fixtures: ${cache.fixtures.data ? 'loaded' : 'empty'}`);
-        console.log(`   GitHub: ${cache.github.data ? 'loaded' : 'empty'}`);
+        logger.log('✅ Cache restored from disk');
+        logger.log(`   Bootstrap: ${cache.bootstrap.data ? 'loaded' : 'empty'}`);
+        logger.log(`   Fixtures: ${cache.fixtures.data ? 'loaded' : 'empty'}`);
+        logger.log(`   GitHub: ${cache.github.data ? 'loaded' : 'empty'}`);
       } else {
-        console.log('⚠️ Cache backup too old (>24h), starting fresh');
+        logger.log('⚠️ Cache backup too old (>24h), starting fresh');
       }
     } catch (err) {
-      console.error('❌ Failed to load cache from disk:', err.message);
-      console.log('   Starting with empty cache');
+      logger.error('❌ Failed to load cache from disk:', err.message);
+      logger.log('   Starting with empty cache');
     }
   } else {
-    console.log('ℹ️ No cache backup found, starting fresh');
+    logger.log('ℹ️ No cache backup found, starting fresh');
   }
 }
 
@@ -509,9 +510,9 @@ function loadCacheFromDisk() {
 function saveCacheToDisk() {
   try {
     fs.writeFileSync(CACHE_BACKUP_PATH, JSON.stringify(cache, null, 2));
-    console.log('💾 Cache backed up to disk');
+    logger.log('💾 Cache backed up to disk');
   } catch (err) {
-    console.error('❌ Failed to backup cache:', err.message);
+    logger.error('❌ Failed to backup cache:', err.message);
   }
 }
 
@@ -520,13 +521,13 @@ setInterval(saveCacheToDisk, 5 * 60 * 1000);
 
 // Save cache on graceful shutdown
 process.on('SIGTERM', () => {
-  console.log('🛑 SIGTERM received, saving cache...');
+  logger.log('🛑 SIGTERM received, saving cache...');
   saveCacheToDisk();
   process.exit(0);
 });
 
 process.on('SIGINT', () => {
-  console.log('🛑 SIGINT received, saving cache...');
+  logger.log('🛑 SIGINT received, saving cache...');
   saveCacheToDisk();
   process.exit(0);
 });
@@ -571,7 +572,7 @@ app.use(cors({
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      console.warn(`⚠️ CORS blocked: ${origin}`);
+      logger.warn(`⚠️ CORS blocked: ${origin}`);
       callback(new Error('Not allowed by CORS'));
     }
   },
@@ -589,7 +590,7 @@ const limiter = rateLimit({
   standardHeaders: true, // Return rate limit info in `RateLimit-*` headers
   legacyHeaders: false, // Disable `X-RateLimit-*` headers
   handler: (req, res) => {
-    console.warn(`⚠️ Rate limit exceeded: ${req.ip}`);
+    logger.warn(`⚠️ Rate limit exceeded: ${req.ip}`);
     res.status(429).json({
       error: 'Too many requests',
       message: 'Please wait 15 minutes before trying again'
@@ -605,7 +606,7 @@ app.use(express.json({ limit: '1mb' }));
 
 // Request logging
 app.use((req, res, next) => {
-  console.log(`${req.method} ${req.path} [${req.ip}]`);
+  logger.log(`${req.method} ${req.path} [${req.ip}]`);
   next();
 });
 
@@ -623,8 +624,8 @@ app.get('/api/fpl-data', async (req, res) => {
   const startTime = Date.now();
   const forceRefresh = req.query.refresh === 'true';
   
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log(`📥 GET /api/fpl-data ${forceRefresh ? '(FORCE REFRESH)' : ''}`);
+  logger.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  logger.log(`📥 GET /api/fpl-data ${forceRefresh ? '(FORCE REFRESH)' : ''}`);
   
   try {
     // Determine what needs fetching
@@ -635,7 +636,7 @@ app.get('/api/fpl-data', async (req, res) => {
     // Track cache performance
     if (!needsBootstrap && !needsFixtures && !needsGithub) {
       cache.stats.cacheHits++;
-      console.log('✨ Full cache hit - returning immediately');
+      logger.log('✨ Full cache hit - returning immediately');
     } else {
       cache.stats.cacheMisses++;
     }
@@ -646,19 +647,19 @@ app.get('/api/fpl-data', async (req, res) => {
     if (needsBootstrap) {
       fetchPromises.push(fetchBootstrap());
     } else {
-      console.log('✅ Bootstrap cache valid, using cached data');
+      logger.log('✅ Bootstrap cache valid, using cached data');
     }
     
     if (needsFixtures) {
       fetchPromises.push(fetchFixtures());
     } else {
-      console.log('✅ Fixtures cache valid, using cached data');
+      logger.log('✅ Fixtures cache valid, using cached data');
     }
     
     if (needsGithub) {
       fetchPromises.push(fetchGithubCSV());
     } else {
-      console.log('✅ GitHub cache valid, using cached data');
+      logger.log('✅ GitHub cache valid, using cached data');
     }
     
     // Wait for all fetches
@@ -684,13 +685,13 @@ app.get('/api/fpl-data', async (req, res) => {
     };
     
     const duration = Date.now() - startTime;
-    console.log(`✅ Response ready (${duration}ms)`);
-    console.log(`   Cache hits: ${cache.stats.cacheHits}, misses: ${cache.stats.cacheMisses}`);
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    logger.log(`✅ Response ready (${duration}ms)`);
+    logger.log(`   Cache hits: ${cache.stats.cacheHits}, misses: ${cache.stats.cacheMisses}`);
+    logger.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
     res.json(response);
   } catch (err) {
-    console.error('❌ Error in /api/fpl-data:', err.message);
+    logger.error('❌ Error in /api/fpl-data:', err.message);
 
     // Don't expose detailed error messages in production
     const isProduction = process.env.NODE_ENV === 'production';
@@ -708,12 +709,12 @@ app.get('/api/fpl-data', async (req, res) => {
 app.get('/api/team/:teamId', async (req, res) => {
   const { teamId } = req.params;
 
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log(`📥 GET /api/team/${teamId}`);
+  logger.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  logger.log(`📥 GET /api/team/${teamId}`);
 
   // Validate team ID
   if (!isValidTeamId(teamId)) {
-    console.warn(`⚠️ Invalid team ID format: ${teamId}`);
+    logger.warn(`⚠️ Invalid team ID format: ${teamId}`);
     return res.status(400).json({
       error: 'Invalid team ID',
       message: 'Team ID must be a number between 1 and 10 digits'
@@ -730,7 +731,7 @@ app.get('/api/team/:teamId', async (req, res) => {
     const currentEvent = cache.bootstrap.data.events.find(e => e.is_current);
     const currentGW = currentEvent ? currentEvent.id : 1;
 
-    console.log(`   Current GW: ${currentGW}`);
+    logger.log(`   Current GW: ${currentGW}`);
 
     // Fetch team info and picks in parallel
     const [teamInfo, teamPicks] = await Promise.all([
@@ -745,12 +746,12 @@ app.get('/api/team/:teamId', async (req, res) => {
       timestamp: new Date().toISOString()
     };
 
-    console.log(`✅ Team data ready`);
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    logger.log(`✅ Team data ready`);
+    logger.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
     res.json(response);
   } catch (err) {
-    console.error(`❌ Error fetching team ${teamId}:`, err.message);
+    logger.error(`❌ Error fetching team ${teamId}:`, err.message);
 
     // Don't expose detailed error messages in production
     const isProduction = process.env.NODE_ENV === 'production';
@@ -774,12 +775,12 @@ app.get('/api/team/:teamId', async (req, res) => {
 app.post('/api/ai-insights', async (req, res) => {
   const { page, tab, position, gameweek, data } = req.body;
 
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log(`📥 POST /api/ai-insights [${page}/${tab}/${position}]`);
+  logger.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  logger.log(`📥 POST /api/ai-insights [${page}/${tab}/${position}]`);
 
   // Validate required fields
   if (!page || !tab || !gameweek || !data) {
-    console.warn('⚠️ Missing required fields');
+    logger.warn('⚠️ Missing required fields');
     return res.status(400).json({
       error: 'Missing required fields',
       message: 'page, tab, gameweek, and data are required'
@@ -788,7 +789,7 @@ app.post('/api/ai-insights', async (req, res) => {
 
   // Check if Gemini API key is configured
   if (!GEMINI_API_KEY) {
-    console.error('❌ Gemini API key not configured');
+    logger.error('❌ Gemini API key not configured');
     return res.status(500).json({
       error: 'AI service not configured',
       message: 'Gemini API key is missing. Please configure GEMINI_API_KEY environment variable.'
@@ -799,7 +800,7 @@ app.post('/api/ai-insights', async (req, res) => {
     // Build prompt based on page/tab
     const prompt = buildAIPrompt(page, tab, position, gameweek, data);
 
-    console.log(`🤖 Calling Gemini API...`);
+    logger.log(`🤖 Calling Gemini API...`);
 
     // Call Gemini API (Google Search grounding disabled temporarily for debugging)
     const geminiResponse = await axios.post(
@@ -833,20 +834,20 @@ app.post('/api/ai-insights', async (req, res) => {
     );
 
     // Debug: Log raw Gemini response
-    console.log('🔍 DEBUG: Raw Gemini response:', JSON.stringify(geminiResponse.data, null, 2));
-    console.log('🔍 DEBUG: Candidates array:', JSON.stringify(geminiResponse.data.candidates, null, 2));
+    logger.log('🔍 DEBUG: Raw Gemini response:', JSON.stringify(geminiResponse.data, null, 2));
+    logger.log('🔍 DEBUG: Candidates array:', JSON.stringify(geminiResponse.data.candidates, null, 2));
 
     // Parse Gemini response
     const insights = parseGeminiResponse(geminiResponse.data, gameweek);
 
     const categoryCount = Object.keys(insights.categories || {}).length;
-    console.log(`✅ AI Insights generated (${categoryCount} categories)`);
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    logger.log(`✅ AI Insights generated (${categoryCount} categories)`);
+    logger.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
     res.json(insights);
 
   } catch (error) {
-    console.error('❌ Error generating AI insights:', error.message);
+    logger.error('❌ Error generating AI insights:', error.message);
 
     // Don't expose detailed error messages in production
     const isProduction = process.env.NODE_ENV === 'production';
@@ -867,12 +868,12 @@ app.get('/api/leagues/:leagueId', async (req, res) => {
   const { leagueId } = req.params;
   const page = parseInt(req.query.page) || 1;
 
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log(`📥 GET /api/leagues/${leagueId} (page ${page})`);
+  logger.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  logger.log(`📥 GET /api/leagues/${leagueId} (page ${page})`);
 
   // Validate league ID
   if (!isValidLeagueId(leagueId)) {
-    console.warn(`⚠️ Invalid league ID format: ${leagueId}`);
+    logger.warn(`⚠️ Invalid league ID format: ${leagueId}`);
     return res.status(400).json({
       error: 'Invalid league ID',
       message: 'League ID must be a number between 1 and 10 digits'
@@ -881,7 +882,7 @@ app.get('/api/leagues/:leagueId', async (req, res) => {
 
   // Validate page number
   if (page < 1 || page > 100) {
-    console.warn(`⚠️ Invalid page number: ${page}`);
+    logger.warn(`⚠️ Invalid page number: ${page}`);
     return res.status(400).json({
       error: 'Invalid page number',
       message: 'Page must be between 1 and 100'
@@ -898,14 +899,14 @@ app.get('/api/leagues/:leagueId', async (req, res) => {
       timestamp: new Date().toISOString()
     };
 
-    console.log(`✅ League data ready`);
-    console.log(`   League: ${leagueData.league.name}`);
-    console.log(`   Entries: ${leagueData.standings.results.length}`);
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    logger.log(`✅ League data ready`);
+    logger.log(`   League: ${leagueData.league.name}`);
+    logger.log(`   Entries: ${leagueData.standings.results.length}`);
+    logger.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
     res.json(response);
   } catch (err) {
-    console.error(`❌ Error fetching league ${leagueId}:`, err.message);
+    logger.error(`❌ Error fetching league ${leagueId}:`, err.message);
 
     // Don't expose detailed error messages in production
     const isProduction = process.env.NODE_ENV === 'production';
@@ -978,7 +979,7 @@ function parseGeminiResponse(geminiData, gameweek) {
     // Extract text from Gemini response
     const text = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
-    console.log('🔍 DEBUG: Extracted text from Gemini:', text.substring(0, 500)); // First 500 chars
+    logger.log('🔍 DEBUG: Extracted text from Gemini:', text.substring(0, 500)); // First 500 chars
 
     if (!text) {
       throw new Error('No text content in Gemini response');
@@ -991,19 +992,19 @@ function parseGeminiResponse(geminiData, gameweek) {
     const jsonMatch = text.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
     if (jsonMatch) {
       jsonText = jsonMatch[1];
-      console.log('🔍 DEBUG: Found JSON in markdown code block');
+      logger.log('🔍 DEBUG: Found JSON in markdown code block');
     } else {
       // Try to find JSON object directly
       const objectMatch = text.match(/\{[\s\S]*\}/);
       if (objectMatch) {
         jsonText = objectMatch[0];
-        console.log('🔍 DEBUG: Found JSON object directly');
+        logger.log('🔍 DEBUG: Found JSON object directly');
       } else {
-        console.log('⚠️ DEBUG: No JSON object found in response');
+        logger.log('⚠️ DEBUG: No JSON object found in response');
       }
     }
 
-    console.log('🔍 DEBUG: JSON text to parse:', jsonText.substring(0, 500));
+    logger.log('🔍 DEBUG: JSON text to parse:', jsonText.substring(0, 500));
 
     // Parse JSON
     const categories = JSON.parse(jsonText);
@@ -1041,8 +1042,8 @@ function parseGeminiResponse(geminiData, gameweek) {
     };
 
   } catch (error) {
-    console.error('❌ Failed to parse Gemini response:', error.message);
-    console.error('❌ Full error:', error.stack);
+    logger.error('❌ Failed to parse Gemini response:', error.message);
+    logger.error('❌ Full error:', error.stack);
 
     // TEMPORARY DEBUG: Return raw response in error case
     const fallbackCategories = {};
@@ -1151,18 +1152,18 @@ app.get('*', (req, res, next) => {
 loadCacheFromDisk();
 
 app.listen(PORT, HOST, () => { 
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('🚀 FPLanner Backend Server');
-  console.log(`📡 Listening on host ${HOST} and port ${PORT}`); // Update console log
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('');
-  console.log('Available endpoints:');
-  console.log(`  GET  /api/fpl-data       - Combined FPL data`);
-  console.log(`  GET  /api/fpl-data?refresh=true - Force refresh`);
-  console.log(`  GET  /api/team/:teamId   - User team data`);
-  console.log(`  POST /api/ai-insights    - AI insights (Gemini)`);
-  console.log(`  GET  /api/leagues/:leagueId - League standings`);
-  console.log(`  GET  /api/stats          - Cache statistics`);
-  console.log(`  GET  /health             - Health check`);
-  console.log('');
+  logger.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  logger.log('🚀 FPLanner Backend Server');
+  logger.log(`📡 Listening on host ${HOST} and port ${PORT}`); // Update console log
+  logger.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  logger.log('');
+  logger.log('Available endpoints:');
+  logger.log(`  GET  /api/fpl-data       - Combined FPL data`);
+  logger.log(`  GET  /api/fpl-data?refresh=true - Force refresh`);
+  logger.log(`  GET  /api/team/:teamId   - User team data`);
+  logger.log(`  POST /api/ai-insights    - AI insights (Gemini)`);
+  logger.log(`  GET  /api/leagues/:leagueId - League standings`);
+  logger.log(`  GET  /api/stats          - Cache statistics`);
+  logger.log(`  GET  /health             - Health check`);
+  logger.log('');
 });
