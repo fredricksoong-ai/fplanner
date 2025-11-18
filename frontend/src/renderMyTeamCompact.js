@@ -142,70 +142,33 @@ export function renderCompactHeader(teamData, gwNumber) {
 
 
     return `
-        <div
-            id="compact-header"
-            style="
-                position: sticky;
-                top: calc(3.5rem + env(safe-area-inset-top)); /* Keeps this box sticky just below the top app bar */
-                background: var(--bg-primary);
-                z-index: 100;
-                padding: 0.5rem 0;
-                border-bottom: 2px solid var(--border-color);
-                margin: 0;
-            "
-        >
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; padding: 0 0.75rem;">
-                <div style="flex: 1; display: grid; gap: 0.2rem; padding-left: 0;">
-                    <div style="display: flex; align-items: center; gap: 0.4rem;">
-                        <button
-                            id="change-team-btn"
-                            style="
-                                background: transparent;
-                                border: 1px solid var(--border-color);
-                                border-radius: 0.3rem;
-                                padding: 0.2rem 0.35rem;
-                                color: var(--text-secondary);
-                                cursor: pointer;
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                                transition: all 0.2s;
-                            "
-                            title="Change Team"
-                        >
-                            <i class="fas fa-exchange-alt" style="font-size: 0.7rem;"></i>
-                        </button>
-                        <div style="font-size: 0.95rem; font-weight: 700; color: var(--text-primary); line-height: 1.2; flex: 1;">
-                            <span style="background: red; color: white; padding: 0.2rem; font-size: 0.6rem; margin-right: 0.3rem;">DEPLOY-TEST</span>${escapeHtml(team.name)}
-                        </div>
-                    </div>
-
-                    <div style="font-size: 0.7rem; color: var(--text-secondary);">
-                        <span style="color: ${rankColor};">${overallRank}</span> • ${totalPoints.toLocaleString()} pts
-                    </div>
-
-                    <div style="font-size: 0.7rem; color: var(--text-secondary);">
-                        Transfers: ${freeTransfers} FT${transferCost > 0 ? ` (-${transferCost} pts)` : ''}  •  Squad: £${squadValue}m + £${bank}m
-                    </div>
-                </div>
-
-                <div style="display: grid; gap: 0.3rem; flex-shrink: 0;">
+        <div style="padding: 0.5rem 0; background: var(--bg-secondary); margin-bottom: 0.25rem;">
+            <div style="padding: 0 0.75rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem;">
+                    <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--text-primary); margin: 0;">
+                        ${escapeHtml(team.name)}
+                    </h4>
                     <div style="
-                        background: var(--bg-secondary);
+                        background: var(--bg-primary);
                         border: 1px solid var(--border-color);
                         border-radius: 6px;
-                        padding: 0.5rem 0.75rem;
+                        padding: 0.3rem 0.6rem;
                         text-align: center;
-                        min-width: 90px;
                     ">
-                        <div style="font-size: 1.75rem; font-weight: 800; color: ${gwTextColor}; line-height: 1;">
+                        <div style="font-size: 1.2rem; font-weight: 800; color: ${gwTextColor}; line-height: 1;">
                             ${gwPoints}
                         </div>
-                        <div style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.2rem; font-weight: 600;">
+                        <div style="font-size: 0.6rem; color: var(--text-secondary); margin-top: 0.1rem; font-weight: 600;">
                             GW ${gwNumber}
                         </div>
-                        ${leagueInfo}
                     </div>
+                </div>
+                <div style="font-size: 0.65rem; color: var(--text-secondary); display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                    <span style="color: ${rankColor};">Rank: ${overallRank}</span>
+                    <span>•</span>
+                    <span>Pts: ${totalPoints.toLocaleString()}</span>
+                    <span>•</span>
+                    <span>Value: £${squadValue}m</span>
                 </div>
             </div>
         </div>
