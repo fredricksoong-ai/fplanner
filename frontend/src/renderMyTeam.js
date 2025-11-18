@@ -1133,13 +1133,13 @@ function renderMobileFixturesTab() {
                         display: grid;
                         grid-template-columns: 0.8fr 2fr 1fr 2fr 0.6fr;
                         gap: 0.25rem;
-                        padding: 0.4rem 0.75rem;
+                        padding: 0.3rem 0.75rem;
                         background: ${isStarted && !isFinished ? 'rgba(239, 68, 68, 0.05)' : 'transparent'};
                         border-bottom: 1px solid var(--border-color);
-                        font-size: 0.75rem;
+                        font-size: 0.7rem;
                         align-items: center;
                     ">
-                        <div style="color: var(--text-secondary); font-size: 0.65rem;">${timeStr.split(',')[1] || timeStr}</div>
+                        <div style="color: var(--text-secondary); font-size: 0.6rem; white-space: nowrap;">${timeStr.split(',')[1] || timeStr}</div>
                         <div style="text-align: right; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                             ${homeTeam?.short_name || 'TBD'}
                         </div>
@@ -1162,10 +1162,10 @@ function renderMobileFixturesTab() {
                     display: grid;
                     grid-template-columns: 0.8fr 2fr 1fr 2fr 0.6fr;
                     gap: 0.25rem;
-                    padding: 0.4rem 0.75rem;
+                    padding: 0.3rem 0.75rem;
                     background: var(--primary-color);
                     color: white;
-                    font-size: 0.7rem;
+                    font-size: 0.65rem;
                     font-weight: 700;
                     position: sticky;
                     top: calc(3.5rem + env(safe-area-inset-top));

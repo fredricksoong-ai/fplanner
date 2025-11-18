@@ -15,7 +15,7 @@ export function createMobileNav(currentPage, onNavigate) {
         { id: 'my-team', label: 'Team', icon: 'fa-users' },
         { id: 'refresh', label: 'Refresh', icon: 'fa-sync-alt', action: 'refresh', isGreen: true },
         { id: 'fixtures', label: 'Fixtures', icon: 'fa-calendar-alt', action: 'fixtures' },
-        { id: 'stats', label: 'Stats', icon: 'fa-chart-bar', disabled: true }
+        { id: 'stats', label: 'Stats', icon: 'fa-chart-bar', action: 'stats' }
     ];
 
     const navHtml = `
@@ -98,7 +98,7 @@ export function initMobileNav(navigateCallback) {
         item.addEventListener('click', (e) => {
             e.preventDefault();
 
-            // Handle action buttons (League, Fixtures, Refresh)
+            // Handle action buttons (League, Fixtures, Stats, Refresh)
             const action = item.dataset.action;
             if (action === 'league') {
                 console.log('🏆 League button clicked - navigating to leagues tab');
@@ -110,6 +110,12 @@ export function initMobileNav(navigateCallback) {
                 console.log('📅 Fixtures button clicked - navigating to fixtures tab');
                 // Navigate to fixtures tab in my-team page
                 navigateCallback('my-team', 'fixtures');
+                return;
+            }
+            if (action === 'stats') {
+                console.log('📊 Stats button clicked - navigating to data analysis');
+                // Navigate to data analysis page
+                navigateCallback('data-analysis');
                 return;
             }
             if (action === 'refresh') {
