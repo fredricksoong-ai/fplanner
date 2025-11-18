@@ -23,7 +23,8 @@ import {
 
 import {
     getGWOpponent,
-    getFixtures
+    getFixtures,
+    getMatchStatus
 } from './fixtures.js';
 
 import {
@@ -230,9 +231,13 @@ export function renderCompactPlayerRow(pick, player, gwNumber) {
     const risks = analyzePlayerRisks(player);
     const riskTooltip = renderRiskTooltip(risks);
 
+    // Get match status display
+    const matchStatus = getMatchStatus(player.team, gwNumber, player);
+    const isLive = matchStatus === 'LIVE';
+    const isFinished = matchStatus.startsWith('FT');
+
     // Get GW-specific stats
     const hasGWStats = player.github_gw && player.github_gw.gw === gwNumber;
-    const gwMinutes = hasGWStats ? player.github_gw.minutes : '—';
     const gwPoints = hasGWStats ? player.github_gw.total_points : (player.event_points || 0);
     const displayPoints = isCaptain ? (gwPoints * 2) : gwPoints;
 
@@ -280,7 +285,7 @@ export function renderCompactPlayerRow(pick, player, gwNumber) {
                     ${gwOpp.name} (${gwOpp.isHome ? 'H' : 'A'})
                 </span>
             </div>
-            <div style="text-align: center; font-size: 0.65rem; color: var(--text-secondary);">${gwMinutes}</div>
+            <div style="text-align: center; font-size: 0.6rem; font-weight: ${isLive || isFinished ? '700' : '400'}; color: ${isLive ? '#ef4444' : isFinished ? '#22c55e' : 'var(--text-secondary)'};">${matchStatus}</div>
             <div style="text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 700; padding: 0.05rem; border-radius: 0.2rem; font-size: 0.7rem;">${displayPoints}</div>
             <div style="text-align: center; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 600; padding: 0.05rem; border-radius: 0.2rem; font-size: 0.65rem;">${formatDecimal(player.form)}</div>
             <div style="text-align: center; font-size: 0.65rem; color: var(--text-secondary);">${ownership.toFixed(1)}%</div>
@@ -314,7 +319,7 @@ export function renderCompactTeamList(players, gwNumber) {
         ">
             <div>Player</div>
             <div style="text-align: center;">Opp</div>
-            <div style="text-align: center;">Mins</div>
+            <div style="text-align: center;">Status</div>
             <div style="text-align: center;">Pts</div>
             <div style="text-align: center;">Form</div>
             <div style="text-align: center;">Own%</div>
