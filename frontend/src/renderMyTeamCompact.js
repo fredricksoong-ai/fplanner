@@ -234,7 +234,7 @@ export function renderCompactPlayerRow(pick, player, gwNumber) {
     const isBench = pick.position > 11;
 
     let captainBadge = '';
-    if (isCaptain) captainBadge = ' <span style="color: var(--primary-color); font-weight: 700; font-size: 0.7rem;">(C)</span>';
+    if (isCaptain) captainBadge = ' <span style="color: var(--text-secondary); font-weight: 700; font-size: 0.7rem;">(VC)</span>';
     if (isVice) captainBadge = ' <span style="color: var(--text-secondary); font-weight: 700; font-size: 0.7rem;">(VC)</span>';
 
     const gwOpp = getGWOpponent(player.team, gwNumber);
@@ -299,9 +299,9 @@ export function renderCompactPlayerRow(pick, player, gwNumber) {
     // Background color - captain/vice get purple highlights, no bench highlight
     let bgColor = 'var(--bg-primary)';
     if (isCaptain && !isBench) {
-        bgColor = 'rgba(147, 51, 234, 0.12)'; // Purple for captain
+        bgColor = 'rgb(85, 107, 47)';
     } else if (isVice && !isBench) {
-        bgColor = 'rgba(147, 51, 234, 0.06)'; // Lighter purple for vice
+        bgColor = 'rgb(85, 107, 47)';
     }
 
     // Add thick border after row 11 (last starter)
@@ -315,19 +315,21 @@ export function renderCompactPlayerRow(pick, player, gwNumber) {
             background: ${bgColor};
             border-bottom: ${borderStyle};
             cursor: pointer;
+            pointer; padding-bottom: 3px !important; 
+            padding-top: 3px !important;
         ">
             <div style="font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                 ${escapeHtml(player.web_name)}${captainBadge}
                 ${riskTooltip ? `${riskTooltip}` : ''}
             </div>
             <div style="text-align: center;">
-                <span class="${getDifficultyClass(gwOpp.difficulty)}" style="padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.62rem; min-width: 3rem; display: inline-block; text-align: center;">
+                <span class="${getDifficultyClass(gwOpp.difficulty)}" style="padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.6rem; min-width: 3rem; display: inline-block; text-align: center;">
                     ${gwOpp.name} (${gwOpp.isHome ? 'H' : 'A'})
                 </span>
             </div>
-            <div style="text-align: center; font-size: 0.6rem; font-weight: ${statusWeight}; color: ${statusColor}; background: ${statusBgColor}; padding: 0.2rem; border-radius: 0.2rem;">${matchStatus}</div>
-            <div style="text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 700; padding: 0.05rem; border-radius: 0.2rem; font-size: 0.7rem;">${displayPoints}</div>
-            <div style="text-align: center; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 600; padding: 0.05rem; border-radius: 0.2rem; font-size: 0.65rem;">${formatDecimal(player.form)}</div>
+            <div style="text-align: center; font-size: 0.6rem; font-weight: ${statusWeight}; color: ${statusColor}; background: ${statusBgColor}; padding: 0.08rem 0.25rem; border-radius: 0.25rem;">${matchStatus}</div>
+            <div style="text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 700; padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-size: 0.6rem;">${displayPoints}</div>
+            <div style="text-align: center; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 600; padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-size: 0.6rem;">${formatDecimal(player.form)}</div>
         </div>
     `;
 }
@@ -341,7 +343,7 @@ export function renderCompactTeamList(players, gwNumber) {
 
     // Compact header row (scrolls with content)
     const headerRow = `
-        <div class="mobile-table-header mobile-table-team" style="text-transform: capitalize;">
+        <div class="mobile-table-header mobile-table-team" style="text-transform: capitalize; padding-bottom: 2px !important; padding-top: 2px !important;">
             <div>Player</div>
             <div style="text-align: center;">Opp</div>
             <div style="text-align: center;">Status</div>
