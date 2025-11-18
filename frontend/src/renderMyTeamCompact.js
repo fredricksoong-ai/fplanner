@@ -18,7 +18,8 @@ import {
     getDifficultyClass,
     getTeamShortName,
     calculatePPM,
-    escapeHtml
+    escapeHtml,
+    getCurrentGW
 } from './utils.js';
 
 import {
@@ -142,18 +143,72 @@ export function renderCompactHeader(teamData, gwNumber) {
 
 
     return `
-        <div style="padding: 0.5rem 0; background: var(--bg-secondary); margin-bottom: 0.25rem;">
-            <div style="padding: 0 0.75rem;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem;">
-                    <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--text-primary); margin: 0;">
-                        ${escapeHtml(team.name)}
-                    </h4>
+        <div
+            id="compact-header"
+            style="
+                position: sticky;
+                top: calc(3.5rem + env(safe-area-inset-top)); /* Keeps this box sticky just below the top app bar */
+                background: var(--bg-primary);
+                z-index: 100;
+                padding: 0.5rem 0;
+                border-bottom: 2px solid var(--border-color);
+                margin: 0;
+            "
+        >
+            <div style="display: flex; justify-content: space-between; align-items: stretch; gap: 0.5rem;">
+                <div style="flex: 1; display: grid; gap: 0.2rem;">
+                    <div style="display: flex; align-items: center; gap: 0.4rem;">
+                        <button
+                            id="change-team-btn"
+                            style="
+                                background: transparent;
+                                border: 1px solid var(--border-color);
+                                border-radius: 0.3rem;
+                                padding: 0.2rem 0.35rem;
+                                color: var(--text-secondary);
+                                cursor: pointer;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                transition: all 0.2s;
+                            "
+                            title="Change Team"
+                        >
+                            <i class="fas fa-exchange-alt" style="font-size: 0.7rem;"></i>
+                        </button>
+                        <div style="font-size: 0.95rem; font-weight: 700; color: var(--text-primary); line-height: 1.2; flex: 1;">
+                            <span style="background: red; color: white; padding: 0.2rem; font-size: 0.6rem; margin-right: 0.3rem;">DEPLOY-TEST</span>${escapeHtml(team.name)}
+                        </div>
+                    </div>
+
+                    <div style="font-size: 0.7rem; color: var(--text-secondary);">
+                        Overall Rank: <span style="color: ${rankColor};">${overallRank}</span>
+                    </div>
+
+                    <div style="font-size: 0.7rem; color: var(--text-secondary);">
+                        Overall Points: ${totalPoints.toLocaleString()}
+                    </div>
+
+                    <div style="font-size: 0.7rem; color: var(--text-secondary);">
+                        Squad Value: £${squadValue}m + £${bank}m
+                    </div>
+
+                    <div style="font-size: 0.7rem; color: var(--text-secondary);">
+                        Transfers: ${freeTransfers} FT${transferCost > 0 ? ` (-${transferCost} pts)` : ''}
+                    </div>
+                </div>
+
+                <div style="display: flex; align-items: stretch;">
                     <div style="
                         background: var(--bg-primary);
                         border: 1px solid var(--border-color);
                         border-radius: 6px;
                         padding: 0.3rem 0.6rem;
                         text-align: center;
+                        min-width: 90px;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: center;
                     ">
                         <div style="font-size: 1.2rem; font-weight: 800; color: ${gwTextColor}; line-height: 1;">
                             ${gwPoints}
@@ -265,7 +320,7 @@ export function renderCompactPlayerRow(pick, player, gwNumber) {
             display: grid;
             grid-template-columns: 2.5fr 1fr 1fr 0.8fr 0.8fr;
             gap: 0.25rem;
-            padding: 0.4rem 0.75rem;
+            padding: 0.4rem 0;
             background: ${bgColor};
             border-bottom: ${borderStyle};
             font-size: 0.75rem;
@@ -301,7 +356,7 @@ export function renderCompactTeamList(players, gwNumber) {
             display: grid;
             grid-template-columns: 2.5fr 1fr 1fr 0.8fr 0.8fr;
             gap: 0.25rem;
-            padding: 0.4rem 0.75rem;
+            padding: 0.4rem 0;
             background: var(--bg-secondary);
             color: var(--text-primary);
             font-size: 0.7rem;
@@ -429,7 +484,7 @@ export function showPlayerModal(playerId) {
     const player = getPlayerById(playerId);
     if (!player) return;
 
-    // Create modal overlay
+    // Simple modal for testing
     const modalHTML = `
         <div id="player-modal" style="
             position: fixed;
@@ -437,7 +492,7 @@ export function showPlayerModal(playerId) {
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0,0,0,0.7);
             z-index: 10000;
             display: flex;
             align-items: center;
@@ -447,49 +502,33 @@ export function showPlayerModal(playerId) {
             <div style="
                 background: var(--bg-primary);
                 border-radius: 12px;
-                max-width: 500px;
+                max-width: 400px;
                 width: 100%;
-                max-height: 80vh;
-                overflow-y: auto;
+                padding: 2rem;
                 box-shadow: 0 4px 20px rgba(0,0,0,0.3);
             ">
-                <div style="
-                    padding: 1rem;
-                    border-bottom: 1px solid var(--border-color);
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                ">
-                    <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin: 0;">
-                        ${escapeHtml(player.web_name)}
-                    </h3>
-                    <button
-                        id="close-player-modal"
-                        style="
-                            background: transparent;
-                            border: none;
-                            font-size: 1.5rem;
-                            color: var(--text-secondary);
-                            cursor: pointer;
-                            padding: 0;
-                            width: 2rem;
-                            height: 2rem;
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                        "
-                    >
-                        ×
-                    </button>
-                </div>
-                <div style="padding: 1.5rem; text-align: center;">
-                    <p style="color: var(--text-secondary); font-size: 1rem; margin: 0;">
-                        Player details coming soon!
-                    </p>
-                    <p style="color: var(--text-tertiary); font-size: 0.875rem; margin-top: 0.5rem;">
-                        This modal will show detailed player stats, fixtures, and analysis.
-                    </p>
-                </div>
+                <h2 style="margin: 0 0 1rem 0; color: var(--text-primary);">
+                    ${escapeHtml(player.web_name)}
+                </h2>
+                <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+                    Player ID: ${playerId}
+                </p>
+                <button
+                    id="close-player-modal"
+                    style="
+                        background: var(--primary-color);
+                        color: white;
+                        border: none;
+                        padding: 0.75rem 1.5rem;
+                        border-radius: 6px;
+                        cursor: pointer;
+                        width: 100%;
+                        font-size: 1rem;
+                        font-weight: 600;
+                    "
+                >
+                    Close
+                </button>
             </div>
         </div>
     `;
