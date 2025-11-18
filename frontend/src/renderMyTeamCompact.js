@@ -308,17 +308,11 @@ export function renderCompactPlayerRow(pick, player, gwNumber) {
 
     return `
         <div
-            class="player-row"
+            class="player-row mobile-table-row mobile-table-team"
             data-player-id="${player.id}"
             style="
-            display: grid;
-            grid-template-columns: 2.5fr 1fr 1fr 0.8fr 0.8fr;
-            gap: 0.25rem;
-            padding: 0.4rem 0;
             background: ${bgColor};
             border-bottom: ${borderStyle};
-            font-size: 0.75rem;
-            align-items: center;
             cursor: pointer;
         ">
             <div style="font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
@@ -346,18 +340,7 @@ export function renderCompactTeamList(players, gwNumber) {
 
     // Compact header row (scrolls with content)
     const headerRow = `
-        <div style="
-            display: grid;
-            grid-template-columns: 2.5fr 1fr 1fr 0.8fr 0.8fr;
-            gap: 0.25rem;
-            padding: 0.4rem 0;
-            background: var(--bg-secondary);
-            color: var(--text-primary);
-            font-size: 0.7rem;
-            font-weight: 700;
-            text-transform: capitalize;
-            border-top: 2px solid var(--border-color);
-        ">
+        <div class="mobile-table-header mobile-table-team" style="text-transform: capitalize;">
             <div>Player</div>
             <div style="text-align: center;">Opp</div>
             <div style="text-align: center;">Status</div>
@@ -381,7 +364,7 @@ export function renderCompactTeamList(players, gwNumber) {
     }).join('');
 
     return `
-        <div style="background: var(--bg-secondary);">
+        <div class="mobile-table">
             ${headerRow}
             ${startersHtml}
             ${benchHtml}
