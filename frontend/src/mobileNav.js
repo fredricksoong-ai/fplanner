@@ -33,8 +33,9 @@ export function createMobileNav(currentPage, onNavigate) {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
+                padding-top: 6px !important
                 padding: 0.3rem 0.5rem;
-                padding-bottom: max(0.3rem, env(safe-area-inset-bottom));
+                padding-bottom: 6px !important
                 z-index: 1000;
                 gap: 1.75rem;
                 box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
@@ -57,7 +58,7 @@ export function createMobileNav(currentPage, onNavigate) {
                         border: none;
                         padding: 0.35rem 0.4rem;
                         border-radius: 0.5rem;
-                        color: ${item.isGreen ? 'var(--bg-primary)' : (item.disabled ? 'var(--text-tertiary)' : 'var(--text-primary)')};
+                        color: var(--secondary-color);
                         cursor: ${item.disabled ? 'not-allowed' : 'pointer'};
                         transition: all 0.2s;
                         flex: 1;
