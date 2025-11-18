@@ -155,8 +155,8 @@ export function renderCompactHeader(teamData, gwNumber) {
                 margin: 0;
             "
         >
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; padding: 0 0.75rem;">
-                <div style="flex: 1; display: grid; gap: 0.2rem; padding-left: 0;">
+            <div style="display: flex; justify-content: space-between; align-items: stretch; gap: 0.5rem;">
+                <div style="flex: 1; display: grid; gap: 0.2rem; padding-left: 0.75rem;">
                     <div style="display: flex; align-items: center; gap: 0.4rem;">
                         <button
                             id="change-team-btn"
@@ -190,14 +190,17 @@ export function renderCompactHeader(teamData, gwNumber) {
                     </div>
                 </div>
 
-                <div style="display: grid; gap: 0.3rem; flex-shrink: 0;">
+                <div style="display: flex; align-items: stretch; padding-right: 0.75rem;">
                     <div style="
                         background: var(--bg-secondary);
                         border: 1px solid var(--border-color);
                         border-radius: 6px;
-                        padding: 0.5rem 0.75rem;
+                        padding: 0.6rem 0.75rem;
                         text-align: center;
                         min-width: 90px;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: center;
                     ">
                         <div style="font-size: 1.75rem; font-weight: 800; color: ${gwTextColor}; line-height: 1;">
                             ${gwPoints}
