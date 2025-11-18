@@ -656,14 +656,15 @@ function renderMobileLeaguesTab(teamData) {
     const html = `
         <div>
             <!-- League Selector -->
-            <div style="margin-bottom: 0.75rem; padding: 0.75rem 0.75rem 0 0.75rem;">
-                <label style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-bottom: 0.25rem;">
+            <div style="margin-bottom: 0.75rem; padding: 0.75rem 0 0 0;">
+                <label style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-bottom: 0.25rem; padding: 0 0.75rem;">
                     Select League
                 </label>
                 <select
                     id="mobile-leagues-dropdown"
                     style="
-                        width: 100%;
+                        width: calc(100% - 1.5rem);
+                        margin: 0 0.75rem;
                         padding: 0.5rem;
                         font-size: 0.85rem;
                         background: var(--bg-secondary);
