@@ -202,18 +202,19 @@ export function renderCompactHeader(teamData, gwNumber) {
                     <div style="
                         background: var(--bg-secondary);
                         border: 1px solid var(--border-color);
-                        border-radius: 6px;
-                        padding: 0.5rem 0.75rem;
+                        border-radius: 0.5rem;
+                        padding: 0.5rem 0.6rem;
                         text-align: center;
-                        min-width: 90px;
+                        min-width: 85px;
                         display: flex;
                         flex-direction: column;
                         justify-content: center;
+                        box-shadow: 0 1px 3px var(--shadow);
                     ">
-                        <div style="font-size: 1.75rem; font-weight: 800; color: ${gwTextColor}; line-height: 1;">
+                        <div style="font-size: 1.6rem; font-weight: 800; color: ${gwTextColor}; line-height: 1;">
                             ${gwPoints}
                         </div>
-                        <div style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.2rem; font-weight: 600;">
+                        <div style="font-size: 0.65rem; color: var(--text-secondary); margin-top: 0.15rem; font-weight: 600;">
                             GW ${gwNumber}
                         </div>
                         ${leagueInfo}
