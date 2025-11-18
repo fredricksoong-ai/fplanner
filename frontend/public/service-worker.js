@@ -3,8 +3,8 @@
  * Provides offline support and smart caching for PWA
  */
 
-const CACHE_NAME = 'fplanner-v4';
-const RUNTIME_CACHE = 'fplanner-runtime-v4';
+const CACHE_NAME = 'fplanner-v5';
+const RUNTIME_CACHE = 'fplanner-runtime-v5';
 
 // Assets to cache immediately on install
 const PRECACHE_ASSETS = [
