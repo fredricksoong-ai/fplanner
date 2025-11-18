@@ -53,7 +53,7 @@ export function createMobileNav(currentPage, onNavigate) {
                         align-items: center;
                         justify-content: center;
                         gap: 0.2rem;
-                        background: ${item.isGreen ? 'var(--secondary-color)' : (currentPage === item.id ? 'var(--bg-tertiary)' : 'transparent')};
+                        background: ${(currentPage === item.id ? 'var(--bg-tertiary)' : 'transparent')};
                         border: none;
                         padding: 0.35rem 0.4rem;
                         border-radius: 0.5rem;
