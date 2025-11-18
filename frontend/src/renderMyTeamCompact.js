@@ -185,26 +185,23 @@ export function renderCompactHeader(teamData, gwNumber) {
                     </div>
 
                     <div style="font-size: 0.7rem; color: var(--text-secondary);">
-                        Transfers: ${freeTransfers} FT${transferCost > 0 ? ` (-${transferCost} pts)` : ''}
-                    </div>
-
-                    <div style="font-size: 0.7rem; color: var(--text-secondary);">
-                        Squad Value: £${squadValue}m + £${bank}m bank
+                        Transfers: ${freeTransfers} FT${transferCost > 0 ? ` (-${transferCost} pts)` : ''}  •  Squad: £${squadValue}m + £${bank}m
                     </div>
                 </div>
 
-                <div style="display: grid; gap: 0.3rem; flex: 1; max-width: 180px;">
+                <div style="display: grid; gap: 0.3rem; flex-shrink: 0;">
                     <div style="
                         background: var(--bg-secondary);
                         border: 1px solid var(--border-color);
                         border-radius: 6px;
-                        padding: 0.75rem 1rem;
+                        padding: 0.5rem 0.75rem;
                         text-align: center;
+                        min-width: 90px;
                     ">
-                        <div style="font-size: 2.25rem; font-weight: 800; color: ${gwTextColor}; line-height: 1;">
+                        <div style="font-size: 1.75rem; font-weight: 800; color: ${gwTextColor}; line-height: 1;">
                             ${gwPoints}
                         </div>
-                        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem; font-weight: 600;">
+                        <div style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.2rem; font-weight: 600;">
                             GW ${gwNumber}
                         </div>
                         ${leagueInfo}
@@ -231,10 +228,39 @@ export function renderCompactPlayerRow(pick, player, gwNumber) {
     const risks = analyzePlayerRisks(player);
     const riskTooltip = renderRiskTooltip(risks);
 
-    // Get match status display
+    // Get match status display with color coding
     const matchStatus = getMatchStatus(player.team, gwNumber, player);
     const isLive = matchStatus === 'LIVE';
     const isFinished = matchStatus.startsWith('FT');
+
+    // Color code minutes played
+    let statusColor = 'var(--text-secondary)';
+    let statusBgColor = 'transparent';
+    let statusWeight = '400';
+
+    if (isFinished && matchStatus.includes('(')) {
+        // Extract minutes from "FT (90)" format
+        const minsMatch = matchStatus.match(/\((\d+)\)/);
+        if (minsMatch) {
+            const mins = parseInt(minsMatch[1]);
+            statusWeight = '700';
+            if (mins >= 90) {
+                statusColor = '#166534'; // Soft green
+                statusBgColor = 'rgba(34, 197, 94, 0.15)';
+            } else if (mins >= 60) {
+                statusColor = '#a16207'; // Soft yellow/orange
+                statusBgColor = 'rgba(234, 179, 8, 0.15)';
+            } else {
+                statusColor = '#991b1b'; // Soft red
+                statusBgColor = 'rgba(239, 68, 68, 0.15)';
+            }
+        } else {
+            statusColor = '#22c55e'; // FT but no minutes data
+        }
+    } else if (isLive) {
+        statusColor = '#ef4444';
+        statusWeight = '700';
+    }
 
     // Get GW-specific stats
     const hasGWStats = player.github_gw && player.github_gw.gw === gwNumber;
@@ -257,24 +283,31 @@ export function renderCompactPlayerRow(pick, player, gwNumber) {
     const netTransfers = transfersIn - transfersOut;
     const transferColor = netTransfers > 0 ? '#22c55e' : netTransfers < 0 ? '#ef4444' : 'var(--text-secondary)';
 
-    // Background color - captain/vice get purple highlights, bench gets tertiary
-    let bgColor = isBench ? 'var(--bg-tertiary)' : 'var(--bg-primary)';
+    // Background color - captain/vice get purple highlights, no bench highlight
+    let bgColor = 'var(--bg-primary)';
     if (isCaptain && !isBench) {
         bgColor = 'rgba(147, 51, 234, 0.12)'; // Purple for captain
     } else if (isVice && !isBench) {
         bgColor = 'rgba(147, 51, 234, 0.06)'; // Lighter purple for vice
     }
 
+    // Add thick border after row 11 (last starter)
+    const borderStyle = pick.position === 11 ? '3px solid var(--border-color)' : '1px solid var(--border-color)';
+
     return `
-        <div style="
+        <div
+            class="player-row"
+            data-player-id="${player.id}"
+            style="
             display: grid;
-            grid-template-columns: 2.5fr 1fr 0.7fr 0.6fr 0.6fr 0.7fr 0.6fr;
+            grid-template-columns: 2.5fr 1fr 1fr 0.8fr 0.8fr;
             gap: 0.25rem;
             padding: 0.4rem 0.75rem;
             background: ${bgColor};
-            border-bottom: 1px solid var(--border-color);
+            border-bottom: ${borderStyle};
             font-size: 0.75rem;
             align-items: center;
+            cursor: pointer;
         ">
             <div style="font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                 ${escapeHtml(player.web_name)}${captainBadge}
@@ -285,13 +318,9 @@ export function renderCompactPlayerRow(pick, player, gwNumber) {
                     ${gwOpp.name} (${gwOpp.isHome ? 'H' : 'A'})
                 </span>
             </div>
-            <div style="text-align: center; font-size: 0.6rem; font-weight: ${isLive || isFinished ? '700' : '400'}; color: ${isLive ? '#ef4444' : isFinished ? '#22c55e' : 'var(--text-secondary)'};">${matchStatus}</div>
+            <div style="text-align: center; font-size: 0.6rem; font-weight: ${statusWeight}; color: ${statusColor}; background: ${statusBgColor}; padding: 0.2rem; border-radius: 0.2rem;">${matchStatus}</div>
             <div style="text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 700; padding: 0.05rem; border-radius: 0.2rem; font-size: 0.7rem;">${displayPoints}</div>
             <div style="text-align: center; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 600; padding: 0.05rem; border-radius: 0.2rem; font-size: 0.65rem;">${formatDecimal(player.form)}</div>
-            <div style="text-align: center; font-size: 0.65rem; color: var(--text-secondary);">${ownership.toFixed(1)}%</div>
-            <div style="text-align: center; font-size: 0.65rem; font-weight: 600; color: ${transferColor};">
-                ${netTransfers > 0 ? '+' : ''}${(netTransfers / 1000).toFixed(0)}k
-            </div>
         </div>
     `;
 }
@@ -307,7 +336,7 @@ export function renderCompactTeamList(players, gwNumber) {
     const headerRow = `
         <div style="
             display: grid;
-            grid-template-columns: 2.5fr 1fr 0.7fr 0.6fr 0.6fr 0.7fr 0.6fr;
+            grid-template-columns: 2.5fr 1fr 1fr 0.8fr 0.8fr;
             gap: 0.25rem;
             padding: 0.4rem 0.75rem;
             background: var(--bg-secondary);
@@ -322,8 +351,6 @@ export function renderCompactTeamList(players, gwNumber) {
             <div style="text-align: center;">Status</div>
             <div style="text-align: center;">Pts</div>
             <div style="text-align: center;">Form</div>
-            <div style="text-align: center;">Own%</div>
-            <div style="text-align: center;">ΔT</div>
         </div>
     `;
 
@@ -429,4 +456,124 @@ export function renderMatchSchedule(players, gwNumber) {
             </details>
         </div>
     `;
+}
+
+/**
+ * Show player modal with details
+ * @param {number} playerId - Player ID
+ */
+export function showPlayerModal(playerId) {
+    const player = getPlayerById(playerId);
+    if (!player) return;
+
+    // Create modal overlay
+    const modalHTML = `
+        <div id="player-modal" style="
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        ">
+            <div style="
+                background: var(--bg-primary);
+                border-radius: 12px;
+                max-width: 500px;
+                width: 100%;
+                max-height: 80vh;
+                overflow-y: auto;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            ">
+                <div style="
+                    padding: 1rem;
+                    border-bottom: 1px solid var(--border-color);
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                ">
+                    <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin: 0;">
+                        ${escapeHtml(player.web_name)}
+                    </h3>
+                    <button
+                        id="close-player-modal"
+                        style="
+                            background: transparent;
+                            border: none;
+                            font-size: 1.5rem;
+                            color: var(--text-secondary);
+                            cursor: pointer;
+                            padding: 0;
+                            width: 2rem;
+                            height: 2rem;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                        "
+                    >
+                        ×
+                    </button>
+                </div>
+                <div style="padding: 1.5rem; text-align: center;">
+                    <p style="color: var(--text-secondary); font-size: 1rem; margin: 0;">
+                        Player details coming soon!
+                    </p>
+                    <p style="color: var(--text-tertiary); font-size: 0.875rem; margin-top: 0.5rem;">
+                        This modal will show detailed player stats, fixtures, and analysis.
+                    </p>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Remove existing modal if any
+    const existingModal = document.getElementById('player-modal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+
+    // Add modal to DOM
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+    // Add event listeners
+    document.getElementById('close-player-modal').addEventListener('click', closePlayerModal);
+    document.getElementById('player-modal').addEventListener('click', (e) => {
+        if (e.target.id === 'player-modal') {
+            closePlayerModal();
+        }
+    });
+}
+
+/**
+ * Close player modal
+ */
+export function closePlayerModal() {
+    const modal = document.getElementById('player-modal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+/**
+ * Attach click listeners to player rows
+ */
+export function attachPlayerRowListeners() {
+    const playerRows = document.querySelectorAll('.player-row');
+    playerRows.forEach(row => {
+        row.addEventListener('click', (e) => {
+            // Don't trigger if clicking on risk indicator
+            if (e.target.closest('.risk-indicator')) {
+                return;
+            }
+            const playerId = parseInt(row.dataset.playerId);
+            if (playerId) {
+                showPlayerModal(playerId);
+            }
+        });
+    });
 }
