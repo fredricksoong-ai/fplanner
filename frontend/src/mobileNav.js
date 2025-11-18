@@ -53,13 +53,11 @@ export function createMobileNav(currentPage, onNavigate) {
                         align-items: center;
                         justify-content: center;
                         gap: 0.2rem;
-                        background: ${(currentPage === item.id ? 'var(--bg-tertiary)' : 'transparent')};
+                        background: ${item.isGreen ? 'var(--secondary-color)' : (currentPage === item.id ? 'var(--bg-tertiary)' : 'transparent')};
                         border: none;
                         padding: 0.35rem 0.4rem;
                         border-radius: 0.5rem;
-                        color: ${(item.isGreen || item.action === 'refresh') 
-                            ? 'var(--secondary-color)' /* Use the green color for the text/icon */
-                            : (item.disabled ? 'var(--text-tertiary)' : 'var(--text-primary)')};                        
+                        color: ${item.isGreen ? 'var(--bg-primary)' : (item.disabled ? 'var(--text-tertiary)' : 'var(--text-primary)')};
                         cursor: ${item.disabled ? 'not-allowed' : 'pointer'};
                         transition: all 0.2s;
                         flex: 1;
@@ -70,7 +68,7 @@ export function createMobileNav(currentPage, onNavigate) {
                     <i class="fas ${item.icon}" style="font-size: 1.3rem;"></i>
                     <span style="
                         font-size: 0.7rem;
-                        font-weight: ${(currentPage === item.id || item.action === 'refresh') ? '700' : '500'};                       
+                        font-weight: ${currentPage === item.id || item.isGreen ? '700' : '500'};
                         white-space: nowrap;
                     ">${item.label}</span>
                 </button>
