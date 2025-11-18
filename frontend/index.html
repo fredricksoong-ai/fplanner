@@ -77,20 +77,6 @@
 
     <script type="module" src="/src/main.js"></script>
 
-    <!-- Mobile Debug Console (Temporary) -->
-    <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-    <script>
-        // Initialize Eruda console for debugging
-        window.addEventListener('load', function() {
-            if (typeof eruda !== 'undefined') {
-                eruda.init();
-                console.log('🔍 Eruda mobile console enabled - tap the icon in bottom-right corner');
-            } else {
-                console.log('❌ Eruda failed to load');
-            }
-        });
-    </script>
-
     <!-- Service Worker Registration -->
     <script>
         // Register service worker for PWA support
