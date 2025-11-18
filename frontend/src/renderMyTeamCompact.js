@@ -480,6 +480,39 @@ export function showPlayerModal(playerId) {
     // Get opponent for current GW
     const gwOpp = getGWOpponent(player.team, currentGW);
 
+    // Get next 5 fixtures
+    const allFixtures = getFixtures();
+    const upcomingFixtures = allFixtures
+        .filter(f => f.event >= currentGW && f.event <= currentGW + 4)
+        .filter(f => f.team_h === player.team || f.team_a === player.team)
+        .sort((a, b) => a.event - b.event)
+        .slice(0, 5);
+
+    const fixturesHTML = upcomingFixtures.map(fixture => {
+        const isHome = fixture.team_h === player.team;
+        const opponentId = isHome ? fixture.team_a : fixture.team_h;
+        const opponentName = getTeamShortName(opponentId);
+        const difficulty = isHome ? fixture.team_h_difficulty : fixture.team_a_difficulty;
+
+        return `
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <div style="font-size: 0.7rem; color: var(--text-secondary); min-width: 2rem;">
+                    GW${fixture.event}
+                </div>
+                <span class="${getDifficultyClass(difficulty)}" style="
+                    padding: 0.25rem 0.5rem;
+                    border-radius: 0.25rem;
+                    font-weight: 600;
+                    font-size: 0.75rem;
+                    flex: 1;
+                    text-align: center;
+                ">
+                    ${opponentName} (${isHome ? 'H' : 'A'})
+                </span>
+            </div>
+        `;
+    }).join('');
+
     // Enhanced modal with player details
     const modalHTML = `
         <div id="player-modal" style="
@@ -618,7 +651,7 @@ export function showPlayerModal(playerId) {
                         </div>
                     </div>
 
-                    <!-- Next Opponent -->
+                    <!-- Upcoming Fixtures -->
                     <div style="
                         background: var(--bg-secondary);
                         border: 1px solid var(--border-color);
@@ -626,23 +659,12 @@ export function showPlayerModal(playerId) {
                         padding: 0.75rem;
                         margin-bottom: 1rem;
                     ">
-                        <div style="font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 0.3rem;">
-                            GW ${currentGW} Opponent
+                        <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem;">
+                            Next 5 Fixtures
                         </div>
-                        <div style="display: flex; align-items: center; gap: 0.5rem;">
-                            <span class="${getDifficultyClass(gwOpp.difficulty)}" style="
-                                padding: 0.3rem 0.6rem;
-                                border-radius: 0.25rem;
-                                font-weight: 700;
-                                font-size: 0.85rem;
-                            ">
-                                ${gwOpp.name} (${gwOpp.isHome ? 'H' : 'A'})
-                            </span>
+                        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                            ${fixturesHTML}
                         </div>
-                    </div>
-
-                    <div style="text-align: center; color: var(--text-secondary); padding: 1rem; font-size: 0.875rem;">
-                        More details coming soon...
                     </div>
                 </div>
             </div>
