@@ -153,8 +153,6 @@ export function renderCompactHeader(teamData, gwNumber) {
                 padding: 0.5rem 0;
                 border-bottom: 2px solid var(--border-color);
                 margin: 0;
-                border-left: 3px solid red;
-                border-right: 3px solid red;
             "
         >
             <div style="display: flex; justify-content: space-between; align-items: stretch; gap: 0.5rem;">
