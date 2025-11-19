@@ -142,12 +142,17 @@ export function renderInsightBannerError(message, contextId) {
 /**
  * Render a category's insights as bullet points
  * @param {Array<string>} insights - Array of insight strings
+ * @param {boolean} isMobile - Whether viewing on mobile device
  * @returns {string} HTML string
  */
-function renderCategoryInsights(insights) {
+function renderCategoryInsights(insights, isMobile = false) {
     if (!insights || insights.length === 0) {
-        return '<div style="color: var(--text-secondary); font-style: italic;">No insights available</div>';
+        return `<div style="color: var(--text-secondary); font-style: italic; font-size: ${isMobile ? '0.8rem' : '1rem'};">No insights available</div>`;
     }
+
+    const fontSize = isMobile ? '0.8rem' : '1rem';
+    const marginBottom = isMobile ? '0.5rem' : '0.75rem';
+    const paddingLeft = isMobile ? '1.25rem' : '1.5rem';
 
     return `
         <ul style="
@@ -157,11 +162,12 @@ function renderCategoryInsights(insights) {
         ">
             ${insights.map(insight => `
                 <li style="
-                    margin-bottom: 0.75rem;
-                    padding-left: 1.5rem;
+                    margin-bottom: ${marginBottom};
+                    padding-left: ${paddingLeft};
                     position: relative;
                     line-height: 1.6;
                     color: var(--text-primary);
+                    font-size: ${fontSize};
                 ">
                     <span style="
                         position: absolute;
@@ -180,9 +186,10 @@ function renderCategoryInsights(insights) {
  * Render AI insights banner with tabbed categories
  * @param {Object} insights - Insights data from API
  * @param {string} contextId - Unique context ID for refresh functionality
+ * @param {boolean} isMobile - Whether viewing on mobile device
  * @returns {string} HTML string
  */
-export function renderInsightBanner(insights, contextId) {
+export function renderInsightBanner(insights, contextId, isMobile = false) {
     // Handle error state
     if (insights.error || !insights.categories) {
         const message = insights.message || 'Unable to load AI insights';
@@ -193,22 +200,31 @@ export function renderInsightBanner(insights, contextId) {
 
     const categories = ['Overview', 'Hidden Gems', 'Differentials', 'Transfer Targets', 'Team Analysis'];
 
+    // Mobile-specific sizing
+    const bannerPadding = isMobile ? '0.75rem' : '1.5rem';
+    const bannerMargin = isMobile ? '1rem' : '2rem';
+    const headerFontSize = isMobile ? '0.875rem' : '1rem';
+    const tabPadding = isMobile ? '0.4rem 0.6rem' : '0.5rem 1rem';
+    const tabFontSize = isMobile ? '0.7rem' : '0.75rem';
+    const contentPadding = isMobile ? '0.75rem' : '1rem';
+    const footerFontSize = isMobile ? '0.65rem' : '0.75rem';
+
     return `
         <div class="ai-insights-banner" id="ai-insights-${contextId}" style="
             background: var(--bg-primary);
             border: 2px solid var(--accent-color);
             border-radius: 12px;
-            padding: 1.5rem;
-            margin-bottom: 2rem;
+            padding: ${bannerPadding};
+            margin-bottom: ${bannerMargin};
             box-shadow: 0 4px 12px var(--shadow);
         ">
             <!-- Header -->
-            <div style="margin-bottom: 1rem;">
+            <div style="margin-bottom: ${isMobile ? '0.75rem' : '1rem'};">
                 <h3 style="
                     color: var(--accent-color);
                     font-weight: 700;
-                    font-size: 1rem;
-                    margin: 0 0 1rem 0;
+                    font-size: ${headerFontSize};
+                    margin: 0 0 ${isMobile ? '0.75rem' : '1rem'} 0;
                 ">
                     🤖 AI Insights
                 </h3>
@@ -218,7 +234,7 @@ export function renderInsightBanner(insights, contextId) {
                     display: flex;
                     gap: 0.5rem;
                     flex-wrap: wrap;
-                    margin-bottom: 1rem;
+                    margin-bottom: ${isMobile ? '0.75rem' : '1rem'};
                 ">
                     ${categories.map((category, index) => `
                         <button
@@ -227,13 +243,13 @@ export function renderInsightBanner(insights, contextId) {
                             data-context="${contextId}"
                             data-is-active="${index === 0}"
                             style="
-                                padding: 0.5rem 1rem;
+                                padding: ${tabPadding};
                                 background: ${index === 0 ? 'var(--accent-color)' : 'var(--bg-secondary)'};
                                 color: ${index === 0 ? 'white' : 'var(--text-secondary)'};
                                 border: 1px solid ${index === 0 ? 'var(--accent-color)' : 'var(--border-color)'};
                                 border-radius: 6px;
                                 cursor: pointer;
-                                font-size: 0.75rem;
+                                font-size: ${tabFontSize};
                                 font-weight: 600;
                                 transition: all 0.2s;
                                 white-space: nowrap;
@@ -247,8 +263,8 @@ export function renderInsightBanner(insights, contextId) {
 
             <!-- Tab Content -->
             <div class="ai-insights-content" style="
-                min-height: 200px;
-                padding: 1rem;
+                min-height: ${isMobile ? '150px' : '200px'};
+                padding: ${contentPadding};
                 background: var(--bg-secondary);
                 border-radius: 8px;
             ">
@@ -258,7 +274,7 @@ export function renderInsightBanner(insights, contextId) {
                         data-category="${category}"
                         style="display: ${index === 0 ? 'block' : 'none'};"
                     >
-                        ${renderCategoryInsights(insights.categories[category])}
+                        ${renderCategoryInsights(insights.categories[category], isMobile)}
                     </div>
                 `).join('')}
             </div>
@@ -266,10 +282,10 @@ export function renderInsightBanner(insights, contextId) {
             <!-- Footer -->
             <div style="
                 text-align: center;
-                font-size: 0.75rem;
+                font-size: ${footerFontSize};
                 color: var(--text-secondary);
-                margin-top: 1rem;
-                padding-top: 1rem;
+                margin-top: ${isMobile ? '0.75rem' : '1rem'};
+                padding-top: ${isMobile ? '0.75rem' : '1rem'};
                 border-top: 1px solid var(--border-color);
             ">
                 Generated: ${timestamp} • Refreshes at 5am & 5pm UTC •
@@ -359,9 +375,10 @@ export function attachInsightBannerListeners(contextId, onRetry) {
  * Insights automatically refresh based on era schedule (5am & 5pm UTC)
  * @param {Object} context - Context for AI insights
  * @param {string} containerId - ID of container element to render into
+ * @param {boolean} isMobile - Whether viewing on mobile device
  * @returns {Promise<void>}
  */
-export async function loadAndRenderInsights(context, containerId) {
+export async function loadAndRenderInsights(context, containerId, isMobile = false) {
     const container = document.getElementById(containerId);
     if (!container) {
         console.error(`Container ${containerId} not found`);
@@ -378,7 +395,7 @@ export async function loadAndRenderInsights(context, containerId) {
         const insights = await aiInsights.getInsights(context);
 
         // Render banner
-        container.innerHTML = renderInsightBanner(insights, contextId);
+        container.innerHTML = renderInsightBanner(insights, contextId, isMobile);
 
         // Attach tab switching listeners
         attachInsightBannerListeners(contextId);
@@ -392,7 +409,7 @@ export async function loadAndRenderInsights(context, containerId) {
 
         // Attach retry listener for error state only
         attachInsightBannerListeners(contextId, () => {
-            loadAndRenderInsights(context, containerId);
+            loadAndRenderInsights(context, containerId, isMobile);
         });
     }
 }

@@ -54,11 +54,11 @@ export function createMobileNav(currentPage, onNavigate) {
                         align-items: center;
                         justify-content: center;
                         gap: 0.2rem;
-                        background: ${item.isGreen ? 'var(--secondary-color)' : (currentPage === item.id ? 'var(--bg-tertiary)' : 'transparent')};
+                        background: ${item.isGreen ? 'transparent' : (currentPage === item.id ? 'var(--bg-tertiary)' : 'transparent')};
                         border: none;
                         padding: 0.35rem 0.4rem;
                         border-radius: 0.5rem;
-                        color: ${item.isGreen ? 'var(--bg-primary)' : (item.disabled ? 'var(--text-tertiary)' : 'var(--text-primary)')};
+                        color: ${item.isGreen ? '#00ff88' : (item.disabled ? 'var(--text-tertiary)' : 'var(--text-primary)')};
                         cursor: ${item.disabled ? 'not-allowed' : 'pointer'};
                         transition: all 0.2s;
                         flex: 1;
@@ -66,11 +66,12 @@ export function createMobileNav(currentPage, onNavigate) {
                         opacity: ${item.disabled ? '0.5' : '1'};
                     "
                 >
-                    <i class="fas ${item.icon}" style="font-size: 1.3rem;"></i>
+                    <i class="fas ${item.icon}" style="font-size: 1.3rem; color: ${item.isGreen ? '#00ff88' : 'inherit'};"></i>
                     <span style="
                         font-size: 0.7rem;
                         font-weight: ${currentPage === item.id || item.isGreen ? '700' : '500'};
                         white-space: nowrap;
+                        color: ${item.isGreen ? '#00ff88' : 'inherit'};
                     ">${item.label}</span>
                 </button>
             `;
@@ -167,7 +168,7 @@ export function initMobileNav(navigateCallback) {
                 const page = item.dataset.page;
                 const currentPage = getCurrentPage();
                 const isRefresh = item.dataset.action === 'refresh';
-                item.style.background = isRefresh ? 'var(--secondary-color)' : (currentPage === page ? 'var(--bg-tertiary)' : 'transparent');
+                item.style.background = isRefresh ? 'transparent' : (currentPage === page ? 'var(--bg-tertiary)' : 'transparent');
             }
         });
     });
@@ -193,6 +194,8 @@ export function updateMobileNav(activePage, subTab = 'overview') {
             isActive = true;
         } else if (action === 'fixtures' && activePage === 'my-team' && subTab === 'fixtures') {
             isActive = true;
+        } else if (action === 'stats' && activePage === 'data-analysis') {
+            isActive = true;
         } else if (page === activePage && subTab === 'overview') {
             isActive = true;
         } else {
@@ -201,10 +204,21 @@ export function updateMobileNav(activePage, subTab = 'overview') {
 
         const isRefresh = action === 'refresh';
 
-        item.style.background = isRefresh ? 'var(--secondary-color)' : (isActive ? 'var(--bg-tertiary)' : 'transparent');
+        item.style.background = isRefresh ? 'transparent' : (isActive ? 'var(--bg-tertiary)' : 'transparent');
         const label = item.querySelector('span');
         if (label) {
             label.style.fontWeight = isActive || isRefresh ? '700' : '500';
+            if (isRefresh) {
+                label.style.color = '#00ff88';
+            }
+        }
+
+        // Set icon color for refresh button
+        if (isRefresh) {
+            const icon = item.querySelector('i');
+            if (icon) {
+                icon.style.color = '#00ff88';
+            }
         }
     });
 }

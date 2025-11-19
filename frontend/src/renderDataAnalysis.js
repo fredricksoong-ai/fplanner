@@ -95,9 +95,9 @@ export function renderDataAnalysis(subTab = 'overview', position = 'all') {
 
     const tabHTML = `
         <div style="margin-bottom: ${isMobile ? '1rem' : '2rem'};">
-            <h1 style="font-size: ${headerSize}; font-weight: 700; color: var(--primary-color); margin-bottom: ${headerMargin};">
+            ${!isMobile ? `<h1 style="font-size: ${headerSize}; font-weight: 700; color: var(--primary-color); margin-bottom: ${headerMargin};">
                 <i class="fas fa-chart-bar"></i> Data Analysis
-            </h1>
+            </h1>` : ''}
 
             <!-- Main Tabs -->
             <div style="display: flex; gap: 0.5rem; border-bottom: 2px solid var(--border-color); margin-bottom: 1rem; overflow-x: auto; flex-wrap: nowrap;">
@@ -198,7 +198,7 @@ export function renderDataAnalysis(subTab = 'overview', position = 'all') {
                 </button>
             </div>
 
-            <!-- Position Filter -->
+            ${!isMobile ? `<!-- Position Filter -->
             <div style="display: flex; gap: 0.5rem; margin-bottom: ${isMobile ? '1rem' : '2rem'}; flex-wrap: wrap;">
                 ${['all', 'GKP', 'DEF', 'MID', 'FWD'].map(pos => `
                     <button
@@ -220,7 +220,7 @@ export function renderDataAnalysis(subTab = 'overview', position = 'all') {
                         ${pos === 'all' ? 'All Positions' : pos}
                     </button>
                 `).join('')}
-            </div>
+            </div>` : ''}
         </div>
     `;
 
@@ -1401,5 +1401,5 @@ async function loadAIInsightsForTab(tab, position) {
     };
 
     // Load and render insights
-    await loadAndRenderInsights(context, 'ai-insights-container');
+    await loadAndRenderInsights(context, 'ai-insights-container', isMobile);
 }
