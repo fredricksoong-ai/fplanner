@@ -4,7 +4,8 @@
 // ============================================================================
 
 import { currentGW } from '../data.js';
-import { isMobileDevice, getHeatmapStyle } from '../utils.js';
+import { getHeatmapStyle } from '../utils.js';
+import { isMobileDevice } from '../renderMyTeamMobile.js';
 import {
     getTableConfig,
     getFixtureHeaders,
