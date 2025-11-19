@@ -3,10 +3,50 @@
 // Handles league standings rendering and team comparison
 // ============================================================================
 
-import { loadLeagueStandings, loadMyTeam } from '../data.js';
+import { loadLeagueStandings, loadMyTeam, getPlayerById } from '../data.js';
 import { escapeHtml } from '../utils.js';
 import { renderTeamComparison } from './teamComparison.js';
 import { shouldUseMobileLayout } from '../renderMyTeamMobile.js';
+
+// Captain cache for league entries
+const captainCache = new Map();
+
+/**
+ * Get captain name for a league entry
+ * @param {number} entryId - Team entry ID
+ * @returns {Promise<string>} Captain player name
+ */
+async function getCaptainName(entryId) {
+    // Check cache first
+    if (captainCache.has(entryId)) {
+        return captainCache.get(entryId);
+    }
+
+    try {
+        // Load team data
+        const teamData = await loadMyTeam(entryId);
+
+        // Find captain from picks
+        const captainPick = teamData.picks?.picks?.find(p => p.is_captain);
+
+        if (captainPick) {
+            const player = getPlayerById(captainPick.element);
+            const captainName = player ? player.web_name : 'Unknown';
+
+            // Cache result
+            captainCache.set(entryId, captainName);
+            return captainName;
+        }
+
+        // No captain found
+        captainCache.set(entryId, 'No Captain');
+        return 'No Captain';
+    } catch (err) {
+        console.error(`Failed to load captain for entry ${entryId}:`, err);
+        captainCache.set(entryId, '—');
+        return '—';
+    }
+}
 
 /**
  * Render league tabs for selected leagues
@@ -64,9 +104,9 @@ export function renderLeagueTabs(myTeamState) {
 /**
  * Render content for the active league tab
  * @param {Object} myTeamState - Current state object
- * @returns {string} HTML for league content
+ * @returns {Promise<string>} HTML for league content
  */
-export function renderLeagueContent(myTeamState) {
+export async function renderLeagueContent(myTeamState) {
     if (myTeamState.selectedLeagues.length === 0) {
         return `
             <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; padding: 2rem;">
@@ -93,7 +133,7 @@ export function renderLeagueContent(myTeamState) {
     // Check if data is cached
     if (myTeamState.leagueStandingsCache.has(myTeamState.activeLeagueTab)) {
         const leagueData = myTeamState.leagueStandingsCache.get(myTeamState.activeLeagueTab);
-        return renderLeagueStandings(leagueData, myTeamState);
+        return await renderLeagueStandings(leagueData, myTeamState);
     }
 
     // Show loading state
@@ -144,11 +184,12 @@ export function updateLeagueTabsUI(myTeamState, attachLeagueTabListeners) {
  * Update league content UI (show content for active tab)
  * @param {Object} myTeamState - Current state object
  */
-export function updateLeagueContentUI(myTeamState) {
+export async function updateLeagueContentUI(myTeamState) {
     const contentContainer = document.getElementById('league-content-container');
     if (!contentContainer) return;
 
-    contentContainer.innerHTML = renderLeagueContent(myTeamState);
+    const html = await renderLeagueContent(myTeamState);
+    contentContainer.innerHTML = html;
 }
 
 /**
@@ -228,7 +269,8 @@ export async function loadMobileLeagueStandings(leagueId, myTeamState) {
 
     try {
         const leagueData = await loadLeagueStandings(leagueId);
-        container.innerHTML = renderLeagueStandings(leagueData, myTeamState);
+        const html = await renderLeagueStandings(leagueData, myTeamState);
+        container.innerHTML = html;
     } catch (err) {
         console.error('Failed to load league standings:', err);
         container.innerHTML = `
@@ -245,9 +287,9 @@ export async function loadMobileLeagueStandings(leagueId, myTeamState) {
  * Render league standings table (with richer data)
  * @param {Object} leagueData - League standings data
  * @param {Object} myTeamState - Current state object
- * @returns {string} HTML for league standings
+ * @returns {Promise<string>} HTML for league standings
  */
-export function renderLeagueStandings(leagueData, myTeamState) {
+export async function renderLeagueStandings(leagueData, myTeamState) {
     const { league, standings } = leagueData;
     const results = standings.results;
 
@@ -272,11 +314,15 @@ export function renderLeagueStandings(leagueData, myTeamState) {
     const useMobile = shouldUseMobileLayout();
 
     if (useMobile) {
+        // Load captain data for all entries in parallel
+        const captainPromises = results.slice(0, 50).map(entry => getCaptainName(entry.entry));
+        const captainNames = await Promise.all(captainPromises);
+
         // Compact grid-based layout for mobile (matching team table)
         const headerRow = `
             <div class="mobile-table-header mobile-table-header-sticky mobile-table-league" style="top: calc(3.5rem + 8rem + env(safe-area-inset-top));">
                 <div style="text-align: center;">Rank</div>
-                <div>Manager</div>
+                <div>Team/Manager</div>
                 <div style="text-align: center;">GW Pts</div>
                 <div style="text-align: center;">Total Pts</div>
                 <div style="text-align: center;">Gap</div>
@@ -284,6 +330,7 @@ export function renderLeagueStandings(leagueData, myTeamState) {
         `;
 
         const rowsHtml = results.slice(0, 50).map((entry, index) => {
+            const captainName = captainNames[index];
             const isUser = entry.entry === userTeamId;
             const bgColor = isUser ? 'rgba(56, 189, 248, 0.1)' : (index % 2 === 0 ? 'var(--bg-primary)' : 'var(--bg-secondary)');
             const rankChange = entry.last_rank - entry.rank;
@@ -325,8 +372,13 @@ export function renderLeagueStandings(leagueData, myTeamState) {
                         </div>
                     </div>
                     <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                        <div style="font-weight: 600; color: var(--text-primary);">${escapeHtml(entry.player_name)}${isUser ? ' (You)' : ''}</div>
-                        <div style="font-size: 0.65rem; color: var(--text-secondary);">${escapeHtml(entry.entry_name)}</div>
+                        <div style="font-size: 0.7rem; color: var(--text-primary);">
+                            <span style="font-weight: 600;">${escapeHtml(entry.entry_name)}</span>
+                            <span style="color: var(--text-secondary);"> • ${escapeHtml(entry.player_name)}${isUser ? ' (You)' : ''}</span>
+                        </div>
+                        <div style="font-size: 0.65rem; color: var(--text-secondary);">
+                            <i class="fas fa-star" style="font-size: 0.55rem; margin-right: 0.2rem;"></i>${escapeHtml(captainName)}
+                        </div>
                     </div>
                     <div style="text-align: center; background: ${gwBgColor}; color: ${gwTextColor}; font-weight: 700; padding: 0.05rem; border-radius: 0.2rem;">
                         ${gwPoints}
