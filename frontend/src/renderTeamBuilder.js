@@ -18,30 +18,36 @@ import { getFixtures, calculateFixtureDifficulty } from './fixtures.js';
 import { analyzePlayerRisks, hasHighRisk, renderRiskTooltip } from './risk.js';
 import { attachRiskTooltipListeners } from './renderHelpers.js';
 import {
-    createNewPlan,
     calculateProjectedSquad,
-    addTransfer,
-    removeTransfer,
     validateSquad,
-    setChip,
-    findSuggestedTransfers,
-    savePlansToStorage,
     loadPlansFromStorage,
-    deletePlanFromStorage,
-    getAvailableChips
+    savePlansToStorage
 } from './teamBuilderHelpers.js';
 
-// ============================================================================
-// STATE
-// ============================================================================
-
-let currentTeamData = null;
-let allPlans = [];
-let activePlanId = null;
-let activeGameweek = null;
-let planningHorizon = 3; // Default 3 GWs
-let playerSearchModal = null;
-let transferOutPlayerId = null; // For player selection modal
+// Team Builder modules
+import { teamBuilderState } from './teamBuilder/state.js';
+import {
+    handleNewPlan,
+    handleSavePlan,
+    handleDeletePlan,
+    initializePlansFromStorage
+} from './teamBuilder/planManager.js';
+import {
+    handleRemoveTransfer,
+    handleConfirmTransfer,
+    openPlayerSelectModal,
+    closePlayerModal,
+    getTransferOutPlayerId
+} from './teamBuilder/transferManager.js';
+import {
+    handleLoadSuggestions,
+    handleApplySuggestion,
+    generateSuggestions
+} from './teamBuilder/suggestionEngine.js';
+import {
+    handleChipChange,
+    getTeamAvailableChips
+} from './teamBuilder/chipManager.js';
 
 // ============================================================================
 // MAIN RENDER FUNCTION
@@ -92,27 +98,30 @@ export async function renderTeamBuilder() {
     `;
 
     try {
-        currentTeamData = await loadMyTeam(cachedTeamId);
+        const currentTeamData = await loadMyTeam(cachedTeamId);
 
-        // Load saved plans
-        allPlans = loadPlansFromStorage();
+        // Initialize state with team data
+        teamBuilderState.setTeamData(currentTeamData);
+
+        // Load saved plans from storage
+        const loadedPlans = loadPlansFromStorage();
 
         // Filter plans to match current team (in case user switched teams)
-        allPlans = allPlans.filter(plan => {
+        const validPlans = loadedPlans.filter(plan => {
             // Check if plan's snapshot matches current team structure
             return plan.currentTeamSnapshot.picks.length === 15;
         });
 
-        // Create a default plan if none exist
-        if (allPlans.length === 0) {
-            const defaultPlan = createNewPlan('Plan A', currentTeamData, planningHorizon);
-            allPlans.push(defaultPlan);
-            savePlansToStorage(allPlans);
-        }
+        // Initialize plans in state using the planManager module
+        initializePlansFromStorage(validPlans);
 
-        // Set active plan
-        activePlanId = allPlans[0].id;
-        activeGameweek = currentGW + 1;
+        // Create a default plan if none exist
+        if (validPlans.length === 0) {
+            handleNewPlan(renderTeamBuilderContent);
+        } else {
+            // Set active gameweek
+            teamBuilderState.setActiveGameweek(currentGW + 1);
+        }
 
         renderTeamBuilderContent();
     } catch (err) {
@@ -148,7 +157,8 @@ export async function renderTeamBuilder() {
  */
 function renderTeamBuilderContent() {
     const container = document.getElementById('app-container');
-    const activePlan = allPlans.find(p => p.id === activePlanId);
+    const activePlan = teamBuilderState.getActivePlan();
+    const activeGameweek = teamBuilderState.getActiveGameweek();
 
     if (!activePlan) {
         console.error('No active plan found');
@@ -208,6 +218,7 @@ function renderTeamBuilderContent() {
  * Render team info card
  */
 function renderTeamInfoCard() {
+    const currentTeamData = teamBuilderState.getTeamData();
     const team = currentTeamData.team;
     const entry = currentTeamData.picks.entry_history;
 
@@ -245,6 +256,9 @@ function renderTeamInfoCard() {
  * Render plan tabs
  */
 function renderPlanTabs() {
+    const allPlans = teamBuilderState.getPlans();
+    const activePlanId = teamBuilderState.getActivePlanId();
+
     const tabs = allPlans.map(plan => {
         const isActive = plan.id === activePlanId;
         return `
@@ -504,8 +518,9 @@ function renderGameweekContent(plan, gameweek) {
     const gwPlan = plan.gameweekPlans[gameweek];
     if (!gwPlan) return '';
 
+    const currentTeamData = teamBuilderState.getTeamData();
     const usedChips = currentTeamData.team.chips || [];
-    const availableChips = getAvailableChips(currentTeamData);
+    const availableChips = getTeamAvailableChips(currentTeamData);
 
     return `
         <div style="margin-bottom: 2rem;">
@@ -737,7 +752,7 @@ function renderAutoSuggestionsPlaceholder(gameweek) {
  * Render auto-suggestions panel (called on demand)
  */
 function renderAutoSuggestions(plan, gameweek) {
-    const suggestions = findSuggestedTransfers(plan, gameweek, 5);
+    const suggestions = generateSuggestions(plan, gameweek, 5);
 
     if (suggestions.length === 0) {
         return `
@@ -969,7 +984,7 @@ function attachEventListeners() {
     // Plan tabs
     document.querySelectorAll('.plan-tab').forEach(btn => {
         btn.addEventListener('click', () => {
-            activePlanId = btn.dataset.planId;
+            teamBuilderState.setActivePlanId(btn.dataset.planId);
             renderTeamBuilderContent();
         });
     });
@@ -977,13 +992,15 @@ function attachEventListeners() {
     // New plan button
     const newPlanBtn = document.getElementById('new-plan-btn');
     if (newPlanBtn) {
-        newPlanBtn.addEventListener('click', handleNewPlan);
+        newPlanBtn.addEventListener('click', () => {
+            handleNewPlan(renderTeamBuilderContent);
+        });
     }
 
     // Gameweek tabs
     document.querySelectorAll('.gw-tab').forEach(btn => {
         btn.addEventListener('click', () => {
-            activeGameweek = parseInt(btn.dataset.gw);
+            teamBuilderState.setActiveGameweek(parseInt(btn.dataset.gw));
             renderTeamBuilderContent();
         });
     });
@@ -991,27 +1008,37 @@ function attachEventListeners() {
     // Add transfer button
     const addTransferBtn = document.getElementById('add-transfer-btn');
     if (addTransferBtn) {
-        addTransferBtn.addEventListener('click', () => openPlayerSelectModal(null));
+        addTransferBtn.addEventListener('click', () => {
+            openPlayerSelectModal(null, showSquadSelectionModal, showReplacementSelectionModal);
+        });
     }
 
     // Remove transfer buttons
     document.querySelectorAll('.remove-transfer-btn').forEach(btn => {
-        btn.addEventListener('click', handleRemoveTransfer);
+        btn.addEventListener('click', (e) => {
+            handleRemoveTransfer(e, renderTeamBuilderContent);
+        });
     });
 
     // Load suggestions buttons (lazy-load)
     document.querySelectorAll('.load-suggestions-btn').forEach(btn => {
-        btn.addEventListener('click', handleLoadSuggestions);
+        btn.addEventListener('click', (e) => {
+            handleLoadSuggestions(e, renderAutoSuggestions);
+        });
     });
 
     // Apply suggestion buttons
     document.querySelectorAll('.apply-suggestion-btn').forEach(btn => {
-        btn.addEventListener('click', handleApplySuggestion);
+        btn.addEventListener('click', (e) => {
+            handleApplySuggestion(e, renderTeamBuilderContent);
+        });
     });
 
     // Chip selectors
     document.querySelectorAll('.chip-select').forEach(select => {
-        select.addEventListener('change', handleChipChange);
+        select.addEventListener('change', (e) => {
+            handleChipChange(e, renderTeamBuilderContent);
+        });
     });
 
     // Planning horizon select
@@ -1023,139 +1050,23 @@ function attachEventListeners() {
     // Save plan button
     const savePlanBtn = document.getElementById('save-plan-btn');
     if (savePlanBtn) {
-        savePlanBtn.addEventListener('click', handleSavePlan);
+        savePlanBtn.addEventListener('click', () => {
+            handleSavePlan();
+        });
     }
 
     // Delete plan button
     const deletePlanBtn = document.getElementById('delete-plan-btn');
     if (deletePlanBtn) {
-        deletePlanBtn.addEventListener('click', handleDeletePlan);
-    }
-}
-
-/**
- * Handle new plan creation
- */
-function handleNewPlan() {
-    const planName = prompt('Enter plan name:', `Plan ${String.fromCharCode(65 + allPlans.length)}`);
-    if (!planName) return;
-
-    const activePlan = allPlans.find(p => p.id === activePlanId);
-    const horizon = activePlan ? activePlan.planningHorizon : 3;
-
-    const newPlan = createNewPlan(planName, currentTeamData, horizon);
-    allPlans.push(newPlan);
-    activePlanId = newPlan.id;
-
-    savePlansToStorage(allPlans);
-    renderTeamBuilderContent();
-}
-
-/**
- * Handle remove transfer
- */
-function handleRemoveTransfer(e) {
-    const btn = e.currentTarget;
-    const gw = parseInt(btn.dataset.gw);
-    const index = parseInt(btn.dataset.index);
-
-    const activePlan = allPlans.find(p => p.id === activePlanId);
-    if (!activePlan) return;
-
-    const updatedPlan = removeTransfer(activePlan, gw, index);
-
-    // Update plan in array
-    const planIndex = allPlans.findIndex(p => p.id === activePlanId);
-    allPlans[planIndex] = updatedPlan;
-
-    savePlansToStorage(allPlans);
-    renderTeamBuilderContent();
-}
-
-/**
- * Handle load suggestions (lazy-load on demand)
- */
-function handleLoadSuggestions(e) {
-    const btn = e.currentTarget;
-    const gw = parseInt(btn.dataset.gw);
-
-    // Show loading state
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
-    btn.disabled = true;
-
-    // Small delay to show loading state
-    setTimeout(() => {
-        const activePlan = allPlans.find(p => p.id === activePlanId);
-        if (!activePlan) return;
-
-        const suggestionsContent = document.getElementById(`suggestions-content-${gw}`);
-        if (suggestionsContent) {
-            suggestionsContent.innerHTML = renderAutoSuggestions(activePlan, gw);
-            suggestionsContent.style.display = 'block';
-        }
-
-        // Hide the button after loading
-        btn.style.display = 'none';
-
-        // Re-attach event listeners for apply buttons
-        document.querySelectorAll('.apply-suggestion-btn').forEach(applyBtn => {
-            applyBtn.addEventListener('click', handleApplySuggestion);
+        deletePlanBtn.addEventListener('click', () => {
+            handleDeletePlan(renderTeamBuilderContent);
         });
-    }, 100);
-}
-
-/**
- * Handle apply suggestion
- */
-function handleApplySuggestion(e) {
-    const btn = e.currentTarget;
-    const playerOutId = parseInt(btn.dataset.out);
-    const playerInId = parseInt(btn.dataset.in);
-    const gw = parseInt(btn.dataset.gw);
-
-    const activePlan = allPlans.find(p => p.id === activePlanId);
-    if (!activePlan) return;
-
-    const result = addTransfer(activePlan, gw, playerOutId, playerInId);
-
-    if (result.success) {
-        // Update plan in array
-        const planIndex = allPlans.findIndex(p => p.id === activePlanId);
-        allPlans[planIndex] = result.updatedPlan;
-
-        savePlansToStorage(allPlans);
-        renderTeamBuilderContent();
-    } else {
-        alert(`Failed to add transfer: ${result.error}`);
     }
 }
 
-/**
- * Handle chip change
- */
-function handleChipChange(e) {
-    const select = e.currentTarget;
-    const gw = parseInt(select.dataset.gw);
-    const chipName = select.value || null;
-
-    const activePlan = allPlans.find(p => p.id === activePlanId);
-    if (!activePlan) return;
-
-    const usedChips = currentTeamData.team.chips || [];
-    const result = setChip(activePlan, gw, chipName, usedChips);
-
-    if (result.success) {
-        // Update plan in array
-        const planIndex = allPlans.findIndex(p => p.id === activePlanId);
-        allPlans[planIndex] = result.updatedPlan;
-
-        savePlansToStorage(allPlans);
-        renderTeamBuilderContent();
-    } else {
-        alert(`Failed to set chip: ${result.error}`);
-        select.value = activePlan.gameweekPlans[gw].chipUsed || '';
-    }
-}
+// ============================================================================
+// PLANNING HORIZON HANDLER (UI-specific, not extracted to module)
+// ============================================================================
 
 /**
  * Handle planning horizon change
@@ -1163,7 +1074,7 @@ function handleChipChange(e) {
 function handlePlanningHorizonChange(e) {
     const newHorizon = parseInt(e.target.value);
 
-    const activePlan = allPlans.find(p => p.id === activePlanId);
+    const activePlan = teamBuilderState.getActivePlan();
     if (!activePlan) return;
 
     // Update plan horizon
@@ -1193,71 +1104,24 @@ function handlePlanningHorizonChange(e) {
     activePlan.planningHorizon = newHorizon;
     activePlan.modified = new Date().toISOString();
 
-    // Update plan in array
-    const planIndex = allPlans.findIndex(p => p.id === activePlanId);
-    allPlans[planIndex] = activePlan;
+    // Update plan in state
+    teamBuilderState.updatePlan(activePlan);
 
     // Ensure active GW is still valid
+    const activeGameweek = teamBuilderState.getActiveGameweek();
     if (activeGameweek > startGW + newHorizon - 1) {
-        activeGameweek = startGW + newHorizon - 1;
+        teamBuilderState.setActiveGameweek(startGW + newHorizon - 1);
     }
 
-    savePlansToStorage(allPlans);
-    renderTeamBuilderContent();
-}
-
-/**
- * Handle save plan
- */
-function handleSavePlan() {
-    savePlansToStorage(allPlans);
-    alert('Plan saved successfully!');
-}
-
-/**
- * Handle delete plan
- */
-function handleDeletePlan() {
-    if (allPlans.length === 1) {
-        alert('Cannot delete the last plan. Create a new plan first.');
-        return;
-    }
-
-    const confirmed = confirm('Are you sure you want to delete this plan?');
-    if (!confirmed) return;
-
-    deletePlanFromStorage(activePlanId);
-    allPlans = allPlans.filter(p => p.id !== activePlanId);
-
-    activePlanId = allPlans[0].id;
+    // Save to storage
+    savePlansToStorage(teamBuilderState.getPlans());
 
     renderTeamBuilderContent();
 }
 
-/**
- * Open player selection modal
- * @param {number|null} playerOutId - If null, show all squad players to select from
- */
-function openPlayerSelectModal(playerOutId) {
-    transferOutPlayerId = playerOutId;
-
-    // Show modal with player search
-    const activePlan = allPlans.find(p => p.id === activePlanId);
-    if (!activePlan) return;
-
-    const { squad, bank } = calculateProjectedSquad(activePlan, activeGameweek - 1);
-
-    // If no player selected yet, show squad to pick from
-    if (!playerOutId) {
-        showSquadSelectionModal(squad);
-    } else {
-        // Show replacement options
-        const playerOut = getPlayerById(playerOutId);
-        if (!playerOut) return;
-
-        showReplacementSelectionModal(playerOut, squad, bank);
-    }
-}
+// ============================================================================
+// MODAL UI COMPONENTS (UI-specific rendering, not extracted to module)
+// ============================================================================
 
 /**
  * Show squad selection modal (pick player to transfer out)
@@ -1353,7 +1217,7 @@ function showSquadSelectionModal(squad) {
         btn.addEventListener('click', () => {
             const playerId = parseInt(btn.dataset.playerId);
             closePlayerModal();
-            openPlayerSelectModal(playerId);
+            openPlayerSelectModal(playerId, showSquadSelectionModal, showReplacementSelectionModal);
         });
 
         btn.addEventListener('mouseenter', e => {
@@ -1514,7 +1378,8 @@ function showReplacementSelectionModal(playerOut, squad, bank) {
     document.querySelectorAll('.select-player-in-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const playerInId = parseInt(btn.dataset.playerId);
-            handleConfirmTransfer(transferOutPlayerId, playerInId);
+            const playerOutId = getTransferOutPlayerId();
+            handleConfirmTransfer(playerOutId, playerInId, renderTeamBuilderContent);
         });
 
         btn.addEventListener('mouseenter', e => {
@@ -1524,37 +1389,4 @@ function showReplacementSelectionModal(playerOut, squad, bank) {
             e.currentTarget.style.borderColor = 'var(--border-color)';
         });
     });
-}
-
-/**
- * Handle confirm transfer
- */
-function handleConfirmTransfer(playerOutId, playerInId) {
-    const activePlan = allPlans.find(p => p.id === activePlanId);
-    if (!activePlan) return;
-
-    const result = addTransfer(activePlan, activeGameweek, playerOutId, playerInId);
-
-    if (result.success) {
-        // Update plan in array
-        const planIndex = allPlans.findIndex(p => p.id === activePlanId);
-        allPlans[planIndex] = result.updatedPlan;
-
-        savePlansToStorage(allPlans);
-        closePlayerModal();
-        renderTeamBuilderContent();
-    } else {
-        alert(`Failed to add transfer: ${result.error}`);
-    }
-}
-
-/**
- * Close player modal
- */
-function closePlayerModal() {
-    const modal = document.getElementById('player-modal');
-    if (modal) {
-        modal.remove();
-    }
-    transferOutPlayerId = null;
 }

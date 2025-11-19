@@ -855,10 +855,6 @@ app.post('/api/ai-insights', async (req, res) => {
       }
     );
 
-    // Debug: Log raw Gemini response
-    logger.log('🔍 DEBUG: Raw Gemini response:', JSON.stringify(geminiResponse.data, null, 2));
-    logger.log('🔍 DEBUG: Candidates array:', JSON.stringify(geminiResponse.data.candidates, null, 2));
-
     // Parse Gemini response
     const insights = parseGeminiResponse(geminiResponse.data, gameweek);
 
@@ -1001,8 +997,6 @@ function parseGeminiResponse(geminiData, gameweek) {
     // Extract text from Gemini response
     const text = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
-    logger.log('🔍 DEBUG: Extracted text from Gemini:', text.substring(0, 500)); // First 500 chars
-
     if (!text) {
       throw new Error('No text content in Gemini response');
     }
@@ -1014,19 +1008,13 @@ function parseGeminiResponse(geminiData, gameweek) {
     const jsonMatch = text.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
     if (jsonMatch) {
       jsonText = jsonMatch[1];
-      logger.log('🔍 DEBUG: Found JSON in markdown code block');
     } else {
       // Try to find JSON object directly
       const objectMatch = text.match(/\{[\s\S]*\}/);
       if (objectMatch) {
         jsonText = objectMatch[0];
-        logger.log('🔍 DEBUG: Found JSON object directly');
-      } else {
-        logger.log('⚠️ DEBUG: No JSON object found in response');
       }
     }
-
-    logger.log('🔍 DEBUG: JSON text to parse:', jsonText.substring(0, 500));
 
     // Parse JSON
     const categories = JSON.parse(jsonText);
@@ -1067,15 +1055,15 @@ function parseGeminiResponse(geminiData, gameweek) {
     logger.error('❌ Failed to parse Gemini response:', error.message);
     logger.error('❌ Full error:', error.stack);
 
-    // TEMPORARY DEBUG: Return raw response in error case
+    // Return fallback insights in case of parsing error
     const fallbackCategories = {};
     const expectedCategories = ['Overview', 'Hidden Gems', 'Differentials', 'Transfer Targets', 'Team Analysis'];
 
     for (const category of expectedCategories) {
       fallbackCategories[category] = [
-        `DEBUG: Parse Error - ${error.message}`,
-        'Check browser console for raw Gemini response',
-        'AI insights will be available after fixing the issue'
+        'AI insights temporarily unavailable',
+        'Please try refreshing the page',
+        'Check back at next update (5am/5pm UTC)'
       ];
     }
 
@@ -1083,15 +1071,7 @@ function parseGeminiResponse(geminiData, gameweek) {
       gameweek: gameweek,
       categories: fallbackCategories,
       timestamp: Date.now(),
-      parseError: true,
-      // DEBUG INFO - will be visible in browser console
-      debug: {
-        errorMessage: error.message,
-        rawGeminiData: geminiData,
-        candidatesArray: geminiData.candidates,
-        firstCandidate: geminiData.candidates?.[0],
-        extractedText: geminiData.candidates?.[0]?.content?.parts?.[0]?.text?.substring(0, 1000)
-      }
+      parseError: true
     };
   }
 }
