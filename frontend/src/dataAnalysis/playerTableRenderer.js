@@ -4,13 +4,12 @@
 // ============================================================================
 
 import { currentGW } from '../data.js';
-import { isMobileDevice } from '../utils.js';
+import { isMobileDevice, getHeatmapStyle } from '../utils.js';
 import {
     getTableConfig,
     getFixtureHeaders,
     getNextFixtures
 } from './tableConfigs.js';
-import { getHeatmapStyle } from '../styles/tableStyles.js';
 
 // ============================================================================
 // DESKTOP TABLE RENDERER
