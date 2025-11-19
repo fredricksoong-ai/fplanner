@@ -66,6 +66,29 @@ import { renderFixturesTab, renderMobileFixturesTab } from './myTeam/fixturesTab
 import { renderTeamTable } from './myTeam/teamTable.js';
 
 import {
+    renderLeaguesTab as renderLeaguesTabModule,
+    renderLeagueSideMenu,
+    toggleLeagueSelection as toggleLeagueSelectionModule,
+    updateLeagueMenuItemUI as updateLeagueMenuItemUIModule,
+    updateLeagueSelectionCount as updateLeagueSelectionCountModule,
+    switchLeagueTab as switchLeagueTabModule,
+    attachLeagueTabListeners as attachLeagueTabListenersModule
+} from './myTeam/leagueManagement.js';
+
+import {
+    renderLeagueTabs,
+    renderLeagueContent,
+    updateLeagueTabsUI as updateLeagueTabsUIModule,
+    updateLeagueContentUI as updateLeagueContentUIModule,
+    loadLeagueStandingsForTab as loadLeagueStandingsForTabModule,
+    loadMobileLeagueStandings,
+    renderLeagueStandings,
+    loadAndCompareRivalTeam as loadAndCompareRivalTeamModule,
+    closeComparisonModal,
+    renderComparisonModal
+} from './myTeam/leagueStandings.js';
+
+import {
     attachRiskTooltipListeners
 } from './renderHelpers.js';
 
@@ -713,7 +736,7 @@ function renderMobileLeaguesTab(teamData) {
 
     // Load standings after DOM is ready
     requestAnimationFrame(() => {
-        loadMobileLeagueStandings(selectedLeagueId);
+        loadMobileLeagueStandingsWrapper(selectedLeagueId);
 
         // Add event listener for league selector
         const dropdown = document.getElementById('mobile-leagues-dropdown');
@@ -721,7 +744,7 @@ function renderMobileLeaguesTab(teamData) {
             dropdown.addEventListener('change', (e) => {
                 const leagueId = e.target.value;
                 localStorage.setItem(`fpl_selected_league_${teamId}`, leagueId);
-                loadMobileLeagueStandings(leagueId);
+                loadMobileLeagueStandingsWrapper(leagueId);
             });
         }
     });
@@ -730,823 +753,82 @@ function renderMobileLeaguesTab(teamData) {
 }
 
 /**
- * Load and render league standings for mobile view
+ * Load and render league standings for mobile view (wrapper)
  */
-async function loadMobileLeagueStandings(leagueId) {
-    const container = document.getElementById('mobile-league-standings');
-    if (!container) return;
-
-    // Show loading state
-    container.innerHTML = `
-        <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
-            <i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 1rem;"></i>
-            <p>Loading standings...</p>
-        </div>
-    `;
-
-    try {
-        const leagueData = await loadLeagueStandings(leagueId);
-        container.innerHTML = renderLeagueStandings(leagueData);
-    } catch (err) {
-        console.error('Failed to load league standings:', err);
-        container.innerHTML = `
-            <div style="text-align: center; padding: 2rem;">
-                <i class="fas fa-exclamation-triangle" style="font-size: 2rem; color: var(--danger-color); margin-bottom: 1rem; display: block;"></i>
-                <p style="color: var(--text-secondary);">Failed to load standings</p>
-                <p style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 0.5rem;">${escapeHtml(err.message)}</p>
-            </div>
-        `;
-    }
+async function loadMobileLeagueStandingsWrapper(leagueId) {
+    return loadMobileLeagueStandings(leagueId, myTeamState);
 }
 
 /**
- * Render My Leagues tab content with side menu layout
+ * Render My Leagues tab content with side menu layout (wrapper)
  */
 function renderLeaguesTab(teamData) {
-    const { team } = teamData;
-
-    // Set active league tab to first selected league if not set
-    if (myTeamState.selectedLeagues.length > 0 && !myTeamState.activeLeagueTab) {
-        myTeamState.activeLeagueTab = myTeamState.selectedLeagues[0];
-    }
-
-    const useMobile = shouldUseMobileLayout();
-
-    const html = `
-        <div style="display: ${useMobile ? 'flex' : 'grid'}; ${useMobile ? 'flex-direction: column;' : 'grid-template-columns: 300px 1fr;'} gap: 1.5rem; ${useMobile ? '' : 'height: calc(100vh - 300px);'}">
-            <!-- Left Sidebar: League Selection -->
-            <div id="league-selection-sidebar" style="background: var(--bg-secondary); padding: ${useMobile ? '1rem' : '1.5rem'}; border-radius: 12px; ${useMobile ? '' : 'overflow-y: auto;'}">
-                <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem;">
-                    <i class="fas fa-trophy"></i> Your Leagues
-                </h3>
-                <p style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 1.5rem;">
-                    Select up to 3 leagues to track
-                </p>
-                ${renderLeagueSideMenu(team)}
-            </div>
-
-            <!-- Right Content: League Tabs and Standings -->
-            <div style="display: flex; flex-direction: column; background: var(--bg-primary); border-radius: 12px; overflow: hidden; ${useMobile ? 'min-height: 400px' : ''}">
-                ${renderLeagueTabs()}
-                <div id="league-content-container" style="flex: 1; overflow-y: auto; padding: ${useMobile ? '1rem' : '1.5rem'};">
-                    ${renderLeagueContent()}
-                </div>
-            </div>
-
-            <!-- Modal for team comparison -->
-            <div id="comparison-modal" style="display: none;"></div>
-        </div>
-    `;
-
-    // Load standings after DOM is ready
-    requestAnimationFrame(() => {
-        if (myTeamState.activeLeagueTab) {
-            loadLeagueStandingsForTab(myTeamState.activeLeagueTab);
-        }
-    });
-
-    return html;
+    return renderLeaguesTabModule(
+        teamData,
+        myTeamState,
+        (leagueId) => loadLeagueStandingsForTab(leagueId),
+        () => renderLeagueTabs(myTeamState),
+        () => renderLeagueContent(myTeamState)
+    );
 }
 
-/**
- * Render league side menu (replaces old card grid)
- */
-function renderLeagueSideMenu(team) {
-    if (!team.leagues || !team.leagues.classic || team.leagues.classic.length === 0) {
-        return `
-            <div style="text-align: center; padding: 1rem;">
-                <i class="fas fa-info-circle" style="font-size: 1.5rem; color: var(--text-secondary); margin-bottom: 0.5rem; display: block;"></i>
-                <p style="color: var(--text-secondary); font-size: 0.875rem;">No leagues found. Join a league first!</p>
-            </div>
-        `;
-    }
+// League management wrapper functions
 
-    const leagues = team.leagues.classic;
-
-    // Sort leagues by entry_rank (user's rank in league)
-    const sortedLeagues = [...leagues].sort((a, b) => {
-        if (!a.entry_rank) return 1;
-        if (!b.entry_rank) return -1;
-        return a.entry_rank - b.entry_rank;
-    });
-
-    return `
-        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-            ${sortedLeagues.map(league => {
-                const isSelected = myTeamState.selectedLeagues.includes(league.id);
-                const canSelect = isSelected || myTeamState.selectedLeagues.length < 3;
-
-                return `
-                    <div
-                        class="league-menu-item ${canSelect ? 'selectable' : 'disabled'}"
-                        data-league-id="${league.id}"
-                        style="
-                            background: ${isSelected ? 'var(--primary-color)' : 'var(--bg-primary)'};
-                            color: ${isSelected ? 'white' : 'var(--text-primary)'};
-                            padding: 0.875rem;
-                            border-radius: 8px;
-                            border: 2px solid ${isSelected ? 'var(--primary-color)' : 'var(--border-color)'};
-                            cursor: ${canSelect ? 'pointer' : 'not-allowed'};
-                            transition: all 0.2s;
-                            opacity: ${canSelect ? '1' : '0.5'};
-                            display: flex;
-                            align-items: center;
-                            gap: 0.75rem;
-                        "
-                    >
-                        <div>
-                            <i class="fas fa-${isSelected ? 'check-square' : 'square'}" style="font-size: 1.25rem;"></i>
-                        </div>
-                        <div style="flex: 1; min-width: 0;">
-                            <div style="font-weight: 600; font-size: 0.875rem; margin-bottom: 0.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(league.name)}">
-                                ${escapeHtml(league.name)}
-                            </div>
-                            <div style="font-size: 0.75rem; opacity: 0.8;">
-                                Rank: ${league.entry_rank ? league.entry_rank.toLocaleString() : 'N/A'}
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('')}
-        </div>
-        <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
-            <p style="color: var(--text-secondary); font-size: 0.75rem; text-align: center;" id="league-selection-count">
-                ${myTeamState.selectedLeagues.length}/3 leagues selected
-            </p>
-        </div>
-    `;
-}
-
-/**
- * Render league tabs for selected leagues
- */
-function renderLeagueTabs() {
-    if (myTeamState.selectedLeagues.length === 0) {
-        return '';
-    }
-
-    // Get team data to access league names
-    const teamLeagues = myTeamState.teamData?.team?.leagues?.classic || [];
-
-    return `
-        <div class="league-tabs-container" style="display: flex; gap: 0.25rem; background: var(--bg-secondary); padding: 0.5rem; border-bottom: 2px solid var(--border-color);">
-            ${myTeamState.selectedLeagues.map((leagueId, index) => {
-                const isActive = myTeamState.activeLeagueTab === leagueId;
-
-                // Try to get league name from team data first (immediate), then from standings cache
-                const teamLeague = teamLeagues.find(l => l.id === leagueId);
-                const leagueData = myTeamState.leagueStandingsCache.get(leagueId);
-                const leagueName = teamLeague?.name || leagueData?.league?.name || `League ${index + 1}`;
-
-                return `
-                    <button
-                        class="league-tab-btn"
-                        data-league-id="${leagueId}"
-                        style="
-                            padding: 0.75rem 1.25rem;
-                            background: ${isActive ? 'var(--primary-color)' : 'var(--bg-primary)'};
-                            color: ${isActive ? 'white' : 'var(--text-primary)'};
-                            border: none;
-                            border-radius: 6px 6px 0 0;
-                            cursor: pointer;
-                            font-weight: ${isActive ? '600' : '500'};
-                            font-size: 0.875rem;
-                            transition: all 0.2s;
-                            white-space: nowrap;
-                            max-width: 200px;
-                            overflow: hidden;
-                            text-overflow: ellipsis;
-                        "
-                        title="${escapeHtml(leagueName)}"
-                    >
-                        <i class="fas fa-trophy" style="margin-right: 0.5rem; font-size: 0.75rem;"></i>
-                        ${escapeHtml(leagueName)}
-                    </button>
-                `;
-            }).join('')}
-        </div>
-    `;
-}
-
-/**
- * Render content for the active league tab
- */
-function renderLeagueContent() {
-    if (myTeamState.selectedLeagues.length === 0) {
-        return `
-            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; padding: 2rem;">
-                <i class="fas fa-hand-pointer" style="font-size: 3rem; color: var(--text-secondary); margin-bottom: 1rem;"></i>
-                <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem;">
-                    No Leagues Selected
-                </h3>
-                <p style="color: var(--text-secondary); max-width: 400px;">
-                    Select up to 3 leagues from the sidebar to view detailed standings and compare with rivals.
-                </p>
-            </div>
-        `;
-    }
-
-    if (!myTeamState.activeLeagueTab) {
-        return `
-            <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
-                <i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 1rem;"></i>
-                <p>Loading...</p>
-            </div>
-        `;
-    }
-
-    // Check if data is cached
-    if (myTeamState.leagueStandingsCache.has(myTeamState.activeLeagueTab)) {
-        const leagueData = myTeamState.leagueStandingsCache.get(myTeamState.activeLeagueTab);
-        return renderLeagueStandings(leagueData);
-    }
-
-    // Show loading state
-    return `
-        <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
-            <i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 1rem;"></i>
-            <p>Loading league standings...</p>
-        </div>
-    `;
-}
-
-
-/**
- * Toggle league selection (with dynamic tab management)
- */
 function toggleLeagueSelection(leagueId) {
-    console.log(`🔄 Toggle league selection: ${leagueId}`);
-
-    const index = myTeamState.selectedLeagues.indexOf(leagueId);
-    const wasSelected = index > -1;
-
-    if (wasSelected) {
-        // Deselect - remove from selected leagues
-        myTeamState.selectedLeagues.splice(index, 1);
-        console.log(`➖ Deselected league ${leagueId}`);
-
-        // If this was the active tab, switch to another tab or clear
-        if (myTeamState.activeLeagueTab === leagueId) {
-            myTeamState.activeLeagueTab = myTeamState.selectedLeagues[0] || null;
-            console.log(`🔄 Active tab changed to: ${myTeamState.activeLeagueTab}`);
-        }
-    } else {
-        // Select (if under limit)
-        if (myTeamState.selectedLeagues.length >= 3) {
-            console.warn('⚠️ Already at max 3 leagues');
-            return; // Already at max, do nothing
-        }
-        myTeamState.selectedLeagues.push(leagueId);
-        console.log(`✅ Selected league ${leagueId}`);
-
-        // Set newly selected league as active tab
-        myTeamState.activeLeagueTab = leagueId;
-        console.log(`🎯 Set as active tab: ${leagueId}`);
-    }
-
-    // Save to localStorage
-    localStorage.setItem('fplanner_selected_leagues', JSON.stringify(myTeamState.selectedLeagues));
-
-    // Update UI: menu item, tabs, and content
-    updateLeagueMenuItemUI(leagueId, !wasSelected);
-    updateLeagueSelectionCount();
-    updateLeagueTabsUI();
-    updateLeagueContentUI();
-
-    // Load data for newly selected league
-    if (!wasSelected && !myTeamState.leagueStandingsCache.has(leagueId)) {
-        console.log(`📥 Loading data for league ${leagueId}...`);
-        loadLeagueStandingsForTab(leagueId);
-    }
+    toggleLeagueSelectionModule(
+        leagueId,
+        myTeamState,
+        (id, selected) => updateLeagueMenuItemUI(id, selected),
+        () => updateLeagueSelectionCount(),
+        () => updateLeagueTabsUI(),
+        () => updateLeagueContentUI(),
+        (id) => loadLeagueStandingsForTab(id)
+    );
 }
 
-/**
- * Update a single league menu item's UI without re-rendering
- */
 function updateLeagueMenuItemUI(leagueId, isSelected) {
-    const menuItem = document.querySelector(`.league-menu-item[data-league-id="${leagueId}"]`);
-    if (!menuItem) return;
-
-    // Update menu item styling
-    menuItem.style.background = isSelected ? 'var(--primary-color)' : 'var(--bg-primary)';
-    menuItem.style.color = isSelected ? 'white' : 'var(--text-primary)';
-    menuItem.style.borderColor = isSelected ? 'var(--primary-color)' : 'var(--border-color)';
-
-    // Update icon
-    const icon = menuItem.querySelector('i.fas');
-    if (icon) {
-        icon.className = isSelected ? 'fas fa-check-square' : 'fas fa-square';
-    }
-
-    // Update all menu items' selectability
-    const allMenuItems = document.querySelectorAll('.league-menu-item');
-    allMenuItems.forEach(item => {
-        const itemId = parseInt(item.dataset.leagueId);
-        const itemIsSelected = myTeamState.selectedLeagues.includes(itemId);
-        const canSelect = itemIsSelected || myTeamState.selectedLeagues.length < 3;
-
-        item.classList.toggle('selectable', canSelect);
-        item.classList.toggle('disabled', !canSelect);
-        item.style.cursor = canSelect ? 'pointer' : 'not-allowed';
-        item.style.opacity = canSelect ? '1' : '0.5';
-    });
+    updateLeagueMenuItemUIModule(leagueId, isSelected, myTeamState);
 }
 
-/**
- * Update league selection count text
- */
 function updateLeagueSelectionCount() {
-    const countText = document.getElementById('league-selection-count');
-    if (countText) {
-        countText.textContent = `${myTeamState.selectedLeagues.length}/3 leagues selected`;
-    }
+    updateLeagueSelectionCountModule(myTeamState);
 }
 
-/**
- * Update league tabs UI (dynamically add/remove tabs)
- */
 function updateLeagueTabsUI() {
-    // Find the tabs container
-    const tabsContainer = document.querySelector('.league-tabs-container');
-    if (!tabsContainer) {
-        console.warn('⚠️ League tabs container not found');
-        return;
-    }
-
-    // Re-render tabs HTML
-    const newTabsHTML = renderLeagueTabs();
-
-    if (newTabsHTML) {
-        // Parse the new HTML to get just the buttons
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = newTabsHTML;
-        const newButtons = tempDiv.querySelector('.league-tabs-container').innerHTML;
-        tabsContainer.innerHTML = newButtons;
-        tabsContainer.style.display = 'flex'; // Make sure it's visible
-        console.log('✅ Updated league tabs UI');
-    } else {
-        // No selected leagues, clear tabs
-        tabsContainer.innerHTML = '';
-        tabsContainer.style.display = 'none';
-        console.log('🔄 Cleared league tabs (no selections)');
-    }
-
-    // Re-attach event listeners for new tabs
-    attachLeagueTabListeners();
+    updateLeagueTabsUIModule(myTeamState, () => attachLeagueTabListeners());
 }
 
-/**
- * Update league content UI (show content for active tab)
- */
 function updateLeagueContentUI() {
-    const contentContainer = document.getElementById('league-content-container');
-    if (!contentContainer) return;
-
-    contentContainer.innerHTML = renderLeagueContent();
+    updateLeagueContentUIModule(myTeamState);
 }
 
-/**
- * Switch to a specific league tab
- */
 function switchLeagueTab(leagueId) {
-    myTeamState.activeLeagueTab = leagueId;
-
-    // Update tabs styling
-    updateLeagueTabsUI();
-
-    // Update content
-    updateLeagueContentUI();
-
-    // Load data if not cached
-    if (!myTeamState.leagueStandingsCache.has(leagueId)) {
-        loadLeagueStandingsForTab(leagueId);
-    }
+    switchLeagueTabModule(
+        leagueId,
+        myTeamState,
+        () => updateLeagueTabsUI(),
+        () => updateLeagueContentUI(),
+        (id) => loadLeagueStandingsForTab(id)
+    );
 }
 
-/**
- * Attach event listeners to league tabs
- */
 function attachLeagueTabListeners() {
-    const tabButtons = document.querySelectorAll('.league-tab-btn');
-    tabButtons.forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const leagueId = parseInt(e.currentTarget.dataset.leagueId);
-            switchLeagueTab(leagueId);
-        });
-    });
+    attachLeagueTabListenersModule((leagueId) => switchLeagueTab(leagueId));
 }
 
-/**
- * Load standings for a specific league tab (with caching)
- */
-async function loadLeagueStandingsForTab(leagueId) {
-    const contentContainer = document.getElementById('league-content-container');
-    if (!contentContainer) return;
+// League standings wrapper functions
 
-    // Check if this is still the active tab
-    if (myTeamState.activeLeagueTab !== leagueId) {
-        console.log(`⏭️ Skipping load for league ${leagueId} (no longer active)`);
-        return;
-    }
-
-    // Check cache first
-    if (myTeamState.leagueStandingsCache.has(leagueId)) {
-        console.log(`✅ Using cached data for league ${leagueId}`);
-        updateLeagueContentUI();
-        return;
-    }
-
-    // Show loading state
-    contentContainer.innerHTML = `
-        <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
-            <i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 1rem;"></i>
-            <p>Loading league standings...</p>
-        </div>
-    `;
-
-    try {
-        // Fetch and cache
-        const data = await loadLeagueStandings(leagueId);
-        myTeamState.leagueStandingsCache.set(leagueId, data);
-
-        // Update content if still active tab
-        if (myTeamState.activeLeagueTab === leagueId) {
-            updateLeagueContentUI();
-            updateLeagueTabsUI(); // Update tab name with fetched league name
-        }
-
-    } catch (err) {
-        console.error(`Failed to load league ${leagueId}:`, err);
-
-        // Show error if still active tab
-        if (myTeamState.activeLeagueTab === leagueId) {
-            contentContainer.innerHTML = `
-                <div style="background: var(--bg-secondary); padding: 2rem; border-radius: 12px; text-align: center;">
-                    <i class="fas fa-exclamation-circle" style="font-size: 2rem; color: #ef4444; margin-bottom: 1rem;"></i>
-                    <p style="color: var(--text-secondary);">Failed to load league standings. Please try again.</p>
-                </div>
-            `;
-        }
-    }
+function loadLeagueStandingsForTab(leagueId) {
+    return loadLeagueStandingsForTabModule(
+        leagueId,
+        myTeamState,
+        () => updateLeagueContentUI(),
+        () => updateLeagueTabsUI()
+    );
 }
 
-/**
- * Render league standings table (with richer data)
- */
-function renderLeagueStandings(leagueData) {
-    const { league, standings } = leagueData;
-    const results = standings.results;
-
-    if (!results || results.length === 0) {
-        return `
-            <div style="background: var(--bg-secondary); padding: 2rem; border-radius: 12px; text-align: center; margin-bottom: 2rem;">
-                <p style="color: var(--text-secondary);">No standings data available for ${escapeHtml(league.name)}</p>
-            </div>
-        `;
-    }
-
-    // Find user's entry in standings
-    const userTeamId = parseInt(localStorage.getItem('fplanner_team_id'));
-    const userEntry = results.find(r => r.entry === userTeamId);
-
-    // Calculate statistics
-    const leaderPoints = results[0]?.total || 0;
-    const userPoints = userEntry?.total || 0;
-    const avgGWPoints = results.reduce((sum, r) => sum + (r.event_total || 0), 0) / results.length;
-
-    // Check if mobile layout
-    const useMobile = shouldUseMobileLayout();
-
-    if (useMobile) {
-        // Compact grid-based layout for mobile (matching team table)
-        const headerRow = `
-            <div class="mobile-table-header mobile-table-header-sticky mobile-table-league" style="top: calc(3.5rem + 8rem + env(safe-area-inset-top));">
-                <div style="text-align: center;">Rank</div>
-                <div>Manager</div>
-                <div style="text-align: center;">GW Pts</div>
-                <div style="text-align: center;">Total Pts</div>
-                <div style="text-align: center;">Gap</div>
-            </div>
-        `;
-
-        const rowsHtml = results.slice(0, 50).map((entry, index) => {
-            const isUser = entry.entry === userTeamId;
-            const bgColor = isUser ? 'rgba(56, 189, 248, 0.1)' : (index % 2 === 0 ? 'var(--bg-primary)' : 'var(--bg-secondary)');
-            const rankChange = entry.last_rank - entry.rank;
-            const rankChangeIcon = rankChange > 0 ? '▲' : rankChange < 0 ? '▼' : '━';
-            const rankChangeColor = rankChange > 0 ? '#22c55e' : rankChange < 0 ? '#ef4444' : 'var(--text-secondary)';
-
-            // Calculate gap to user (+ if user is above, - if user is below)
-            let gapText = '—';
-            let gapColor = 'var(--text-secondary)';
-            if (!isUser && userEntry) {
-                const gap = userPoints - entry.total; // Inverted: user's points - their points
-                if (gap > 0) {
-                    gapText = `+${gap}`;
-                    gapColor = '#22c55e'; // Green when user is ahead
-                } else if (gap < 0) {
-                    gapText = gap.toString();
-                    gapColor = '#ef4444'; // Red when user is behind
-                }
-            }
-
-            // Color-code GW points
-            const gwPoints = entry.event_total || 0;
-            let gwBgColor = 'transparent';
-            let gwTextColor = 'var(--text-primary)';
-            if (gwPoints > avgGWPoints + 10) {
-                gwBgColor = 'rgba(34, 197, 94, 0.2)';
-                gwTextColor = '#22c55e';
-            } else if (gwPoints < avgGWPoints - 10) {
-                gwBgColor = 'rgba(239, 68, 68, 0.2)';
-                gwTextColor = '#ef4444';
-            }
-
-            return `
-                <div class="mobile-table-row mobile-table-league" style="background: ${bgColor}; ${isUser ? 'border-left: 3px solid var(--primary-color);' : ''}">
-                    <div style="text-align: center;">
-                        <div style="font-weight: 600;">${entry.rank}</div>
-                        <div style="font-size: 0.6rem; color: ${rankChangeColor};">
-                            ${rankChangeIcon}
-                        </div>
-                    </div>
-                    <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                        <div style="font-weight: 600; color: var(--text-primary);">${escapeHtml(entry.player_name)}${isUser ? ' (You)' : ''}</div>
-                        <div style="font-size: 0.65rem; color: var(--text-secondary);">${escapeHtml(entry.entry_name)}</div>
-                    </div>
-                    <div style="text-align: center; background: ${gwBgColor}; color: ${gwTextColor}; font-weight: 700; padding: 0.05rem; border-radius: 0.2rem;">
-                        ${gwPoints}
-                    </div>
-                    <div style="text-align: center; font-weight: 600;">${entry.total.toLocaleString()}</div>
-                    <div style="text-align: center; font-weight: 600; color: ${gapColor}; font-size: 0.7rem;">
-                        ${gapText}
-                    </div>
-                </div>
-            `;
-        }).join('');
-
-        return `
-            <div style="margin-bottom: 0.75rem; background: var(--bg-secondary); padding: 0.5rem 0.75rem;">
-                <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.25rem;">
-                    <i class="fas fa-trophy"></i> ${escapeHtml(league.name)}
-                </h4>
-                <p style="font-size: 0.7rem; color: var(--text-secondary);">
-                    ${standings.has_next ? `Top ${results.length}` : `${results.length} entries`}
-                </p>
-            </div>
-            ${headerRow}
-            ${rowsHtml}
-        `;
-    }
-
-    // Desktop: Traditional table layout
-    return `
-        <div style="background: var(--bg-primary); padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px var(--shadow); margin-bottom: 2rem;">
-            <div style="margin-bottom: 1rem;">
-                <h4 style="font-size: 1.125rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem;">
-                    <i class="fas fa-trophy"></i> ${escapeHtml(league.name)}
-                </h4>
-                <p style="font-size: 0.875rem; color: var(--text-secondary);">
-                    ${standings.has_next ? `Showing top ${results.length} entries` : `${results.length} entries total`}
-                </p>
-            </div>
-
-            <div style="overflow-x: auto;">
-                <table style="width: 100%; font-size: 0.875rem; border-collapse: collapse;">
-                    <thead style="background: var(--primary-color); color: white;">
-                        <tr>
-                            <th style="text-align: center; padding: 0.75rem 0.5rem;">Rank</th>
-                            <th style="text-align: left; padding: 0.75rem 0.75rem;">Manager</th>
-                            <th style="text-align: left; padding: 0.75rem 0.75rem;">Team</th>
-                            <th style="text-align: center; padding: 0.75rem 0.5rem;">GW</th>
-                            <th style="text-align: center; padding: 0.75rem 0.5rem;">Total</th>
-                            <th style="text-align: center; padding: 0.75rem 0.5rem;" title="Points behind leader">From 1st</th>
-                            <th style="text-align: center; padding: 0.75rem 0.5rem;" title="Points gap to you">Gap</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${results.slice(0, 50).map((entry, index) => {
-                            const isUser = entry.entry === userTeamId;
-                            const rowBg = isUser ? 'rgba(56, 189, 248, 0.1)' : (index % 2 === 0 ? 'var(--bg-secondary)' : 'var(--bg-primary)');
-                            const rankChange = entry.last_rank - entry.rank;
-                            const rankChangeIcon = rankChange > 0 ? '▲' : rankChange < 0 ? '▼' : '━';
-                            const rankChangeColor = rankChange > 0 ? '#22c55e' : rankChange < 0 ? '#ef4444' : 'var(--text-secondary)';
-
-                            const fromLeader = entry.total - leaderPoints;
-                            const fromLeaderText = fromLeader === 0 ? '—' : fromLeader.toLocaleString();
-
-                            let gapText = '—';
-                            let gapColor = 'var(--text-secondary)';
-                            if (!isUser && userEntry) {
-                                const gap = entry.total - userPoints;
-                                if (gap > 0) {
-                                    gapText = `+${gap}`;
-                                    gapColor = '#ef4444';
-                                } else if (gap < 0) {
-                                    gapText = gap.toString();
-                                    gapColor = '#22c55e';
-                                }
-                            }
-
-                            const gwPoints = entry.event_total || 0;
-                            let gwBgColor = 'transparent';
-                            let gwTextColor = 'inherit';
-                            if (gwPoints > avgGWPoints + 10) {
-                                gwBgColor = 'rgba(34, 197, 94, 0.15)';
-                                gwTextColor = '#22c55e';
-                            } else if (gwPoints < avgGWPoints - 10) {
-                                gwBgColor = 'rgba(239, 68, 68, 0.15)';
-                                gwTextColor = '#ef4444';
-                            }
-
-                            return `
-                                <tr
-                                    class="${!isUser ? 'rival-team-row' : ''}"
-                                    data-rival-id="${entry.entry}"
-                                    style="background: ${rowBg}; ${isUser ? 'border-left: 4px solid var(--primary-color);' : ''} ${!isUser ? 'cursor: pointer;' : ''}"
-                                >
-                                    <td style="padding: 0.75rem 0.5rem; text-align: center;">
-                                        <div style="font-weight: 600;">${entry.rank.toLocaleString()}</div>
-                                        <div style="font-size: 0.75rem; color: ${rankChangeColor};">
-                                            ${rankChange !== 0 ? rankChangeIcon + ' ' + Math.abs(rankChange) : rankChangeIcon}
-                                        </div>
-                                    </td>
-                                    <td style="padding: 0.75rem 0.75rem;">
-                                        <strong>${escapeHtml(entry.player_name)}</strong>
-                                        ${isUser ? ' <span style="color: var(--primary-color); font-weight: 700;">(You)</span>' : ''}
-                                        ${!isUser ? ' <i class="fas fa-eye" style="margin-left: 0.5rem; color: var(--text-secondary); font-size: 0.75rem;"></i>' : ''}
-                                    </td>
-                                    <td style="padding: 0.75rem 0.75rem;">${escapeHtml(entry.entry_name)}</td>
-                                    <td style="padding: 0.75rem 0.5rem; text-align: center; font-weight: 600; background: ${gwBgColor}; color: ${gwTextColor};">
-                                        ${gwPoints}
-                                    </td>
-                                    <td style="padding: 0.75rem 0.5rem; text-align: center; font-weight: 600;">${entry.total.toLocaleString()}</td>
-                                    <td style="padding: 0.75rem 0.5rem; text-align: center; font-size: 0.8rem; color: var(--text-secondary);">
-                                        ${fromLeaderText}
-                                    </td>
-                                    <td style="padding: 0.75rem 0.5rem; text-align: center; font-size: 0.8rem; font-weight: 600; color: ${gapColor};">
-                                        ${gapText}
-                                    </td>
-                                </tr>
-                            `;
-                        }).join('')}
-                    </tbody>
-                </table>
-            </div>
-
-            ${standings.has_next ? `
-                <div style="margin-top: 1rem; text-align: center;">
-                    <p style="font-size: 0.875rem; color: var(--text-secondary);">
-                        <i class="fas fa-info-circle"></i> Showing top 50 entries
-                    </p>
-                </div>
-            ` : ''}
-        </div>
-    `;
-}
-
-/**
- * Load and compare rival team (with modal and caching)
- */
-async function loadAndCompareRivalTeam(rivalId) {
-    console.log(`Loading rival team ${rivalId} for comparison...`);
-
-    // Update state
-    myTeamState.comparisonRivalId = rivalId;
-
-    // Get or create modal
-    let modal = document.getElementById('comparison-modal');
-    if (!modal) {
-        modal = document.createElement('div');
-        modal.id = 'comparison-modal';
-        document.body.appendChild(modal);
-    }
-
-    // Show loading modal
-    modal.style.display = 'block';
-    modal.innerHTML = `
-        <div style="
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.7);
-            z-index: 1000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        ">
-            <div style="text-align: center; color: white;">
-                <i class="fas fa-spinner fa-spin" style="font-size: 3rem; margin-bottom: 1rem;"></i>
-                <p style="font-size: 1.125rem;">Loading rival team for comparison...</p>
-            </div>
-        </div>
-    `;
-
-    try {
-        // Check cache first
-        let rivalTeamData;
-        if (myTeamState.rivalTeamCache.has(rivalId)) {
-            console.log(`✅ Using cached data for rival team ${rivalId}`);
-            rivalTeamData = myTeamState.rivalTeamCache.get(rivalId);
-        } else {
-            // Load rival's team data
-            rivalTeamData = await loadMyTeam(rivalId);
-            myTeamState.rivalTeamCache.set(rivalId, rivalTeamData);
-        }
-
-        myTeamState.comparisonRivalData = rivalTeamData;
-
-        // Render comparison in modal
-        modal.innerHTML = renderComparisonModal(myTeamState.teamData, rivalTeamData);
-
-        // Add click handler to close modal when clicking overlay
-        modal.addEventListener('click', (e) => {
-            if (e.target.id === 'comparison-modal-overlay') {
-                closeComparisonModal();
-            }
-        });
-
-    } catch (err) {
-        console.error('Failed to load rival team:', err);
-        modal.innerHTML = `
-            <div style="
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0, 0, 0, 0.7);
-                z-index: 1000;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            ">
-                <div style="background: var(--bg-primary); padding: 2rem; border-radius: 12px; text-align: center; max-width: 400px;">
-                    <i class="fas fa-exclamation-circle" style="font-size: 2rem; color: #ef4444; margin-bottom: 1rem;"></i>
-                    <p style="color: var(--text-secondary); margin-bottom: 1rem;">Failed to load rival team. Please try again.</p>
-                    <button
-                        class="close-modal-btn"
-                        style="
-                            padding: 0.5rem 1rem;
-                            background: var(--primary-color);
-                            color: white;
-                            border: none;
-                            border-radius: 6px;
-                            cursor: pointer;
-                        "
-                    >
-                        Close
-                    </button>
-                </div>
-            </div>
-        `;
-    }
-}
-
-/**
- * Close comparison modal
- */
-function closeComparisonModal() {
-    const modal = document.getElementById('comparison-modal');
-    if (modal) {
-        modal.style.display = 'none';
-        modal.innerHTML = '';
-    }
-}
-
-/**
- * Render comparison modal wrapper
- */
-function renderComparisonModal(myTeamData, rivalTeamData) {
-    return `
-        <div
-            id="comparison-modal-overlay"
-            style="
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0, 0, 0, 0.7);
-                z-index: 1000;
-                overflow-y: auto;
-                padding: 2rem;
-            "
-        >
-            <div style="
-                max-width: 1400px;
-                margin: 0 auto;
-                background: var(--bg-primary);
-                border-radius: 12px;
-                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-                position: relative;
-            ">
-                ${renderTeamComparison(myTeamData, rivalTeamData)}
-            </div>
-        </div>
-    `;
+function loadAndCompareRivalTeam(rivalId) {
+    return loadAndCompareRivalTeamModule(rivalId, myTeamState);
 }
 
 /**
