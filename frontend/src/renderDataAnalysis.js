@@ -141,25 +141,6 @@ export function renderDataAnalysis(subTab = 'overview', position = 'all') {
                 </button>
                 <button
                     class="analysis-tab-btn"
-                    data-tab="differentials"
-                    data-position="${position}"
-                    style="
-                        padding: ${tabPadding};
-                        background: ${subTab === 'differentials' ? 'var(--primary-color)' : 'transparent'};
-                        color: ${subTab === 'differentials' ? 'white' : 'var(--text-primary)'};
-                        border: none;
-                        border-bottom: 3px solid ${subTab === 'differentials' ? 'var(--primary-color)' : 'transparent'};
-                        cursor: pointer;
-                        font-weight: 600;
-                        font-size: ${tabFontSize};
-                        transition: all 0.2s;
-                        white-space: nowrap;
-                    "
-                >
-                    Differentials
-                </button>
-                <button
-                    class="analysis-tab-btn"
                     data-tab="transfer-targets"
                     data-position="${position}"
                     style="
@@ -229,8 +210,6 @@ export function renderDataAnalysis(subTab = 'overview', position = 'all') {
         contentHTML = renderAnalysisOverview(position);
     } else if (subTab === 'hidden-gems') {
         contentHTML = renderHiddenGems(position);
-    } else if (subTab === 'differentials') {
-        contentHTML = renderDifferentials(position);
     } else if (subTab === 'transfer-targets') {
         contentHTML = renderTransferTargets(position);
     } else if (subTab === 'team-analysis') {
@@ -589,6 +568,15 @@ function renderHiddenGems(position = 'all') {
         return p.bonus && p.bonus > 0;
     }).sort((a, b) => b.bonus - a.bonus).slice(0, 15);
 
+    // Differentials (low ownership < 10%, good form, playing regularly)
+    const differentials = activePlayers.filter(p => {
+        const ownership = parseFloat(p.selected_by_percent) || 0;
+        const form = parseFloat(p.form) || 0;
+        const minPercentage = calculateMinutesPercentage(p, getCurrentGW());
+
+        return ownership < 10 && ownership > 0 && form > 3 && minPercentage > 40;
+    }).sort((a, b) => b.total_points - a.total_points).slice(0, 15);
+
     return `
         <div>
             <!-- Section 1: xG Overperformers -->
@@ -607,6 +595,12 @@ function renderHiddenGems(position = 'all') {
             <div style="margin-bottom: 3rem;">
                 ${renderSectionHeader('🎁', 'Bonus Magnets', 'Players with high bonus points (valuable for tight gameweeks)')}
                 ${bonusMagnets.length > 0 ? (isMobile ? renderPositionSpecificTableMobile(bonusMagnets, 'bonus') : renderPositionSpecificTable(bonusMagnets, position)) : '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">No bonus magnets found</div>'}
+            </div>
+
+            <!-- Section 4: Differentials -->
+            <div style="margin-bottom: 3rem;">
+                ${renderSectionHeader('💎', 'Differentials (<10% Owned)', 'Low ownership players in good form - differential picks to gain rank')}
+                ${differentials.length > 0 ? (isMobile ? renderPositionSpecificTableMobile(differentials, 'ownership') : renderPositionSpecificTable(differentials, position)) : '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">No differentials found</div>'}
             </div>
         </div>
     `;
@@ -777,7 +771,77 @@ function renderTeamAnalysis(position = 'all') {
     `;
 }
 
+function renderTeamTableMobile(teamAnalysis) {
+    const currentGW = getCurrentGW();
+    const fixtureHeaders = getFixtureHeaders(5, 1);
+
+    let html = `
+        <div class="mobile-table" style="display: flex; flex-direction: column; gap: 0.5rem;">
+            <!-- Header Row -->
+            <div class="mobile-table-header" style="
+                display: grid;
+                grid-template-columns: 2fr 0.8fr 1fr 1fr 1fr 1fr 1fr;
+                gap: 0.25rem;
+                padding: 0.5rem;
+                background: var(--primary-color);
+                color: white;
+                border-radius: 8px;
+                font-size: 0.7rem;
+                font-weight: 700;
+                text-align: center;
+            ">
+                <div style="text-align: left;">Team</div>
+                <div>FDR(5)</div>
+                ${fixtureHeaders.map(h => `<div>${h}</div>`).join('')}
+            </div>
+    `;
+
+    teamAnalysis.forEach((ta, index) => {
+        const fdr5Class = getDifficultyClass(Math.round(ta.fdr5));
+        const next5 = getFixtures(ta.team.id, 10, false).filter(f => f.event > currentGW).slice(0, 5);
+
+        // Pad if less than 5 fixtures
+        while (next5.length < 5) {
+            next5.push({ opponent: '—', difficulty: 0 });
+        }
+
+        html += `
+            <div class="mobile-table-row" style="
+                display: grid;
+                grid-template-columns: 2fr 0.8fr 1fr 1fr 1fr 1fr 1fr;
+                gap: 0.25rem;
+                padding: 0.5rem;
+                background: var(--bg-secondary);
+                border-radius: 8px;
+                font-size: 0.75rem;
+                text-align: center;
+                align-items: center;
+            ">
+                <div style="text-align: left; font-weight: 600;">${getTeamShortName(ta.team.id)}</div>
+                <div><span class="${fdr5Class}" style="padding: 0.2rem 0.4rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.7rem;">${formatDecimal(ta.fdr5)}</span></div>
+                ${next5.map(f => `
+                    <div>${f.opponent !== '—' ? `<span class="${getDifficultyClass(f.difficulty)}" style="padding: 0.2rem 0.4rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.7rem;">${f.opponent}</span>` : '—'}</div>
+                `).join('')}
+            </div>
+        `;
+    });
+
+    html += `
+        </div>
+    `;
+
+    return html;
+}
+
 function renderTeamTable(teamAnalysis) {
+    const isMobile = isMobileDevice();
+
+    // Use mobile table on mobile devices
+    if (isMobile) {
+        return renderTeamTableMobile(teamAnalysis);
+    }
+
+    // Desktop table
     const fixtureHeaders = getFixtureHeaders(5, 1);
 
     let html = `
@@ -882,9 +946,45 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
 
     // Context column header and value function
     const contextConfig = {
-        'total': { header: 'Total', getValue: (p) => p.total_points },
-        'ppm': { header: 'PPM', getValue: (p) => formatDecimal(calculatePPM(p)) },
-        'ownership': { header: 'Own%', getValue: (p) => `${(parseFloat(p.selected_by_percent) || 0).toFixed(1)}%` },
+        'total': {
+            header: 'Total',
+            getValue: (p) => p.total_points,
+            getHeatmap: (p) => {
+                // Total points heatmap (0-200 range)
+                const pts = p.total_points || 0;
+                if (pts >= 100) return 'dark-green';
+                if (pts >= 70) return 'light-green';
+                if (pts >= 40) return 'yellow';
+                if (pts >= 20) return 'red';
+                return 'gray';
+            }
+        },
+        'ppm': {
+            header: 'PPM',
+            getValue: (p) => formatDecimal(calculatePPM(p)),
+            getHeatmap: (p) => {
+                // PPM heatmap (points per million)
+                const ppm = calculatePPM(p);
+                if (ppm >= 6) return 'dark-green';
+                if (ppm >= 5) return 'light-green';
+                if (ppm >= 4) return 'yellow';
+                if (ppm >= 3) return 'red';
+                return 'gray';
+            }
+        },
+        'ownership': {
+            header: 'Own%',
+            getValue: (p) => `${(parseFloat(p.selected_by_percent) || 0).toFixed(1)}%`,
+            getHeatmap: (p) => {
+                // Ownership heatmap (inverted - lower is better for differentials)
+                const own = parseFloat(p.selected_by_percent) || 0;
+                if (own >= 30) return 'red';
+                if (own >= 15) return 'yellow';
+                if (own >= 5) return 'light-green';
+                if (own > 0) return 'dark-green';
+                return 'gray';
+            }
+        },
         'transfers': {
             header: 'ΔT',
             getValue: (p) => {
@@ -904,11 +1004,56 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
             getValue: (p) => {
                 const variance = (p.goals_scored || 0) - (parseFloat(p.expected_goals) || 0);
                 return variance > 0 ? `+${formatDecimal(variance)}` : formatDecimal(variance);
+            },
+            getHeatmap: (p) => {
+                // Variance heatmap (positive is good, negative is bad)
+                const variance = (p.goals_scored || 0) - (parseFloat(p.expected_goals) || 0);
+                if (variance >= 2) return 'dark-green';
+                if (variance >= 1) return 'light-green';
+                if (variance >= -1) return 'yellow';
+                if (variance >= -2) return 'red';
+                return 'gray';
             }
         },
-        'xg': { header: 'xG', getValue: (p) => formatDecimal(parseFloat(p.expected_goals) || 0) },
-        'bonus': { header: 'Bonus', getValue: (p) => p.bonus || 0 },
-        'def90': { header: 'Def/90', getValue: (p) => formatDecimal(p.github_season?.defensive_contribution_per_90 || 0) },
+        'xg': {
+            header: 'xG',
+            getValue: (p) => formatDecimal(parseFloat(p.expected_goals) || 0),
+            getHeatmap: (p) => {
+                // xG heatmap
+                const xg = parseFloat(p.expected_goals) || 0;
+                if (xg >= 4) return 'dark-green';
+                if (xg >= 2.5) return 'light-green';
+                if (xg >= 1.5) return 'yellow';
+                if (xg >= 0.5) return 'red';
+                return 'gray';
+            }
+        },
+        'bonus': {
+            header: 'Bonus',
+            getValue: (p) => p.bonus || 0,
+            getHeatmap: (p) => {
+                // Bonus points heatmap
+                const bonus = p.bonus || 0;
+                if (bonus >= 10) return 'dark-green';
+                if (bonus >= 5) return 'light-green';
+                if (bonus >= 2) return 'yellow';
+                if (bonus >= 1) return 'red';
+                return 'gray';
+            }
+        },
+        'def90': {
+            header: 'Def/90',
+            getValue: (p) => formatDecimal(p.github_season?.defensive_contribution_per_90 || 0),
+            getHeatmap: (p) => {
+                // Defensive contribution per 90 heatmap
+                const def = p.github_season?.defensive_contribution_per_90 || 0;
+                if (def >= 5) return 'dark-green';
+                if (def >= 4) return 'light-green';
+                if (def >= 3) return 'yellow';
+                if (def >= 2) return 'red';
+                return 'gray';
+            }
+        },
         'fdr5': {
             header: 'FDR(5)',
             getValue: (p) => formatDecimal(calculateFixtureDifficulty(p.team, 5)),
@@ -977,11 +1122,28 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
             statusWeight = '700';
         }
 
-        // Context column value
+        // Context column value and styling
         const contextValue = config.getValue(player);
-        const contextColor = config.getColor ? config.getColor(player) : 'inherit';
-        const contextClass = config.getClass ? config.getClass(player) : '';
-        const contextStyle = contextClass ? `class="${contextClass}" style="padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-weight: 700; font-size: 0.6rem; display: inline-block;"` : `style="color: ${contextColor};"`;
+
+        // Determine context column styling (priority: class > heatmap > color > default)
+        let contextDisplayStyle = '';
+        if (config.getClass) {
+            // Use difficulty class (for FDR)
+            const contextClass = config.getClass(player);
+            contextDisplayStyle = `class="${contextClass}" style="padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-weight: 700; font-size: 0.6rem; display: inline-block;"`;
+        } else if (config.getHeatmap) {
+            // Use heatmap (for total, ppm, ownership, etc.)
+            const heatmap = config.getHeatmap(player);
+            const heatmapStyle = getHeatmapStyle(heatmap);
+            contextDisplayStyle = `style="text-align: center; background: ${heatmapStyle.background}; color: ${heatmapStyle.color}; font-weight: 700; padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-size: 0.6rem;"`;
+        } else if (config.getColor) {
+            // Use custom color (for transfers)
+            const contextColor = config.getColor(player);
+            contextDisplayStyle = `style="color: ${contextColor}; font-weight: 700; font-size: 0.7rem;"`;
+        } else {
+            // Default styling
+            contextDisplayStyle = `style="font-size: 0.7rem;"`;
+        }
 
         html += `
             <div
@@ -1000,7 +1162,7 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
                 <div style="text-align: center; font-size: 0.6rem; font-weight: ${statusWeight}; color: ${statusColor}; background: ${statusBgColor}; padding: 0.08rem 0.25rem; border-radius: 0.25rem;">${matchStatus}</div>
                 <div style="text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 700; padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-size: 0.6rem;">${gwPoints}</div>
                 <div style="text-align: center; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 700; padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-size: 0.6rem;">${formatDecimal(player.form)}</div>
-                <div style="text-align: center; font-size: 0.7rem;" ${contextStyle}>${contextValue}</div>
+                <div ${contextDisplayStyle}>${contextValue}</div>
             </div>
         `;
     });
