@@ -604,6 +604,28 @@ app.use('/api/', limiter);
 // Request size limiting
 app.use(express.json({ limit: '1mb' }));
 
+// ============================================================================
+// HEALTH CHECK - Must be before logging middleware to prevent cascading failures
+// ============================================================================
+/**
+ * GET /health
+ * Health check endpoint for Render/monitoring services
+ * Registered before logging middleware to ensure it always responds,
+ * even if logging or other middleware has issues
+ */
+app.get('/health', (req, res) => {
+  try {
+    res.json({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      gemini_api_configured: !!GEMINI_API_KEY && GEMINI_API_KEY !== 'your_gemini_api_key_here'
+    });
+  } catch (error) {
+    // Fallback: return 200 even if JSON serialization fails
+    res.status(200).send('OK');
+  }
+});
+
 // Request logging
 app.use((req, res, next) => {
   logger.log(`${req.method} ${req.path} [${req.ip}]`);
@@ -1113,17 +1135,6 @@ app.get('/api/stats', (req, res) => {
   });
 });
 
-/**
- * GET /health
- * Health check endpoint
- */
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    gemini_api_configured: !!GEMINI_API_KEY && GEMINI_API_KEY !== 'your_gemini_api_key_here'
-  });
-});
 
 // ============================================================================
 // SERVE FRONTEND IN PRODUCTION
