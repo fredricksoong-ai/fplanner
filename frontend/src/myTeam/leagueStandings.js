@@ -3,10 +3,12 @@
 // Handles league standings rendering and team comparison
 // ============================================================================
 
-import { loadLeagueStandings, loadMyTeam, getPlayerById } from '../data.js';
-import { escapeHtml } from '../utils.js';
+import { loadLeagueStandings, loadMyTeam, getPlayerById, currentGW } from '../data.js';
+import { escapeHtml, formatDecimal, getPtsHeatmap, getFormHeatmap, getHeatmapStyle } from '../utils.js';
 import { renderTeamComparison } from './teamComparison.js';
 import { shouldUseMobileLayout } from '../renderMyTeamMobile.js';
+import { getGWOpponent, getMatchStatus } from '../fixtures.js';
+import { renderOpponentBadge, calculateStatusColor, calculatePlayerBgColor } from './compact/compactStyleHelpers.js';
 
 /**
  * Get captain name for a league entry
@@ -669,6 +671,9 @@ function renderMobileRivalModal(rivalTeamData) {
         ? `${team.player_first_name} ${team.player_last_name}`
         : 'Manager';
 
+    // Get current gameweek (use module-level currentGW from data.js)
+    const gwNumber = currentGW || 1;
+
     // Get starters and bench
     const starters = picks?.picks?.filter(p => p.position <= 11) || [];
     const bench = picks?.picks?.filter(p => p.position > 11) || [];
@@ -680,24 +685,58 @@ function renderMobileRivalModal(rivalTeamData) {
     const captainPlayer = captain ? getPlayerById(captain.element) : null;
     const vicePlayer = viceCaptain ? getPlayerById(viceCaptain.element) : null;
 
-    // Render player rows
-    const renderPlayerRow = (pick, index) => {
+    // Render player row matching Team table style
+    const renderPlayerRow = (pick, index, isBenchSection = false) => {
         const player = getPlayerById(pick.element);
         if (!player) return '';
 
         const isCaptain = pick.is_captain;
         const isVice = pick.is_vice_captain;
-        const badge = isCaptain ? '(C)' : isVice ? '(V)' : '';
+        const isBench = pick.position > 11;
+
+        let captainBadge = '';
+        if (isCaptain) captainBadge = ' <span style="color: var(--text-primary); font-weight: 700; font-size: 0.7rem;">(C)</span>';
+        if (isVice) captainBadge = ' <span style="color: var(--text-primary); font-weight: 700; font-size: 0.7rem;">(VC)</span>';
+
+        // Get opponent and match status
+        const gwOpp = getGWOpponent(player.team, gwNumber);
+        const matchStatus = getMatchStatus(player.team, gwNumber, player);
+        const statusColors = calculateStatusColor(matchStatus);
+
+        // Calculate points with captain multiplier
+        const gwPoints = player.event_points || 0;
+        const displayPoints = isCaptain ? (gwPoints * 2) : gwPoints;
+
+        // Get heatmap styles for points and form
+        const ptsHeatmap = getPtsHeatmap(displayPoints, 'gw_pts');
+        const ptsStyle = getHeatmapStyle(ptsHeatmap);
+        const formHeatmap = getFormHeatmap(player.form);
+        const formStyle = getHeatmapStyle(formHeatmap);
+
+        // Background color
+        const bgColor = calculatePlayerBgColor(isCaptain, isVice, isBench);
+
+        // Border style - thick after last starter
+        const borderStyle = pick.position === 11 ? '3px solid var(--border-color)' : '1px solid var(--border-color)';
 
         return `
-            <div class="mobile-table-row" style="background: ${index % 2 === 0 ? 'var(--bg-primary)' : 'var(--bg-secondary)'};">
-                <div style="font-size: 0.7rem; font-weight: 600;">
-                    ${player.web_name}
-                    ${badge ? `<span style="color: var(--primary-color); margin-left: 0.25rem;">${badge}</span>` : ''}
+            <div
+                class="mobile-table-row mobile-table-team"
+                style="
+                background: ${bgColor};
+                border-bottom: ${borderStyle};
+                padding-bottom: 3px !important;
+                padding-top: 3px !important;
+            ">
+                <div style="font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    ${escapeHtml(player.web_name)}${captainBadge}
                 </div>
-                <div style="font-size: 0.65rem; color: var(--text-secondary);">${player.team_short}</div>
-                <div style="text-align: center; font-weight: 600;">${pick.multiplier}x</div>
-                <div style="text-align: center; font-weight: 600;">${player.event_points || 0}</div>
+                <div style="text-align: center;">
+                    ${renderOpponentBadge(gwOpp, 'small')}
+                </div>
+                <div style="text-align: center; font-size: 0.6rem; font-weight: ${statusColors.statusWeight}; color: ${statusColors.statusColor}; background: ${statusColors.statusBgColor}; padding: 0.08rem 0.25rem; border-radius: 0.25rem;">${matchStatus}</div>
+                <div style="text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 700; padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-size: 0.6rem;">${displayPoints}</div>
+                <div style="text-align: center; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 700; padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-size: 0.6rem;">${formatDecimal(player.form)}</div>
             </div>
         `;
     };
@@ -764,35 +803,22 @@ function renderMobileRivalModal(rivalTeamData) {
                 </div>
 
                 <!-- Team List -->
-                <div style="background: var(--bg-primary); padding: 0 0 1rem 0; border-radius: 0 0 12px 12px;">
-                    <!-- Starters Header -->
-                    <div style="padding: 0.75rem 1rem; background: var(--bg-secondary); font-size: 0.75rem; font-weight: 700; color: var(--text-primary);">
-                        Starting XI
-                    </div>
-
-                    <!-- Column Headers -->
-                    <div class="mobile-table-header" style="grid-template-columns: 2fr 1fr 0.6fr 0.6fr; padding: 0.5rem 1rem; font-size: 0.7rem;">
+                <div style="background: var(--bg-primary); padding: 0; border-radius: 0 0 12px 12px;">
+                    <!-- Column Headers - matching Team table -->
+                    <div class="mobile-table-header mobile-table-team" style="padding: 0.5rem;">
                         <div>Player</div>
-                        <div>Team</div>
-                        <div style="text-align: center;">Mult</div>
+                        <div style="text-align: center;">Opp</div>
+                        <div style="text-align: center;">Status</div>
                         <div style="text-align: center;">Pts</div>
+                        <div style="text-align: center;">Form</div>
                     </div>
 
                     <!-- Starters -->
-                    <div style="display: grid; gap: 0; padding: 0 1rem;">
-                        ${starters.map((pick, idx) => renderPlayerRow(pick, idx)).join('')}
-                    </div>
+                    ${starters.map((pick, idx) => renderPlayerRow(pick, idx)).join('')}
 
                     ${bench.length > 0 ? `
-                        <!-- Bench Header -->
-                        <div style="padding: 0.75rem 1rem; background: var(--bg-secondary); font-size: 0.75rem; font-weight: 700; color: var(--text-primary); margin-top: 1rem;">
-                            Bench
-                        </div>
-
-                        <!-- Bench Players -->
-                        <div style="display: grid; gap: 0; padding: 0 1rem;">
-                            ${bench.map((pick, idx) => renderPlayerRow(pick, idx)).join('')}
-                        </div>
+                        <!-- Bench -->
+                        ${bench.map((pick, idx) => renderPlayerRow(pick, idx, true)).join('')}
                     ` : ''}
                 </div>
             </div>
