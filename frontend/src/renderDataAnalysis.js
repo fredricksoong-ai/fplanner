@@ -776,20 +776,9 @@ function renderTeamTableMobile(teamAnalysis) {
     const fixtureHeaders = getFixtureHeaders(5, 1);
 
     let html = `
-        <div class="mobile-table" style="display: flex; flex-direction: column; gap: 0.5rem;">
+        <div class="mobile-table">
             <!-- Header Row -->
-            <div class="mobile-table-header" style="
-                display: grid;
-                grid-template-columns: 2fr 0.8fr 1fr 1fr 1fr 1fr 1fr;
-                gap: 0.25rem;
-                padding: 0.5rem;
-                background: var(--primary-color);
-                color: white;
-                border-radius: 8px;
-                font-size: 0.7rem;
-                font-weight: 700;
-                text-align: center;
-            ">
+            <div class="mobile-table-header" style="grid-template-columns: 1.5fr 0.8fr 1fr 1fr 1fr 1fr 1fr; padding-bottom: 2px !important; padding-top: 2px !important;">
                 <div style="text-align: left;">Team</div>
                 <div>FDR(5)</div>
                 ${fixtureHeaders.map(h => `<div>${h}</div>`).join('')}
@@ -806,29 +795,17 @@ function renderTeamTableMobile(teamAnalysis) {
         }
 
         html += `
-            <div class="mobile-table-row" style="
-                display: grid;
-                grid-template-columns: 2fr 0.8fr 1fr 1fr 1fr 1fr 1fr;
-                gap: 0.25rem;
-                padding: 0.5rem;
-                background: var(--bg-secondary);
-                border-radius: 8px;
-                font-size: 0.75rem;
-                text-align: center;
-                align-items: center;
-            ">
-                <div style="text-align: left; font-weight: 600;">${getTeamShortName(ta.team.id)}</div>
-                <div><span class="${fdr5Class}" style="padding: 0.2rem 0.4rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.7rem;">${formatDecimal(ta.fdr5)}</span></div>
+            <div class="mobile-table-row" style="grid-template-columns: 1.5fr 0.8fr 1fr 1fr 1fr 1fr 1fr; padding-bottom: 3px !important; padding-top: 3px !important;">
+                <div style="text-align: left; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${getTeamShortName(ta.team.id)}</div>
+                <div style="text-align: center;"><span class="${fdr5Class}" style="padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-weight: 700; font-size: 0.6rem; display: inline-block;">${formatDecimal(ta.fdr5)}</span></div>
                 ${next5.map(f => `
-                    <div>${f.opponent !== '—' ? `<span class="${getDifficultyClass(f.difficulty)}" style="padding: 0.2rem 0.4rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.7rem;">${f.opponent}</span>` : '—'}</div>
+                    <div style="text-align: center;">${f.opponent !== '—' ? `<span class="${getDifficultyClass(f.difficulty)}" style="padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-weight: 700; font-size: 0.6rem; display: inline-block; white-space: nowrap;">${f.opponent}</span>` : '<span style="color: var(--text-tertiary);">—</span>'}</div>
                 `).join('')}
             </div>
         `;
     });
 
-    html += `
-        </div>
-    `;
+    html += `</div>`;
 
     return html;
 }
@@ -1460,6 +1437,7 @@ async function loadAIInsightsForTab(tab, position) {
         return;
     }
 
+    const isMobile = isMobileDevice();
     const currentGW = getCurrentGW();
     const players = getAllPlayers();
 
