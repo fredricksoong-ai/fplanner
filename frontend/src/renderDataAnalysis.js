@@ -778,7 +778,7 @@ function renderTeamTableMobile(teamAnalysis) {
     let html = `
         <div class="mobile-table">
             <!-- Header Row -->
-            <div class="mobile-table-header" style="grid-template-columns: 1.2fr 0.8fr 1fr 1fr 1fr 1fr 1fr; padding-bottom: 2px !important; padding-top: 2px !important;">
+            <div class="mobile-table-header" style="grid-template-columns: 1fr 0.7fr 1.15fr 1.15fr 1.15fr 1.15fr 1.15fr; padding-bottom: 2px !important; padding-top: 2px !important;">
                 <div style="text-align: left;">Team</div>
                 <div style="text-align: center;">FDR(5)</div>
                 ${fixtureHeaders.map(h => `<div style="text-align: center;">${h}</div>`).join('')}
@@ -795,7 +795,7 @@ function renderTeamTableMobile(teamAnalysis) {
         }
 
         html += `
-            <div class="mobile-table-row" style="grid-template-columns: 1.2fr 0.8fr 1fr 1fr 1fr 1fr 1fr; padding-bottom: 3px !important; padding-top: 3px !important;">
+            <div class="mobile-table-row" style="grid-template-columns: 1fr 0.7fr 1.15fr 1.15fr 1.15fr 1.15fr 1.15fr; padding-bottom: 3px !important; padding-top: 3px !important;">
                 <div style="text-align: left; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${getTeamShortName(ta.team.id)}</div>
                 <div style="text-align: center;"><span class="${fdr5Class}" style="padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-weight: 700; font-size: 0.6rem; display: inline-block;">${formatDecimal(ta.fdr5)}</span></div>
                 ${next5.map(f => `
@@ -1102,24 +1102,24 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
         // Context column value and styling
         const contextValue = config.getValue(player);
 
-        // Determine context column styling (priority: class > heatmap > color > default)
-        let contextDisplayStyle = '';
+        // Render context column with appropriate styling
+        let contextHTML = '';
         if (config.getClass) {
             // Use difficulty class (for FDR)
             const contextClass = config.getClass(player);
-            contextDisplayStyle = `class="${contextClass}" style="text-align: center; padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-weight: 700; font-size: 0.6rem; display: inline-block;"`;
+            contextHTML = `<span class="${contextClass}" style="padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-weight: 700; font-size: 0.6rem; display: inline-block;">${contextValue}</span>`;
         } else if (config.getHeatmap) {
             // Use heatmap (for total, ppm, ownership, etc.)
             const heatmap = config.getHeatmap(player);
             const heatmapStyle = getHeatmapStyle(heatmap);
-            contextDisplayStyle = `style="text-align: center; background: ${heatmapStyle.background}; color: ${heatmapStyle.color}; font-weight: 700; padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-size: 0.6rem; display: inline-block;"`;
+            contextHTML = `<span style="background: ${heatmapStyle.background}; color: ${heatmapStyle.color}; font-weight: 700; padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-size: 0.6rem; display: inline-block;">${contextValue}</span>`;
         } else if (config.getColor) {
             // Use custom color (for transfers)
             const contextColor = config.getColor(player);
-            contextDisplayStyle = `style="text-align: center; color: ${contextColor}; font-weight: 700; font-size: 0.7rem;"`;
+            contextHTML = `<span style="color: ${contextColor}; font-weight: 700; font-size: 0.7rem;">${contextValue}</span>`;
         } else {
             // Default styling
-            contextDisplayStyle = `style="text-align: center; font-size: 0.7rem;"`;
+            contextHTML = contextValue;
         }
 
         html += `
@@ -1139,7 +1139,7 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
                 <div style="text-align: center; font-size: 0.6rem; font-weight: ${statusWeight}; color: ${statusColor}; background: ${statusBgColor}; padding: 0.08rem 0.25rem; border-radius: 0.25rem;">${matchStatus}</div>
                 <div style="text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 700; padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-size: 0.6rem;">${gwPoints}</div>
                 <div style="text-align: center; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 700; padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-size: 0.6rem;">${formatDecimal(player.form)}</div>
-                <div ${contextDisplayStyle}>${contextValue}</div>
+                <div style="text-align: center;">${contextHTML}</div>
             </div>
         `;
     });
