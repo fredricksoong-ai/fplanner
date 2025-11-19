@@ -8,18 +8,21 @@ import { escapeHtml } from '../utils.js';
 import { renderTeamComparison } from './teamComparison.js';
 import { shouldUseMobileLayout } from '../renderMyTeamMobile.js';
 
-// Captain cache for league entries
-const captainCache = new Map();
-
 /**
  * Get captain name for a league entry
  * @param {number} entryId - Team entry ID
+ * @param {Object} myTeamState - Current state object with captain cache
  * @returns {Promise<string>} Captain player name
  */
-async function getCaptainName(entryId) {
+async function getCaptainName(entryId, myTeamState) {
+    // Initialize captain cache if it doesn't exist
+    if (!myTeamState.captainCache) {
+        myTeamState.captainCache = new Map();
+    }
+
     // Check cache first
-    if (captainCache.has(entryId)) {
-        return captainCache.get(entryId);
+    if (myTeamState.captainCache.has(entryId)) {
+        return myTeamState.captainCache.get(entryId);
     }
 
     try {
@@ -34,16 +37,16 @@ async function getCaptainName(entryId) {
             const captainName = player ? player.web_name : 'Unknown';
 
             // Cache result
-            captainCache.set(entryId, captainName);
+            myTeamState.captainCache.set(entryId, captainName);
             return captainName;
         }
 
         // No captain found
-        captainCache.set(entryId, 'No Captain');
+        myTeamState.captainCache.set(entryId, 'No Captain');
         return 'No Captain';
     } catch (err) {
         console.error(`Failed to load captain for entry ${entryId}:`, err);
-        captainCache.set(entryId, '—');
+        myTeamState.captainCache.set(entryId, '—');
         return '—';
     }
 }
@@ -190,6 +193,11 @@ export async function updateLeagueContentUI(myTeamState) {
 
     const html = await renderLeagueContent(myTeamState);
     contentContainer.innerHTML = html;
+
+    // Attach event listeners for mobile rival rows
+    if (shouldUseMobileLayout()) {
+        attachMobileRivalListeners(myTeamState);
+    }
 }
 
 /**
@@ -271,6 +279,9 @@ export async function loadMobileLeagueStandings(leagueId, myTeamState) {
         const leagueData = await loadLeagueStandings(leagueId);
         const html = await renderLeagueStandings(leagueData, myTeamState);
         container.innerHTML = html;
+
+        // Attach event listeners for mobile rival rows
+        attachMobileRivalListeners(myTeamState);
     } catch (err) {
         console.error('Failed to load league standings:', err);
         container.innerHTML = `
@@ -315,7 +326,7 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
 
     if (useMobile) {
         // Load captain data for all entries in parallel
-        const captainPromises = results.slice(0, 50).map(entry => getCaptainName(entry.entry));
+        const captainPromises = results.slice(0, 50).map(entry => getCaptainName(entry.entry, myTeamState));
         const captainNames = await Promise.all(captainPromises);
 
         // Compact grid-based layout for mobile (matching team table)
@@ -364,7 +375,9 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
             }
 
             return `
-                <div class="mobile-table-row mobile-table-league" style="background: ${bgColor}; ${isUser ? 'border-left: 3px solid var(--primary-color);' : ''}">
+                <div class="mobile-table-row mobile-table-league ${!isUser ? 'mobile-rival-team-row' : ''}"
+                     data-rival-id="${entry.entry}"
+                     style="background: ${bgColor}; ${isUser ? 'border-left: 3px solid var(--primary-color);' : ''} ${!isUser ? 'cursor: pointer;' : ''}">
                     <div style="text-align: center;">
                         <div style="font-weight: 600;">${entry.rank}</div>
                         <div style="font-size: 0.6rem; color: ${rankChangeColor};">
@@ -378,6 +391,7 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
                         </div>
                         <div style="font-size: 0.65rem; color: var(--text-secondary);">
                             <i class="fas fa-star" style="font-size: 0.55rem; margin-right: 0.2rem;"></i>${escapeHtml(captainName)}
+                            ${!isUser ? '<i class="fas fa-eye" style="margin-left: 0.35rem; font-size: 0.6rem; opacity: 0.6;"></i>' : ''}
                         </div>
                     </div>
                     <div style="text-align: center; background: ${gwBgColor}; color: ${gwTextColor}; font-weight: 700; padding: 0.05rem; border-radius: 0.2rem;">
@@ -507,6 +521,279 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
                     </p>
                 </div>
             ` : ''}
+        </div>
+    `;
+}
+
+/**
+ * Attach event listeners for mobile rival team rows
+ * @param {Object} myTeamState - Current state object
+ */
+export function attachMobileRivalListeners(myTeamState) {
+    const mobileRivalRows = document.querySelectorAll('.mobile-rival-team-row');
+
+    mobileRivalRows.forEach(row => {
+        row.addEventListener('click', () => {
+            const rivalId = parseInt(row.getAttribute('data-rival-id'));
+            if (rivalId) {
+                showMobileRivalTeam(rivalId, myTeamState);
+            }
+        });
+    });
+}
+
+/**
+ * Show rival team in mobile-friendly modal
+ * @param {number} rivalId - Rival team ID
+ * @param {Object} myTeamState - Current state object
+ */
+export async function showMobileRivalTeam(rivalId, myTeamState) {
+    console.log(`Loading rival team ${rivalId} for mobile view...`);
+
+    // Get or create modal
+    let modal = document.getElementById('mobile-rival-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'mobile-rival-modal';
+        document.body.appendChild(modal);
+    }
+
+    // Show loading modal
+    modal.style.display = 'block';
+    modal.innerHTML = `
+        <div style="
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 2000;
+            overflow-y: auto;
+            padding: 1rem;
+        ">
+            <div style="text-align: center; color: white; margin-top: 50%;">
+                <i class="fas fa-spinner fa-spin" style="font-size: 2.5rem; margin-bottom: 1rem;"></i>
+                <p style="font-size: 1rem;">Loading rival team...</p>
+            </div>
+        </div>
+    `;
+
+    try {
+        // Check cache first
+        let rivalTeamData;
+        if (myTeamState.rivalTeamCache.has(rivalId)) {
+            console.log(`✅ Using cached data for rival team ${rivalId}`);
+            rivalTeamData = myTeamState.rivalTeamCache.get(rivalId);
+        } else {
+            // Load rival's team data
+            rivalTeamData = await loadMyTeam(rivalId);
+            myTeamState.rivalTeamCache.set(rivalId, rivalTeamData);
+        }
+
+        // Render rival team modal
+        modal.innerHTML = renderMobileRivalModal(rivalTeamData);
+
+        // Add close handler
+        const closeBtn = modal.querySelector('.close-rival-modal-btn');
+        const overlay = modal.querySelector('.rival-modal-overlay');
+
+        const closeModal = () => {
+            modal.style.display = 'none';
+            modal.innerHTML = '';
+        };
+
+        if (closeBtn) closeBtn.addEventListener('click', closeModal);
+        if (overlay) overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) closeModal();
+        });
+
+    } catch (err) {
+        console.error('Failed to load rival team:', err);
+        modal.innerHTML = `
+            <div style="
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.85);
+                z-index: 2000;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 1rem;
+            ">
+                <div style="background: var(--bg-primary); padding: 1.5rem; border-radius: 12px; text-align: center; max-width: 400px;">
+                    <i class="fas fa-exclamation-circle" style="font-size: 2rem; color: #ef4444; margin-bottom: 1rem;"></i>
+                    <p style="color: var(--text-secondary); margin-bottom: 1rem;">Failed to load rival team.</p>
+                    <button
+                        class="close-rival-modal-btn"
+                        style="
+                            padding: 0.5rem 1rem;
+                            background: var(--primary-color);
+                            color: white;
+                            border: none;
+                            border-radius: 6px;
+                            cursor: pointer;
+                            font-size: 0.875rem;
+                        "
+                    >
+                        Close
+                    </button>
+                </div>
+            </div>
+        `;
+
+        const closeBtn = modal.querySelector('.close-rival-modal-btn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                modal.style.display = 'none';
+                modal.innerHTML = '';
+            });
+        }
+    }
+}
+
+/**
+ * Render mobile rival team modal
+ * @param {Object} rivalTeamData - Rival's team data
+ * @returns {string} HTML for mobile rival modal
+ */
+function renderMobileRivalModal(rivalTeamData) {
+    const { team, picks } = rivalTeamData;
+    const teamName = team?.name || 'Rival Team';
+    const managerName = team?.player_first_name && team?.player_last_name
+        ? `${team.player_first_name} ${team.player_last_name}`
+        : 'Manager';
+
+    // Get starters and bench
+    const starters = picks?.picks?.filter(p => p.position <= 11) || [];
+    const bench = picks?.picks?.filter(p => p.position > 11) || [];
+
+    // Find captain and vice captain
+    const captain = starters.find(p => p.is_captain);
+    const viceCaptain = starters.find(p => p.is_vice_captain);
+
+    const captainPlayer = captain ? getPlayerById(captain.element) : null;
+    const vicePlayer = viceCaptain ? getPlayerById(viceCaptain.element) : null;
+
+    // Render player rows
+    const renderPlayerRow = (pick, index) => {
+        const player = getPlayerById(pick.element);
+        if (!player) return '';
+
+        const isCaptain = pick.is_captain;
+        const isVice = pick.is_vice_captain;
+        const badge = isCaptain ? '(C)' : isVice ? '(V)' : '';
+
+        return `
+            <div class="mobile-table-row" style="background: ${index % 2 === 0 ? 'var(--bg-primary)' : 'var(--bg-secondary)'};">
+                <div style="font-size: 0.7rem; font-weight: 600;">
+                    ${player.web_name}
+                    ${badge ? `<span style="color: var(--primary-color); margin-left: 0.25rem;">${badge}</span>` : ''}
+                </div>
+                <div style="font-size: 0.65rem; color: var(--text-secondary);">${player.team_short}</div>
+                <div style="text-align: center; font-weight: 600;">${pick.multiplier}x</div>
+                <div style="text-align: center; font-weight: 600;">${player.event_points || 0}</div>
+            </div>
+        `;
+    };
+
+    return `
+        <div class="rival-modal-overlay" style="
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 2000;
+            overflow-y: auto;
+        ">
+            <div style="
+                max-width: 600px;
+                margin: 0 auto;
+                padding: 1rem;
+                min-height: 100%;
+                display: flex;
+                flex-direction: column;
+            ">
+                <!-- Header -->
+                <div style="
+                    background: var(--bg-primary);
+                    padding: 1rem;
+                    border-radius: 12px 12px 0 0;
+                    border-bottom: 2px solid var(--border-color);
+                ">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-primary); margin: 0;">
+                            ${escapeHtml(teamName)}
+                        </h3>
+                        <button class="close-rival-modal-btn" style="
+                            background: transparent;
+                            border: none;
+                            color: var(--text-secondary);
+                            font-size: 1.5rem;
+                            cursor: pointer;
+                            padding: 0;
+                            width: 2rem;
+                            height: 2rem;
+                            line-height: 1;
+                        ">
+                            ×
+                        </button>
+                    </div>
+                    <p style="font-size: 0.75rem; color: var(--text-secondary); margin: 0;">
+                        Managed by ${escapeHtml(managerName)}
+                    </p>
+                    ${captainPlayer ? `
+                        <div style="margin-top: 0.75rem; padding: 0.5rem; background: var(--bg-secondary); border-radius: 6px; font-size: 0.7rem;">
+                            <div style="color: var(--text-secondary);">
+                                Captain: <span style="color: var(--text-primary); font-weight: 600;">${escapeHtml(captainPlayer.web_name)}</span>
+                            </div>
+                            ${vicePlayer ? `
+                                <div style="color: var(--text-secondary); margin-top: 0.25rem;">
+                                    Vice: <span style="color: var(--text-primary); font-weight: 600;">${escapeHtml(vicePlayer.web_name)}</span>
+                                </div>
+                            ` : ''}
+                        </div>
+                    ` : ''}
+                </div>
+
+                <!-- Team List -->
+                <div style="background: var(--bg-primary); padding: 0 0 1rem 0; border-radius: 0 0 12px 12px;">
+                    <!-- Starters Header -->
+                    <div style="padding: 0.75rem 1rem; background: var(--bg-secondary); font-size: 0.75rem; font-weight: 700; color: var(--text-primary);">
+                        Starting XI
+                    </div>
+
+                    <!-- Column Headers -->
+                    <div class="mobile-table-header" style="grid-template-columns: 2fr 1fr 0.6fr 0.6fr; padding: 0.5rem 1rem; font-size: 0.7rem;">
+                        <div>Player</div>
+                        <div>Team</div>
+                        <div style="text-align: center;">Mult</div>
+                        <div style="text-align: center;">Pts</div>
+                    </div>
+
+                    <!-- Starters -->
+                    <div style="display: grid; gap: 0; padding: 0 1rem;">
+                        ${starters.map((pick, idx) => renderPlayerRow(pick, idx)).join('')}
+                    </div>
+
+                    ${bench.length > 0 ? `
+                        <!-- Bench Header -->
+                        <div style="padding: 0.75rem 1rem; background: var(--bg-secondary); font-size: 0.75rem; font-weight: 700; color: var(--text-primary); margin-top: 1rem;">
+                            Bench
+                        </div>
+
+                        <!-- Bench Players -->
+                        <div style="display: grid; gap: 0; padding: 0 1rem;">
+                            ${bench.map((pick, idx) => renderPlayerRow(pick, idx)).join('')}
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
         </div>
     `;
 }
