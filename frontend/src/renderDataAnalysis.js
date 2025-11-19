@@ -1102,24 +1102,26 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
         // Context column value and styling
         const contextValue = config.getValue(player);
 
-        // Render context column with appropriate styling
-        let contextHTML = '';
+        // Build context column styling and content
+        let contextDivStyle = 'text-align: center;';
+        let contextContent = contextValue;
+
         if (config.getClass) {
-            // Use difficulty class (for FDR)
+            // Use difficulty class (for FDR) - needs a span with class
             const contextClass = config.getClass(player);
-            contextHTML = `<span class="${contextClass}" style="padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-weight: 700; font-size: 0.6rem; display: inline-block;">${contextValue}</span>`;
+            contextContent = `<span class="${contextClass}" style="padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-weight: 700; font-size: 0.6rem; display: inline-block;">${contextValue}</span>`;
         } else if (config.getHeatmap) {
-            // Use heatmap (for total, ppm, ownership, etc.)
+            // Use heatmap - apply directly to div like Pts/Form columns
             const heatmap = config.getHeatmap(player);
             const heatmapStyle = getHeatmapStyle(heatmap);
-            contextHTML = `<span style="background: ${heatmapStyle.background}; color: ${heatmapStyle.color}; font-weight: 700; padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-size: 0.6rem; display: inline-block;">${contextValue}</span>`;
+            contextDivStyle = `text-align: center; background: ${heatmapStyle.background}; color: ${heatmapStyle.color}; font-weight: 700; padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-size: 0.6rem;`;
         } else if (config.getColor) {
             // Use custom color (for transfers)
             const contextColor = config.getColor(player);
-            contextHTML = `<span style="color: ${contextColor}; font-weight: 700; font-size: 0.7rem;">${contextValue}</span>`;
+            contextDivStyle = `text-align: center; color: ${contextColor}; font-weight: 700; font-size: 0.7rem;`;
         } else {
             // Default styling
-            contextHTML = contextValue;
+            contextDivStyle = 'text-align: center; font-size: 0.7rem;';
         }
 
         html += `
@@ -1139,7 +1141,7 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
                 <div style="text-align: center; font-size: 0.6rem; font-weight: ${statusWeight}; color: ${statusColor}; background: ${statusBgColor}; padding: 0.08rem 0.25rem; border-radius: 0.25rem;">${matchStatus}</div>
                 <div style="text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 700; padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-size: 0.6rem;">${gwPoints}</div>
                 <div style="text-align: center; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 700; padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-size: 0.6rem;">${formatDecimal(player.form)}</div>
-                <div style="text-align: center;">${contextHTML}</div>
+                <div style="${contextDivStyle}">${contextContent}</div>
             </div>
         `;
     });
