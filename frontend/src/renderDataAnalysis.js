@@ -141,25 +141,6 @@ export function renderDataAnalysis(subTab = 'overview', position = 'all') {
                 </button>
                 <button
                     class="analysis-tab-btn"
-                    data-tab="differentials"
-                    data-position="${position}"
-                    style="
-                        padding: ${tabPadding};
-                        background: ${subTab === 'differentials' ? 'var(--primary-color)' : 'transparent'};
-                        color: ${subTab === 'differentials' ? 'white' : 'var(--text-primary)'};
-                        border: none;
-                        border-bottom: 3px solid ${subTab === 'differentials' ? 'var(--primary-color)' : 'transparent'};
-                        cursor: pointer;
-                        font-weight: 600;
-                        font-size: ${tabFontSize};
-                        transition: all 0.2s;
-                        white-space: nowrap;
-                    "
-                >
-                    Differentials
-                </button>
-                <button
-                    class="analysis-tab-btn"
                     data-tab="transfer-targets"
                     data-position="${position}"
                     style="
@@ -229,8 +210,6 @@ export function renderDataAnalysis(subTab = 'overview', position = 'all') {
         contentHTML = renderAnalysisOverview(position);
     } else if (subTab === 'hidden-gems') {
         contentHTML = renderHiddenGems(position);
-    } else if (subTab === 'differentials') {
-        contentHTML = renderDifferentials(position);
     } else if (subTab === 'transfer-targets') {
         contentHTML = renderTransferTargets(position);
     } else if (subTab === 'team-analysis') {
@@ -589,6 +568,15 @@ function renderHiddenGems(position = 'all') {
         return p.bonus && p.bonus > 0;
     }).sort((a, b) => b.bonus - a.bonus).slice(0, 15);
 
+    // Differentials (low ownership < 10%, good form, playing regularly)
+    const differentials = activePlayers.filter(p => {
+        const ownership = parseFloat(p.selected_by_percent) || 0;
+        const form = parseFloat(p.form) || 0;
+        const minPercentage = calculateMinutesPercentage(p, getCurrentGW());
+
+        return ownership < 10 && ownership > 0 && form > 3 && minPercentage > 40;
+    }).sort((a, b) => b.total_points - a.total_points).slice(0, 15);
+
     return `
         <div>
             <!-- Section 1: xG Overperformers -->
@@ -607,6 +595,12 @@ function renderHiddenGems(position = 'all') {
             <div style="margin-bottom: 3rem;">
                 ${renderSectionHeader('🎁', 'Bonus Magnets', 'Players with high bonus points (valuable for tight gameweeks)')}
                 ${bonusMagnets.length > 0 ? (isMobile ? renderPositionSpecificTableMobile(bonusMagnets, 'bonus') : renderPositionSpecificTable(bonusMagnets, position)) : '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">No bonus magnets found</div>'}
+            </div>
+
+            <!-- Section 4: Differentials -->
+            <div style="margin-bottom: 3rem;">
+                ${renderSectionHeader('💎', 'Differentials (<10% Owned)', 'Low ownership players in good form - differential picks to gain rank')}
+                ${differentials.length > 0 ? (isMobile ? renderPositionSpecificTableMobile(differentials, 'ownership') : renderPositionSpecificTable(differentials, position)) : '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">No differentials found</div>'}
             </div>
         </div>
     `;
@@ -777,7 +771,77 @@ function renderTeamAnalysis(position = 'all') {
     `;
 }
 
+function renderTeamTableMobile(teamAnalysis) {
+    const currentGW = getCurrentGW();
+    const fixtureHeaders = getFixtureHeaders(5, 1);
+
+    let html = `
+        <div class="mobile-table" style="display: flex; flex-direction: column; gap: 0.5rem;">
+            <!-- Header Row -->
+            <div class="mobile-table-header" style="
+                display: grid;
+                grid-template-columns: 2fr 0.8fr 1fr 1fr 1fr 1fr 1fr;
+                gap: 0.25rem;
+                padding: 0.5rem;
+                background: var(--primary-color);
+                color: white;
+                border-radius: 8px;
+                font-size: 0.7rem;
+                font-weight: 700;
+                text-align: center;
+            ">
+                <div style="text-align: left;">Team</div>
+                <div>FDR(5)</div>
+                ${fixtureHeaders.map(h => `<div>${h}</div>`).join('')}
+            </div>
+    `;
+
+    teamAnalysis.forEach((ta, index) => {
+        const fdr5Class = getDifficultyClass(Math.round(ta.fdr5));
+        const next5 = getFixtures(ta.team.id, 10, false).filter(f => f.event > currentGW).slice(0, 5);
+
+        // Pad if less than 5 fixtures
+        while (next5.length < 5) {
+            next5.push({ opponent: '—', difficulty: 0 });
+        }
+
+        html += `
+            <div class="mobile-table-row" style="
+                display: grid;
+                grid-template-columns: 2fr 0.8fr 1fr 1fr 1fr 1fr 1fr;
+                gap: 0.25rem;
+                padding: 0.5rem;
+                background: var(--bg-secondary);
+                border-radius: 8px;
+                font-size: 0.75rem;
+                text-align: center;
+                align-items: center;
+            ">
+                <div style="text-align: left; font-weight: 600;">${getTeamShortName(ta.team.id)}</div>
+                <div><span class="${fdr5Class}" style="padding: 0.2rem 0.4rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.7rem;">${formatDecimal(ta.fdr5)}</span></div>
+                ${next5.map(f => `
+                    <div>${f.opponent !== '—' ? `<span class="${getDifficultyClass(f.difficulty)}" style="padding: 0.2rem 0.4rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.7rem;">${f.opponent}</span>` : '—'}</div>
+                `).join('')}
+            </div>
+        `;
+    });
+
+    html += `
+        </div>
+    `;
+
+    return html;
+}
+
 function renderTeamTable(teamAnalysis) {
+    const isMobile = isMobileDevice();
+
+    // Use mobile table on mobile devices
+    if (isMobile) {
+        return renderTeamTableMobile(teamAnalysis);
+    }
+
+    // Desktop table
     const fixtureHeaders = getFixtureHeaders(5, 1);
 
     let html = `

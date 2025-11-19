@@ -163,8 +163,22 @@ export function getMatchStatus(teamId, gameweek, player) {
 
     // 1. Match FINISHED
     if (fixture.finished) {
-        if (gwMinutes !== null && gwMinutes !== undefined) {
-            return `FT (${gwMinutes})`;
+        // Try github_gw minutes first, then fall back to player's latest event minutes
+        let minutes = gwMinutes;
+
+        // Fallback: check if player has explain data for this event
+        if (minutes === null && player && player.explain) {
+            const eventExplain = player.explain.find(e => e.event === gameweek);
+            if (eventExplain && eventExplain.stats && eventExplain.stats.length > 0) {
+                const minutesStat = eventExplain.stats.find(s => s.identifier === 'minutes');
+                if (minutesStat) {
+                    minutes = minutesStat.value;
+                }
+            }
+        }
+
+        if (minutes !== null && minutes !== undefined) {
+            return `FT (${minutes})`;
         }
         return 'FT';
     }
