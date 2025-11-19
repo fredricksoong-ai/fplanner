@@ -483,12 +483,15 @@ export function showPlayerModal(playerId) {
     // Get next 5 fixtures
     const allFixtures = getFixtures();
     const upcomingFixtures = allFixtures
-        .filter(f => f.event >= currentGW && f.event <= currentGW + 4)
+        .filter(f => f.event && f.event >= currentGW) // Get all future fixtures from current GW onwards
         .filter(f => f.team_h === player.team || f.team_a === player.team)
         .sort((a, b) => a.event - b.event)
         .slice(0, 5);
 
-    const fixturesHTML = upcomingFixtures.map(fixture => {
+    console.log('Fixtures debug - Player:', player.web_name, 'Team ID:', player.team, 'Current GW:', currentGW);
+    console.log('Total fixtures:', allFixtures.length, 'Upcoming:', upcomingFixtures.length);
+
+    const fixturesHTML = upcomingFixtures.length > 0 ? upcomingFixtures.map(fixture => {
         const isHome = fixture.team_h === player.team;
         const opponentId = isHome ? fixture.team_a : fixture.team_h;
         const opponentName = getTeamShortName(opponentId);
@@ -496,7 +499,7 @@ export function showPlayerModal(playerId) {
 
         return `
             <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <div style="font-size: 0.7rem; color: var(--text-secondary); min-width: 2rem;">
+                <div style="font-size: 0.7rem; color: var(--text-secondary); min-width: 2.5rem;">
                     GW${fixture.event}
                 </div>
                 <span class="${getDifficultyClass(difficulty)}" style="
@@ -511,7 +514,7 @@ export function showPlayerModal(playerId) {
                 </span>
             </div>
         `;
-    }).join('');
+    }).join('') : '<div style="text-align: center; color: var(--text-secondary); font-size: 0.75rem; padding: 0.5rem;">No upcoming fixtures available</div>';
 
     // Enhanced modal with player details
     const modalHTML = `
