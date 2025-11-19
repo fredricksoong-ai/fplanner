@@ -74,9 +74,12 @@ export const TTL = {
 export const ALLOWED_ORIGINS = [
   'http://localhost:5173',         // Vite dev server
   'http://localhost:3000',         // Alternative dev port
-  'https://fplanner.vercel.app',   // Production domain
+  'http://localhost:3001',         // Backend dev
+  'https://fplanner.onrender.com', // Production domain (Render)
+  'https://fplanner.vercel.app',   // Production domain (Vercel)
   'https://fplanner-git-*.vercel.app', // Preview deployments (wildcard handled in server)
-];
+  process.env.ALLOWED_ORIGIN,      // Custom domain from env var
+].filter(Boolean);
 
 // ============================================================================
 // RATE LIMITING CONFIGURATION
