@@ -50,6 +50,11 @@ import {
     attachPlayerRowListeners
 } from './renderMyTeamCompact.js';
 
+import { renderAnalysisOverview as renderAnalysisOverviewModule } from './dataAnalysis/overview.js';
+import { renderHiddenGems as renderHiddenGemsModule } from './dataAnalysis/hiddenGems.js';
+import { renderTransferTargets as renderTransferTargetsModule } from './dataAnalysis/transferTargets.js';
+import { renderTeamAnalysis as renderTeamAnalysisModule } from './dataAnalysis/teamAnalysis.js';
+
 // ============================================================================
 // DATA ANALYSIS PAGE
 // ============================================================================
@@ -292,75 +297,12 @@ export function renderDataAnalysis(subTab = 'overview', position = 'all') {
 }
 
 function renderAnalysisOverview(position = 'all') {
-    let players = getAllPlayers();
-    const isMobile = isMobileDevice();
-
-    // Filter by position if selected
-    if (position !== 'all') {
-        const posMap = { 'GKP': 1, 'DEF': 2, 'MID': 3, 'FWD': 4 };
-        players = players.filter(p => p.element_type === posMap[position]);
-    }
-
-    const top20 = sortPlayers(players, 'total_points', false).slice(0, 20);
-    const bestValue = players.filter(p => calculateMinutesPercentage(p, getCurrentGW()) > 30);
-    const top15Value = sortPlayers(bestValue, 'ppm', false).slice(0, 15);
-    const top15Form = sortPlayers(bestValue, 'form', false).slice(0, 15);
-
-    // Penalty takers (exclude GKP)
-    const penaltyTakers = players.filter(p =>
-        p.penalties_order === 1 && p.element_type !== 1
-    ).sort((a, b) => calculateFixtureDifficulty(a.team, 5) - calculateFixtureDifficulty(b.team, 5));
-
-    // Defensive standouts (for outfield players only)
-    let defensiveSection = '';
-    if (position === 'DEF' || position === 'MID' || position === 'FWD') {
-        const withDefCon = players.filter(p => p.github_season && p.github_season.defensive_contribution_per_90);
-        const topDefensive = withDefCon.sort((a, b) =>
-            b.github_season.defensive_contribution_per_90 - a.github_season.defensive_contribution_per_90
-        ).slice(0, 10);
-
-        if (topDefensive.length > 0) {
-            defensiveSection = `
-                <div style="margin-top: 3rem;">
-                    ${renderSectionHeader('🛡️', 'Defensive Standouts', `Top ${position === 'all' ? 'outfield players' : position} by defensive contribution per 90`)}
-                    ${isMobile ? renderPositionSpecificTableMobile(topDefensive, 'def90') : renderPositionSpecificTable(topDefensive, position)}
-                </div>
-            `;
-        }
-    }
-
-    return `
-        <div>
-            <!-- Section 1: Top Performers -->
-            <div style="margin-bottom: 3rem;">
-                ${renderSectionHeader('🏆', 'Top Performers', `Top ${position === 'all' ? '20 players' : '20 ' + position} by total points`)}
-                ${isMobile ? renderPositionSpecificTableMobile(top20, 'total') : renderPositionSpecificTable(top20, position)}
-            </div>
-
-            <!-- Section 2: Best Value -->
-            <div style="margin-bottom: 3rem;">
-                ${renderSectionHeader('💰', 'Best Value', 'Top 15 by points per million (min 30% minutes played)')}
-                ${isMobile ? renderPositionSpecificTableMobile(top15Value, 'ppm') : renderPositionSpecificTable(top15Value, position)}
-            </div>
-
-            <!-- Section 3: Form Stars -->
-            <div style="margin-bottom: 3rem;">
-                ${renderSectionHeader('🔥', 'Form Stars', 'Top 15 by recent form (min 30% minutes played)')}
-                ${isMobile ? renderPositionSpecificTableMobile(top15Form, 'ppm') : renderPositionSpecificTable(top15Form, position)}
-            </div>
-
-            <!-- Section 4: Penalty Takers -->
-            ${penaltyTakers.length > 0 ? `
-                <div style="margin-top: 3rem;">
-                    ${renderSectionHeader('⚽', 'Penalty Takers', 'First-choice penalty takers sorted by upcoming fixture difficulty')}
-                    ${isMobile ? renderPositionSpecificTableMobile(penaltyTakers.slice(0, 15), 'penalty') : renderPositionSpecificTable(penaltyTakers.slice(0, 15), position)}
-                </div>
-            ` : ''}
-
-            <!-- Section 5: Defensive Standouts (if applicable) -->
-            ${defensiveSection}
-        </div>
-    `;
+    return renderAnalysisOverviewModule(
+        position,
+        renderSectionHeader,
+        renderPositionSpecificTableMobile,
+        renderPositionSpecificTable
+    );
 }
 
 function renderDifferentials(position = 'all') {
@@ -525,250 +467,29 @@ function renderDifferentials(position = 'all') {
 }
 
 function renderHiddenGems(position = 'all') {
-    let players = getAllPlayers();
-    const isMobile = isMobileDevice();
-
-    // Filter by position if selected
-    if (position !== 'all') {
-        const posMap = { 'GKP': 1, 'DEF': 2, 'MID': 3, 'FWD': 4 };
-        players = players.filter(p => p.element_type === posMap[position]);
-    }
-
-    // Filter players with enough minutes and data
-    const activePlayers = players.filter(p => {
-        const minPercentage = calculateMinutesPercentage(p, getCurrentGW());
-        return minPercentage > 30;
-    });
-
-    // xG Overperformers (actual goals > expected)
-    const overperformers = activePlayers.filter(p => {
-        const xG = parseFloat(p.expected_goals) || 0;
-        const actualGoals = p.goals_scored || 0;
-        return actualGoals > xG + 1; // At least 1 goal over expected
-    }).sort((a, b) => {
-        const aVariance = (a.goals_scored || 0) - (parseFloat(a.expected_goals) || 0);
-        const bVariance = (b.goals_scored || 0) - (parseFloat(b.expected_goals) || 0);
-        return bVariance - aVariance;
-    }).slice(0, 15);
-
-    // xG Underperformers (expected > actual, likely to bounce back)
-    const underperformers = activePlayers.filter(p => {
-        const xG = parseFloat(p.expected_goals) || 0;
-        const actualGoals = p.goals_scored || 0;
-        const xGI = parseFloat(p.expected_goal_involvements) || 0;
-        return xG > 2 && (xG - actualGoals) > 1.5; // High xG but underperforming
-    }).sort((a, b) => {
-        const aVariance = (parseFloat(a.expected_goals) || 0) - (a.goals_scored || 0);
-        const bVariance = (parseFloat(b.expected_goals) || 0) - (b.goals_scored || 0);
-        return bVariance - aVariance;
-    }).slice(0, 15);
-
-    // Bonus magnets (high BPS per 90, if available via github_season)
-    const bonusMagnets = activePlayers.filter(p => {
-        return p.bonus && p.bonus > 0;
-    }).sort((a, b) => b.bonus - a.bonus).slice(0, 15);
-
-    // Differentials (low ownership < 10%, good form, playing regularly)
-    const differentials = activePlayers.filter(p => {
-        const ownership = parseFloat(p.selected_by_percent) || 0;
-        const form = parseFloat(p.form) || 0;
-        const minPercentage = calculateMinutesPercentage(p, getCurrentGW());
-
-        return ownership < 10 && ownership > 0 && form > 3 && minPercentage > 40;
-    }).sort((a, b) => b.total_points - a.total_points).slice(0, 15);
-
-    return `
-        <div>
-            <!-- Section 1: xG Overperformers -->
-            <div style="margin-bottom: 3rem;">
-                ${renderSectionHeader('🔥', 'xG Overperformers', 'Players scoring more than expected (hot streak, may not be sustainable)')}
-                ${overperformers.length > 0 ? (isMobile ? renderPositionSpecificTableMobile(overperformers, 'xg-variance') : renderPositionSpecificTable(overperformers, position)) : '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">No overperformers found</div>'}
-            </div>
-
-            <!-- Section 2: xG Underperformers -->
-            <div style="margin-bottom: 3rem;">
-                ${renderSectionHeader('📈', 'xG Underperformers (Bounce-back Candidates)', 'High xG but low actual goals - likely to return to form')}
-                ${underperformers.length > 0 ? (isMobile ? renderPositionSpecificTableMobile(underperformers, 'xg') : renderPositionSpecificTable(underperformers, position)) : '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">No underperformers found</div>'}
-            </div>
-
-            <!-- Section 3: Bonus Magnets -->
-            <div style="margin-bottom: 3rem;">
-                ${renderSectionHeader('🎁', 'Bonus Magnets', 'Players with high bonus points (valuable for tight gameweeks)')}
-                ${bonusMagnets.length > 0 ? (isMobile ? renderPositionSpecificTableMobile(bonusMagnets, 'bonus') : renderPositionSpecificTable(bonusMagnets, position)) : '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">No bonus magnets found</div>'}
-            </div>
-
-            <!-- Section 4: Differentials -->
-            <div style="margin-bottom: 3rem;">
-                ${renderSectionHeader('💎', 'Differentials (<10% Owned)', 'Low ownership players in good form - differential picks to gain rank')}
-                ${differentials.length > 0 ? (isMobile ? renderPositionSpecificTableMobile(differentials, 'ownership') : renderPositionSpecificTable(differentials, position)) : '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">No differentials found</div>'}
-            </div>
-        </div>
-    `;
+    return renderHiddenGemsModule(
+        position,
+        renderSectionHeader,
+        renderPositionSpecificTableMobile,
+        renderPositionSpecificTable
+    );
 }
 
 function renderTransferTargets(position = 'all') {
-    let players = getAllPlayers();
-    const isMobile = isMobileDevice();
-
-    // Filter by position if selected
-    if (position !== 'all') {
-        const posMap = { 'GKP': 1, 'DEF': 2, 'MID': 3, 'FWD': 4 };
-        players = players.filter(p => p.element_type === posMap[position]);
-    }
-
-    // Rising stars (positive momentum + good fixtures + good form)
-    const risingStars = players.filter(p => {
-        const minPercentage = calculateMinutesPercentage(p, getCurrentGW());
-        if (minPercentage < 30) return false;
-
-        const form = parseFloat(p.form) || 0;
-        const fdr5 = calculateFixtureDifficulty(p.team, 5);
-
-        let hasPositiveMomentum = false;
-        if (p.github_transfers) {
-            const net = p.github_transfers.transfers_in - p.github_transfers.transfers_out;
-            hasPositiveMomentum = net > 0;
-        }
-
-        return form > 4 && fdr5 <= 3.0 && hasPositiveMomentum;
-    }).sort((a, b) => {
-        const aNet = a.github_transfers ? (a.github_transfers.transfers_in - a.github_transfers.transfers_out) : 0;
-        const bNet = b.github_transfers ? (b.github_transfers.transfers_in - b.github_transfers.transfers_out) : 0;
-        return bNet - aNet;
-    }).slice(0, 20);
-
-    // Sell candidates (negative momentum + bad fixtures + poor form)
-    const sellCandidates = players.filter(p => {
-        const minPercentage = calculateMinutesPercentage(p, getCurrentGW());
-        const ownership = parseFloat(p.selected_by_percent) || 0;
-        if (minPercentage < 20 || ownership < 2) return false;
-
-        const form = parseFloat(p.form) || 0;
-        const fdr5 = calculateFixtureDifficulty(p.team, 5);
-
-        let hasNegativeMomentum = false;
-        if (p.github_transfers) {
-            const net = p.github_transfers.transfers_in - p.github_transfers.transfers_out;
-            hasNegativeMomentum = net < -10000; // Significant negative transfers
-        }
-
-        return (form < 3 || fdr5 >= 4.0) && hasNegativeMomentum;
-    }).sort((a, b) => {
-        const aNet = a.github_transfers ? (a.github_transfers.transfers_in - a.github_transfers.transfers_out) : 0;
-        const bNet = b.github_transfers ? (b.github_transfers.transfers_in - b.github_transfers.transfers_out) : 0;
-        return aNet - bNet;
-    }).slice(0, 20);
-
-    // Fixture turnarounds (bad fixtures now, good fixtures soon)
-    const fixtureTurnarounds = players.filter(p => {
-        const minPercentage = calculateMinutesPercentage(p, getCurrentGW());
-        if (minPercentage < 30) return false;
-
-        const next3FDR = calculateFixtureDifficulty(p.team, 3);
-        // Would need to calculate next 3 after that for swing
-        // For now, just use players with improving fixtures
-        return next3FDR <= 2.5;
-    }).sort((a, b) => {
-        const aFDR = calculateFixtureDifficulty(a.team, 5);
-        const bFDR = calculateFixtureDifficulty(b.team, 5);
-        return aFDR - bFDR;
-    }).slice(0, 15);
-
-    return `
-        <div>
-            <!-- Section 1: Rising Stars -->
-            <div style="margin-bottom: 3rem;">
-                ${renderSectionHeader('⭐', 'Rising Stars', 'High form + good fixtures + positive transfer momentum')}
-                ${risingStars.length > 0 ? (isMobile ? renderPositionSpecificTableMobile(risingStars, 'transfers') : renderPositionSpecificTable(risingStars, position)) : '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">No rising stars found</div>'}
-            </div>
-
-            <!-- Section 2: Sell Candidates -->
-            <div style="margin-bottom: 3rem;">
-                ${renderSectionHeader('📉', 'Sell Candidates', 'Poor form or bad fixtures + negative transfer momentum')}
-                ${sellCandidates.length > 0 ? (isMobile ? renderPositionSpecificTableMobile(sellCandidates, 'transfers') : renderPositionSpecificTable(sellCandidates, position)) : '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">No sell candidates found</div>'}
-            </div>
-
-            <!-- Section 3: Fixture Turnarounds -->
-            <div style="margin-bottom: 3rem;">
-                ${renderSectionHeader('🔄', 'Fixture Turnarounds', 'Players with improving fixtures (good time to buy before price rises)')}
-                ${fixtureTurnarounds.length > 0 ? (isMobile ? renderPositionSpecificTableMobile(fixtureTurnarounds, 'fdr5') : renderPositionSpecificTable(fixtureTurnarounds, position)) : '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">No fixture turnarounds found</div>'}
-            </div>
-        </div>
-    `;
+    return renderTransferTargetsModule(
+        position,
+        renderSectionHeader,
+        renderPositionSpecificTableMobile,
+        renderPositionSpecificTable
+    );
 }
 
 function renderTeamAnalysis(position = 'all') {
-    if (!fplBootstrap || !fplBootstrap.teams) {
-        return '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">Team data not available</div>';
-    }
-
-    // Get all teams with fixture analysis
-    const teamAnalysis = fplBootstrap.teams.map(team => {
-        const fdr3 = calculateFixtureDifficulty(team.id, 3);
-        const fdr5 = calculateFixtureDifficulty(team.id, 5);
-
-        // Find best player from this team
-        const teamPlayers = getAllPlayers().filter(p => p.team === team.id);
-        const bestPlayer = teamPlayers.sort((a, b) => b.total_points - a.total_points)[0];
-
-        return {
-            team,
-            fdr3,
-            fdr5,
-            bestPlayer,
-            strength: team.strength,
-            strengthAttackHome: team.strength_attack_home,
-            strengthAttackAway: team.strength_attack_away,
-            strengthDefenceHome: team.strength_defence_home,
-            strengthDefenceAway: team.strength_defence_away
-        };
-    });
-
-    // Best fixtures (next 5)
-    const bestFixtures = [...teamAnalysis].sort((a, b) => a.fdr5 - b.fdr5).slice(0, 10);
-
-    // Worst fixtures (next 5)
-    const worstFixtures = [...teamAnalysis].sort((a, b) => b.fdr5 - a.fdr5).slice(0, 10);
-
-    // Best attack teams
-    const bestAttack = [...teamAnalysis].sort((a, b) =>
-        (b.team.strength_attack_home + b.team.strength_attack_away) -
-        (a.team.strength_attack_home + a.team.strength_attack_away)
-    ).slice(0, 10);
-
-    // Best defense teams
-    const bestDefense = [...teamAnalysis].sort((a, b) =>
-        (b.team.strength_defence_home + b.team.strength_defence_away) -
-        (a.team.strength_defence_home + a.team.strength_defence_away)
-    ).slice(0, 10);
-
-    return `
-        <div>
-            <!-- Section 1: Best Fixtures -->
-            <div style="margin-bottom: 3rem;">
-                ${renderSectionHeader('✅', 'Teams with Best Fixtures (Next 5 GWs)', '')}
-                ${renderTeamTable(bestFixtures)}
-            </div>
-
-            <!-- Section 2: Worst Fixtures -->
-            <div style="margin-bottom: 3rem;">
-                ${renderSectionHeader('❌', 'Teams with Worst Fixtures (Next 5 GWs)', '')}
-                ${renderTeamTable(worstFixtures)}
-            </div>
-
-            <!-- Section 3: Best Attack -->
-            <div style="margin-bottom: 3rem;">
-                ${renderSectionHeader('⚔️', 'Best Attack Teams', '')}
-                ${renderTeamTable(bestAttack)}
-            </div>
-
-            <!-- Section 4: Best Defense -->
-            <div style="margin-bottom: 3rem;">
-                ${renderSectionHeader('🛡️', 'Best Defense Teams', '')}
-                ${renderTeamTable(bestDefense)}
-            </div>
-        </div>
-    `;
+    return renderTeamAnalysisModule(
+        position,
+        renderSectionHeader,
+        renderTeamTable
+    );
 }
 
 function renderTeamTableMobile(teamAnalysis) {

@@ -29,6 +29,18 @@ import {
     hasHighRisk
 } from './risk.js';
 
+import {
+    getTableContainerStyle,
+    getTableStyle,
+    getTableHeaderStyle,
+    getHeaderCellStyle,
+    getCellStyle,
+    getRowBackground,
+    getEmptyStateStyle,
+    getFixtureBadgeStyle,
+    COLORS
+} from './styles/tableStyles.js';
+
 // ============================================================================
 // PLAYER TABLE RENDERING
 // ============================================================================
