@@ -946,9 +946,45 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
 
     // Context column header and value function
     const contextConfig = {
-        'total': { header: 'Total', getValue: (p) => p.total_points },
-        'ppm': { header: 'PPM', getValue: (p) => formatDecimal(calculatePPM(p)) },
-        'ownership': { header: 'Own%', getValue: (p) => `${(parseFloat(p.selected_by_percent) || 0).toFixed(1)}%` },
+        'total': {
+            header: 'Total',
+            getValue: (p) => p.total_points,
+            getHeatmap: (p) => {
+                // Total points heatmap (0-200 range)
+                const pts = p.total_points || 0;
+                if (pts >= 100) return 'dark-green';
+                if (pts >= 70) return 'light-green';
+                if (pts >= 40) return 'yellow';
+                if (pts >= 20) return 'red';
+                return 'gray';
+            }
+        },
+        'ppm': {
+            header: 'PPM',
+            getValue: (p) => formatDecimal(calculatePPM(p)),
+            getHeatmap: (p) => {
+                // PPM heatmap (points per million)
+                const ppm = calculatePPM(p);
+                if (ppm >= 6) return 'dark-green';
+                if (ppm >= 5) return 'light-green';
+                if (ppm >= 4) return 'yellow';
+                if (ppm >= 3) return 'red';
+                return 'gray';
+            }
+        },
+        'ownership': {
+            header: 'Own%',
+            getValue: (p) => `${(parseFloat(p.selected_by_percent) || 0).toFixed(1)}%`,
+            getHeatmap: (p) => {
+                // Ownership heatmap (inverted - lower is better for differentials)
+                const own = parseFloat(p.selected_by_percent) || 0;
+                if (own >= 30) return 'red';
+                if (own >= 15) return 'yellow';
+                if (own >= 5) return 'light-green';
+                if (own > 0) return 'dark-green';
+                return 'gray';
+            }
+        },
         'transfers': {
             header: 'ΔT',
             getValue: (p) => {
@@ -968,11 +1004,56 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
             getValue: (p) => {
                 const variance = (p.goals_scored || 0) - (parseFloat(p.expected_goals) || 0);
                 return variance > 0 ? `+${formatDecimal(variance)}` : formatDecimal(variance);
+            },
+            getHeatmap: (p) => {
+                // Variance heatmap (positive is good, negative is bad)
+                const variance = (p.goals_scored || 0) - (parseFloat(p.expected_goals) || 0);
+                if (variance >= 2) return 'dark-green';
+                if (variance >= 1) return 'light-green';
+                if (variance >= -1) return 'yellow';
+                if (variance >= -2) return 'red';
+                return 'gray';
             }
         },
-        'xg': { header: 'xG', getValue: (p) => formatDecimal(parseFloat(p.expected_goals) || 0) },
-        'bonus': { header: 'Bonus', getValue: (p) => p.bonus || 0 },
-        'def90': { header: 'Def/90', getValue: (p) => formatDecimal(p.github_season?.defensive_contribution_per_90 || 0) },
+        'xg': {
+            header: 'xG',
+            getValue: (p) => formatDecimal(parseFloat(p.expected_goals) || 0),
+            getHeatmap: (p) => {
+                // xG heatmap
+                const xg = parseFloat(p.expected_goals) || 0;
+                if (xg >= 4) return 'dark-green';
+                if (xg >= 2.5) return 'light-green';
+                if (xg >= 1.5) return 'yellow';
+                if (xg >= 0.5) return 'red';
+                return 'gray';
+            }
+        },
+        'bonus': {
+            header: 'Bonus',
+            getValue: (p) => p.bonus || 0,
+            getHeatmap: (p) => {
+                // Bonus points heatmap
+                const bonus = p.bonus || 0;
+                if (bonus >= 10) return 'dark-green';
+                if (bonus >= 5) return 'light-green';
+                if (bonus >= 2) return 'yellow';
+                if (bonus >= 1) return 'red';
+                return 'gray';
+            }
+        },
+        'def90': {
+            header: 'Def/90',
+            getValue: (p) => formatDecimal(p.github_season?.defensive_contribution_per_90 || 0),
+            getHeatmap: (p) => {
+                // Defensive contribution per 90 heatmap
+                const def = p.github_season?.defensive_contribution_per_90 || 0;
+                if (def >= 5) return 'dark-green';
+                if (def >= 4) return 'light-green';
+                if (def >= 3) return 'yellow';
+                if (def >= 2) return 'red';
+                return 'gray';
+            }
+        },
         'fdr5': {
             header: 'FDR(5)',
             getValue: (p) => formatDecimal(calculateFixtureDifficulty(p.team, 5)),
@@ -1041,11 +1122,28 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
             statusWeight = '700';
         }
 
-        // Context column value
+        // Context column value and styling
         const contextValue = config.getValue(player);
-        const contextColor = config.getColor ? config.getColor(player) : 'inherit';
-        const contextClass = config.getClass ? config.getClass(player) : '';
-        const contextStyle = contextClass ? `class="${contextClass}" style="padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-weight: 700; font-size: 0.6rem; display: inline-block;"` : `style="color: ${contextColor};"`;
+
+        // Determine context column styling (priority: class > heatmap > color > default)
+        let contextDisplayStyle = '';
+        if (config.getClass) {
+            // Use difficulty class (for FDR)
+            const contextClass = config.getClass(player);
+            contextDisplayStyle = `class="${contextClass}" style="padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-weight: 700; font-size: 0.6rem; display: inline-block;"`;
+        } else if (config.getHeatmap) {
+            // Use heatmap (for total, ppm, ownership, etc.)
+            const heatmap = config.getHeatmap(player);
+            const heatmapStyle = getHeatmapStyle(heatmap);
+            contextDisplayStyle = `style="text-align: center; background: ${heatmapStyle.background}; color: ${heatmapStyle.color}; font-weight: 700; padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-size: 0.6rem;"`;
+        } else if (config.getColor) {
+            // Use custom color (for transfers)
+            const contextColor = config.getColor(player);
+            contextDisplayStyle = `style="color: ${contextColor}; font-weight: 700; font-size: 0.7rem;"`;
+        } else {
+            // Default styling
+            contextDisplayStyle = `style="font-size: 0.7rem;"`;
+        }
 
         html += `
             <div
@@ -1064,7 +1162,7 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
                 <div style="text-align: center; font-size: 0.6rem; font-weight: ${statusWeight}; color: ${statusColor}; background: ${statusBgColor}; padding: 0.08rem 0.25rem; border-radius: 0.25rem;">${matchStatus}</div>
                 <div style="text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 700; padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-size: 0.6rem;">${gwPoints}</div>
                 <div style="text-align: center; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 700; padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-size: 0.6rem;">${formatDecimal(player.form)}</div>
-                <div style="text-align: center; font-size: 0.7rem;" ${contextStyle}>${contextValue}</div>
+                <div ${contextDisplayStyle}>${contextValue}</div>
             </div>
         `;
     });
