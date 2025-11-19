@@ -466,8 +466,52 @@ export function showPlayerModal(playerId) {
 
     const currentGW = getCurrentGW();
     const team = getTeamShortName(player.team);
-    const position = getPositionShort(player.element_type);
+    const position = getPositionShort(player); // Fixed: pass full player object
     const price = (player.now_cost / 10).toFixed(1);
+
+    // Get GW stats
+    const gwPoints = player.event_points || 0;
+    const totalPoints = player.total_points || 0;
+
+    // Get form & ownership
+    const form = formatDecimal(player.form) || '0.0';
+    const ownership = parseFloat(player.selected_by_percent) || 0;
+
+    // Get opponent for current GW
+    const gwOpp = getGWOpponent(player.team, currentGW);
+
+    // Get next 5 fixtures
+    const allFixtures = getFixtures();
+    const upcomingFixtures = allFixtures
+        .filter(f => f.event >= currentGW && f.event <= currentGW + 4)
+        .filter(f => f.team_h === player.team || f.team_a === player.team)
+        .sort((a, b) => a.event - b.event)
+        .slice(0, 5);
+
+    const fixturesHTML = upcomingFixtures.map(fixture => {
+        const isHome = fixture.team_h === player.team;
+        const opponentId = isHome ? fixture.team_a : fixture.team_h;
+        const opponentName = getTeamShortName(opponentId);
+        const difficulty = isHome ? fixture.team_h_difficulty : fixture.team_a_difficulty;
+
+        return `
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <div style="font-size: 0.7rem; color: var(--text-secondary); min-width: 2rem;">
+                    GW${fixture.event}
+                </div>
+                <span class="${getDifficultyClass(difficulty)}" style="
+                    padding: 0.25rem 0.5rem;
+                    border-radius: 0.25rem;
+                    font-weight: 600;
+                    font-size: 0.75rem;
+                    flex: 1;
+                    text-align: center;
+                ">
+                    ${opponentName} (${isHome ? 'H' : 'A'})
+                </span>
+            </div>
+        `;
+    }).join('');
 
     // Enhanced modal with player details
     const modalHTML = `
@@ -535,8 +579,92 @@ export function showPlayerModal(playerId) {
 
                 <!-- Content -->
                 <div style="padding: 1rem;">
-                    <div style="text-align: center; color: var(--text-secondary); padding: 2rem;">
-                        More stats coming soon...
+                    <!-- Stats Grid -->
+                    <div style="
+                        display: grid;
+                        grid-template-columns: repeat(2, 1fr);
+                        gap: 0.75rem;
+                        margin-bottom: 1rem;
+                    ">
+                        <!-- GW Points -->
+                        <div style="
+                            background: var(--bg-secondary);
+                            border: 1px solid var(--border-color);
+                            border-radius: 8px;
+                            padding: 0.75rem;
+                            text-align: center;
+                        ">
+                            <div style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary);">
+                                ${gwPoints}
+                            </div>
+                            <div style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.2rem;">
+                                GW ${currentGW} Points
+                            </div>
+                        </div>
+
+                        <!-- Total Points -->
+                        <div style="
+                            background: var(--bg-secondary);
+                            border: 1px solid var(--border-color);
+                            border-radius: 8px;
+                            padding: 0.75rem;
+                            text-align: center;
+                        ">
+                            <div style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary);">
+                                ${totalPoints}
+                            </div>
+                            <div style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.2rem;">
+                                Total Points
+                            </div>
+                        </div>
+
+                        <!-- Form -->
+                        <div style="
+                            background: var(--bg-secondary);
+                            border: 1px solid var(--border-color);
+                            border-radius: 8px;
+                            padding: 0.75rem;
+                            text-align: center;
+                        ">
+                            <div style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary);">
+                                ${form}
+                            </div>
+                            <div style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.2rem;">
+                                Form
+                            </div>
+                        </div>
+
+                        <!-- Ownership -->
+                        <div style="
+                            background: var(--bg-secondary);
+                            border: 1px solid var(--border-color);
+                            border-radius: 8px;
+                            padding: 0.75rem;
+                            text-align: center;
+                        ">
+                            <div style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary);">
+                                ${ownership.toFixed(1)}%
+                            </div>
+                            <div style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.2rem;">
+                                Ownership
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Upcoming Fixtures -->
+                    <div style="
+                        background: var(--bg-secondary);
+                        border: 1px solid var(--border-color);
+                        border-radius: 8px;
+                        padding: 0.75rem;
+                        margin-bottom: 1rem;
+                    ">
+                        <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem;">
+                            Next 5 Fixtures
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                            ${fixturesHTML}
+                        </div>
                     </div>
                 </div>
             </div>
