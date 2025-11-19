@@ -1674,9 +1674,7 @@ window.toggleProblemPlayers = function() {
         icon.classList.remove('fa-chevron-up');
         icon.classList.add('fa-chevron-down');
     }
-    `;
-}
-}
+};
 
 // ============================================================================
 // GLOBAL FUNCTION BINDINGS
