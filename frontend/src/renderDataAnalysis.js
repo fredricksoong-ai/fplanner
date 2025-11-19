@@ -83,10 +83,19 @@ export function setPriceRange(range) {
 export function renderDataAnalysis(subTab = 'overview', position = 'all') {
     const container = document.getElementById('app-container');
     analysisState.position = position;
+    const isMobile = isMobileDevice();
+
+    // Mobile-specific sizing
+    const headerSize = isMobile ? '1.25rem' : '2rem';
+    const headerMargin = isMobile ? '0.5rem' : '1rem';
+    const tabPadding = isMobile ? '0.5rem 0.75rem' : '0.75rem 1.5rem';
+    const tabFontSize = isMobile ? '0.75rem' : '1rem';
+    const positionPadding = isMobile ? '0.4rem 0.6rem' : '0.5rem 1rem';
+    const positionFontSize = isMobile ? '0.75rem' : '0.875rem';
 
     const tabHTML = `
-        <div style="margin-bottom: 2rem;">
-            <h1 style="font-size: 2rem; font-weight: 700; color: var(--primary-color); margin-bottom: 1rem;">
+        <div style="margin-bottom: ${isMobile ? '1rem' : '2rem'};">
+            <h1 style="font-size: ${headerSize}; font-weight: 700; color: var(--primary-color); margin-bottom: ${headerMargin};">
                 <i class="fas fa-chart-bar"></i> Data Analysis
             </h1>
 
@@ -97,13 +106,14 @@ export function renderDataAnalysis(subTab = 'overview', position = 'all') {
                     data-tab="overview"
                     data-position="${position}"
                     style="
-                        padding: 0.75rem 1.5rem;
+                        padding: ${tabPadding};
                         background: ${subTab === 'overview' ? 'var(--primary-color)' : 'transparent'};
                         color: ${subTab === 'overview' ? 'white' : 'var(--text-primary)'};
                         border: none;
                         border-bottom: 3px solid ${subTab === 'overview' ? 'var(--primary-color)' : 'transparent'};
                         cursor: pointer;
                         font-weight: 600;
+                        font-size: ${tabFontSize};
                         transition: all 0.2s;
                         white-space: nowrap;
                     "
@@ -115,13 +125,14 @@ export function renderDataAnalysis(subTab = 'overview', position = 'all') {
                     data-tab="hidden-gems"
                     data-position="${position}"
                     style="
-                        padding: 0.75rem 1.5rem;
+                        padding: ${tabPadding};
                         background: ${subTab === 'hidden-gems' ? 'var(--primary-color)' : 'transparent'};
                         color: ${subTab === 'hidden-gems' ? 'white' : 'var(--text-primary)'};
                         border: none;
                         border-bottom: 3px solid ${subTab === 'hidden-gems' ? 'var(--primary-color)' : 'transparent'};
                         cursor: pointer;
                         font-weight: 600;
+                        font-size: ${tabFontSize};
                         transition: all 0.2s;
                         white-space: nowrap;
                     "
@@ -133,13 +144,14 @@ export function renderDataAnalysis(subTab = 'overview', position = 'all') {
                     data-tab="differentials"
                     data-position="${position}"
                     style="
-                        padding: 0.75rem 1.5rem;
+                        padding: ${tabPadding};
                         background: ${subTab === 'differentials' ? 'var(--primary-color)' : 'transparent'};
                         color: ${subTab === 'differentials' ? 'white' : 'var(--text-primary)'};
                         border: none;
                         border-bottom: 3px solid ${subTab === 'differentials' ? 'var(--primary-color)' : 'transparent'};
                         cursor: pointer;
                         font-weight: 600;
+                        font-size: ${tabFontSize};
                         transition: all 0.2s;
                         white-space: nowrap;
                     "
@@ -151,13 +163,14 @@ export function renderDataAnalysis(subTab = 'overview', position = 'all') {
                     data-tab="transfer-targets"
                     data-position="${position}"
                     style="
-                        padding: 0.75rem 1.5rem;
+                        padding: ${tabPadding};
                         background: ${subTab === 'transfer-targets' ? 'var(--primary-color)' : 'transparent'};
                         color: ${subTab === 'transfer-targets' ? 'white' : 'var(--text-primary)'};
                         border: none;
                         border-bottom: 3px solid ${subTab === 'transfer-targets' ? 'var(--primary-color)' : 'transparent'};
                         cursor: pointer;
                         font-weight: 600;
+                        font-size: ${tabFontSize};
                         transition: all 0.2s;
                         white-space: nowrap;
                     "
@@ -169,13 +182,14 @@ export function renderDataAnalysis(subTab = 'overview', position = 'all') {
                     data-tab="team-analysis"
                     data-position="${position}"
                     style="
-                        padding: 0.75rem 1.5rem;
+                        padding: ${tabPadding};
                         background: ${subTab === 'team-analysis' ? 'var(--primary-color)' : 'transparent'};
                         color: ${subTab === 'team-analysis' ? 'white' : 'var(--text-primary)'};
                         border: none;
                         border-bottom: 3px solid ${subTab === 'team-analysis' ? 'var(--primary-color)' : 'transparent'};
                         cursor: pointer;
                         font-weight: 600;
+                        font-size: ${tabFontSize};
                         transition: all 0.2s;
                         white-space: nowrap;
                     "
@@ -185,21 +199,21 @@ export function renderDataAnalysis(subTab = 'overview', position = 'all') {
             </div>
 
             <!-- Position Filter -->
-            <div style="display: flex; gap: 0.5rem; margin-bottom: 2rem;">
+            <div style="display: flex; gap: 0.5rem; margin-bottom: ${isMobile ? '1rem' : '2rem'}; flex-wrap: wrap;">
                 ${['all', 'GKP', 'DEF', 'MID', 'FWD'].map(pos => `
                     <button
                         class="position-filter-btn"
                         data-tab="${subTab}"
                         data-position="${pos}"
                         style="
-                            padding: 0.5rem 1rem;
+                            padding: ${positionPadding};
                             background: ${position === pos ? 'var(--accent-color)' : 'var(--bg-secondary)'};
                             color: ${position === pos ? 'white' : 'var(--text-primary)'};
                             border: 1px solid ${position === pos ? 'var(--accent-color)' : 'var(--border-color)'};
                             border-radius: 6px;
                             cursor: pointer;
                             font-weight: 500;
-                            font-size: 0.875rem;
+                            font-size: ${positionFontSize};
                             transition: all 0.2s;
                         "
                     >
@@ -225,7 +239,6 @@ export function renderDataAnalysis(subTab = 'overview', position = 'all') {
         contentHTML = renderAnalysisOverview(position);
     }
 
-    const isMobile = isMobileDevice();
     const containerPadding = isMobile ? 'padding: 1rem;' : 'padding: 2rem;';
 
     container.innerHTML = `
@@ -330,12 +343,7 @@ function renderAnalysisOverview(position = 'all') {
         if (topDefensive.length > 0) {
             defensiveSection = `
                 <div style="margin-top: 3rem;">
-                    <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
-                        🛡️ Defensive Standouts
-                    </h2>
-                    <p style="color: var(--text-secondary); margin-bottom: 2rem;">
-                        Top ${position === 'all' ? 'outfield players' : position} by defensive contribution per 90
-                    </p>
+                    ${renderSectionHeader('🛡️', 'Defensive Standouts', `Top ${position === 'all' ? 'outfield players' : position} by defensive contribution per 90`)}
                     ${isMobile ? renderPositionSpecificTableMobile(topDefensive, 'def90') : renderPositionSpecificTable(topDefensive, position)}
                 </div>
             `;
@@ -346,46 +354,26 @@ function renderAnalysisOverview(position = 'all') {
         <div>
             <!-- Section 1: Top Performers -->
             <div style="margin-bottom: 3rem;">
-                <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
-                    🏆 Top Performers
-                </h2>
-                <p style="color: var(--text-secondary); margin-bottom: 2rem;">
-                    Top ${position === 'all' ? '20 players' : '20 ' + position} by total points
-                </p>
+                ${renderSectionHeader('🏆', 'Top Performers', `Top ${position === 'all' ? '20 players' : '20 ' + position} by total points`)}
                 ${isMobile ? renderPositionSpecificTableMobile(top20, 'total') : renderPositionSpecificTable(top20, position)}
             </div>
 
             <!-- Section 2: Best Value -->
             <div style="margin-bottom: 3rem;">
-                <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
-                    💰 Best Value
-                </h2>
-                <p style="color: var(--text-secondary); margin-bottom: 2rem;">
-                    Top 15 by points per million (min 30% minutes played)
-                </p>
+                ${renderSectionHeader('💰', 'Best Value', 'Top 15 by points per million (min 30% minutes played)')}
                 ${isMobile ? renderPositionSpecificTableMobile(top15Value, 'ppm') : renderPositionSpecificTable(top15Value, position)}
             </div>
 
             <!-- Section 3: Form Stars -->
             <div style="margin-bottom: 3rem;">
-                <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
-                    🔥 Form Stars
-                </h2>
-                <p style="color: var(--text-secondary); margin-bottom: 2rem;">
-                    Top 15 by recent form (min 30% minutes played)
-                </p>
+                ${renderSectionHeader('🔥', 'Form Stars', 'Top 15 by recent form (min 30% minutes played)')}
                 ${isMobile ? renderPositionSpecificTableMobile(top15Form, 'ppm') : renderPositionSpecificTable(top15Form, position)}
             </div>
 
             <!-- Section 4: Penalty Takers -->
             ${penaltyTakers.length > 0 ? `
                 <div style="margin-top: 3rem;">
-                    <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
-                        ⚽ Penalty Takers
-                    </h2>
-                    <p style="color: var(--text-secondary); margin-bottom: 2rem;">
-                        First-choice penalty takers sorted by upcoming fixture difficulty
-                    </p>
+                    ${renderSectionHeader('⚽', 'Penalty Takers', 'First-choice penalty takers sorted by upcoming fixture difficulty')}
                     ${isMobile ? renderPositionSpecificTableMobile(penaltyTakers.slice(0, 15), 'penalty') : renderPositionSpecificTable(penaltyTakers.slice(0, 15), position)}
                 </div>
             ` : ''}
@@ -551,12 +539,7 @@ function renderDifferentials(position = 'all') {
             </div>
 
             <!-- Results -->
-            <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
-                🎯 Differential Picks
-            </h2>
-            <p style="color: var(--text-secondary); margin-bottom: 2rem;">
-                Found ${sortedDiffs.length} ${position === 'all' ? 'players' : position} matching criteria
-            </p>
+            ${renderSectionHeader('🎯', 'Differential Picks', `Found ${sortedDiffs.length} ${position === 'all' ? 'players' : position} matching criteria`)}
             ${sortedDiffs.length > 0 ? (isMobile ? renderPositionSpecificTableMobile(sortedDiffs, 'ownership') : renderPositionSpecificTable(sortedDiffs, position)) : '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">No differentials found matching criteria. Try adjusting filters.</div>'}
         </div>
     `;
@@ -610,34 +593,19 @@ function renderHiddenGems(position = 'all') {
         <div>
             <!-- Section 1: xG Overperformers -->
             <div style="margin-bottom: 3rem;">
-                <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
-                    🔥 xG Overperformers
-                </h2>
-                <p style="color: var(--text-secondary); margin-bottom: 2rem;">
-                    Players scoring more than expected (hot streak, may not be sustainable)
-                </p>
+                ${renderSectionHeader('🔥', 'xG Overperformers', 'Players scoring more than expected (hot streak, may not be sustainable)')}
                 ${overperformers.length > 0 ? (isMobile ? renderPositionSpecificTableMobile(overperformers, 'xg-variance') : renderPositionSpecificTable(overperformers, position)) : '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">No overperformers found</div>'}
             </div>
 
             <!-- Section 2: xG Underperformers -->
             <div style="margin-bottom: 3rem;">
-                <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
-                    📈 xG Underperformers (Bounce-back Candidates)
-                </h2>
-                <p style="color: var(--text-secondary); margin-bottom: 2rem;">
-                    High xG but low actual goals - likely to return to form
-                </p>
+                ${renderSectionHeader('📈', 'xG Underperformers (Bounce-back Candidates)', 'High xG but low actual goals - likely to return to form')}
                 ${underperformers.length > 0 ? (isMobile ? renderPositionSpecificTableMobile(underperformers, 'xg') : renderPositionSpecificTable(underperformers, position)) : '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">No underperformers found</div>'}
             </div>
 
             <!-- Section 3: Bonus Magnets -->
             <div style="margin-bottom: 3rem;">
-                <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
-                    🎁 Bonus Magnets
-                </h2>
-                <p style="color: var(--text-secondary); margin-bottom: 2rem;">
-                    Players with high bonus points (valuable for tight gameweeks)
-                </p>
+                ${renderSectionHeader('🎁', 'Bonus Magnets', 'Players with high bonus points (valuable for tight gameweeks)')}
                 ${bonusMagnets.length > 0 ? (isMobile ? renderPositionSpecificTableMobile(bonusMagnets, 'bonus') : renderPositionSpecificTable(bonusMagnets, position)) : '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">No bonus magnets found</div>'}
             </div>
         </div>
@@ -716,34 +684,19 @@ function renderTransferTargets(position = 'all') {
         <div>
             <!-- Section 1: Rising Stars -->
             <div style="margin-bottom: 3rem;">
-                <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
-                    ⭐ Rising Stars
-                </h2>
-                <p style="color: var(--text-secondary); margin-bottom: 2rem;">
-                    High form + good fixtures + positive transfer momentum
-                </p>
+                ${renderSectionHeader('⭐', 'Rising Stars', 'High form + good fixtures + positive transfer momentum')}
                 ${risingStars.length > 0 ? (isMobile ? renderPositionSpecificTableMobile(risingStars, 'transfers') : renderPositionSpecificTable(risingStars, position)) : '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">No rising stars found</div>'}
             </div>
 
             <!-- Section 2: Sell Candidates -->
             <div style="margin-bottom: 3rem;">
-                <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
-                    📉 Sell Candidates
-                </h2>
-                <p style="color: var(--text-secondary); margin-bottom: 2rem;">
-                    Poor form or bad fixtures + negative transfer momentum
-                </p>
+                ${renderSectionHeader('📉', 'Sell Candidates', 'Poor form or bad fixtures + negative transfer momentum')}
                 ${sellCandidates.length > 0 ? (isMobile ? renderPositionSpecificTableMobile(sellCandidates, 'transfers') : renderPositionSpecificTable(sellCandidates, position)) : '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">No sell candidates found</div>'}
             </div>
 
             <!-- Section 3: Fixture Turnarounds -->
             <div style="margin-bottom: 3rem;">
-                <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
-                    🔄 Fixture Turnarounds
-                </h2>
-                <p style="color: var(--text-secondary); margin-bottom: 2rem;">
-                    Players with improving fixtures (good time to buy before price rises)
-                </p>
+                ${renderSectionHeader('🔄', 'Fixture Turnarounds', 'Players with improving fixtures (good time to buy before price rises)')}
                 ${fixtureTurnarounds.length > 0 ? (isMobile ? renderPositionSpecificTableMobile(fixtureTurnarounds, 'fdr5') : renderPositionSpecificTable(fixtureTurnarounds, position)) : '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">No fixture turnarounds found</div>'}
             </div>
         </div>
@@ -799,33 +752,25 @@ function renderTeamAnalysis(position = 'all') {
         <div>
             <!-- Section 1: Best Fixtures -->
             <div style="margin-bottom: 3rem;">
-                <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
-                    ✅ Teams with Best Fixtures (Next 5 GWs)
-                </h2>
+                ${renderSectionHeader('✅', 'Teams with Best Fixtures (Next 5 GWs)', '')}
                 ${renderTeamTable(bestFixtures)}
             </div>
 
             <!-- Section 2: Worst Fixtures -->
             <div style="margin-bottom: 3rem;">
-                <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
-                    ❌ Teams with Worst Fixtures (Next 5 GWs)
-                </h2>
+                ${renderSectionHeader('❌', 'Teams with Worst Fixtures (Next 5 GWs)', '')}
                 ${renderTeamTable(worstFixtures)}
             </div>
 
             <!-- Section 3: Best Attack -->
             <div style="margin-bottom: 3rem;">
-                <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
-                    ⚔️ Best Attack Teams
-                </h2>
+                ${renderSectionHeader('⚔️', 'Best Attack Teams', '')}
                 ${renderTeamTable(bestAttack)}
             </div>
 
             <!-- Section 4: Best Defense -->
             <div style="margin-bottom: 3rem;">
-                <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
-                    🛡️ Best Defense Teams
-                </h2>
+                ${renderSectionHeader('🛡️', 'Best Defense Teams', '')}
                 ${renderTeamTable(bestDefense)}
             </div>
         </div>
@@ -894,6 +839,29 @@ function renderTeamTable(teamAnalysis) {
     `;
 
     return html;
+}
+
+/**
+ * Helper to render section headers with mobile-friendly sizing
+ * @param {string} icon - Emoji icon
+ * @param {string} title - Section title
+ * @param {string} description - Section description
+ * @returns {string} HTML for section header
+ */
+function renderSectionHeader(icon, title, description) {
+    const isMobile = isMobileDevice();
+    const titleSize = isMobile ? '1.125rem' : '1.5rem';
+    const descSize = isMobile ? '0.8rem' : '1rem';
+    const marginBottom = isMobile ? '1rem' : '2rem';
+
+    return `
+        <h2 style="font-size: ${titleSize}; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem;">
+            ${icon} ${title}
+        </h2>
+        <p style="color: var(--text-secondary); margin-bottom: ${marginBottom}; font-size: ${descSize};">
+            ${description}
+        </p>
+    `;
 }
 
 /**
@@ -967,7 +935,9 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
     // Render rows
     mobilePlayers.forEach((player) => {
         const gwOpp = getGWOpponent(player.team, currentGW);
-        const matchStatus = getMatchStatus(player.team, currentGW);
+        const matchStatus = getMatchStatus(player.team, currentGW, player);
+        const isLive = matchStatus === 'LIVE';
+        const isFinished = matchStatus.startsWith('FT');
 
         // Points (GW points)
         const gwPoints = player.event_points || 0;
@@ -978,17 +948,33 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
         const formHeatmap = getFormHeatmap(parseFloat(player.form) || 0);
         const formStyle = getHeatmapStyle(formHeatmap);
 
-        // Status styling
+        // Status styling (matching My Team logic)
         let statusColor = 'var(--text-secondary)';
-        let statusWeight = '500';
+        let statusWeight = '400';
         let statusBgColor = 'transparent';
-        if (matchStatus.status === 'Live') {
-            statusColor = '#22c55e';
+
+        if (isFinished && matchStatus.includes('(')) {
+            // Extract minutes from "FT (90)" format
+            const minsMatch = matchStatus.match(/\((\d+)\)/);
+            if (minsMatch) {
+                const mins = parseInt(minsMatch[1]);
+                statusWeight = '700';
+                if (mins >= 90) {
+                    statusColor = '#86efac'; // Soft green
+                    statusBgColor = 'rgba(31, 77, 46, 1.0)';
+                } else if (mins >= 60) {
+                    statusColor = '#fcd34d'; // Soft yellow/orange
+                    statusBgColor = 'rgba(92, 74, 31, 1.0)';
+                } else {
+                    statusColor = '#fca5a5'; // Soft red
+                    statusBgColor = 'rgba(92, 31, 31, 1.0)';
+                }
+            } else {
+                statusColor = '#22c55e'; // FT but no minutes data
+            }
+        } else if (isLive) {
+            statusColor = '#ef4444';
             statusWeight = '700';
-            statusBgColor = 'rgba(34, 197, 94, 0.1)';
-        } else if (matchStatus.status === 'Finished') {
-            statusColor = 'var(--text-secondary)';
-            statusWeight = '600';
         }
 
         // Context column value
@@ -999,7 +985,7 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
 
         html += `
             <div
-                class="mobile-table-row"
+                class="player-row mobile-table-row"
                 style="grid-template-columns: 2fr 1.2fr 1fr 0.7fr 0.7fr 0.8fr; cursor: pointer; padding-bottom: 3px !important; padding-top: 3px !important;"
                 data-player-id="${player.id}"
             >
@@ -1011,7 +997,7 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
                         ${gwOpp.name} (${gwOpp.isHome ? 'H' : 'A'})
                     </span>
                 </div>
-                <div style="text-align: center; font-size: 0.6rem; font-weight: ${statusWeight}; color: ${statusColor}; background: ${statusBgColor}; padding: 0.08rem 0.25rem; border-radius: 0.25rem;">${matchStatus.status}</div>
+                <div style="text-align: center; font-size: 0.6rem; font-weight: ${statusWeight}; color: ${statusColor}; background: ${statusBgColor}; padding: 0.08rem 0.25rem; border-radius: 0.25rem;">${matchStatus}</div>
                 <div style="text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 700; padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-size: 0.6rem;">${gwPoints}</div>
                 <div style="text-align: center; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 700; padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-size: 0.6rem;">${formatDecimal(player.form)}</div>
                 <div style="text-align: center; font-size: 0.7rem;" ${contextStyle}>${contextValue}</div>
