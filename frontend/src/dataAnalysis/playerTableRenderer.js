@@ -4,7 +4,20 @@
 // ============================================================================
 
 import { currentGW } from '../data.js';
-import { getHeatmapStyle } from '../utils.js';
+import {
+    formatCurrency,
+    formatDecimal,
+    getTeamShortName,
+    getPositionShort,
+    getDifficultyClass,
+    calculatePPM,
+    calculateMinutesPercentage,
+    getPtsHeatmap,
+    getFormHeatmap,
+    getHeatmapStyle,
+    escapeHtml
+} from '../utils.js';
+import { getGWOpponent, getMatchStatus, calculateFixtureDifficulty } from '../fixtures.js';
 import { isMobileDevice } from '../renderMyTeamMobile.js';
 import {
     getTableConfig,
@@ -96,109 +109,236 @@ export function renderPlayerTableDesktop(players, position, myPlayerIds = new Se
 }
 
 // ============================================================================
-// MOBILE TABLE RENDERER
+// MOBILE TABLE RENDERER (ORIGINAL DESIGN)
 // ============================================================================
 
 /**
- * Render player table for mobile (grid-based layout)
+ * Render player table for mobile - ORIGINAL TABLE-BASED DESIGN
  * @param {Array} players - Players to display
- * @param {string} contextType - Type of context to show ('ownership', 'form', 'fixtures')
- * @param {Set} myPlayerIds - Set of player IDs in user's team
+ * @param {string} contextColumn - Context column type
  * @returns {string} HTML for mobile table
  */
-export function renderPlayerTableMobile(players, contextType = 'ownership', myPlayerIds = new Set()) {
-    const contextConfig = getContextColumnConfig(contextType);
+export function renderPlayerTableMobile(players, contextColumn = 'total') {
+    if (!players || players.length === 0) {
+        return '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">No players found</div>';
+    }
 
+    // Limit to top 15 for mobile
+    const mobilePlayers = players.slice(0, 15);
+
+    // Context column header and value function
+    const contextConfig = {
+        'total': {
+            header: 'Total',
+            getValue: (p) => p.total_points,
+            getHeatmap: (p) => {
+                const pts = p.total_points || 0;
+                if (pts >= 100) return 'heat-dark-green';
+                if (pts >= 70) return 'heat-light-green';
+                if (pts >= 40) return 'heat-yellow';
+                if (pts >= 20) return 'heat-red';
+                return 'heat-gray';
+            }
+        },
+        'ppm': {
+            header: 'PPM',
+            getValue: (p) => formatDecimal(calculatePPM(p)),
+            getHeatmap: (p) => {
+                const ppm = calculatePPM(p);
+                if (ppm >= 6) return 'heat-dark-green';
+                if (ppm >= 5) return 'heat-light-green';
+                if (ppm >= 4) return 'heat-yellow';
+                if (ppm >= 3) return 'heat-red';
+                return 'heat-gray';
+            }
+        },
+        'ownership': {
+            header: 'Own%',
+            getValue: (p) => `${(parseFloat(p.selected_by_percent) || 0).toFixed(1)}%`,
+            getHeatmap: (p) => {
+                const own = parseFloat(p.selected_by_percent) || 0;
+                if (own >= 30) return 'heat-red';
+                if (own >= 15) return 'heat-yellow';
+                if (own >= 5) return 'heat-light-green';
+                if (own > 0) return 'heat-dark-green';
+                return 'heat-gray';
+            }
+        },
+        'transfers': {
+            header: 'ΔT',
+            getValue: (p) => {
+                if (!p.github_transfers) return '—';
+                const net = p.github_transfers.transfers_in - p.github_transfers.transfers_out;
+                const prefix = net > 0 ? '+' : '';
+                return `${prefix}${(net / 1000).toFixed(0)}k`;
+            },
+            getColor: (p) => {
+                if (!p.github_transfers) return 'inherit';
+                const net = p.github_transfers.transfers_in - p.github_transfers.transfers_out;
+                return net > 0 ? '#22c55e' : net < 0 ? '#ef4444' : 'inherit';
+            }
+        },
+        'xg-variance': {
+            header: 'G-xG',
+            getValue: (p) => {
+                const variance = (p.goals_scored || 0) - (parseFloat(p.expected_goals) || 0);
+                return variance > 0 ? `+${formatDecimal(variance)}` : formatDecimal(variance);
+            },
+            getHeatmap: (p) => {
+                const variance = (p.goals_scored || 0) - (parseFloat(p.expected_goals) || 0);
+                if (variance >= 2) return 'heat-dark-green';
+                if (variance >= 1) return 'heat-light-green';
+                if (variance >= -1) return 'heat-yellow';
+                if (variance >= -2) return 'heat-red';
+                return 'heat-gray';
+            }
+        },
+        'xg': {
+            header: 'xG',
+            getValue: (p) => formatDecimal(parseFloat(p.expected_goals) || 0),
+            getHeatmap: (p) => {
+                const xg = parseFloat(p.expected_goals) || 0;
+                if (xg >= 4) return 'heat-dark-green';
+                if (xg >= 2.5) return 'heat-light-green';
+                if (xg >= 1.5) return 'heat-yellow';
+                if (xg >= 0.5) return 'heat-red';
+                return 'heat-gray';
+            }
+        },
+        'bonus': {
+            header: 'Bonus',
+            getValue: (p) => p.bonus || 0,
+            getHeatmap: (p) => {
+                const bonus = p.bonus || 0;
+                if (bonus >= 10) return 'heat-dark-green';
+                if (bonus >= 5) return 'heat-light-green';
+                if (bonus >= 2) return 'heat-yellow';
+                if (bonus >= 1) return 'heat-red';
+                return 'heat-gray';
+            }
+        },
+        'def90': {
+            header: 'Def/90',
+            getValue: (p) => formatDecimal(p.github_season?.defensive_contribution_per_90 || 0),
+            getHeatmap: (p) => {
+                const def = p.github_season?.defensive_contribution_per_90 || 0;
+                if (def >= 5) return 'heat-dark-green';
+                if (def >= 4) return 'heat-light-green';
+                if (def >= 3) return 'heat-yellow';
+                if (def >= 2) return 'heat-red';
+                return 'heat-gray';
+            }
+        },
+        'fdr5': {
+            header: 'FDR(5)',
+            getValue: (p) => formatDecimal(calculateFixtureDifficulty(p.team, 5)),
+            getClass: (p) => getDifficultyClass(Math.round(calculateFixtureDifficulty(p.team, 5)))
+        },
+        'penalty': { header: 'PK', getValue: (p) => p.penalties_order === 1 ? '⚽' : '—' }
+    };
+
+    const config = contextConfig[contextColumn] || contextConfig.total;
+
+    // Header row
     let html = `
-        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+        <div class="mobile-table">
+            <div class="mobile-table-header" style="grid-template-columns: 2fr 1.2fr 1fr 0.7fr 0.7fr 0.8fr; padding-bottom: 2px !important; padding-top: 2px !important;">
+                <div>Player</div>
+                <div style="text-align: center;">Opp</div>
+                <div style="text-align: center;">Status</div>
+                <div style="text-align: center;">Pts</div>
+                <div style="text-align: center;">Form</div>
+                <div style="text-align: center;">${config.header}</div>
+            </div>
     `;
 
-    players.forEach((player, index) => {
-        const isMyPlayer = myPlayerIds.has(player.id);
-        const cardBg = isMyPlayer ? 'rgba(139, 92, 246, 0.15)' : 'var(--bg-primary)';
+    // Render rows
+    mobilePlayers.forEach((player) => {
+        const gwOpp = getGWOpponent(player.team, currentGW);
+        const matchStatus = getMatchStatus(player.team, currentGW, player);
+        const isLive = matchStatus === 'LIVE';
+        const isFinished = matchStatus.startsWith('FT');
+
+        // Points (GW points)
+        const gwPoints = player.event_points || 0;
+        const ptsHeatmap = getPtsHeatmap(gwPoints, 'gw_pts');
+        const ptsStyle = getHeatmapStyle(ptsHeatmap);
+
+        // Form
+        const formHeatmap = getFormHeatmap(parseFloat(player.form) || 0);
+        const formStyle = getHeatmapStyle(formHeatmap);
+
+        // Status styling
+        let statusColor = 'var(--text-secondary)';
+        let statusWeight = '400';
+        let statusBgColor = 'transparent';
+
+        if (isFinished && matchStatus.includes('(')) {
+            const minsMatch = matchStatus.match(/\((\d+)\)/);
+            if (minsMatch) {
+                const mins = parseInt(minsMatch[1]);
+                statusWeight = '700';
+                if (mins >= 90) {
+                    statusColor = '#86efac';
+                    statusBgColor = 'rgba(31, 77, 46, 1.0)';
+                } else if (mins >= 60) {
+                    statusColor = '#fcd34d';
+                    statusBgColor = 'rgba(92, 74, 31, 1.0)';
+                } else {
+                    statusColor = '#fca5a5';
+                    statusBgColor = 'rgba(92, 31, 31, 1.0)';
+                }
+            } else {
+                statusColor = '#22c55e';
+            }
+        } else if (isLive) {
+            statusColor = '#ef4444';
+            statusWeight = '700';
+        }
+
+        // Context column value and styling
+        const contextValue = config.getValue(player);
+
+        let contextDivStyle = 'text-align: center;';
+        let contextContent = contextValue;
+
+        if (config.getClass) {
+            const contextClass = config.getClass(player);
+            contextContent = `<span class="${contextClass}" style="padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-weight: 700; font-size: 0.6rem; display: inline-block;">${contextValue}</span>`;
+        } else if (config.getHeatmap) {
+            const heatmap = config.getHeatmap(player);
+            const heatmapStyle = getHeatmapStyle(heatmap);
+            contextDivStyle = `text-align: center; background: ${heatmapStyle.background}; color: ${heatmapStyle.color}; font-weight: 700; padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-size: 0.6rem;`;
+        } else if (config.getColor) {
+            const contextColor = config.getColor(player);
+            contextDivStyle = `text-align: center; color: ${contextColor}; font-weight: 700; font-size: 0.7rem;`;
+        } else {
+            contextDivStyle = 'text-align: center; font-size: 0.7rem;';
+        }
 
         html += `
-            <div style="
-                background: ${cardBg};
-                border-radius: 12px;
-                padding: 1rem;
-                box-shadow: 0 2px 8px var(--shadow);
-                border-left: 4px solid ${isMyPlayer ? '#8b5cf6' : 'transparent'};
-            ">
-                <!-- Player Header -->
-                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.75rem;">
-                    <div style="flex: 1;">
-                        <div style="font-weight: 700; font-size: 1rem; color: var(--text-primary); margin-bottom: 0.25rem;">
-                            ${player.web_name}${isMyPlayer ? ' <span style="color: #8b5cf6;">⭐</span>' : ''}
-                        </div>
-                        <div style="font-size: 0.875rem; color: var(--text-secondary);">
-                            ${getTeamShortName(player.team)} • ${getPositionShort(player)}
-                        </div>
-                    </div>
-                    <div style="text-align: right;">
-                        <div style="font-size: 1.125rem; font-weight: 700; color: var(--primary-color);">
-                            ${formatCurrency(player.now_cost)}
-                        </div>
-                        <div style="font-size: 0.75rem; color: var(--text-secondary);">
-                            ${player.total_points} pts
-                        </div>
-                    </div>
+            <div
+                class="player-row mobile-table-row"
+                style="grid-template-columns: 2fr 1.2fr 1fr 0.7fr 0.7fr 0.8fr; cursor: pointer; padding-bottom: 3px !important; padding-top: 3px !important;"
+                data-player-id="${player.id}"
+            >
+                <div style="font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    ${escapeHtml(player.web_name)}
                 </div>
-
-                <!-- Context Stats Grid -->
-                <div style="display: grid; grid-template-columns: repeat(${contextConfig.length}, 1fr); gap: 0.75rem; margin-bottom: 0.75rem;">
-        `;
-
-        contextConfig.forEach(col => {
-            const value = col.getValue(player);
-            const style = col.getStyle ? col.getStyle(player) : {};
-            const bgStyle = style.background ? `background: ${style.background};` : '';
-            const colorStyle = style.color ? `color: ${style.color};` : '';
-
-            html += `
-                    <div style="text-align: center;">
-                        <div style="font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 0.25rem;">
-                            ${col.label}
-                        </div>
-                        <div style="font-weight: 600; font-size: 0.95rem; ${bgStyle} ${colorStyle} padding: 0.25rem; border-radius: 0.25rem;">
-                            ${value}
-                        </div>
-                    </div>
-            `;
-        });
-
-        html += `
+                <div style="text-align: center;">
+                    <span class="${getDifficultyClass(gwOpp.difficulty)}" style="padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-weight: 700; font-size: 0.6rem; min-width: 3rem; display: inline-block; text-align: center;">
+                        ${gwOpp.name} (${gwOpp.isHome ? 'H' : 'A'})
+                    </span>
                 </div>
-
-                <!-- Next Fixtures -->
-                <div>
-                    <div style="font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
-                        Next 5 Fixtures
-                    </div>
-                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-        `;
-
-        const next5 = getNextFixtures(player.team, currentGW, 5);
-        next5.forEach(f => {
-            const fdrClass = getDifficultyClass(f.difficulty);
-            html += `
-                        <span class="${fdrClass}" style="padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.75rem;">
-                            ${f.opponent}
-                        </span>
-            `;
-        });
-
-        html += `
-                    </div>
-                </div>
+                <div style="text-align: center; font-size: 0.6rem; font-weight: ${statusWeight}; color: ${statusColor}; background: ${statusBgColor}; padding: 0.08rem 0.25rem; border-radius: 0.25rem;">${matchStatus}</div>
+                <div style="text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 700; padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-size: 0.6rem;">${gwPoints}</div>
+                <div style="text-align: center; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 700; padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-size: 0.6rem;">${formatDecimal(player.form)}</div>
+                <div style="${contextDivStyle}">${contextContent}</div>
             </div>
         `;
     });
 
-    html += `
-        </div>
-    `;
-
+    html += `</div>`;
     return html;
 }
 
@@ -217,17 +357,14 @@ function renderTableCell(player, col, isMyPlayer) {
     const align = col.align || 'center';
     let cellStyle = `padding: 0.75rem 0.5rem; text-align: ${align};`;
 
-    // Add font size if specified
     if (col.fontSize) {
         cellStyle += ` font-size: ${col.fontSize};`;
     }
 
-    // Add bold if specified
     if (col.bold) {
         cellStyle += ` font-weight: 600;`;
     }
 
-    // Add heatmap styling if configured
     if (col.hasHeatmap && col.heatmapKey) {
         const heatmapStyle = getHeatmapStyle(player[col.heatmapKey], col.heatmapKey);
         if (heatmapStyle) {
@@ -235,13 +372,11 @@ function renderTableCell(player, col, isMyPlayer) {
         }
     }
 
-    // Add color if specified
     if (col.getColor) {
         const color = col.getColor(player);
         cellStyle += ` color: ${color};`;
     }
 
-    // Use custom render function if provided
     let cellContent;
     if (col.renderCell) {
         cellContent = col.renderCell(player, isMyPlayer);
@@ -251,86 +386,6 @@ function renderTableCell(player, col, isMyPlayer) {
 
     return `<td style="${cellStyle}">${cellContent}</td>`;
 }
-
-/**
- * Get context column configuration for mobile view
- * @param {string} contextType - 'ownership', 'form', or 'fixtures'
- * @returns {Array} Context column configuration
- */
-function getContextColumnConfig(contextType) {
-    const configs = {
-        ownership: [
-            {
-                label: 'PPM',
-                getValue: (p) => formatDecimal(calculatePPM(p)),
-                getStyle: (p) => getHeatmapStyle(calculatePPM(p), 'ppm')
-            },
-            {
-                label: 'Own%',
-                getValue: (p) => `${(parseFloat(p.selected_by_percent) || 0).toFixed(1)}%`
-            },
-            {
-                label: 'Form',
-                getValue: (p) => formatDecimal(p.form),
-                getStyle: (p) => getHeatmapStyle(parseFloat(p.form), 'form')
-            }
-        ],
-        form: [
-            {
-                label: 'Form',
-                getValue: (p) => formatDecimal(p.form),
-                getStyle: (p) => getHeatmapStyle(parseFloat(p.form), 'form')
-            },
-            {
-                label: 'Min%',
-                getValue: (p) => `${calculateMinutesPercentage(p, currentGW).toFixed(0)}%`
-            },
-            {
-                label: 'ΔT',
-                getValue: (p) => {
-                    const net = (p.transfers_in_event || 0) - (p.transfers_out_event || 0);
-                    return net >= 0 ? `+${net}` : net.toString();
-                },
-                getStyle: (p) => {
-                    const net = (p.transfers_in_event || 0) - (p.transfers_out_event || 0);
-                    const color = net > 0 ? '#22c55e' : net < 0 ? '#ef4444' : 'var(--text-secondary)';
-                    return { color };
-                }
-            }
-        ],
-        fixtures: [
-            {
-                label: 'FDR(5)',
-                getValue: (p) => calculateFixtureDifficulty(p.team, 5).toFixed(1)
-            },
-            {
-                label: 'PPM',
-                getValue: (p) => formatDecimal(calculatePPM(p)),
-                getStyle: (p) => getHeatmapStyle(calculatePPM(p), 'ppm')
-            },
-            {
-                label: 'Form',
-                getValue: (p) => formatDecimal(p.form),
-                getStyle: (p) => getHeatmapStyle(parseFloat(p.form), 'form')
-            }
-        ]
-    };
-
-    return configs[contextType] || configs.ownership;
-}
-
-/**
- * Import required utility functions (to be imported at top when integrated)
- */
-import {
-    formatCurrency,
-    formatDecimal,
-    getTeamShortName,
-    getPositionShort,
-    getDifficultyClass,
-    calculatePPM,
-    calculateMinutesPercentage
-} from '../utils.js';
 
 // ============================================================================
 // PUBLIC API
@@ -345,7 +400,7 @@ import {
  */
 export function renderPlayerTable(players, position, options = {}) {
     const {
-        contextType = 'ownership',
+        contextType = 'total',
         myPlayerIds = new Set(),
         forceMobile = false,
         forceDesktop = false
