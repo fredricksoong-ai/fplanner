@@ -384,14 +384,16 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
                             ${rankChangeIcon}
                         </div>
                     </div>
-                    <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                        <div style="font-size: 0.7rem; color: var(--text-primary);">
-                            <span style="font-weight: 600;">${escapeHtml(entry.entry_name)}</span>
-                            <span style="color: var(--text-secondary);"> • ${escapeHtml(entry.player_name)}${isUser ? ' (You)' : ''}</span>
+                    <div style="overflow: hidden;">
+                        <div style="font-size: 0.7rem; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                            ${escapeHtml(entry.entry_name)}${isUser ? ' (You)' : ''}
                         </div>
-                        <div style="font-size: 0.65rem; color: var(--text-secondary);">
-                            <i class="fas fa-star" style="font-size: 0.55rem; margin-right: 0.2rem;"></i>${escapeHtml(captainName)}
-                            ${!isUser ? '<i class="fas fa-eye" style="margin-left: 0.35rem; font-size: 0.6rem; opacity: 0.6;"></i>' : ''}
+                        <div style="font-size: 0.65rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 0.1rem;">
+                            ${escapeHtml(entry.player_name)}
+                        </div>
+                        <div style="font-size: 0.6rem; color: var(--text-secondary); margin-top: 0.15rem;">
+                            <i class="fas fa-star" style="font-size: 0.5rem; margin-right: 0.2rem;"></i>${escapeHtml(captainName)}
+                            ${!isUser ? '<i class="fas fa-eye" style="margin-left: 0.35rem; font-size: 0.55rem; opacity: 0.6;"></i>' : ''}
                         </div>
                     </div>
                     <div style="text-align: center; background: ${gwBgColor}; color: ${gwTextColor}; font-weight: 700; padding: 0.05rem; border-radius: 0.2rem;">
