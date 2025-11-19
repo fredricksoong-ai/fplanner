@@ -929,11 +929,11 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
             getHeatmap: (p) => {
                 // Total points heatmap (0-200 range)
                 const pts = p.total_points || 0;
-                if (pts >= 100) return 'dark-green';
-                if (pts >= 70) return 'light-green';
-                if (pts >= 40) return 'yellow';
-                if (pts >= 20) return 'red';
-                return 'gray';
+                if (pts >= 100) return 'heat-dark-green';
+                if (pts >= 70) return 'heat-light-green';
+                if (pts >= 40) return 'heat-yellow';
+                if (pts >= 20) return 'heat-red';
+                return 'heat-gray';
             }
         },
         'ppm': {
@@ -942,11 +942,11 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
             getHeatmap: (p) => {
                 // PPM heatmap (points per million)
                 const ppm = calculatePPM(p);
-                if (ppm >= 6) return 'dark-green';
-                if (ppm >= 5) return 'light-green';
-                if (ppm >= 4) return 'yellow';
-                if (ppm >= 3) return 'red';
-                return 'gray';
+                if (ppm >= 6) return 'heat-dark-green';
+                if (ppm >= 5) return 'heat-light-green';
+                if (ppm >= 4) return 'heat-yellow';
+                if (ppm >= 3) return 'heat-red';
+                return 'heat-gray';
             }
         },
         'ownership': {
@@ -955,11 +955,11 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
             getHeatmap: (p) => {
                 // Ownership heatmap (inverted - lower is better for differentials)
                 const own = parseFloat(p.selected_by_percent) || 0;
-                if (own >= 30) return 'red';
-                if (own >= 15) return 'yellow';
-                if (own >= 5) return 'light-green';
-                if (own > 0) return 'dark-green';
-                return 'gray';
+                if (own >= 30) return 'heat-red';
+                if (own >= 15) return 'heat-yellow';
+                if (own >= 5) return 'heat-light-green';
+                if (own > 0) return 'heat-dark-green';
+                return 'heat-gray';
             }
         },
         'transfers': {
@@ -985,11 +985,11 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
             getHeatmap: (p) => {
                 // Variance heatmap (positive is good, negative is bad)
                 const variance = (p.goals_scored || 0) - (parseFloat(p.expected_goals) || 0);
-                if (variance >= 2) return 'dark-green';
-                if (variance >= 1) return 'light-green';
-                if (variance >= -1) return 'yellow';
-                if (variance >= -2) return 'red';
-                return 'gray';
+                if (variance >= 2) return 'heat-dark-green';
+                if (variance >= 1) return 'heat-light-green';
+                if (variance >= -1) return 'heat-yellow';
+                if (variance >= -2) return 'heat-red';
+                return 'heat-gray';
             }
         },
         'xg': {
@@ -998,11 +998,11 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
             getHeatmap: (p) => {
                 // xG heatmap
                 const xg = parseFloat(p.expected_goals) || 0;
-                if (xg >= 4) return 'dark-green';
-                if (xg >= 2.5) return 'light-green';
-                if (xg >= 1.5) return 'yellow';
-                if (xg >= 0.5) return 'red';
-                return 'gray';
+                if (xg >= 4) return 'heat-dark-green';
+                if (xg >= 2.5) return 'heat-light-green';
+                if (xg >= 1.5) return 'heat-yellow';
+                if (xg >= 0.5) return 'heat-red';
+                return 'heat-gray';
             }
         },
         'bonus': {
@@ -1011,11 +1011,11 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
             getHeatmap: (p) => {
                 // Bonus points heatmap
                 const bonus = p.bonus || 0;
-                if (bonus >= 10) return 'dark-green';
-                if (bonus >= 5) return 'light-green';
-                if (bonus >= 2) return 'yellow';
-                if (bonus >= 1) return 'red';
-                return 'gray';
+                if (bonus >= 10) return 'heat-dark-green';
+                if (bonus >= 5) return 'heat-light-green';
+                if (bonus >= 2) return 'heat-yellow';
+                if (bonus >= 1) return 'heat-red';
+                return 'heat-gray';
             }
         },
         'def90': {
@@ -1024,11 +1024,11 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
             getHeatmap: (p) => {
                 // Defensive contribution per 90 heatmap
                 const def = p.github_season?.defensive_contribution_per_90 || 0;
-                if (def >= 5) return 'dark-green';
-                if (def >= 4) return 'light-green';
-                if (def >= 3) return 'yellow';
-                if (def >= 2) return 'red';
-                return 'gray';
+                if (def >= 5) return 'heat-dark-green';
+                if (def >= 4) return 'heat-light-green';
+                if (def >= 3) return 'heat-yellow';
+                if (def >= 2) return 'heat-red';
+                return 'heat-gray';
             }
         },
         'fdr5': {
@@ -1063,7 +1063,7 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
 
         // Points (GW points)
         const gwPoints = player.event_points || 0;
-        const ptsHeatmap = getPtsHeatmap(gwPoints);
+        const ptsHeatmap = getPtsHeatmap(gwPoints, 'gw_pts');  // Use 'gw_pts' metric for gameweek points
         const ptsStyle = getHeatmapStyle(ptsHeatmap);
 
         // Form
