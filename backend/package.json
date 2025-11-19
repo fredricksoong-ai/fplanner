@@ -6,7 +6,9 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "test": "vitest",
+    "test:run": "vitest run"
   },
   "keywords": [
     "fpl",
@@ -27,5 +29,9 @@
   },
   "engines": {
     "node": ">=20.0.0"
+  },
+  "devDependencies": {
+    "supertest": "^7.1.4",
+    "vitest": "^4.0.10"
   }
 }
