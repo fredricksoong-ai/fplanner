@@ -3,7 +3,7 @@
 // Detailed player stats modal with 4-quadrant layout
 // ============================================================================
 
-import { getPlayerById, fplFixtures, currentGW as dataCurrentGW } from '../../data.js';
+import { getPlayerById, fplFixtures, getActiveGW } from '../../data.js';
 import {
     getPositionShort,
     getTeamShortName,
@@ -11,6 +11,7 @@ import {
     getCurrentGW,
     getDifficultyClass
 } from '../../utils.js';
+import { getMatchStatus } from '../../fixtures.js';
 
 /**
  * Calculate league ownership from cached rival teams
@@ -88,6 +89,7 @@ export async function showPlayerModal(playerId, myTeamState = null) {
     if (!player) return;
 
     const currentGW = getCurrentGW();
+    const activeGW = getActiveGW(); // For UI display (Past/Upcoming)
     const team = getTeamShortName(player.team);
     const position = getPositionShort(player);
     const price = (player.now_cost / 10).toFixed(1);
@@ -108,16 +110,22 @@ export async function showPlayerModal(playerId, myTeamState = null) {
     const xG = gwStats.expected_goals ? parseFloat(gwStats.expected_goals).toFixed(2) : '0.00';
     const xA = gwStats.expected_assists ? parseFloat(gwStats.expected_assists).toFixed(2) : '0.00';
 
+    // Check if player's match is live
+    const matchStatus = getMatchStatus(player.team, activeGW, player);
+    const isLive = matchStatus === 'LIVE';
+
     // Ownership stats
     const ownership = parseFloat(player.selected_by_percent) || 0;
     const leagueOwnership = calculateLeagueOwnership(playerId, myTeamState);
 
-    // Past 3 GW history (skip current GW since it's shown in top-left)
+    // Past 3 GW history (exclude current active GW since it's shown in top-left)
     const history = playerSummary.history || [];
-    const past3GW = history.length > 3 ? history.slice(-4, -1).reverse() : history.slice(0, -1).reverse();
+    // Filter to only GWs before the active GW, then take last 3
+    const pastHistory = history.filter(h => h.round < activeGW);
+    const past3GW = pastHistory.slice(-3).reverse();
 
-    // Next 3 fixtures
-    const upcomingFixtures = getUpcomingFixtures(player, currentGW).slice(0, 3);
+    // Next 3 fixtures (after active GW)
+    const upcomingFixtures = getUpcomingFixturesAfterGW(player, activeGW).slice(0, 3);
 
     // Build modal HTML
     const modalHTML = buildModalHTML({
@@ -125,7 +133,7 @@ export async function showPlayerModal(playerId, myTeamState = null) {
         team,
         position,
         price,
-        currentGW,
+        currentGW: activeGW,  // Use activeGW for display
         gwPoints,
         minutes,
         bps,
@@ -136,7 +144,8 @@ export async function showPlayerModal(playerId, myTeamState = null) {
         ownership,
         leagueOwnership,
         past3GW,
-        upcomingFixtures
+        upcomingFixtures,
+        isLive
     });
 
     // Update modal content
@@ -229,19 +238,39 @@ function buildModalHTML(data) {
     const {
         player, team, position, price, currentGW,
         gwPoints, minutes, bps, goals, assists, xG, xA,
-        ownership, leagueOwnership, past3GW, upcomingFixtures
+        ownership, leagueOwnership, past3GW, upcomingFixtures, isLive
     } = data;
+
+    // LIVE indicator styles
+    const liveIndicator = isLive ? `
+        <span style="
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            padding: 0.1rem 0.35rem;
+            border-radius: 0.25rem;
+            font-size: 0.55rem;
+            font-weight: 700;
+            margin-left: 0.5rem;
+            animation: pulse 2s infinite;
+        ">
+            <span style="width: 6px; height: 6px; background: #ef4444; border-radius: 50%; animation: pulse 1s infinite;"></span>
+            LIVE
+        </span>
+    ` : '';
 
     // GW Stats section (top-left)
     const gwStatsHTML = `
         <div style="flex: 1; min-width: 140px;">
             <div style="font-size: 0.7rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem; text-transform: uppercase;">
-                GW ${currentGW} Stats
+                GW ${currentGW} Stats${liveIndicator}
             </div>
             <div style="display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.7rem;">
                 <div style="display: flex; justify-content: space-between;">
                     <span style="color: var(--text-secondary);">Points</span>
-                    <span style="font-weight: 600;">${gwPoints}</span>
+                    <span style="font-weight: 600;">${gwPoints}${isLive ? '*' : ''}</span>
                 </div>
                 <div style="display: flex; justify-content: space-between;">
                     <span style="color: var(--text-secondary);">Minutes</span>
@@ -328,13 +357,29 @@ function buildModalHTML(data) {
     // Past 3 GW history (bottom-right top)
     let historyHTML = '';
     if (past3GW.length > 0) {
-        const historyRows = past3GW.map(gw => `
-            <div style="display: flex; justify-content: space-between; font-size: 0.65rem; padding: 0.2rem 0;">
-                <span style="color: var(--text-secondary);">GW${gw.round}</span>
-                <span>${gw.minutes}'</span>
-                <span style="font-weight: 600;">${gw.total_points} pts</span>
-            </div>
-        `).join('');
+        const historyRows = past3GW.map(gw => {
+            const opponentName = getTeamShortName(gw.opponent_team);
+            const isHome = gw.was_home;
+            const difficulty = gw.difficulty || 3;
+
+            return `
+                <div style="display: flex; align-items: center; gap: 0.3rem; font-size: 0.65rem; padding: 0.2rem 0;">
+                    <span style="color: var(--text-secondary); min-width: 2rem;">GW${gw.round}</span>
+                    <span class="${getDifficultyClass(difficulty)}" style="
+                        padding: 0.15rem 0.3rem;
+                        border-radius: 0.2rem;
+                        font-weight: 600;
+                        font-size: 0.6rem;
+                        min-width: 3rem;
+                        text-align: center;
+                    ">
+                        ${opponentName} (${isHome ? 'H' : 'A'})
+                    </span>
+                    <span style="margin-left: auto;">${gw.minutes}'</span>
+                    <span style="font-weight: 600; min-width: 2.5rem; text-align: right;">${gw.total_points} pts</span>
+                </div>
+            `;
+        }).join('');
 
         historyHTML = `
             <div style="margin-bottom: 0.75rem;">
@@ -488,21 +533,21 @@ export function closePlayerModal() {
 }
 
 /**
- * Get upcoming fixtures for a player
+ * Get upcoming fixtures for a player after a specific GW
  * @param {Object} player - Player object
- * @param {number} currentGW - Current gameweek
+ * @param {number} afterGW - Get fixtures after this GW
  * @returns {Array} Upcoming fixtures
  */
-function getUpcomingFixtures(player, currentGW) {
+function getUpcomingFixturesAfterGW(player, afterGW) {
     if (!fplFixtures || fplFixtures.length === 0) {
         return [];
     }
 
-    // Use currentGW or fallback to dataCurrentGW or 1
-    const gw = currentGW || dataCurrentGW || 1;
+    // Use afterGW or fallback
+    const gw = afterGW || getActiveGW() || 1;
 
     return fplFixtures
-        .filter(f => f.event && f.event >= gw)
+        .filter(f => f.event && f.event > gw)  // After the specified GW
         .filter(f => f.team_h === player.team || f.team_a === player.team)
         .sort((a, b) => a.event - b.event)
         .slice(0, 5);

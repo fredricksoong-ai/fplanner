@@ -5,8 +5,11 @@
 
 import {
     getAllPlayers,
-    fplBootstrap
+    fplBootstrap,
+    getActiveGW
 } from './data.js';
+
+import { sharedState } from './sharedState.js';
 
 import {
     getPositionShort,
@@ -291,7 +294,8 @@ export function renderDataAnalysis(subTab = 'overview', position = 'all') {
     });
 
     // Attach player row click listeners for mobile tables
-    attachPlayerRowListeners();
+    // Pass shared state for league ownership in player modal
+    attachPlayerRowListeners(sharedState.getTeamState());
 
     attachRiskTooltipListeners();
 }
@@ -493,7 +497,7 @@ function renderTeamAnalysis(position = 'all') {
 }
 
 function renderTeamTableMobile(teamAnalysis) {
-    const currentGW = getCurrentGW();
+    const currentGW = getActiveGW(); // Use active GW for upcoming fixtures
     const fixtureHeaders = getFixtureHeaders(5, 1);
 
     let html = `
@@ -568,8 +572,8 @@ function renderTeamTable(teamAnalysis) {
         const bestPlayerPrice = ta.bestPlayer ? formatCurrency(ta.bestPlayer.now_cost) : '—';
         const bestPlayerPts = ta.bestPlayer ? ta.bestPlayer.total_points : '—';
 
-        const currentGW = getCurrentGW();
-        const next5 = getFixtures(ta.team.id, 10, false).filter(f => f.event > currentGW).slice(0, 5);
+        const activeGW = getActiveGW();
+        const next5 = getFixtures(ta.team.id, 10, false).filter(f => f.event > activeGW).slice(0, 5);
 
         html += `
             <tr style="background: ${rowBg}; border-bottom: 1px solid var(--border-color);">
@@ -637,7 +641,7 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
         return '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">No players found</div>';
     }
 
-    const currentGW = getCurrentGW();
+    const currentGW = getActiveGW(); // Use active GW for status/opponent display
 
     // Limit to top 15 for mobile
     const mobilePlayers = players.slice(0, 15);
@@ -879,7 +883,7 @@ function renderPositionSpecificTable(players, position = 'all') {
         return '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">No players found</div>';
     }
 
-    const currentGW = getCurrentGW();
+    const currentGW = getActiveGW(); // Use active GW for upcoming fixtures
 
     // Get my team's player IDs from cache
     let myPlayerIds = new Set();

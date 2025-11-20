@@ -6,7 +6,7 @@
 import {
     fplFixtures as getFixturesData,
     fplBootstrap as getBootstrapData,
-    currentGW as getCurrentGW
+    getActiveGW
 } from '../data.js';
 
 import { escapeHtml } from '../utils.js';
@@ -18,7 +18,7 @@ import { escapeHtml } from '../utils.js';
 export function renderFixturesTab() {
     const fplFixtures = getFixturesData;
     const fplBootstrap = getBootstrapData;
-    const currentGW = getCurrentGW;
+    const currentGW = getActiveGW();
 
     if (!fplFixtures || !fplBootstrap || !currentGW) {
         return `
@@ -142,7 +142,7 @@ export function renderFixturesTab() {
 export function renderMobileFixturesTab() {
     const fplFixtures = getFixturesData;
     const fplBootstrap = getBootstrapData;
-    const currentGW = getCurrentGW;
+    const currentGW = getActiveGW();
 
     if (!fplFixtures || !fplBootstrap || !currentGW) {
         return `
