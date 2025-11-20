@@ -13,7 +13,6 @@ import {
     getDifficultyClass
 } from '../../utils.js';
 import { getFixtures } from '../../fixtures.js';
-import { renderStatCard } from './compactStyleHelpers.js';
 
 /**
  * Show player modal with details
@@ -36,9 +35,43 @@ export function showPlayerModal(playerId) {
     const form = formatDecimal(player.form) || '0.0';
     const ownership = parseFloat(player.selected_by_percent) || 0;
 
+    // Get GitHub GW stats (BPS, minutes, xG, xA, etc.)
+    const gwStats = player.github_gw || {};
+    const bps = gwStats.bps || 0;
+    const minutes = gwStats.minutes || 0;
+    const goals = gwStats.goals_scored || 0;
+    const assists = gwStats.assists || 0;
+    const cleanSheets = gwStats.clean_sheets || 0;
+    const saves = gwStats.saves || 0;
+    const xG = gwStats.expected_goals ? parseFloat(gwStats.expected_goals).toFixed(2) : '0.00';
+    const xA = gwStats.expected_assists ? parseFloat(gwStats.expected_assists).toFixed(2) : '0.00';
+
     // Get next 5 fixtures
     const upcomingFixtures = getUpcomingFixtures(player, currentGW);
     const fixturesHTML = renderUpcomingFixtures(upcomingFixtures);
+
+    // Build stats table rows
+    const statsRows = [
+        { label: `GW ${currentGW} Points`, value: gwPoints },
+        { label: 'Total Points', value: totalPoints },
+        { label: 'BPS', value: bps },
+        { label: 'Minutes', value: minutes },
+        { label: 'Form', value: form },
+        { label: 'Goals', value: goals },
+        { label: 'Assists', value: assists },
+        { label: 'Clean Sheets', value: cleanSheets },
+        { label: 'Saves', value: saves },
+        { label: 'xG', value: xG },
+        { label: 'xA', value: xA },
+        { label: 'Ownership', value: `${ownership.toFixed(1)}%` }
+    ];
+
+    const statsTableHTML = statsRows.map(row => `
+        <div class="mobile-table-row" style="grid-template-columns: 1fr 1fr;">
+            <div style="color: var(--text-secondary);">${row.label}</div>
+            <div style="text-align: right; font-weight: 600; color: var(--text-primary);">${row.value}</div>
+        </div>
+    `).join('');
 
     // Enhanced modal with player details
     const modalHTML = `
@@ -105,27 +138,21 @@ export function showPlayerModal(playerId) {
                 </div>
 
                 <!-- Content -->
-                <div style="padding: 1rem;">
-                    <!-- Stats Grid -->
-                    <div style="
-                        display: grid;
-                        grid-template-columns: repeat(2, 1fr);
-                        gap: 0.75rem;
-                        margin-bottom: 1rem;
-                    ">
-                        ${renderStatCard(gwPoints, `GW ${currentGW} Points`)}
-                        ${renderStatCard(totalPoints, 'Total Points')}
-                        ${renderStatCard(form, 'Form')}
-                        ${renderStatCard(`${ownership.toFixed(1)}%`, 'Ownership')}
+                <div style="padding: 0;">
+                    <!-- Stats Table -->
+                    <div class="mobile-table" style="border-radius: 0;">
+                        <div class="mobile-table-header" style="grid-template-columns: 1fr 1fr; text-transform: capitalize;">
+                            <div>Stat</div>
+                            <div style="text-align: right;">Value</div>
+                        </div>
+                        ${statsTableHTML}
                     </div>
 
                     <!-- Upcoming Fixtures -->
                     <div style="
                         background: var(--bg-secondary);
-                        border: 1px solid var(--border-color);
-                        border-radius: 8px;
+                        border-top: 1px solid var(--border-color);
                         padding: 0.75rem;
-                        margin-bottom: 1rem;
                     ">
                         <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem;">
                             Next 5 Fixtures
