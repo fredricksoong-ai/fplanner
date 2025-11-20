@@ -13,6 +13,7 @@ import {
 } from '../../utils.js';
 import { getMatchStatus } from '../../fixtures.js';
 import { analyzePlayerRisks } from '../../risk.js';
+import { renderOpponentBadge } from './compactStyleHelpers.js';
 
 // Team primary colors for styling
 const TEAM_COLORS = {
@@ -110,6 +111,11 @@ function calculateLeagueOwnership(playerId, myTeamState) {
     }
     const standings = leagueData?.standings?.results || [];
 
+    // Find user's own points from standings
+    const myTeamId = myTeamState.teamId;
+    const myStanding = standings.find(s => parseInt(s.entry, 10) === parseInt(myTeamId, 10));
+    const myPoints = myStanding?.total || 0;
+
     myTeamState.rivalTeamCache.forEach((rivalData, entryId) => {
         if (rivalData && rivalData.picks && rivalData.picks.picks) {
             const hasPlayer = rivalData.picks.picks.some(pick => pick.element === playerId);
@@ -119,20 +125,26 @@ function calculateLeagueOwnership(playerId, myTeamState) {
                 const standingEntry = standings.find(s => parseInt(s.entry, 10) === entryIdNum);
                 // Get team name from the rival's team data
                 const teamName = rivalData.team?.name || standingEntry?.entry_name || 'Unknown';
+                const ownerPoints = standingEntry?.total || 0;
+                const pointsGap = ownerPoints - myPoints; // positive = they're ahead
                 owners.push({
                     entryId,
                     name: teamName,
-                    rank: standingEntry?.rank || 0
+                    rank: standingEntry?.rank || 0,
+                    points: ownerPoints,
+                    gap: pointsGap
                 });
             }
         }
     });
 
-    // Sort by rank
+    // Sort by rank (or by points gap if no ranks)
     owners.sort((a, b) => {
-        const rankA = typeof a.rank === 'number' ? a.rank : 999;
-        const rankB = typeof b.rank === 'number' ? b.rank : 999;
-        return rankA - rankB;
+        if (a.rank > 0 && b.rank > 0) {
+            return a.rank - b.rank;
+        }
+        // Fall back to sorting by points gap (closest competitors first)
+        return Math.abs(a.gap) - Math.abs(b.gap);
     });
 
     return {
@@ -485,10 +497,28 @@ function buildModalHTML(data) {
             <div style="display: flex; flex-direction: column; gap: 0.1rem;">
         `;
         leagueOwnership.owners.forEach(owner => {
-            const rankDisplay = owner.rank && owner.rank > 0 ? `#${owner.rank}` : '—';
+            // Show rank if available, otherwise show points gap
+            let statusDisplay = '';
+            let statusColor = 'var(--text-secondary)';
+            if (owner.rank && owner.rank > 0) {
+                statusDisplay = `#${owner.rank}`;
+            } else if (owner.gap !== undefined) {
+                // Show points gap with color coding
+                if (owner.gap > 0) {
+                    statusDisplay = `+${owner.gap}`;
+                    statusColor = '#ef4444'; // Red - they're ahead
+                } else if (owner.gap < 0) {
+                    statusDisplay = `${owner.gap}`;
+                    statusColor = '#22c55e'; // Green - we're ahead
+                } else {
+                    statusDisplay = '0';
+                }
+            } else {
+                statusDisplay = '—';
+            }
             ownershipAndLeagueHTML += `
                 <div style="display: flex; justify-content: space-between; font-size: 0.6rem; padding: 0.15rem 0;">
-                    <span style="color: var(--text-secondary); min-width: 2rem;">${rankDisplay}</span>
+                    <span style="color: ${statusColor}; min-width: 2.5rem; font-weight: 600;">${statusDisplay}</span>
                     <span style="font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; text-align: right;">${escapeHtml(owner.name)}</span>
                 </div>
             `;
@@ -552,25 +582,16 @@ function buildModalHTML(data) {
     if (past3GW.length > 0) {
         const historyRows = past3GW.map(gw => {
             const opponentName = getTeamShortName(gw.opponent_team);
-            const isHome = gw.was_home;
-            const difficulty = gw.difficulty || 3;
-            const fdrStyle = getFDRStyles(difficulty);
+            const opponent = {
+                name: opponentName,
+                isHome: gw.was_home,
+                difficulty: gw.difficulty || 3
+            };
 
             return `
                 <div style="display: flex; align-items: center; gap: 0.3rem; font-size: 0.6rem; padding: 0.2rem 0;">
                     <span style="color: var(--text-secondary); min-width: 2rem;">GW${gw.round}</span>
-                    <span style="
-                        padding: 0.1rem 0.25rem;
-                        border-radius: 0.2rem;
-                        font-weight: 600;
-                        font-size: 0.55rem;
-                        min-width: 2.5rem;
-                        text-align: center;
-                        background: ${fdrStyle.bg};
-                        color: ${fdrStyle.color};
-                    ">
-                        ${opponentName} (${isHome ? 'H' : 'A'})
-                    </span>
+                    ${renderOpponentBadge(opponent, 'small')}
                     <span style="margin-left: auto;">${gw.minutes}'</span>
                     <span style="font-weight: 600; min-width: 2rem; text-align: right;">${gw.total_points} pts</span>
                 </div>
@@ -595,7 +616,11 @@ function buildModalHTML(data) {
             const opponentId = isHome ? fixture.team_a : fixture.team_h;
             const opponentName = getTeamShortName(opponentId);
             const difficulty = isHome ? fixture.team_h_difficulty : fixture.team_a_difficulty;
-            const fdrStyle = getFDRStyles(difficulty);
+            const opponent = {
+                name: opponentName,
+                isHome: isHome,
+                difficulty: difficulty || 3
+            };
 
             // Format date in Singapore time
             let dateStr = '';
@@ -614,18 +639,7 @@ function buildModalHTML(data) {
             return `
                 <div style="display: flex; align-items: center; gap: 0.3rem; font-size: 0.6rem; padding: 0.2rem 0;">
                     <span style="color: var(--text-secondary); min-width: 2rem;">GW${fixture.event}</span>
-                    <span style="
-                        padding: 0.1rem 0.25rem;
-                        border-radius: 0.2rem;
-                        font-weight: 600;
-                        font-size: 0.55rem;
-                        min-width: 2.5rem;
-                        text-align: center;
-                        background: ${fdrStyle.bg};
-                        color: ${fdrStyle.color};
-                    ">
-                        ${opponentName} (${isHome ? 'H' : 'A'})
-                    </span>
+                    ${renderOpponentBadge(opponent, 'small')}
                     <span style="color: var(--text-secondary); font-size: 0.55rem; margin-left: auto;">${dateStr}</span>
                 </div>
             `;
