@@ -5,6 +5,7 @@
 
 import { escapeHtml } from '../utils.js';
 import { shouldUseMobileLayout } from '../renderMyTeamMobile.js';
+import { sharedState } from '../sharedState.js';
 
 /**
  * Render My Leagues tab content with side menu layout
@@ -21,6 +22,7 @@ export function renderLeaguesTab(teamData, myTeamState, loadLeagueStandingsForTa
     // Set active league tab to first selected league if not set
     if (myTeamState.selectedLeagues.length > 0 && !myTeamState.activeLeagueTab) {
         myTeamState.activeLeagueTab = myTeamState.selectedLeagues[0];
+        sharedState.activeLeagueTab = myTeamState.activeLeagueTab;
     }
 
     const useMobile = shouldUseMobileLayout();
@@ -165,6 +167,7 @@ export function toggleLeagueSelection(
         // If this was the active tab, switch to another tab or clear
         if (myTeamState.activeLeagueTab === leagueId) {
             myTeamState.activeLeagueTab = myTeamState.selectedLeagues[0] || null;
+            sharedState.activeLeagueTab = myTeamState.activeLeagueTab;
             console.log(`🔄 Active tab changed to: ${myTeamState.activeLeagueTab}`);
         }
     } else {
@@ -178,6 +181,7 @@ export function toggleLeagueSelection(
 
         // Set newly selected league as active tab
         myTeamState.activeLeagueTab = leagueId;
+        sharedState.activeLeagueTab = leagueId;
         console.log(`🎯 Set as active tab: ${leagueId}`);
     }
 
@@ -252,6 +256,7 @@ export function updateLeagueSelectionCount(myTeamState) {
  */
 export function switchLeagueTab(leagueId, myTeamState, updateLeagueTabsUI, updateLeagueContentUI, loadLeagueStandingsForTab) {
     myTeamState.activeLeagueTab = leagueId;
+    sharedState.activeLeagueTab = leagueId;
 
     // Update tabs styling
     updateLeagueTabsUI();
