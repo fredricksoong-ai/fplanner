@@ -15,10 +15,40 @@ import {
 import { getFixtures } from '../../fixtures.js';
 
 /**
+ * Calculate league ownership from cached rival teams
+ * @param {number} playerId - Player ID to check
+ * @param {Object} myTeamState - State object with rivalTeamCache
+ * @returns {Object|null} Ownership stats or null if no data
+ */
+function calculateLeagueOwnership(playerId, myTeamState) {
+    if (!myTeamState || !myTeamState.rivalTeamCache || myTeamState.rivalTeamCache.size === 0) {
+        return null;
+    }
+
+    let ownersCount = 0;
+    const totalRivals = myTeamState.rivalTeamCache.size;
+
+    myTeamState.rivalTeamCache.forEach((rivalData) => {
+        if (rivalData && rivalData.picks && rivalData.picks.picks) {
+            const hasPlayer = rivalData.picks.picks.some(pick => pick.element === playerId);
+            if (hasPlayer) {
+                ownersCount++;
+            }
+        }
+    });
+
+    return {
+        owners: ownersCount,
+        total: totalRivals
+    };
+}
+
+/**
  * Show player modal with details
  * @param {number} playerId - Player ID
+ * @param {Object} myTeamState - Optional state object for league ownership
  */
-export function showPlayerModal(playerId) {
+export function showPlayerModal(playerId, myTeamState = null) {
     const player = getPlayerById(playerId);
     if (!player) return;
 
@@ -46,6 +76,9 @@ export function showPlayerModal(playerId) {
     const xG = gwStats.expected_goals ? parseFloat(gwStats.expected_goals).toFixed(2) : '0.00';
     const xA = gwStats.expected_assists ? parseFloat(gwStats.expected_assists).toFixed(2) : '0.00';
 
+    // Calculate league ownership from cached rivals
+    const leagueOwnership = calculateLeagueOwnership(playerId, myTeamState);
+
     // Get next 5 fixtures
     const upcomingFixtures = getUpcomingFixtures(player, currentGW);
     const fixturesHTML = renderUpcomingFixtures(upcomingFixtures);
@@ -65,6 +98,14 @@ export function showPlayerModal(playerId) {
         { label: 'xA', value: xA },
         { label: 'Ownership', value: `${ownership.toFixed(1)}%` }
     ];
+
+    // Add league ownership if available
+    if (leagueOwnership) {
+        statsRows.push({
+            label: 'League Ownership',
+            value: `${leagueOwnership.owners}/${leagueOwnership.total}`
+        });
+    }
 
     const statsTableHTML = statsRows.map(row => `
         <div class="mobile-table-row" style="grid-template-columns: 1fr 1fr;">

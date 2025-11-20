@@ -7,8 +7,9 @@ import { showPlayerModal } from './playerModal.js';
 
 /**
  * Attach click listeners to player rows
+ * @param {Object} myTeamState - Optional state object for league ownership
  */
-export function attachPlayerRowListeners() {
+export function attachPlayerRowListeners(myTeamState = null) {
     const playerRows = document.querySelectorAll('.player-row');
     playerRows.forEach(row => {
         row.addEventListener('click', (e) => {
@@ -18,7 +19,7 @@ export function attachPlayerRowListeners() {
             }
             const playerId = parseInt(row.dataset.playerId);
             if (playerId) {
-                showPlayerModal(playerId);
+                showPlayerModal(playerId, myTeamState);
             }
         });
     });
