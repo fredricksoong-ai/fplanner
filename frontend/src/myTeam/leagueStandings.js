@@ -17,7 +17,7 @@ import { renderOpponentBadge, calculateStatusColor, calculatePlayerBgColor } fro
  * @returns {Promise<string>} Captain player name
  */
 async function getCaptainName(entryId, myTeamState) {
-    // Initialize captain cache if it doesn't exist
+    // Initialize caches if they don't exist
     if (!myTeamState.captainCache) {
         myTeamState.captainCache = new Map();
     }
@@ -31,6 +31,9 @@ async function getCaptainName(entryId, myTeamState) {
         // Load team data
         const teamData = await loadMyTeam(entryId);
 
+        // Cache full team data in rivalTeamCache for league ownership calculation
+        myTeamState.rivalTeamCache.set(entryId, teamData);
+
         // Find captain from picks
         const captainPick = teamData.picks?.picks?.find(p => p.is_captain);
 
@@ -38,7 +41,7 @@ async function getCaptainName(entryId, myTeamState) {
             const player = getPlayerById(captainPick.element);
             const captainName = player ? player.web_name : 'Unknown';
 
-            // Cache result
+            // Cache captain name
             myTeamState.captainCache.set(entryId, captainName);
             return captainName;
         }

@@ -354,7 +354,7 @@ export function renderMyTeam(teamData, subTab = 'overview') {
         // Attach player row click listeners for team overview
         if (subTab === 'overview') {
             requestAnimationFrame(() => {
-                attachPlayerRowListeners();
+                attachPlayerRowListeners(myTeamState);
             });
         }
     } else {
