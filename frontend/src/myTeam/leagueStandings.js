@@ -3,7 +3,7 @@
 // Handles league standings rendering and team comparison
 // ============================================================================
 
-import { loadLeagueStandings, loadMyTeam, getPlayerById, currentGW } from '../data.js';
+import { loadLeagueStandings, loadMyTeam, getPlayerById, getActiveGW } from '../data.js';
 import { escapeHtml, formatDecimal, getPtsHeatmap, getFormHeatmap, getHeatmapStyle } from '../utils.js';
 import { renderTeamComparison } from './teamComparison.js';
 import { shouldUseMobileLayout } from '../renderMyTeamMobile.js';
@@ -674,8 +674,8 @@ function renderMobileRivalModal(rivalTeamData) {
         ? `${team.player_first_name} ${team.player_last_name}`
         : 'Manager';
 
-    // Get current gameweek (use module-level currentGW from data.js)
-    const gwNumber = currentGW || 1;
+    // Get current gameweek (use getActiveGW for display)
+    const gwNumber = getActiveGW() || 1;
 
     // Get starters and bench
     const starters = picks?.picks?.filter(p => p.position <= 11) || [];

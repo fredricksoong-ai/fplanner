@@ -8,8 +8,7 @@ import {
     loadMyTeam,
     loadLeagueStandings,
     fplFixtures as getFixturesData,
-    fplBootstrap as getBootstrapData,
-    currentGW as getCurrentGW
+    fplBootstrap as getBootstrapData
 } from './data.js';
 
 import {
