@@ -36,11 +36,15 @@ function calculateLeagueOwnership(playerId, myTeamState) {
         if (rivalData && rivalData.picks && rivalData.picks.picks) {
             const hasPlayer = rivalData.picks.picks.some(pick => pick.element === playerId);
             if (hasPlayer) {
-                // Find this entry in standings to get rank and name
+                // Find this entry in standings to get rank
                 const standingEntry = standings.find(s => s.entry === entryId);
+                // Get team name from the rival's team data
+                const teamName = rivalData.team?.player_first_name
+                    ? `${rivalData.team.player_first_name} ${rivalData.team.player_last_name?.charAt(0) || ''}`
+                    : rivalData.team?.name || standingEntry?.entry_name || 'Unknown';
                 owners.push({
                     entryId,
-                    name: standingEntry?.player_name || standingEntry?.entry_name || 'Unknown',
+                    name: teamName,
                     rank: standingEntry?.rank || '—'
                 });
             }
@@ -48,11 +52,16 @@ function calculateLeagueOwnership(playerId, myTeamState) {
     });
 
     // Sort by rank
-    owners.sort((a, b) => (a.rank || 999) - (b.rank || 999));
+    owners.sort((a, b) => {
+        const rankA = typeof a.rank === 'number' ? a.rank : 999;
+        const rankB = typeof b.rank === 'number' ? b.rank : 999;
+        return rankA - rankB;
+    });
 
     return {
         owners,
-        total: totalRivals
+        total: totalRivals,
+        percentage: totalRivals > 0 ? ((owners.length / totalRivals) * 100).toFixed(0) : 0
     };
 }
 
@@ -288,7 +297,7 @@ function buildModalHTML(data) {
                 ${leagueOwnership ? `
                 <div style="display: flex; justify-content: space-between;">
                     <span style="color: var(--text-secondary);">League</span>
-                    <span style="font-weight: 600;">${leagueOwnership.owners.length}/${leagueOwnership.total}</span>
+                    <span style="font-weight: 600;">${leagueOwnership.owners.length}/${leagueOwnership.total} (${leagueOwnership.percentage}%)</span>
                 </div>
                 ` : ''}
             </div>
@@ -507,8 +516,15 @@ export function closePlayerModal() {
  */
 function getUpcomingFixtures(player, currentGW) {
     const allFixtures = getFixtures();
+    if (!allFixtures || allFixtures.length === 0) {
+        return [];
+    }
+
+    // Use currentGW or fallback to 1
+    const gw = currentGW || 1;
+
     return allFixtures
-        .filter(f => f.event && f.event >= currentGW)
+        .filter(f => f.event && f.event >= gw)
         .filter(f => f.team_h === player.team || f.team_a === player.team)
         .sort((a, b) => a.event - b.event)
         .slice(0, 5);
