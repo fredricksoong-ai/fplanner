@@ -39,13 +39,11 @@ function calculateLeagueOwnership(playerId, myTeamState) {
                 // Find this entry in standings to get rank
                 const standingEntry = standings.find(s => s.entry === entryId);
                 // Get team name from the rival's team data
-                const teamName = rivalData.team?.player_first_name
-                    ? `${rivalData.team.player_first_name} ${rivalData.team.player_last_name?.charAt(0) || ''}`
-                    : rivalData.team?.name || standingEntry?.entry_name || 'Unknown';
+                const teamName = rivalData.team?.name || standingEntry?.entry_name || 'Unknown';
                 owners.push({
                     entryId,
                     name: teamName,
-                    rank: standingEntry?.rank || '—'
+                    rank: standingEntry?.rank || 0
                 });
             }
         }
@@ -115,9 +113,9 @@ export async function showPlayerModal(playerId, myTeamState = null) {
     const ownership = parseFloat(player.selected_by_percent) || 0;
     const leagueOwnership = calculateLeagueOwnership(playerId, myTeamState);
 
-    // Past 3 GW history
+    // Past 3 GW history (skip current GW since it's shown in top-left)
     const history = playerSummary.history || [];
-    const past3GW = history.slice(-3).reverse();
+    const past3GW = history.length > 3 ? history.slice(-4, -1).reverse() : history.slice(0, -1).reverse();
 
     // Next 3 fixtures
     const upcomingFixtures = getUpcomingFixtures(player, currentGW).slice(0, 3);
@@ -185,23 +183,14 @@ function showLoadingModal(player, team, position, price) {
             ">
                 <!-- Header -->
                 <div style="
-                    padding: 1rem;
+                    padding: 0.75rem 1rem;
                     border-bottom: 2px solid var(--border-color);
                     display: flex;
                     justify-content: space-between;
-                    align-items: flex-start;
+                    align-items: center;
                 ">
-                    <div style="flex: 1;">
-                        <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin: 0 0 0.3rem 0;">
-                            ${escapeHtml(player.web_name)}
-                        </h3>
-                        <div style="display: flex; gap: 0.5rem; align-items: center; font-size: 0.875rem; color: var(--text-secondary);">
-                            <span>${team}</span>
-                            <span>•</span>
-                            <span>${position}</span>
-                            <span>•</span>
-                            <span style="font-weight: 600; color: var(--text-primary);">£${price}m</span>
-                        </div>
+                    <div style="font-size: 0.9rem; font-weight: 600; color: var(--text-primary);">
+                        ${escapeHtml(player.web_name)} <span style="color: var(--text-secondary); font-weight: 400;">• ${team} • ${position} • £${price}m</span>
                     </div>
                     <button
                         id="close-player-modal"
@@ -309,7 +298,7 @@ function buildModalHTML(data) {
     if (leagueOwnership && leagueOwnership.owners.length > 0) {
         const ownersList = leagueOwnership.owners.map(owner => `
             <div style="display: flex; justify-content: space-between; font-size: 0.65rem; padding: 0.2rem 0;">
-                <span style="color: var(--text-secondary);">#${owner.rank}</span>
+                <span style="color: var(--text-secondary);">#${owner.rank || '—'}</span>
                 <span style="font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100px;">${escapeHtml(owner.name)}</span>
             </div>
         `).join('');
@@ -351,7 +340,7 @@ function buildModalHTML(data) {
         historyHTML = `
             <div style="margin-bottom: 0.75rem;">
                 <div style="font-size: 0.7rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem; text-transform: uppercase;">
-                    Recent Form
+                    Past 3 GWs
                 </div>
                 ${historyRows}
             </div>
@@ -418,23 +407,14 @@ function buildModalHTML(data) {
             ">
                 <!-- Header -->
                 <div style="
-                    padding: 1rem;
+                    padding: 0.75rem 1rem;
                     border-bottom: 2px solid var(--border-color);
                     display: flex;
                     justify-content: space-between;
-                    align-items: flex-start;
+                    align-items: center;
                 ">
-                    <div style="flex: 1;">
-                        <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin: 0 0 0.3rem 0;">
-                            ${escapeHtml(player.web_name)}
-                        </h3>
-                        <div style="display: flex; gap: 0.5rem; align-items: center; font-size: 0.875rem; color: var(--text-secondary);">
-                            <span>${team}</span>
-                            <span>•</span>
-                            <span>${position}</span>
-                            <span>•</span>
-                            <span style="font-weight: 600; color: var(--text-primary);">£${price}m</span>
-                        </div>
+                    <div style="font-size: 0.9rem; font-weight: 600; color: var(--text-primary);">
+                        ${escapeHtml(player.web_name)} <span style="color: var(--text-secondary); font-weight: 400;">• ${team} • ${position} • £${price}m</span>
                     </div>
                     <button
                         id="close-player-modal"
