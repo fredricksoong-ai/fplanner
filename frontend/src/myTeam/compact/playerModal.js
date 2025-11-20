@@ -3,7 +3,7 @@
 // Detailed player stats modal with 4-quadrant layout
 // ============================================================================
 
-import { getPlayerById, fplFixtures, currentGW as dataCurrentGW } from '../../data.js';
+import { getPlayerById, fplFixtures, fplBootstrap, currentGW as dataCurrentGW } from '../../data.js';
 import {
     getPositionShort,
     getTeamShortName,
@@ -11,6 +11,31 @@ import {
     getCurrentGW,
     getDifficultyClass
 } from '../../utils.js';
+
+/**
+ * Get the active gameweek (current live or next if between GWs)
+ * @returns {number} Active GW number
+ */
+function getActiveGW() {
+    if (!fplBootstrap || !fplBootstrap.events) {
+        return dataCurrentGW || 1;
+    }
+
+    // Find the current event (is_current = true)
+    const currentEvent = fplBootstrap.events.find(e => e.is_current);
+    if (currentEvent) {
+        return currentEvent.id;
+    }
+
+    // Fallback to next event if no current
+    const nextEvent = fplBootstrap.events.find(e => e.is_next);
+    if (nextEvent) {
+        return nextEvent.id;
+    }
+
+    // Final fallback
+    return dataCurrentGW || 1;
+}
 
 /**
  * Calculate league ownership from cached rival teams
@@ -88,6 +113,7 @@ export async function showPlayerModal(playerId, myTeamState = null) {
     if (!player) return;
 
     const currentGW = getCurrentGW();
+    const activeGW = getActiveGW(); // For UI display (Past/Upcoming)
     const team = getTeamShortName(player.team);
     const position = getPositionShort(player);
     const price = (player.now_cost / 10).toFixed(1);
@@ -112,12 +138,14 @@ export async function showPlayerModal(playerId, myTeamState = null) {
     const ownership = parseFloat(player.selected_by_percent) || 0;
     const leagueOwnership = calculateLeagueOwnership(playerId, myTeamState);
 
-    // Past 3 GW history (skip current GW since it's shown in top-left)
+    // Past 3 GW history (exclude current active GW since it's shown in top-left)
     const history = playerSummary.history || [];
-    const past3GW = history.length > 3 ? history.slice(-4, -1).reverse() : history.slice(0, -1).reverse();
+    // Filter to only GWs before the active GW, then take last 3
+    const pastHistory = history.filter(h => h.round < activeGW);
+    const past3GW = pastHistory.slice(-3).reverse();
 
-    // Next 3 fixtures
-    const upcomingFixtures = getUpcomingFixtures(player, currentGW).slice(0, 3);
+    // Next 3 fixtures (after active GW)
+    const upcomingFixtures = getUpcomingFixturesAfterGW(player, activeGW).slice(0, 3);
 
     // Build modal HTML
     const modalHTML = buildModalHTML({
@@ -125,7 +153,7 @@ export async function showPlayerModal(playerId, myTeamState = null) {
         team,
         position,
         price,
-        currentGW,
+        currentGW: activeGW,  // Use activeGW for display
         gwPoints,
         minutes,
         bps,
@@ -504,22 +532,21 @@ export function closePlayerModal() {
 }
 
 /**
- * Get upcoming fixtures for a player
+ * Get upcoming fixtures for a player after a specific GW
  * @param {Object} player - Player object
- * @param {number} currentGW - Current gameweek (latest finished)
+ * @param {number} afterGW - Get fixtures after this GW
  * @returns {Array} Upcoming fixtures
  */
-function getUpcomingFixtures(player, currentGW) {
+function getUpcomingFixturesAfterGW(player, afterGW) {
     if (!fplFixtures || fplFixtures.length === 0) {
         return [];
     }
 
-    // Use currentGW or fallback to dataCurrentGW or 1
-    // Upcoming should be AFTER the current (finished) GW
-    const gw = currentGW || dataCurrentGW || 1;
+    // Use afterGW or fallback
+    const gw = afterGW || getActiveGW() || 1;
 
     return fplFixtures
-        .filter(f => f.event && f.event > gw)  // Changed to > to exclude current GW
+        .filter(f => f.event && f.event > gw)  // After the specified GW
         .filter(f => f.team_h === player.team || f.team_a === player.team)
         .sort((a, b) => a.event - b.event)
         .slice(0, 5);
