@@ -527,29 +527,9 @@ function buildModalHTML(data) {
             <div style="display: flex; flex-direction: column; gap: 0.1rem;">
         `;
         leagueOwnership.owners.forEach(owner => {
-            // Show rank if available, otherwise show points gap
-            let statusDisplay = '';
-            let statusColor = 'var(--text-secondary)';
-            if (owner.rank && owner.rank > 0) {
-                statusDisplay = `#${owner.rank}`;
-            } else if (owner.gap !== undefined) {
-                // Show points gap with color coding
-                if (owner.gap > 0) {
-                    statusDisplay = `+${owner.gap}`;
-                    statusColor = '#ef4444'; // Red - they're ahead
-                } else if (owner.gap < 0) {
-                    statusDisplay = `${owner.gap}`;
-                    statusColor = '#22c55e'; // Green - we're ahead
-                } else {
-                    statusDisplay = '0';
-                }
-            } else {
-                statusDisplay = '—';
-            }
             ownershipAndLeagueHTML += `
-                <div style="display: flex; justify-content: space-between; font-size: 0.6rem; padding: 0.15rem 0;">
-                    <span style="color: ${statusColor}; min-width: 2.5rem; font-weight: 600;">${statusDisplay}</span>
-                    <span style="font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; text-align: right;">${escapeHtml(owner.name)}</span>
+                <div style="font-size: 0.6rem; padding: 0.15rem 0;">
+                    <span style="font-weight: 500;">${escapeHtml(owner.name)}</span>
                 </div>
             `;
         });
@@ -614,16 +594,12 @@ function buildModalHTML(data) {
             const opponentName = getTeamShortName(gw.opponent_team);
             // Look up actual difficulty from fixtures data
             const difficulty = getFixtureDifficulty(player.team, gw.opponent_team, gw.round, gw.was_home);
-            const opponent = {
-                name: opponentName,
-                isHome: gw.was_home,
-                difficulty: difficulty
-            };
+            const fdrStyle = getFDRStyles(difficulty);
 
             return `
                 <div style="display: flex; align-items: center; gap: 0.3rem; font-size: 0.6rem; padding: 0.2rem 0;">
                     <span style="color: var(--text-secondary); min-width: 2rem;">GW${gw.round}</span>
-                    ${renderOpponentBadge(opponent, 'small')}
+                    <span style="padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-weight: 700; font-size: 0.6rem; min-width: 3rem; display: inline-block; text-align: center; background: ${fdrStyle.bg}; color: ${fdrStyle.color};">${opponentName} (${gw.was_home ? 'H' : 'A'})</span>
                     <span style="margin-left: auto;">${gw.minutes}'</span>
                     <span style="font-weight: 600; min-width: 2rem; text-align: right;">${gw.total_points} pts</span>
                 </div>
@@ -648,11 +624,7 @@ function buildModalHTML(data) {
             const opponentId = isHome ? fixture.team_a : fixture.team_h;
             const opponentName = getTeamShortName(opponentId);
             const difficulty = isHome ? fixture.team_h_difficulty : fixture.team_a_difficulty;
-            const opponent = {
-                name: opponentName,
-                isHome: isHome,
-                difficulty: difficulty || 3
-            };
+            const fdrStyle = getFDRStyles(difficulty || 3);
 
             // Format date in Singapore time
             let dateStr = '';
@@ -671,7 +643,7 @@ function buildModalHTML(data) {
             return `
                 <div style="display: flex; align-items: center; gap: 0.3rem; font-size: 0.6rem; padding: 0.2rem 0;">
                     <span style="color: var(--text-secondary); min-width: 2rem;">GW${fixture.event}</span>
-                    ${renderOpponentBadge(opponent, 'small')}
+                    <span style="padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-weight: 700; font-size: 0.6rem; min-width: 3rem; display: inline-block; text-align: center; background: ${fdrStyle.bg}; color: ${fdrStyle.color};">${opponentName} (${isHome ? 'H' : 'A'})</span>
                     <span style="color: var(--text-secondary); font-size: 0.55rem; margin-left: auto;">${dateStr}</span>
                 </div>
             `;
