@@ -6,7 +6,8 @@
 import express from 'express';
 import {
   fetchBootstrap,
-  fetchFixtures
+  fetchFixtures,
+  fetchElementSummary
 } from '../services/fplService.js';
 import { fetchGithubCSV } from '../services/githubService.js';
 import {
@@ -128,6 +129,46 @@ router.get('/api/fpl-data', async (req, res) => {
     res.status(500).json({
       error: 'Failed to fetch FPL data',
       message: isProduction ? 'Data temporarily unavailable. Please try again later.' : err.message
+    });
+  }
+});
+
+// ============================================================================
+// PLAYER ELEMENT SUMMARY ENDPOINT
+// ============================================================================
+
+/**
+ * GET /api/player/:playerId/summary
+ * Returns player history and upcoming fixtures
+ */
+router.get('/api/player/:playerId/summary', async (req, res) => {
+  const { playerId } = req.params;
+
+  logger.log(`📥 GET /api/player/${playerId}/summary`);
+
+  // Validate player ID
+  const id = parseInt(playerId);
+  if (isNaN(id) || id <= 0) {
+    return res.status(400).json({
+      error: 'Invalid player ID',
+      message: 'Player ID must be a positive integer'
+    });
+  }
+
+  try {
+    const summary = await fetchElementSummary(id);
+
+    res.json({
+      history: summary.history || [],
+      fixtures: summary.fixtures || [],
+      history_past: summary.history_past || [],
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    logger.error(`❌ Error fetching player ${id} summary:`, err.message);
+    res.status(500).json({
+      error: 'Failed to fetch player summary',
+      message: err.message
     });
   }
 });
