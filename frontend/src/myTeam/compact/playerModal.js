@@ -15,6 +15,41 @@ import {
 import { getMatchStatus } from '../../fixtures.js';
 import { analyzePlayerRisks } from '../../risk.js';
 
+// Team primary colors for styling
+const TEAM_COLORS = {
+    1: '#EF0107',   // Arsenal
+    2: '#95BFE5',   // Aston Villa
+    3: '#DA291C',   // Bournemouth
+    4: '#E30613',   // Brentford
+    5: '#0057B8',   // Brighton
+    6: '#6C1D45',   // Burnley
+    7: '#034694',   // Chelsea
+    8: '#1B458F',   // Crystal Palace
+    9: '#003399',   // Everton
+    10: '#000000',  // Fulham
+    11: '#FFCD00',  // Leeds (if in league)
+    12: '#C8102E',  // Liverpool
+    13: '#6CABDD',  // Man City
+    14: '#DA291C',  // Man United
+    15: '#241F20',  // Newcastle
+    16: '#DD0000',  // Nottingham Forest
+    17: '#EB172B',  // Southampton/Sunderland
+    18: '#132257',  // Tottenham
+    19: '#7A263A',  // West Ham
+    20: '#FDB913', // Wolves
+    21: '#0057B8',  // Ipswich (placeholder)
+    22: '#C8102E',  // Leicester (placeholder)
+};
+
+/**
+ * Get team primary color
+ * @param {number} teamId - Team ID
+ * @returns {string} Hex color code
+ */
+function getTeamColor(teamId) {
+    return TEAM_COLORS[teamId] || '#666666';
+}
+
 /**
  * Calculate league ownership from cached rival teams
  * @param {number} playerId - Player ID to check
@@ -364,14 +399,24 @@ function buildModalHTML(data) {
         comparisonHTML += `<div style="display: flex; flex-direction: column; gap: 0.15rem; font-size: 0.6rem;">`;
         comparisonPlayers.forEach(cp => {
             const cpTeam = getTeamShortName(cp.team);
-            const cpForm = parseFloat(cp.form) || 0;
+            const cpGwPts = cp.event_points || 0;
             const cpPrice = (cp.now_cost / 10).toFixed(1);
+            const teamColor = getTeamColor(cp.team);
             comparisonHTML += `
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.15rem 0;">
-                    <span style="font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60px;">${escapeHtml(cp.web_name)}</span>
-                    <span style="color: var(--text-secondary);">${cpTeam}</span>
-                    <span style="font-weight: 600;">${cpForm.toFixed(1)}</span>
-                    <span style="color: var(--text-secondary);">£${cpPrice}m</span>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.15rem 0; gap: 0.25rem;">
+                    <span style="font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">${escapeHtml(cp.web_name)}</span>
+                    <span style="
+                        background: rgba(60, 60, 60, 0.8);
+                        color: ${teamColor};
+                        padding: 0.1rem 0.3rem;
+                        border-radius: 0.2rem;
+                        font-weight: 700;
+                        font-size: 0.55rem;
+                        min-width: 1.8rem;
+                        text-align: center;
+                    ">${cpTeam}</span>
+                    <span style="font-weight: 600; min-width: 1.5rem; text-align: right;">${cpGwPts}</span>
+                    <span style="color: var(--text-secondary); min-width: 2.5rem; text-align: right;">£${cpPrice}m</span>
                 </div>
             `;
         });
