@@ -51,6 +51,26 @@ function getTeamColor(teamId) {
 }
 
 /**
+ * Check if a hex color is dark (needs light background)
+ * @param {string} hex - Hex color code
+ * @returns {boolean} True if color is dark
+ */
+function isColorDark(hex) {
+    // Remove # if present
+    hex = hex.replace('#', '');
+
+    // Convert to RGB
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+
+    // Calculate luminance (perceived brightness)
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+
+    return luminance < 0.5;
+}
+
+/**
  * Calculate league ownership from cached rival teams
  * @param {number} playerId - Player ID to check
  * @param {Object} myTeamState - State object with rivalTeamCache
@@ -490,7 +510,10 @@ function buildModalHTML(data) {
             }
         }
 
-        const chanceText = chanceOfPlaying !== null && chanceOfPlaying !== undefined
+        // Only add chance text if not already in news
+        const newsText = player.news;
+        const hasChanceInNews = newsText.toLowerCase().includes('chance');
+        const chanceText = (!hasChanceInNews && chanceOfPlaying !== null && chanceOfPlaying !== undefined)
             ? ` - ${chanceOfPlaying}% chance of playing`
             : '';
 
@@ -503,7 +526,7 @@ function buildModalHTML(data) {
                 border-radius: 0 0.25rem 0.25rem 0;
             ">
                 <div style="font-size: 0.65rem; color: ${bannerColor}; font-weight: 600;">
-                    ${escapeHtml(player.news)}${chanceText}
+                    ${escapeHtml(newsText)}${chanceText}
                 </div>
             </div>
         `;
@@ -518,20 +541,20 @@ function buildModalHTML(data) {
             const difficulty = gw.difficulty || 3;
 
             return `
-                <div style="display: flex; align-items: center; gap: 0.3rem; font-size: 0.65rem; padding: 0.2rem 0;">
+                <div style="display: flex; align-items: center; gap: 0.3rem; font-size: 0.6rem; padding: 0.2rem 0;">
                     <span style="color: var(--text-secondary); min-width: 2rem;">GW${gw.round}</span>
                     <span class="${getDifficultyClass(difficulty)}" style="
-                        padding: 0.15rem 0.3rem;
+                        padding: 0.1rem 0.25rem;
                         border-radius: 0.2rem;
                         font-weight: 600;
-                        font-size: 0.6rem;
-                        min-width: 3rem;
+                        font-size: 0.55rem;
+                        min-width: 2.5rem;
                         text-align: center;
                     ">
                         ${opponentName} (${isHome ? 'H' : 'A'})
                     </span>
                     <span style="margin-left: auto;">${gw.minutes}'</span>
-                    <span style="font-weight: 600; min-width: 2.5rem; text-align: right;">${gw.total_points} pts</span>
+                    <span style="font-weight: 600; min-width: 1.5rem; text-align: right;">${gw.total_points}</span>
                 </div>
             `;
         }).join('');
@@ -631,7 +654,7 @@ function buildModalHTML(data) {
                     <div>
                         <div style="font-size: 0.9rem; font-weight: 600; color: var(--text-primary);">
                             ${escapeHtml(player.web_name)} <span style="font-weight: 400;">• </span><span style="
-                                background: rgba(255, 255, 255, 0.1);
+                                background: ${isColorDark(getTeamColor(player.team)) ? 'rgba(255, 255, 255, 0.9)' : 'rgba(255, 255, 255, 0.1)'};
                                 color: ${getTeamColor(player.team)};
                                 padding: 0.1rem 0.35rem;
                                 border-radius: 0.2rem;
