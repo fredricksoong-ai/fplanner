@@ -554,7 +554,7 @@ function buildModalHTML(data) {
                         ${opponentName} (${isHome ? 'H' : 'A'})
                     </span>
                     <span style="margin-left: auto;">${gw.minutes}'</span>
-                    <span style="font-weight: 600; min-width: 1.5rem; text-align: right;">${gw.total_points}</span>
+                    <span style="font-weight: 600; min-width: 2rem; text-align: right;">${gw.total_points} pts</span>
                 </div>
             `;
         }).join('');
