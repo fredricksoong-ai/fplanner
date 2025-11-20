@@ -328,13 +328,29 @@ function buildModalHTML(data) {
     // Past 3 GW history (bottom-right top)
     let historyHTML = '';
     if (past3GW.length > 0) {
-        const historyRows = past3GW.map(gw => `
-            <div style="display: flex; justify-content: space-between; font-size: 0.65rem; padding: 0.2rem 0;">
-                <span style="color: var(--text-secondary);">GW${gw.round}</span>
-                <span>${gw.minutes}'</span>
-                <span style="font-weight: 600;">${gw.total_points} pts</span>
-            </div>
-        `).join('');
+        const historyRows = past3GW.map(gw => {
+            const opponentName = getTeamShortName(gw.opponent_team);
+            const isHome = gw.was_home;
+            const difficulty = gw.difficulty || 3;
+
+            return `
+                <div style="display: flex; align-items: center; gap: 0.3rem; font-size: 0.65rem; padding: 0.2rem 0;">
+                    <span style="color: var(--text-secondary); min-width: 2rem;">GW${gw.round}</span>
+                    <span class="${getDifficultyClass(difficulty)}" style="
+                        padding: 0.15rem 0.3rem;
+                        border-radius: 0.2rem;
+                        font-weight: 600;
+                        font-size: 0.6rem;
+                        min-width: 3rem;
+                        text-align: center;
+                    ">
+                        ${opponentName} (${isHome ? 'H' : 'A'})
+                    </span>
+                    <span style="margin-left: auto;">${gw.minutes}'</span>
+                    <span style="font-weight: 600; min-width: 2.5rem; text-align: right;">${gw.total_points} pts</span>
+                </div>
+            `;
+        }).join('');
 
         historyHTML = `
             <div style="margin-bottom: 0.75rem;">
@@ -490,7 +506,7 @@ export function closePlayerModal() {
 /**
  * Get upcoming fixtures for a player
  * @param {Object} player - Player object
- * @param {number} currentGW - Current gameweek
+ * @param {number} currentGW - Current gameweek (latest finished)
  * @returns {Array} Upcoming fixtures
  */
 function getUpcomingFixtures(player, currentGW) {
@@ -499,10 +515,11 @@ function getUpcomingFixtures(player, currentGW) {
     }
 
     // Use currentGW or fallback to dataCurrentGW or 1
+    // Upcoming should be AFTER the current (finished) GW
     const gw = currentGW || dataCurrentGW || 1;
 
     return fplFixtures
-        .filter(f => f.event && f.event >= gw)
+        .filter(f => f.event && f.event > gw)  // Changed to > to exclude current GW
         .filter(f => f.team_h === player.team || f.team_a === player.team)
         .sort((a, b) => a.event - b.event)
         .slice(0, 5);
