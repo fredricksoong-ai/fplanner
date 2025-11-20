@@ -3,7 +3,7 @@
 // Detailed player stats modal with 4-quadrant layout
 // ============================================================================
 
-import { getPlayerById } from '../../data.js';
+import { getPlayerById, fplFixtures, currentGW as dataCurrentGW } from '../../data.js';
 import {
     getPositionShort,
     getTeamShortName,
@@ -11,7 +11,6 @@ import {
     getCurrentGW,
     getDifficultyClass
 } from '../../utils.js';
-import { getFixtures } from '../../fixtures.js';
 
 /**
  * Calculate league ownership from cached rival teams
@@ -495,15 +494,14 @@ export function closePlayerModal() {
  * @returns {Array} Upcoming fixtures
  */
 function getUpcomingFixtures(player, currentGW) {
-    const allFixtures = getFixtures();
-    if (!allFixtures || allFixtures.length === 0) {
+    if (!fplFixtures || fplFixtures.length === 0) {
         return [];
     }
 
-    // Use currentGW or fallback to 1
-    const gw = currentGW || 1;
+    // Use currentGW or fallback to dataCurrentGW or 1
+    const gw = currentGW || dataCurrentGW || 1;
 
-    return allFixtures
+    return fplFixtures
         .filter(f => f.event && f.event >= gw)
         .filter(f => f.team_h === player.team || f.team_a === player.team)
         .sort((a, b) => a.event - b.event)
