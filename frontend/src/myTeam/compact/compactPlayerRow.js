@@ -60,6 +60,23 @@ export function renderCompactPlayerRow(pick, player, gwNumber) {
     // Add thick border after row 11 (last starter)
     const borderStyle = pick.position === 11 ? '3px solid var(--border-color)' : '1px solid var(--border-color)';
 
+    // Colored left border for players with news/injury
+    let leftBorderStyle = 'none';
+    if (player.news && player.news.trim() !== '') {
+        const chanceOfPlaying = player.chance_of_playing_next_round;
+        if (chanceOfPlaying !== null && chanceOfPlaying !== undefined) {
+            if (chanceOfPlaying <= 25) {
+                leftBorderStyle = '3px solid #ef4444'; // Red
+            } else if (chanceOfPlaying <= 50) {
+                leftBorderStyle = '3px solid #f97316'; // Orange
+            } else {
+                leftBorderStyle = '3px solid #fbbf24'; // Yellow
+            }
+        } else {
+            leftBorderStyle = '3px solid #fbbf24'; // Yellow default for news
+        }
+    }
+
     return `
         <div
             class="player-row mobile-table-row mobile-table-team"
@@ -67,8 +84,9 @@ export function renderCompactPlayerRow(pick, player, gwNumber) {
             style="
             background: ${bgColor};
             border-bottom: ${borderStyle};
+            border-left: ${leftBorderStyle};
             cursor: pointer;
-            pointer; padding-bottom: 3px !important;
+            padding-bottom: 3px !important;
             padding-top: 3px !important;
         ">
             <div style="font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">

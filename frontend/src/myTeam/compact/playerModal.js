@@ -9,7 +9,6 @@ import {
     getTeamShortName,
     escapeHtml,
     getCurrentGW,
-    getDifficultyClass,
     formatDecimal
 } from '../../utils.js';
 import { getMatchStatus } from '../../fixtures.js';
@@ -71,6 +70,22 @@ function isColorDark(hex) {
 }
 
 /**
+ * Get inline styles for FDR difficulty
+ * @param {number} difficulty - Fixture difficulty rating (1-5)
+ * @returns {Object} Background and text color styles
+ */
+function getFDRStyles(difficulty) {
+    const colors = {
+        1: { bg: '#147d1e', color: '#ffffff' }, // Dark green (easiest)
+        2: { bg: '#00ff87', color: '#000000' }, // Light green
+        3: { bg: '#ebebe4', color: '#000000' }, // Gray (neutral)
+        4: { bg: '#ff1751', color: '#ffffff' }, // Pink/Red
+        5: { bg: '#861247', color: '#ffffff' }  // Dark red (hardest)
+    };
+    return colors[difficulty] || colors[3];
+}
+
+/**
  * Calculate league ownership from cached rival teams
  * @param {number} playerId - Player ID to check
  * @param {Object} myTeamState - State object with rivalTeamCache
@@ -86,15 +101,22 @@ function calculateLeagueOwnership(playerId, myTeamState) {
 
     // Get league standings to find ranks
     const activeLeagueId = myTeamState.activeLeagueTab;
-    const leagueData = activeLeagueId ? myTeamState.leagueStandingsCache.get(activeLeagueId) : null;
+    // Try both string and number keys since Map might store either
+    let leagueData = null;
+    if (activeLeagueId) {
+        leagueData = myTeamState.leagueStandingsCache.get(activeLeagueId) ||
+                     myTeamState.leagueStandingsCache.get(String(activeLeagueId)) ||
+                     myTeamState.leagueStandingsCache.get(parseInt(activeLeagueId, 10));
+    }
     const standings = leagueData?.standings?.results || [];
 
     myTeamState.rivalTeamCache.forEach((rivalData, entryId) => {
         if (rivalData && rivalData.picks && rivalData.picks.picks) {
             const hasPlayer = rivalData.picks.picks.some(pick => pick.element === playerId);
             if (hasPlayer) {
-                // Find this entry in standings to get rank
-                const standingEntry = standings.find(s => s.entry === entryId);
+                // Find this entry in standings to get rank (convert to number for comparison)
+                const entryIdNum = parseInt(entryId, 10);
+                const standingEntry = standings.find(s => parseInt(s.entry, 10) === entryIdNum);
                 // Get team name from the rival's team data
                 const teamName = rivalData.team?.name || standingEntry?.entry_name || 'Unknown';
                 owners.push({
@@ -423,7 +445,7 @@ function buildModalHTML(data) {
             comparisonHTML += `
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.15rem 0; gap: 0.25rem;">
                     <span style="font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">${escapeHtml(cp.web_name)}</span>
-                    <span style="font-weight: 600; min-width: 1.5rem; text-align: right;">${cpGwPts}</span>
+                    <span style="font-weight: 600; min-width: 2rem; text-align: right;">${cpGwPts} Pts</span>
                     <span style="color: var(--text-secondary); min-width: 2.5rem; text-align: right;">£${cpPrice}m</span>
                 </div>
             `;
@@ -532,17 +554,20 @@ function buildModalHTML(data) {
             const opponentName = getTeamShortName(gw.opponent_team);
             const isHome = gw.was_home;
             const difficulty = gw.difficulty || 3;
+            const fdrStyle = getFDRStyles(difficulty);
 
             return `
                 <div style="display: flex; align-items: center; gap: 0.3rem; font-size: 0.6rem; padding: 0.2rem 0;">
                     <span style="color: var(--text-secondary); min-width: 2rem;">GW${gw.round}</span>
-                    <span class="${getDifficultyClass(difficulty)}" style="
+                    <span style="
                         padding: 0.1rem 0.25rem;
                         border-radius: 0.2rem;
                         font-weight: 600;
                         font-size: 0.55rem;
                         min-width: 2.5rem;
                         text-align: center;
+                        background: ${fdrStyle.bg};
+                        color: ${fdrStyle.color};
                     ">
                         ${opponentName} (${isHome ? 'H' : 'A'})
                     </span>
@@ -570,6 +595,7 @@ function buildModalHTML(data) {
             const opponentId = isHome ? fixture.team_a : fixture.team_h;
             const opponentName = getTeamShortName(opponentId);
             const difficulty = isHome ? fixture.team_h_difficulty : fixture.team_a_difficulty;
+            const fdrStyle = getFDRStyles(difficulty);
 
             // Format date in Singapore time
             let dateStr = '';
@@ -588,13 +614,15 @@ function buildModalHTML(data) {
             return `
                 <div style="display: flex; align-items: center; gap: 0.3rem; font-size: 0.6rem; padding: 0.2rem 0;">
                     <span style="color: var(--text-secondary); min-width: 2rem;">GW${fixture.event}</span>
-                    <span class="${getDifficultyClass(difficulty)}" style="
+                    <span style="
                         padding: 0.1rem 0.25rem;
                         border-radius: 0.2rem;
                         font-weight: 600;
                         font-size: 0.55rem;
                         min-width: 2.5rem;
                         text-align: center;
+                        background: ${fdrStyle.bg};
+                        color: ${fdrStyle.color};
                     ">
                         ${opponentName} (${isHome ? 'H' : 'A'})
                     </span>
@@ -682,19 +710,19 @@ function buildModalHTML(data) {
                     <!-- Injury/News Banner -->
                     ${injuryBannerHTML}
 
-                    <!-- Top row: GW Stats | Alternatives -->
+                    <!-- Top row: GW Stats | Ownership + League Owners -->
                     <div style="display: flex; gap: 0.75rem; margin-bottom: 0.75rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border-color);">
                         ${gwStatsHTML}
-                        ${comparisonHTML}
+                        ${ownershipAndLeagueHTML}
                     </div>
 
-                    <!-- Bottom row: Ownership + League Owners | History + Fixtures -->
+                    <!-- Bottom row: History + Fixtures | Alternatives -->
                     <div style="display: flex; gap: 0.75rem;">
-                        ${ownershipAndLeagueHTML}
                         <div style="flex: 1; min-width: 140px;">
                             ${historyHTML}
                             ${fixturesHTML}
                         </div>
+                        ${comparisonHTML}
                     </div>
                 </div>
             </div>
