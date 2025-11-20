@@ -3,7 +3,7 @@
 // Detailed player stats modal with 4-quadrant layout
 // ============================================================================
 
-import { getPlayerById, fplFixtures, fplBootstrap, currentGW as dataCurrentGW } from '../../data.js';
+import { getPlayerById, fplFixtures, getActiveGW } from '../../data.js';
 import {
     getPositionShort,
     getTeamShortName,
@@ -11,31 +11,6 @@ import {
     getCurrentGW,
     getDifficultyClass
 } from '../../utils.js';
-
-/**
- * Get the active gameweek (current live or next if between GWs)
- * @returns {number} Active GW number
- */
-function getActiveGW() {
-    if (!fplBootstrap || !fplBootstrap.events) {
-        return dataCurrentGW || 1;
-    }
-
-    // Find the current event (is_current = true)
-    const currentEvent = fplBootstrap.events.find(e => e.is_current);
-    if (currentEvent) {
-        return currentEvent.id;
-    }
-
-    // Fallback to next event if no current
-    const nextEvent = fplBootstrap.events.find(e => e.is_next);
-    if (nextEvent) {
-        return nextEvent.id;
-    }
-
-    // Final fallback
-    return dataCurrentGW || 1;
-}
 
 /**
  * Calculate league ownership from cached rival teams

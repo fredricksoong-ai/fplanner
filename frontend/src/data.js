@@ -38,6 +38,32 @@ export let githubData = null;
 /** @type {number|null} Current gameweek number (latest finished GW) */
 export let currentGW = null;
 
+/**
+ * Get the active gameweek (current live or next if between GWs)
+ * Use this for UI display where you want to show the "current" GW to users
+ * @returns {number} Active GW number
+ */
+export function getActiveGW() {
+    if (!fplBootstrap || !fplBootstrap.events) {
+        return currentGW || 1;
+    }
+
+    // Find the current event (is_current = true) - this is the live or most recent GW
+    const currentEvent = fplBootstrap.events.find(e => e.is_current);
+    if (currentEvent) {
+        return currentEvent.id;
+    }
+
+    // Fallback to next event if no current (between GWs)
+    const nextEvent = fplBootstrap.events.find(e => e.is_next);
+    if (nextEvent) {
+        return nextEvent.id;
+    }
+
+    // Final fallback
+    return currentGW || 1;
+}
+
 // ============================================================================
 // API FUNCTIONS
 // ============================================================================
