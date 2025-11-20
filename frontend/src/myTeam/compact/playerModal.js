@@ -398,23 +398,11 @@ function buildModalHTML(data) {
     if (comparisonPlayers && comparisonPlayers.length > 0) {
         comparisonHTML += `<div style="display: flex; flex-direction: column; gap: 0.15rem; font-size: 0.6rem;">`;
         comparisonPlayers.forEach(cp => {
-            const cpTeam = getTeamShortName(cp.team);
             const cpGwPts = cp.event_points || 0;
             const cpPrice = (cp.now_cost / 10).toFixed(1);
-            const teamColor = getTeamColor(cp.team);
             comparisonHTML += `
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.15rem 0; gap: 0.25rem;">
                     <span style="font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">${escapeHtml(cp.web_name)}</span>
-                    <span style="
-                        background: rgba(60, 60, 60, 0.8);
-                        color: ${teamColor};
-                        padding: 0.1rem 0.3rem;
-                        border-radius: 0.2rem;
-                        font-weight: 700;
-                        font-size: 0.55rem;
-                        min-width: 1.8rem;
-                        text-align: center;
-                    ">${cpTeam}</span>
                     <span style="font-weight: 600; min-width: 1.5rem; text-align: right;">${cpGwPts}</span>
                     <span style="color: var(--text-secondary); min-width: 2.5rem; text-align: right;">£${cpPrice}m</span>
                 </div>
@@ -473,13 +461,50 @@ function buildModalHTML(data) {
     }
     ownershipAndLeagueHTML += `</div>`;
 
-    // Risk indicator HTML
+    // Risk indicator HTML - show all risk statements
     let riskHTML = '';
     if (risks && risks.length > 0) {
-        const riskIcons = risks.map(r => `<span title="${escapeHtml(r.details)}">${r.icon}</span>`).join(' ');
+        const riskItems = risks.map(r => `${r.icon} ${r.message}`).join(' • ');
         riskHTML = `
-            <div style="font-size: 0.65rem; color: var(--text-secondary); margin-top: 0.25rem;">
-                ${riskIcons} ${risks[0].message}
+            <div style="font-size: 0.6rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                ${riskItems}
+            </div>
+        `;
+    }
+
+    // Injury/News banner - using FPL API data
+    let injuryBannerHTML = '';
+    if (player.news && player.news.trim() !== '') {
+        const chanceOfPlaying = player.chance_of_playing_next_round;
+        let bannerColor = '#fbbf24'; // Yellow default
+        let bgColor = 'rgba(251, 191, 36, 0.15)';
+
+        // Red for 0-25%, Orange for 26-50%, Yellow for 51-75%
+        if (chanceOfPlaying !== null && chanceOfPlaying !== undefined) {
+            if (chanceOfPlaying <= 25) {
+                bannerColor = '#ef4444';
+                bgColor = 'rgba(239, 68, 68, 0.15)';
+            } else if (chanceOfPlaying <= 50) {
+                bannerColor = '#f97316';
+                bgColor = 'rgba(249, 115, 22, 0.15)';
+            }
+        }
+
+        const chanceText = chanceOfPlaying !== null && chanceOfPlaying !== undefined
+            ? ` - ${chanceOfPlaying}% chance of playing`
+            : '';
+
+        injuryBannerHTML = `
+            <div style="
+                background: ${bgColor};
+                border-left: 3px solid ${bannerColor};
+                padding: 0.5rem 0.75rem;
+                margin-bottom: 0.75rem;
+                border-radius: 0 0.25rem 0.25rem 0;
+            ">
+                <div style="font-size: 0.65rem; color: ${bannerColor}; font-weight: 600;">
+                    ${escapeHtml(player.news)}${chanceText}
+                </div>
             </div>
         `;
     }
@@ -605,7 +630,14 @@ function buildModalHTML(data) {
                 ">
                     <div>
                         <div style="font-size: 0.9rem; font-weight: 600; color: var(--text-primary);">
-                            ${escapeHtml(player.web_name)} <span style="color: var(--text-secondary); font-weight: 400;">• ${team} • ${position} • £${price}m</span>
+                            ${escapeHtml(player.web_name)} <span style="font-weight: 400;">• </span><span style="
+                                background: rgba(255, 255, 255, 0.1);
+                                color: ${getTeamColor(player.team)};
+                                padding: 0.1rem 0.35rem;
+                                border-radius: 0.2rem;
+                                font-weight: 700;
+                                font-size: 0.75rem;
+                            ">${team}</span><span style="color: var(--text-secondary); font-weight: 400;"> • ${position} • £${price}m</span>
                         </div>
                         ${riskHTML}
                     </div>
@@ -631,6 +663,9 @@ function buildModalHTML(data) {
 
                 <!-- Content: 4-quadrant layout -->
                 <div style="padding: 0.75rem;">
+                    <!-- Injury/News Banner -->
+                    ${injuryBannerHTML}
+
                     <!-- Top row: GW Stats | Alternatives -->
                     <div style="display: flex; gap: 0.75rem; margin-bottom: 0.75rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border-color);">
                         ${gwStatsHTML}
