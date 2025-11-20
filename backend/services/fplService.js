@@ -143,6 +143,34 @@ export async function fetchTeamPicks(teamId, gameweek) {
 }
 
 // ============================================================================
+// PLAYER ELEMENT SUMMARY
+// ============================================================================
+
+/**
+ * Fetch player element summary (history and fixtures)
+ * @param {string|number} playerId - Player element ID
+ * @returns {Promise<Object>} Player summary with history and fixtures
+ */
+export async function fetchElementSummary(playerId) {
+  logger.log(`📡 Fetching element summary for player ${playerId}...`);
+
+  try {
+    const response = await axios.get(`${FPL_BASE_URL}/element-summary/${playerId}/`, {
+      timeout: 10000,
+      headers: {
+        'User-Agent': 'FPLanner/1.0'
+      }
+    });
+
+    logger.log(`✅ Element summary fetched for player ${playerId}`);
+    return response.data;
+  } catch (err) {
+    logger.error(`❌ Failed to fetch element summary for player ${playerId}:`, err.message);
+    throw new Error(`Element summary unavailable for player ${playerId}`);
+  }
+}
+
+// ============================================================================
 // LEAGUE DATA
 // ============================================================================
 
