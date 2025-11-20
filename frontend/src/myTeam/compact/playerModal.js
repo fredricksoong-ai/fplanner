@@ -3,15 +3,17 @@
 // Detailed player stats modal with 4-quadrant layout
 // ============================================================================
 
-import { getPlayerById, fplFixtures, getActiveGW } from '../../data.js';
+import { getPlayerById, fplFixtures, getActiveGW, getAllPlayers } from '../../data.js';
 import {
     getPositionShort,
     getTeamShortName,
     escapeHtml,
     getCurrentGW,
-    getDifficultyClass
+    getDifficultyClass,
+    formatDecimal
 } from '../../utils.js';
 import { getMatchStatus } from '../../fixtures.js';
+import { analyzePlayerRisks } from '../../risk.js';
 
 /**
  * Calculate league ownership from cached rival teams
@@ -61,6 +63,47 @@ function calculateLeagueOwnership(playerId, myTeamState) {
         total: totalRivals,
         percentage: totalRivals > 0 ? ((owners.length / totalRivals) * 100).toFixed(0) : 0
     };
+}
+
+/**
+ * Get top 5 comparison players (same position, not in my team, sorted by form)
+ * @param {Object} player - Current player
+ * @param {Object} myTeamState - State with team data
+ * @returns {Array} Top 5 comparison players
+ */
+function getComparisonPlayers(player, myTeamState) {
+    const allPlayers = getAllPlayers();
+    if (!allPlayers || allPlayers.length === 0) return [];
+
+    // Get my team's player IDs
+    let myPlayerIds = new Set();
+    const cachedTeamId = localStorage.getItem('fplanner_team_id');
+    if (cachedTeamId) {
+        const cachedTeamData = localStorage.getItem(`fplanner_team_${cachedTeamId}`);
+        if (cachedTeamData) {
+            try {
+                const teamData = JSON.parse(cachedTeamData);
+                if (teamData && teamData.picks && teamData.picks.picks) {
+                    myPlayerIds = new Set(teamData.picks.picks.map(p => p.element));
+                }
+            } catch (e) {
+                // Ignore parse errors
+            }
+        }
+    }
+
+    // Filter: same position, not in my team, not the current player
+    const samePosition = allPlayers.filter(p =>
+        p.element_type === player.element_type &&
+        p.id !== player.id &&
+        !myPlayerIds.has(p.id)
+    );
+
+    // Sort by form descending
+    samePosition.sort((a, b) => (parseFloat(b.form) || 0) - (parseFloat(a.form) || 0));
+
+    // Return top 5
+    return samePosition.slice(0, 5);
 }
 
 /**
@@ -127,6 +170,12 @@ export async function showPlayerModal(playerId, myTeamState = null) {
     // Next 3 fixtures (after active GW)
     const upcomingFixtures = getUpcomingFixturesAfterGW(player, activeGW).slice(0, 3);
 
+    // Get risk factors for this player
+    const risks = analyzePlayerRisks(player);
+
+    // Get comparison players (same position, not in my team, sorted by form)
+    const comparisonPlayers = getComparisonPlayers(player, myTeamState);
+
     // Build modal HTML
     const modalHTML = buildModalHTML({
         player,
@@ -145,7 +194,9 @@ export async function showPlayerModal(playerId, myTeamState = null) {
         leagueOwnership,
         past3GW,
         upcomingFixtures,
-        isLive
+        isLive,
+        risks,
+        comparisonPlayers
     });
 
     // Update modal content
@@ -238,7 +289,8 @@ function buildModalHTML(data) {
     const {
         player, team, position, price, currentGW,
         gwPoints, minutes, bps, goals, assists, xG, xA,
-        ownership, leagueOwnership, past3GW, upcomingFixtures, isLive
+        ownership, leagueOwnership, past3GW, upcomingFixtures, isLive,
+        risks, comparisonPlayers
     } = data;
 
     // LIVE indicator styles
@@ -300,13 +352,42 @@ function buildModalHTML(data) {
         </div>
     `;
 
-    // Ownership section (top-right)
-    const ownershipHTML = `
+    // Player Comparison section (top-right) - Top 5 same position players by form
+    let comparisonHTML = `
+        <div style="flex: 1; min-width: 140px;">
+            <div style="font-size: 0.7rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem; text-transform: uppercase;">
+                Alternatives
+            </div>
+    `;
+
+    if (comparisonPlayers && comparisonPlayers.length > 0) {
+        comparisonHTML += `<div style="display: flex; flex-direction: column; gap: 0.15rem; font-size: 0.6rem;">`;
+        comparisonPlayers.forEach(cp => {
+            const cpTeam = getTeamShortName(cp.team);
+            const cpForm = parseFloat(cp.form) || 0;
+            const cpPrice = (cp.now_cost / 10).toFixed(1);
+            comparisonHTML += `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.15rem 0;">
+                    <span style="font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60px;">${escapeHtml(cp.web_name)}</span>
+                    <span style="color: var(--text-secondary);">${cpTeam}</span>
+                    <span style="font-weight: 600;">${cpForm.toFixed(1)}</span>
+                    <span style="color: var(--text-secondary);">£${cpPrice}m</span>
+                </div>
+            `;
+        });
+        comparisonHTML += `</div>`;
+    } else {
+        comparisonHTML += `<div style="font-size: 0.65rem; color: var(--text-secondary);">No alternatives found</div>`;
+    }
+    comparisonHTML += `</div>`;
+
+    // Merged Ownership + League Owners section (bottom-left)
+    let ownershipAndLeagueHTML = `
         <div style="flex: 1; min-width: 140px;">
             <div style="font-size: 0.7rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem; text-transform: uppercase;">
                 Ownership
             </div>
-            <div style="display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.7rem;">
+            <div style="display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.7rem; margin-bottom: 0.5rem;">
                 <div style="display: flex; justify-content: space-between;">
                     <span style="color: var(--text-secondary);">Overall</span>
                     <span style="font-weight: 600;">${ownership.toFixed(1)}%</span>
@@ -318,38 +399,42 @@ function buildModalHTML(data) {
                 </div>
                 ` : ''}
             </div>
-        </div>
     `;
 
-    // League owners section (bottom-left)
-    let leagueOwnersHTML = '';
+    // Add league owners list if available
     if (leagueOwnership && leagueOwnership.owners.length > 0) {
-        const ownersList = leagueOwnership.owners.map(owner => `
-            <div style="display: flex; justify-content: space-between; font-size: 0.65rem; padding: 0.2rem 0;">
-                <span style="color: var(--text-secondary);">#${owner.rank || '—'}</span>
-                <span style="font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100px;">${escapeHtml(owner.name)}</span>
+        ownershipAndLeagueHTML += `
+            <div style="font-size: 0.65rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.25rem; text-transform: uppercase;">
+                League Owners
             </div>
-        `).join('');
-
-        leagueOwnersHTML = `
-            <div style="flex: 1; min-width: 140px;">
-                <div style="font-size: 0.7rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem; text-transform: uppercase;">
-                    League Owners
+            <div style="display: flex; flex-direction: column; gap: 0.1rem;">
+        `;
+        leagueOwnership.owners.forEach(owner => {
+            const rankDisplay = owner.rank && owner.rank > 0 ? `#${owner.rank}` : '—';
+            ownershipAndLeagueHTML += `
+                <div style="display: flex; justify-content: space-between; font-size: 0.6rem; padding: 0.15rem 0;">
+                    <span style="color: var(--text-secondary); min-width: 2rem;">${rankDisplay}</span>
+                    <span style="font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; text-align: right;">${escapeHtml(owner.name)}</span>
                 </div>
-                <div style="max-height: 120px; overflow-y: auto;">
-                    ${ownersList}
-                </div>
+            `;
+        });
+        ownershipAndLeagueHTML += `</div>`;
+    } else if (!leagueOwnership) {
+        ownershipAndLeagueHTML += `
+            <div style="font-size: 0.6rem; color: var(--text-secondary);">
+                View Team page for league data
             </div>
         `;
-    } else {
-        leagueOwnersHTML = `
-            <div style="flex: 1; min-width: 140px;">
-                <div style="font-size: 0.7rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem; text-transform: uppercase;">
-                    League Owners
-                </div>
-                <div style="font-size: 0.65rem; color: var(--text-secondary);">
-                    ${leagueOwnership ? 'No league owners' : 'Select a league to view'}
-                </div>
+    }
+    ownershipAndLeagueHTML += `</div>`;
+
+    // Risk indicator HTML
+    let riskHTML = '';
+    if (risks && risks.length > 0) {
+        const riskIcons = risks.map(r => `<span title="${escapeHtml(r.details)}">${r.icon}</span>`).join(' ');
+        riskHTML = `
+            <div style="font-size: 0.65rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                ${riskIcons} ${risks[0].message}
             </div>
         `;
     }
@@ -391,7 +476,7 @@ function buildModalHTML(data) {
         `;
     }
 
-    // Next 3 fixtures (bottom-right bottom)
+    // Next 3 GWs fixtures (bottom-right bottom)
     let fixturesHTML = '';
     if (upcomingFixtures.length > 0) {
         const fixtureRows = upcomingFixtures.map(fixture => {
@@ -400,18 +485,34 @@ function buildModalHTML(data) {
             const opponentName = getTeamShortName(opponentId);
             const difficulty = isHome ? fixture.team_h_difficulty : fixture.team_a_difficulty;
 
+            // Format date in Singapore time
+            let dateStr = '';
+            if (fixture.kickoff_time) {
+                const kickoff = new Date(fixture.kickoff_time);
+                dateStr = kickoff.toLocaleString('en-SG', {
+                    timeZone: 'Asia/Singapore',
+                    day: 'numeric',
+                    month: 'short',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                }).replace(',', '');
+            }
+
             return `
-                <div style="display: flex; align-items: center; gap: 0.3rem; font-size: 0.65rem; padding: 0.2rem 0;">
+                <div style="display: flex; align-items: center; gap: 0.3rem; font-size: 0.6rem; padding: 0.2rem 0;">
                     <span style="color: var(--text-secondary); min-width: 2rem;">GW${fixture.event}</span>
                     <span class="${getDifficultyClass(difficulty)}" style="
-                        padding: 0.15rem 0.4rem;
+                        padding: 0.1rem 0.25rem;
                         border-radius: 0.2rem;
                         font-weight: 600;
-                        flex: 1;
+                        font-size: 0.55rem;
+                        min-width: 2.5rem;
                         text-align: center;
                     ">
                         ${opponentName} (${isHome ? 'H' : 'A'})
                     </span>
+                    <span style="color: var(--text-secondary); font-size: 0.55rem; margin-left: auto;">${dateStr}</span>
                 </div>
             `;
         }).join('');
@@ -419,7 +520,7 @@ function buildModalHTML(data) {
         fixturesHTML = `
             <div>
                 <div style="font-size: 0.7rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem; text-transform: uppercase;">
-                    Upcoming
+                    Next 3 GWs
                 </div>
                 ${fixtureRows}
             </div>
@@ -455,10 +556,13 @@ function buildModalHTML(data) {
                     border-bottom: 2px solid var(--border-color);
                     display: flex;
                     justify-content: space-between;
-                    align-items: center;
+                    align-items: flex-start;
                 ">
-                    <div style="font-size: 0.9rem; font-weight: 600; color: var(--text-primary);">
-                        ${escapeHtml(player.web_name)} <span style="color: var(--text-secondary); font-weight: 400;">• ${team} • ${position} • £${price}m</span>
+                    <div>
+                        <div style="font-size: 0.9rem; font-weight: 600; color: var(--text-primary);">
+                            ${escapeHtml(player.web_name)} <span style="color: var(--text-secondary); font-weight: 400;">• ${team} • ${position} • £${price}m</span>
+                        </div>
+                        ${riskHTML}
                     </div>
                     <button
                         id="close-player-modal"
@@ -482,15 +586,15 @@ function buildModalHTML(data) {
 
                 <!-- Content: 4-quadrant layout -->
                 <div style="padding: 0.75rem;">
-                    <!-- Top row: GW Stats | Ownership -->
+                    <!-- Top row: GW Stats | Alternatives -->
                     <div style="display: flex; gap: 0.75rem; margin-bottom: 0.75rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border-color);">
                         ${gwStatsHTML}
-                        ${ownershipHTML}
+                        ${comparisonHTML}
                     </div>
 
-                    <!-- Bottom row: League Owners | History + Fixtures -->
+                    <!-- Bottom row: Ownership + League Owners | History + Fixtures -->
                     <div style="display: flex; gap: 0.75rem;">
-                        ${leagueOwnersHTML}
+                        ${ownershipAndLeagueHTML}
                         <div style="flex: 1; min-width: 140px;">
                             ${historyHTML}
                             ${fixturesHTML}
