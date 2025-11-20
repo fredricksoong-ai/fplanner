@@ -11,6 +11,8 @@ import {
     fplBootstrap as getBootstrapData
 } from './data.js';
 
+import { sharedState } from './sharedState.js';
+
 import {
     loadAndRenderLeagueInfo
 } from './leagueInfo.js';
@@ -129,7 +131,7 @@ import {
 // MY TEAM PAGE
 // ============================================================================
 
-// State for My Team page
+// State for My Team page (uses shared state for caches)
 let myTeamState = {
     currentTab: 'overview', // 'overview', 'leagues', or 'fixtures'
     teamData: null, // Cached team data
@@ -137,8 +139,9 @@ let myTeamState = {
     activeLeagueTab: null, // Currently active league tab (null = no league selected, or league ID)
     comparisonRivalId: null, // Currently selected rival for comparison
     comparisonRivalData: null, // Cached rival team data
-    leagueStandingsCache: new Map(), // Cache for league standings API responses
-    rivalTeamCache: new Map(), // Cache for rival team data
+    leagueStandingsCache: sharedState.leagueStandingsCache, // Shared cache for league standings
+    rivalTeamCache: sharedState.rivalTeamCache, // Shared cache for rival team data
+    captainCache: sharedState.captainCache, // Shared cache for captain names
     pullToRefreshInstance: null // Pull-to-refresh instance
 };
 

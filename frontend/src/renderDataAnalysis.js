@@ -9,6 +9,8 @@ import {
     getActiveGW
 } from './data.js';
 
+import { sharedState } from './sharedState.js';
+
 import {
     getPositionShort,
     formatCurrency,
@@ -292,7 +294,8 @@ export function renderDataAnalysis(subTab = 'overview', position = 'all') {
     });
 
     // Attach player row click listeners for mobile tables
-    attachPlayerRowListeners();
+    // Pass shared state for league ownership in player modal
+    attachPlayerRowListeners(sharedState.getTeamState());
 
     attachRiskTooltipListeners();
 }

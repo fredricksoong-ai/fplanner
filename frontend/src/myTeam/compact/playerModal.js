@@ -11,6 +11,7 @@ import {
     getCurrentGW,
     getDifficultyClass
 } from '../../utils.js';
+import { getMatchStatus } from '../../fixtures.js';
 
 /**
  * Calculate league ownership from cached rival teams
@@ -109,6 +110,10 @@ export async function showPlayerModal(playerId, myTeamState = null) {
     const xG = gwStats.expected_goals ? parseFloat(gwStats.expected_goals).toFixed(2) : '0.00';
     const xA = gwStats.expected_assists ? parseFloat(gwStats.expected_assists).toFixed(2) : '0.00';
 
+    // Check if player's match is live
+    const matchStatus = getMatchStatus(player.team, activeGW, player);
+    const isLive = matchStatus === 'LIVE';
+
     // Ownership stats
     const ownership = parseFloat(player.selected_by_percent) || 0;
     const leagueOwnership = calculateLeagueOwnership(playerId, myTeamState);
@@ -139,7 +144,8 @@ export async function showPlayerModal(playerId, myTeamState = null) {
         ownership,
         leagueOwnership,
         past3GW,
-        upcomingFixtures
+        upcomingFixtures,
+        isLive
     });
 
     // Update modal content
@@ -232,19 +238,39 @@ function buildModalHTML(data) {
     const {
         player, team, position, price, currentGW,
         gwPoints, minutes, bps, goals, assists, xG, xA,
-        ownership, leagueOwnership, past3GW, upcomingFixtures
+        ownership, leagueOwnership, past3GW, upcomingFixtures, isLive
     } = data;
+
+    // LIVE indicator styles
+    const liveIndicator = isLive ? `
+        <span style="
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            padding: 0.1rem 0.35rem;
+            border-radius: 0.25rem;
+            font-size: 0.55rem;
+            font-weight: 700;
+            margin-left: 0.5rem;
+            animation: pulse 2s infinite;
+        ">
+            <span style="width: 6px; height: 6px; background: #ef4444; border-radius: 50%; animation: pulse 1s infinite;"></span>
+            LIVE
+        </span>
+    ` : '';
 
     // GW Stats section (top-left)
     const gwStatsHTML = `
         <div style="flex: 1; min-width: 140px;">
             <div style="font-size: 0.7rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem; text-transform: uppercase;">
-                GW ${currentGW} Stats
+                GW ${currentGW} Stats${liveIndicator}
             </div>
             <div style="display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.7rem;">
                 <div style="display: flex; justify-content: space-between;">
                     <span style="color: var(--text-secondary);">Points</span>
-                    <span style="font-weight: 600;">${gwPoints}</span>
+                    <span style="font-weight: 600;">${gwPoints}${isLive ? '*' : ''}</span>
                 </div>
                 <div style="display: flex; justify-content: space-between;">
                     <span style="color: var(--text-secondary);">Minutes</span>
