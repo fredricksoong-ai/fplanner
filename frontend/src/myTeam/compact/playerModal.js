@@ -87,6 +87,33 @@ function getFDRStyles(difficulty) {
 }
 
 /**
+ * Get fixture difficulty for a team in a specific GW
+ * @param {number} teamId - Team ID
+ * @param {number} opponentId - Opponent team ID
+ * @param {number} gwNumber - Gameweek number
+ * @param {boolean} isHome - Whether team played at home
+ * @returns {number} Difficulty rating 1-5
+ */
+function getFixtureDifficulty(teamId, opponentId, gwNumber, isHome) {
+    if (!fplFixtures || fplFixtures.length === 0) return 3;
+
+    const fixture = fplFixtures.find(f =>
+        f.event === gwNumber &&
+        ((f.team_h === teamId && f.team_a === opponentId) ||
+         (f.team_a === teamId && f.team_h === opponentId))
+    );
+
+    if (!fixture) return 3;
+
+    // Return difficulty from the team's perspective
+    if (isHome) {
+        return fixture.team_h_difficulty || 3;
+    } else {
+        return fixture.team_a_difficulty || 3;
+    }
+}
+
+/**
  * Calculate league ownership from cached rival teams
  * @param {number} playerId - Player ID to check
  * @param {Object} myTeamState - State object with rivalTeamCache
@@ -120,9 +147,12 @@ function calculateLeagueOwnership(playerId, myTeamState) {
         if (rivalData && rivalData.picks && rivalData.picks.picks) {
             const hasPlayer = rivalData.picks.picks.some(pick => pick.element === playerId);
             if (hasPlayer) {
-                // Find this entry in standings to get rank (convert to number for comparison)
-                const entryIdNum = parseInt(entryId, 10);
-                const standingEntry = standings.find(s => parseInt(s.entry, 10) === entryIdNum);
+                // Find this entry in standings - try both number and string comparison
+                const standingEntry = standings.find(s =>
+                    s.entry === entryId ||
+                    s.entry === Number(entryId) ||
+                    String(s.entry) === String(entryId)
+                );
                 // Get team name from the rival's team data
                 const teamName = rivalData.team?.name || standingEntry?.entry_name || 'Unknown';
                 const ownerPoints = standingEntry?.total || 0;
@@ -582,10 +612,12 @@ function buildModalHTML(data) {
     if (past3GW.length > 0) {
         const historyRows = past3GW.map(gw => {
             const opponentName = getTeamShortName(gw.opponent_team);
+            // Look up actual difficulty from fixtures data
+            const difficulty = getFixtureDifficulty(player.team, gw.opponent_team, gw.round, gw.was_home);
             const opponent = {
                 name: opponentName,
                 isHome: gw.was_home,
-                difficulty: gw.difficulty || 3
+                difficulty: difficulty
             };
 
             return `
