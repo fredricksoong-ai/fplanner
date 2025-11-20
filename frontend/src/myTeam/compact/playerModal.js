@@ -510,13 +510,6 @@ function buildModalHTML(data) {
             }
         }
 
-        // Only add chance text if not already in news
-        const newsText = player.news;
-        const hasChanceInNews = newsText.toLowerCase().includes('chance');
-        const chanceText = (!hasChanceInNews && chanceOfPlaying !== null && chanceOfPlaying !== undefined)
-            ? ` - ${chanceOfPlaying}% chance of playing`
-            : '';
-
         injuryBannerHTML = `
             <div style="
                 background: ${bgColor};
@@ -526,7 +519,7 @@ function buildModalHTML(data) {
                 border-radius: 0 0.25rem 0.25rem 0;
             ">
                 <div style="font-size: 0.65rem; color: ${bannerColor}; font-weight: 600;">
-                    ${escapeHtml(newsText)}${chanceText}
+                    ${escapeHtml(player.news)}
                 </div>
             </div>
         `;
