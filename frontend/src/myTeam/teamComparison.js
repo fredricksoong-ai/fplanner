@@ -151,12 +151,29 @@ function renderComparisonTeamColumn(picks, title, ownPlayerIds, otherPlayerIds, 
                     const bgColor = isDifferential ? `rgba(${accentColor === '#3b82f6' ? '59, 130, 246' : '239, 68, 68'}, 0.1)` :
                                     isShared ? 'rgba(34, 197, 94, 0.1)' : 'transparent';
 
+                    // Colored left border for players with news/injury
+                    let leftBorderStyle = 'none';
+                    if (player.news && player.news.trim() !== '') {
+                        const chanceOfPlaying = player.chance_of_playing_next_round;
+                        if (chanceOfPlaying !== null && chanceOfPlaying !== undefined) {
+                            if (chanceOfPlaying <= 25) {
+                                leftBorderStyle = '3px solid #ef4444'; // Red
+                            } else if (chanceOfPlaying <= 50) {
+                                leftBorderStyle = '3px solid #f97316'; // Orange
+                            } else {
+                                leftBorderStyle = '3px solid #fbbf24'; // Yellow
+                            }
+                        } else {
+                            leftBorderStyle = '3px solid #fbbf24'; // Yellow default for news
+                        }
+                    }
+
                     // Separator between starting 11 and bench
                     const separator = index === 11 ? `<div style="border-top: 2px solid var(--border-color); margin: 0.5rem 0;"></div>` : '';
 
                     return `
                         ${separator}
-                        <div style="background: ${bgColor}; padding: 0.5rem; border-radius: 6px; margin-bottom: 0.25rem; display: flex; justify-content: space-between; align-items: center; ${isBench ? 'opacity: 0.6;' : ''}">
+                        <div style="background: ${bgColor}; padding: 0.5rem; border-radius: 6px; margin-bottom: 0.25rem; display: flex; justify-content: space-between; align-items: center; border-left: ${leftBorderStyle}; ${isBench ? 'opacity: 0.6;' : ''}">
                             <div style="flex: 1;">
                                 <span style="font-weight: 600;">${escapeHtml(player.web_name)}</span>
                                 ${isCaptain ? ' <span style="color: var(--primary-color); font-weight: 700;">(C)</span>' : ''}

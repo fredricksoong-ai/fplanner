@@ -849,10 +849,27 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
             contextDivStyle = 'text-align: center; font-size: 0.7rem;';
         }
 
+        // Colored left border for players with news/injury
+        let leftBorderStyle = 'none';
+        if (player.news && player.news.trim() !== '') {
+            const chanceOfPlaying = player.chance_of_playing_next_round;
+            if (chanceOfPlaying !== null && chanceOfPlaying !== undefined) {
+                if (chanceOfPlaying <= 25) {
+                    leftBorderStyle = '3px solid #ef4444'; // Red
+                } else if (chanceOfPlaying <= 50) {
+                    leftBorderStyle = '3px solid #f97316'; // Orange
+                } else {
+                    leftBorderStyle = '3px solid #fbbf24'; // Yellow
+                }
+            } else {
+                leftBorderStyle = '3px solid #fbbf24'; // Yellow default for news
+            }
+        }
+
         html += `
             <div
                 class="player-row mobile-table-row"
-                style="grid-template-columns: 2fr 1.2fr 1fr 0.7fr 0.7fr 0.8fr; cursor: pointer; padding-bottom: 3px !important; padding-top: 3px !important;"
+                style="grid-template-columns: 2fr 1.2fr 1fr 0.7fr 0.7fr 0.8fr; cursor: pointer; padding-bottom: 3px !important; padding-top: 3px !important; border-left: ${leftBorderStyle};"
                 data-player-id="${player.id}"
             >
                 <div style="font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
