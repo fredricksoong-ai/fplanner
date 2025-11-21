@@ -4,6 +4,7 @@
 // ============================================================================
 
 import axios from 'axios';
+import axiosRetry from 'axios-retry';
 import { FPL_BASE_URL } from '../config.js';
 import {
   cache,
@@ -12,6 +13,28 @@ import {
   recordFetch
 } from './cacheManager.js';
 import logger from '../logger.js';
+
+// ============================================================================
+// AXIOS RETRY CONFIGURATION
+// ============================================================================
+
+// Configure retry with exponential backoff
+axiosRetry(axios, {
+  retries: 3,
+  retryDelay: (retryCount) => {
+    const delay = axiosRetry.exponentialDelay(retryCount);
+    logger.log(`⏳ Retry attempt ${retryCount}, waiting ${delay}ms...`);
+    return delay;
+  },
+  retryCondition: (error) => {
+    // Retry on network errors or 5xx server errors
+    return axiosRetry.isNetworkOrIdempotentRequestError(error) ||
+           (error.response && error.response.status >= 500);
+  },
+  onRetry: (retryCount, error, requestConfig) => {
+    logger.log(`🔄 Retrying request to ${requestConfig.url} (attempt ${retryCount})`);
+  }
+});
 
 // ============================================================================
 // BOOTSTRAP DATA
@@ -86,6 +109,36 @@ export async function fetchFixtures() {
     }
 
     throw new Error('Fixtures data unavailable');
+  }
+}
+
+// ============================================================================
+// LIVE GAMEWEEK DATA
+// ============================================================================
+
+/**
+ * Fetch live gameweek data (real-time player stats during matches)
+ * @param {number} gameweek - Gameweek number
+ * @returns {Promise<Object>} Live gameweek data with player stats
+ */
+export async function fetchLiveGameweekData(gameweek) {
+  logger.log(`📡 Fetching live data for GW${gameweek}...`);
+
+  try {
+    const response = await axios.get(`${FPL_BASE_URL}/event/${gameweek}/live/`, {
+      timeout: 10000,
+      headers: {
+        'User-Agent': 'FPLanner/1.0'
+      }
+    });
+
+    logger.log(`✅ Live GW${gameweek} data fetched (${response.data.elements.length} players)`);
+    recordFetch();
+
+    return response.data;
+  } catch (err) {
+    logger.error(`❌ Failed to fetch live data for GW${gameweek}:`, err.message);
+    throw new Error(`Live data unavailable for GW${gameweek}`);
   }
 }
 

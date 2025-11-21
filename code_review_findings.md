@@ -1,5 +1,19 @@
 # Code Review Findings - FPL Data Flow Logic
 
+## Implementation Status (Updated 2025-11-21)
+
+The following improvements have been implemented:
+
+| Issue | Status | New Files/Changes |
+|-------|--------|-------------------|
+| Missing live GW endpoint | ✅ Fixed | `fplService.js` - added `fetchLiveGameweekData()` |
+| No GW status function | ✅ Fixed | New: `gameweekUtils.js` - `getGameweekStatus()`, helpers |
+| No data routing | ✅ Fixed | New: `dataRouter.js` - source routing logic |
+| No retry logic | ✅ Fixed | `fplService.js` - added axios-retry |
+| GitHub repo confusion | ✅ Clarified | `olbauday/FPL-Elo-Insights` is correct |
+
+---
+
 ## Summary
 
 The FPL Planner codebase has a **well-structured data handling architecture** with clear separation between FPL API calls (`fplService.js`), GitHub data fetching (`githubService.js`), and caching (`cacheManager.js`). Gameweek detection, data source routing, and error handling are all implemented and functional. The main gaps are: (1) using a different GitHub repo than specified, (2) no live match endpoint usage during games, and (3) JSON-based persistence rather than SQLite.
@@ -15,15 +29,10 @@ The FPL Planner codebase has a **well-structured data handling architecture** wi
 - **Impact**: Cannot show live bonus points or in-game stats during matches
 - **Fix estimate**: 2-3 hours
 
-### Issue 2: Wrong GitHub Repository
+### ~~Issue 2: Wrong GitHub Repository~~ (NOT AN ISSUE)
 - **Location**: `backend/config.js:3`
-- **Problem**: Uses `olbauday/FPL-Elo-Insights` instead of `vaastav/Fantasy-Premier-League`
-- **Code snippet**:
-  ```javascript
-  export const GITHUB_BASE_URL = 'https://raw.githubusercontent.com/olbauday/FPL-Elo-Insights/main/data/2025-2026';
-  ```
-- **Impact**: May have different data structure/reliability than expected
-- **Fix estimate**: 1 hour (if switching repos) OR document current approach (30 min)
+- **Clarification**: `olbauday/FPL-Elo-Insights` is the **correct and intended repository**
+- **Note**: Original review template referenced `vaastav/Fantasy-Premier-League` which was a documentation error
 
 ---
 
