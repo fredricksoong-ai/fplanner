@@ -193,6 +193,55 @@ export async function loadFPLData(queryParams = '') {
 }
 
 /**
+ * Load live gameweek data (real-time player stats during matches)
+ * @param {number} gameweek - Gameweek number
+ * @returns {Promise<Object>} Live data with player stats
+ * @throws {Error} If API request fails
+ * @example
+ * const liveData = await loadLiveData(12);
+ * console.log(liveData.elements); // Array of player live stats
+ */
+export async function loadLiveData(gameweek) {
+    console.log(`🔄 Loading live data for GW${gameweek}...`);
+
+    try {
+        const response = await fetch(`${API_BASE}/live/${gameweek}`);
+
+        if (!response.ok) {
+            throw new Error(`Failed to load live data for GW${gameweek}`);
+        }
+
+        const data = await response.json();
+
+        console.log(`✅ Live data loaded for GW${gameweek}`);
+        console.log(`   Status: ${data.status}`);
+        console.log(`   Players: ${data.elements.length}`);
+
+        return data;
+    } catch (err) {
+        console.error(`❌ Failed to load live data:`, err);
+        throw err;
+    }
+}
+
+/**
+ * Get live stats for a specific player
+ * @param {number} playerId - Player element ID
+ * @param {number} gameweek - Gameweek number
+ * @returns {Promise<Object|null>} Player's live stats or null if not found
+ */
+export async function getPlayerLiveStats(playerId, gameweek) {
+    try {
+        const liveData = await loadLiveData(gameweek);
+        const playerStats = liveData.elements.find(e => e.id === playerId);
+        return playerStats || null;
+    } catch (err) {
+        console.error(`❌ Failed to get live stats for player ${playerId}:`, err);
+        return null;
+    }
+}
+
+/**
  * Load user's team data from FPL API
  * @param {number} teamId - FPL team ID (1-10 digits)
  * @returns {Promise<TeamData>} Team data with picks and entry history

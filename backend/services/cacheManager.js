@@ -39,8 +39,29 @@ export let cache = {
   }
 };
 
-// TTL for team data (5 minutes - shorter since it can change)
-export const TEAM_CACHE_TTL = 5 * 60 * 1000;
+// TTL for team data - dynamic based on GW status
+export const TEAM_CACHE_TTL_LIVE = 2 * 60 * 1000;      // 2 minutes during live GW
+export const TEAM_CACHE_TTL_FINISHED = 12 * 60 * 60 * 1000;  // 12 hours when GW finished
+
+/**
+ * Get appropriate team cache TTL based on current GW status
+ * @returns {number} TTL in milliseconds
+ */
+export function getTeamCacheTTL() {
+  if (!cache.bootstrap?.data?.events) {
+    return TEAM_CACHE_TTL_LIVE; // Default to short TTL if we can't determine
+  }
+
+  const currentEvent = cache.bootstrap.data.events.find(e => e.is_current);
+
+  // If no current event or it's finished, use long TTL
+  if (!currentEvent || currentEvent.finished) {
+    return TEAM_CACHE_TTL_FINISHED;
+  }
+
+  // GW in progress - use short TTL
+  return TEAM_CACHE_TTL_LIVE;
+}
 
 // ============================================================================
 // ERA MANAGEMENT
@@ -230,7 +251,9 @@ export function getCachedTeamData(teamId) {
   if (!cached) return null;
 
   const age = Date.now() - cached.timestamp;
-  if (age > TEAM_CACHE_TTL) {
+  const ttl = getTeamCacheTTL();
+
+  if (age > ttl) {
     cache.teams.entries.delete(String(teamId));
     return null;
   }
@@ -262,7 +285,9 @@ export function getCachedTeamPicks(teamId, gameweek) {
   if (!cached) return null;
 
   const age = Date.now() - cached.timestamp;
-  if (age > TEAM_CACHE_TTL) {
+  const ttl = getTeamCacheTTL();
+
+  if (age > ttl) {
     cache.teams.picks.delete(key);
     return null;
   }

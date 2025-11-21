@@ -7,7 +7,8 @@ import express from 'express';
 import {
   fetchBootstrap,
   fetchFixtures,
-  fetchElementSummary
+  fetchElementSummary,
+  fetchLiveGameweekData
 } from '../services/fplService.js';
 import { fetchGithubCSV } from '../services/githubService.js';
 import {
@@ -18,6 +19,11 @@ import {
   shouldRefreshGithub,
   getCacheStats
 } from '../services/cacheManager.js';
+import {
+  getGameweekStatus,
+  getCurrentGameweek,
+  GW_STATUS
+} from '../services/gameweekUtils.js';
 import { GEMINI } from '../config.js';
 import logger from '../logger.js';
 
@@ -129,6 +135,48 @@ router.get('/api/fpl-data', async (req, res) => {
     res.status(500).json({
       error: 'Failed to fetch FPL data',
       message: isProduction ? 'Data temporarily unavailable. Please try again later.' : err.message
+    });
+  }
+});
+
+// ============================================================================
+// LIVE GAMEWEEK DATA ENDPOINT
+// ============================================================================
+
+/**
+ * GET /api/live/:gameweek
+ * Returns live player stats for a gameweek (real-time during matches)
+ * Only useful when GW is LIVE - returns same data when COMPLETED
+ */
+router.get('/api/live/:gameweek', async (req, res) => {
+  const { gameweek } = req.params;
+  const gw = parseInt(gameweek);
+
+  logger.log(`📥 GET /api/live/${gw}`);
+
+  // Validate gameweek
+  if (isNaN(gw) || gw < 1 || gw > 38) {
+    return res.status(400).json({
+      error: 'Invalid gameweek',
+      message: 'Gameweek must be between 1 and 38'
+    });
+  }
+
+  try {
+    const liveData = await fetchLiveGameweekData(gw);
+    const status = getGameweekStatus(gw);
+
+    res.json({
+      gameweek: gw,
+      status: status,
+      elements: liveData.elements,
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    logger.error(`❌ Error fetching live data for GW${gw}:`, err.message);
+    res.status(500).json({
+      error: 'Failed to fetch live data',
+      message: err.message
     });
   }
 });
