@@ -3,6 +3,9 @@
  * Bottom sheet for selecting a league to compare against
  */
 
+import { loadMyTeam } from './data.js';
+import { escapeHtml } from './utils.js';
+
 /**
  * Get user's leagues from localStorage or fetch from API
  * @param {number} teamId - Team ID
@@ -10,12 +13,8 @@
  */
 export async function fetchUserLeagues(teamId) {
     try {
-        const response = await fetch(`/api/team/${teamId}`);
-        if (!response.ok) {
-            throw new Error('Failed to fetch team data');
-        }
-
-        const data = await response.json();
+        // Use centralized team loading (benefits from caching)
+        const data = await loadMyTeam(teamId);
 
         // Extract classic leagues only (not head-to-head)
         const leagues = data.team?.leagues?.classic || [];
@@ -199,17 +198,6 @@ function createLeagueModal(leagues, selectedLeagueId) {
             }
         </style>
     `;
-}
-
-/**
- * Escape HTML to prevent XSS
- * @param {string} text - Text to escape
- * @returns {string} Escaped text
- */
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
 }
 
 /**

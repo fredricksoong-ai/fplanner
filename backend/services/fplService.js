@@ -4,14 +4,42 @@
 // ============================================================================
 
 import axios from 'axios';
+import axiosRetry from 'axios-retry';
 import { FPL_BASE_URL } from '../config.js';
 import {
   cache,
   updateBootstrapCache,
   updateFixturesCache,
-  recordFetch
+  recordFetch,
+  getCachedTeamData,
+  updateTeamCache,
+  getCachedTeamPicks,
+  updateTeamPicksCache,
+  recordCacheHit
 } from './cacheManager.js';
 import logger from '../logger.js';
+
+// ============================================================================
+// AXIOS RETRY CONFIGURATION
+// ============================================================================
+
+// Configure retry with exponential backoff
+axiosRetry(axios, {
+  retries: 3,
+  retryDelay: (retryCount) => {
+    const delay = axiosRetry.exponentialDelay(retryCount);
+    logger.log(`⏳ Retry attempt ${retryCount}, waiting ${delay}ms...`);
+    return delay;
+  },
+  retryCondition: (error) => {
+    // Retry on network errors or 5xx server errors
+    return axiosRetry.isNetworkOrIdempotentRequestError(error) ||
+           (error.response && error.response.status >= 500);
+  },
+  onRetry: (retryCount, error, requestConfig) => {
+    logger.log(`🔄 Retrying request to ${requestConfig.url} (attempt ${retryCount})`);
+  }
+});
 
 // ============================================================================
 // BOOTSTRAP DATA
@@ -90,15 +118,53 @@ export async function fetchFixtures() {
 }
 
 // ============================================================================
+// LIVE GAMEWEEK DATA
+// ============================================================================
+
+/**
+ * Fetch live gameweek data (real-time player stats during matches)
+ * @param {number} gameweek - Gameweek number
+ * @returns {Promise<Object>} Live gameweek data with player stats
+ */
+export async function fetchLiveGameweekData(gameweek) {
+  logger.log(`📡 Fetching live data for GW${gameweek}...`);
+
+  try {
+    const response = await axios.get(`${FPL_BASE_URL}/event/${gameweek}/live/`, {
+      timeout: 10000,
+      headers: {
+        'User-Agent': 'FPLanner/1.0'
+      }
+    });
+
+    logger.log(`✅ Live GW${gameweek} data fetched (${response.data.elements.length} players)`);
+    recordFetch();
+
+    return response.data;
+  } catch (err) {
+    logger.error(`❌ Failed to fetch live data for GW${gameweek}:`, err.message);
+    throw new Error(`Live data unavailable for GW${gameweek}`);
+  }
+}
+
+// ============================================================================
 // TEAM DATA
 // ============================================================================
 
 /**
- * Fetch team data by ID
+ * Fetch team data by ID (with caching)
  * @param {string|number} teamId - FPL team ID
  * @returns {Promise<Object>} Team data
  */
 export async function fetchTeamData(teamId) {
+  // Check cache first
+  const cached = getCachedTeamData(teamId);
+  if (cached) {
+    logger.log(`✅ Team ${teamId} served from cache`);
+    recordCacheHit();
+    return cached;
+  }
+
   logger.log(`📡 Fetching team ${teamId}...`);
 
   try {
@@ -110,6 +176,8 @@ export async function fetchTeamData(teamId) {
     });
 
     logger.log(`✅ Team ${teamId} fetched`);
+    updateTeamCache(teamId, response.data);
+    recordFetch();
     return response.data;
   } catch (err) {
     logger.error(`❌ Failed to fetch team ${teamId}:`, err.message);
@@ -118,12 +186,20 @@ export async function fetchTeamData(teamId) {
 }
 
 /**
- * Fetch team picks for a specific gameweek
+ * Fetch team picks for a specific gameweek (with caching)
  * @param {string|number} teamId - FPL team ID
  * @param {number} gameweek - Gameweek number
  * @returns {Promise<Object>} Team picks data
  */
 export async function fetchTeamPicks(teamId, gameweek) {
+  // Check cache first
+  const cached = getCachedTeamPicks(teamId, gameweek);
+  if (cached) {
+    logger.log(`✅ Picks for team ${teamId}, GW${gameweek} served from cache`);
+    recordCacheHit();
+    return cached;
+  }
+
   logger.log(`📡 Fetching picks for team ${teamId}, GW${gameweek}...`);
 
   try {
@@ -135,6 +211,8 @@ export async function fetchTeamPicks(teamId, gameweek) {
     });
 
     logger.log(`✅ Picks fetched for team ${teamId}, GW${gameweek}`);
+    updateTeamPicksCache(teamId, gameweek, response.data);
+    recordFetch();
     return response.data;
   } catch (err) {
     logger.error(`❌ Failed to fetch picks for team ${teamId}:`, err.message);

@@ -38,6 +38,63 @@ export let githubData = null;
 /** @type {number|null} Current gameweek number (latest finished GW) */
 export let currentGW = null;
 
+// ============================================================================
+// GAMEWEEK STATUS
+// ============================================================================
+
+/** @enum {string} Gameweek status values */
+export const GW_STATUS = {
+    COMPLETED: 'COMPLETED',
+    LIVE: 'LIVE',
+    UPCOMING: 'UPCOMING',
+    UNKNOWN: 'UNKNOWN'
+};
+
+/**
+ * Get the status of a specific gameweek
+ * @param {number} gameweek - Gameweek number to check
+ * @returns {string} GW_STATUS value
+ */
+export function getGameweekStatus(gameweek) {
+    if (!fplBootstrap || !fplBootstrap.events) {
+        return GW_STATUS.UNKNOWN;
+    }
+
+    const event = fplBootstrap.events.find(e => e.id === gameweek);
+    if (!event) {
+        return GW_STATUS.UNKNOWN;
+    }
+
+    // If finished flag is set, it's completed
+    if (event.finished) {
+        return GW_STATUS.COMPLETED;
+    }
+
+    const now = new Date();
+    const deadline = new Date(event.deadline_time);
+
+    // If deadline has passed but not finished, it's live
+    if (deadline <= now && !event.finished) {
+        return GW_STATUS.LIVE;
+    }
+
+    // If deadline is in the future, it's upcoming
+    if (deadline > now) {
+        return GW_STATUS.UPCOMING;
+    }
+
+    return GW_STATUS.UNKNOWN;
+}
+
+/**
+ * Check if a gameweek is currently live
+ * @param {number} gameweek - Gameweek number
+ * @returns {boolean} True if gameweek is live
+ */
+export function isGameweekLive(gameweek) {
+    return getGameweekStatus(gameweek) === GW_STATUS.LIVE;
+}
+
 /**
  * Get the active gameweek (current live or next if between GWs)
  * Use this for UI display where you want to show the "current" GW to users
@@ -62,6 +119,30 @@ export function getActiveGW() {
 
     // Final fallback
     return currentGW || 1;
+}
+
+/**
+ * Get the next gameweek number
+ * @returns {number|null} Next gameweek or null if season ended
+ */
+export function getNextGameweek() {
+    if (!fplBootstrap || !fplBootstrap.events) {
+        return null;
+    }
+    const nextEvent = fplBootstrap.events.find(e => e.is_next);
+    return nextEvent ? nextEvent.id : null;
+}
+
+/**
+ * Get gameweek event data
+ * @param {number} gameweek - Gameweek number
+ * @returns {Object|null} Event object or null
+ */
+export function getGameweekEvent(gameweek) {
+    if (!fplBootstrap || !fplBootstrap.events) {
+        return null;
+    }
+    return fplBootstrap.events.find(e => e.id === gameweek) || null;
 }
 
 // ============================================================================
