@@ -17,7 +17,10 @@ import {
   shouldRefreshBootstrap,
   shouldRefreshFixtures,
   shouldRefreshGithub,
-  getCacheStats
+  getCacheStats,
+  getCachedLiveData,
+  updateLiveCache,
+  getLiveCacheAge
 } from '../services/cacheManager.js';
 import {
   getGameweekStatus,
@@ -163,13 +166,26 @@ router.get('/api/live/:gameweek', async (req, res) => {
   }
 
   try {
-    const liveData = await fetchLiveGameweekData(gw);
+    // Check cache first
+    let liveData = getCachedLiveData(gw);
+    let fromCache = !!liveData;
+
+    if (!liveData) {
+      liveData = await fetchLiveGameweekData(gw);
+      updateLiveCache(gw, liveData);
+      logger.log(`✅ Live data for GW${gw} fetched and cached`);
+    } else {
+      logger.log(`✅ Live data for GW${gw} served from cache (${getLiveCacheAge(gw)}s old)`);
+    }
+
     const status = getGameweekStatus(gw);
 
     res.json({
       gameweek: gw,
       status: status,
       elements: liveData.elements,
+      cached: fromCache,
+      cacheAge: getLiveCacheAge(gw),
       timestamp: new Date().toISOString()
     });
   } catch (err) {
@@ -180,6 +196,179 @@ router.get('/api/live/:gameweek', async (req, res) => {
     });
   }
 });
+
+// ============================================================================
+// ENRICHED BOOTSTRAP ENDPOINT
+// ============================================================================
+
+/**
+ * GET /api/bootstrap/enriched
+ * Returns bootstrap data with live stats merged into elements during live GW
+ * Includes provisional bonus calculation from BPS rankings
+ */
+router.get('/api/bootstrap/enriched', async (req, res) => {
+  const startTime = Date.now();
+  logger.log('📥 GET /api/bootstrap/enriched');
+
+  try {
+    // Ensure we have bootstrap data
+    if (shouldRefreshBootstrap()) {
+      await fetchBootstrap();
+    }
+
+    if (!cache.bootstrap.data) {
+      return res.status(503).json({
+        error: 'Bootstrap data not available',
+        message: 'Please try again shortly'
+      });
+    }
+
+    // Clone bootstrap data
+    const enrichedData = JSON.parse(JSON.stringify(cache.bootstrap.data));
+
+    // Get current GW status
+    const currentGW = getCurrentGameweek();
+    const gwStatus = getGameweekStatus(currentGW);
+
+    let liveStats = null;
+    let provisionalBonus = new Map();
+
+    // Only enrich with live data if GW is live
+    if (gwStatus === GW_STATUS.LIVE && currentGW) {
+      // Get live data (from cache or fetch)
+      let liveData = getCachedLiveData(currentGW);
+      if (!liveData) {
+        liveData = await fetchLiveGameweekData(currentGW);
+        updateLiveCache(currentGW, liveData);
+      }
+
+      if (liveData && liveData.elements) {
+        // Create lookup map for live stats
+        liveStats = new Map();
+        liveData.elements.forEach(el => {
+          liveStats.set(el.id, el.stats);
+        });
+
+        // Calculate provisional bonus from BPS rankings per fixture
+        provisionalBonus = calculateProvisionalBonus(liveData.elements, cache.fixtures.data);
+
+        // Merge live_stats into each element
+        enrichedData.elements = enrichedData.elements.map(element => {
+          const stats = liveStats.get(element.id);
+          const bonus = provisionalBonus.get(element.id) || 0;
+
+          if (stats) {
+            return {
+              ...element,
+              live_stats: {
+                ...stats,
+                provisional_bonus: bonus
+              }
+            };
+          }
+          return element;
+        });
+      }
+    }
+
+    const duration = Date.now() - startTime;
+    logger.log(`✅ Enriched bootstrap ready (${duration}ms, GW${currentGW} ${gwStatus})`);
+
+    res.json({
+      ...enrichedData,
+      meta: {
+        gameweek: currentGW,
+        gwStatus: gwStatus,
+        isLive: gwStatus === GW_STATUS.LIVE,
+        liveDataAge: currentGW ? getLiveCacheAge(currentGW) : null,
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (err) {
+    logger.error('❌ Error in /api/bootstrap/enriched:', err.message);
+    res.status(500).json({
+      error: 'Failed to fetch enriched bootstrap',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * Calculate provisional bonus points from BPS rankings per fixture
+ * Top 3 BPS in each fixture get 3/2/1 bonus points
+ * @param {Array} liveElements - Live data elements with stats
+ * @param {Array} fixtures - Fixtures data
+ * @returns {Map} Map of playerId -> provisional bonus
+ */
+function calculateProvisionalBonus(liveElements, fixtures) {
+  const bonusMap = new Map();
+
+  if (!fixtures || !liveElements) return bonusMap;
+
+  // Group players by fixture (using their team and the current GW fixture)
+  const fixturePlayerMap = new Map(); // fixtureId -> [{ id, bps }]
+
+  // Find current/live fixtures
+  const liveFixtures = fixtures.filter(f => f.started && !f.finished);
+  const finishedFixtures = fixtures.filter(f => f.finished);
+  const relevantFixtures = [...liveFixtures, ...finishedFixtures];
+
+  // Build team to fixture mapping
+  const teamToFixture = new Map();
+  relevantFixtures.forEach(fixture => {
+    teamToFixture.set(fixture.team_h, fixture.id);
+    teamToFixture.set(fixture.team_a, fixture.id);
+  });
+
+  // Group players by fixture based on their team
+  liveElements.forEach(el => {
+    // We need to find the player's team from bootstrap
+    const player = cache.bootstrap?.data?.elements?.find(p => p.id === el.id);
+    if (!player) return;
+
+    const fixtureId = teamToFixture.get(player.team);
+    if (!fixtureId) return;
+
+    if (!fixturePlayerMap.has(fixtureId)) {
+      fixturePlayerMap.set(fixtureId, []);
+    }
+    fixturePlayerMap.get(fixtureId).push({
+      id: el.id,
+      bps: el.stats.bps || 0
+    });
+  });
+
+  // Calculate bonus for each fixture
+  fixturePlayerMap.forEach((players, fixtureId) => {
+    // Sort by BPS descending
+    players.sort((a, b) => b.bps - a.bps);
+
+    // Assign bonus points (handle ties)
+    let bonusPoints = 3;
+    let lastBps = null;
+    let sameRankCount = 0;
+
+    for (let i = 0; i < players.length && bonusPoints > 0; i++) {
+      const player = players[i];
+
+      if (player.bps === lastBps) {
+        // Same BPS as previous player - same bonus
+        bonusMap.set(player.id, bonusMap.get(players[i - 1].id));
+        sameRankCount++;
+      } else {
+        // Different BPS - assign current bonus level
+        bonusMap.set(player.id, bonusPoints);
+        lastBps = player.bps;
+
+        // Reduce bonus points, accounting for ties
+        bonusPoints -= (1 + sameRankCount);
+        sameRankCount = 0;
+      }
+    }
+  });
+
+  return bonusMap;
+}
 
 // ============================================================================
 // PLAYER ELEMENT SUMMARY ENDPOINT

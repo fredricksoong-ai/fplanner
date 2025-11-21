@@ -262,9 +262,8 @@ export async function showPlayerModal(playerId, myTeamState = null) {
     // Fetch player history
     const playerSummary = await fetchPlayerHistory(playerId);
 
-    // Check for live stats from myTeamState
-    const pick = myTeamState?.picks?.picks?.find(p => p.element === playerId);
-    const liveStats = pick?.live_stats;
+    // Get live stats from enriched bootstrap (available on all players during live GW)
+    const liveStats = player.live_stats;
     const hasLiveStats = !!liveStats;
 
     // Get GW stats - prioritize live_stats, then GitHub, then bootstrap
@@ -274,7 +273,7 @@ export async function showPlayerModal(playerId, myTeamState = null) {
     const bps = liveStats?.bps ?? gwStats.bps ?? 0;
     const goals = liveStats?.goals_scored ?? gwStats.goals_scored ?? 0;
     const assists = liveStats?.assists ?? gwStats.assists ?? 0;
-    const bonus = liveStats?.bonus ?? 0;
+    const bonus = liveStats?.provisional_bonus ?? liveStats?.bonus ?? 0;
     const xG = gwStats.expected_goals ? parseFloat(gwStats.expected_goals).toFixed(2) : '0.00';
     const xA = gwStats.expected_assists ? parseFloat(gwStats.expected_assists).toFixed(2) : '0.00';
 

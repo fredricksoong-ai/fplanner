@@ -22,15 +22,16 @@ export function renderCompactHeader(teamData, gwNumber) {
     const { picks, team, isLive } = teamData;
     const entry = picks.entry_history;
 
-    // Calculate GW points - use live_stats if available
+    // Calculate GW points - use live_stats from enriched bootstrap if available
     let gwPoints = team.summary_event_points || 0;
     if (isLive && picks.picks) {
         // Calculate live points from starting XI (positions 1-11)
         const livePoints = picks.picks
-            .filter(p => p.position <= 11 && p.live_stats)
+            .filter(p => p.position <= 11)
             .reduce((sum, p) => {
-                const pts = p.live_stats.total_points || 0;
-                const mult = p.is_captain ? 2 : (p.is_vice_captain ? 1 : 1);
+                const player = getPlayerById(p.element);
+                const pts = player?.live_stats?.total_points || 0;
+                const mult = p.is_captain ? 2 : 1;
                 return sum + (pts * mult);
             }, 0);
         if (livePoints > 0) gwPoints = livePoints;
