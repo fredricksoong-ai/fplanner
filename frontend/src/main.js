@@ -183,28 +183,28 @@ function startCountdown() {
  */
 function updateCountdown() {
     const countdownText = document.getElementById('countdown-text');
-    
+
     if (!countdownText) return;
-    
-    // Import from data.js module
-    import('./data.js').then(({ fplBootstrap }) => {
+
+    // Import from data.js module (use centralized GW functions)
+    import('./data.js').then(({ fplBootstrap, getActiveGW, getGameweekEvent, isGameweekLive }) => {
         if (!fplBootstrap) {
             countdownText.textContent = 'Loading...';
             return;
         }
-        
-        const currentEvent = fplBootstrap.events.find(e => e.is_current);
+
+        const activeGW = getActiveGW();
+        const activeEvent = getGameweekEvent(activeGW);
         const nextEvent = fplBootstrap.events.find(e => e.is_next);
-        
+
         let targetDate;
         let gwNumber;
-        let isLive = false;
-        
-        if (currentEvent && !currentEvent.finished) {
+        let isLive = isGameweekLive(activeGW);
+
+        if (activeEvent && isLive) {
             // Current GW is live
-            targetDate = new Date(currentEvent.deadline_time);
-            gwNumber = currentEvent.id;
-            isLive = true;
+            targetDate = new Date(activeEvent.deadline_time);
+            gwNumber = activeGW;
         } else if (nextEvent) {
             // Next GW deadline
             targetDate = new Date(nextEvent.deadline_time);

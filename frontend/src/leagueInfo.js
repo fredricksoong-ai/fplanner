@@ -3,7 +3,8 @@
  * Handles fetching and rendering league position data for mobile compact header
  */
 
-import { loadLeagueStandings } from './data.js';
+import { loadLeagueStandings, loadMyTeam } from './data.js';
+import { escapeHtml } from './utils.js';
 
 /**
  * Load and render league info into the placeholder
@@ -92,15 +93,6 @@ export async function loadAndRenderLeagueInfo() {
 }
 
 /**
- * Escape HTML to prevent XSS
- */
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-/**
  * Initialize league selector dropdown
  */
 export async function initializeLeagueSelector(teamId) {
@@ -108,9 +100,8 @@ export async function initializeLeagueSelector(teamId) {
     if (!selector) return;
 
     try {
-        // Fetch team data to get leagues
-        const response = await fetch(`/api/team/${teamId}`);
-        const data = await response.json();
+        // Fetch team data to get leagues (uses cached data if available)
+        const data = await loadMyTeam(teamId);
         const leagues = data.team?.leagues?.classic || [];
 
         // Get currently selected league
