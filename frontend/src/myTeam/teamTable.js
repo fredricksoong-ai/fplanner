@@ -124,11 +124,13 @@ function renderTeamRows(players, gameweek, next5GWs) {
         // Get GW-specific stats from GitHub (only if matches current GW)
         const hasGWStats = player.github_gw && player.github_gw.gw === gameweek;
 
-        // Minutes: use GitHub if available, otherwise show dash (will show season total in future)
-        const gwMinutes = hasGWStats ? player.github_gw.minutes : '—';
+        // Minutes: use live_stats if available, then GitHub, otherwise dash
+        const gwMinutes = pick.live_stats?.minutes ??
+                         (hasGWStats ? player.github_gw.minutes : '—');
 
-        // Points: use GitHub if available, otherwise FPL API event_points
-        const gwPoints = hasGWStats ? player.github_gw.total_points : (player.event_points || 0);
+        // Points: prioritize live_stats during live GW
+        const gwPoints = pick.live_stats?.total_points ??
+                        (hasGWStats ? player.github_gw.total_points : (player.event_points || 0));
 
         // Use GW points for heatmap (not season total)
         const ptsHeatmap = getPtsHeatmap(gwPoints, 'gw_pts');
