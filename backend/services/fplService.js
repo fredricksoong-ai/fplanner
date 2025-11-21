@@ -10,7 +10,12 @@ import {
   cache,
   updateBootstrapCache,
   updateFixturesCache,
-  recordFetch
+  recordFetch,
+  getCachedTeamData,
+  updateTeamCache,
+  getCachedTeamPicks,
+  updateTeamPicksCache,
+  recordCacheHit
 } from './cacheManager.js';
 import logger from '../logger.js';
 
@@ -147,11 +152,19 @@ export async function fetchLiveGameweekData(gameweek) {
 // ============================================================================
 
 /**
- * Fetch team data by ID
+ * Fetch team data by ID (with caching)
  * @param {string|number} teamId - FPL team ID
  * @returns {Promise<Object>} Team data
  */
 export async function fetchTeamData(teamId) {
+  // Check cache first
+  const cached = getCachedTeamData(teamId);
+  if (cached) {
+    logger.log(`✅ Team ${teamId} served from cache`);
+    recordCacheHit();
+    return cached;
+  }
+
   logger.log(`📡 Fetching team ${teamId}...`);
 
   try {
@@ -163,6 +176,8 @@ export async function fetchTeamData(teamId) {
     });
 
     logger.log(`✅ Team ${teamId} fetched`);
+    updateTeamCache(teamId, response.data);
+    recordFetch();
     return response.data;
   } catch (err) {
     logger.error(`❌ Failed to fetch team ${teamId}:`, err.message);
@@ -171,12 +186,20 @@ export async function fetchTeamData(teamId) {
 }
 
 /**
- * Fetch team picks for a specific gameweek
+ * Fetch team picks for a specific gameweek (with caching)
  * @param {string|number} teamId - FPL team ID
  * @param {number} gameweek - Gameweek number
  * @returns {Promise<Object>} Team picks data
  */
 export async function fetchTeamPicks(teamId, gameweek) {
+  // Check cache first
+  const cached = getCachedTeamPicks(teamId, gameweek);
+  if (cached) {
+    logger.log(`✅ Picks for team ${teamId}, GW${gameweek} served from cache`);
+    recordCacheHit();
+    return cached;
+  }
+
   logger.log(`📡 Fetching picks for team ${teamId}, GW${gameweek}...`);
 
   try {
@@ -188,6 +211,8 @@ export async function fetchTeamPicks(teamId, gameweek) {
     });
 
     logger.log(`✅ Picks fetched for team ${teamId}, GW${gameweek}`);
+    updateTeamPicksCache(teamId, gameweek, response.data);
+    recordFetch();
     return response.data;
   } catch (err) {
     logger.error(`❌ Failed to fetch picks for team ${teamId}:`, err.message);

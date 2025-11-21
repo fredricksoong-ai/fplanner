@@ -25,6 +25,12 @@ export let cache = {
     timestamp: null,
     era: null  // 'morning' or 'evening'
   },
+  teams: {
+    // Map of teamId -> { data, timestamp }
+    entries: new Map(),
+    // Map of `${teamId}-${gw}` -> { data, timestamp }
+    picks: new Map()
+  },
   stats: {
     totalFetches: 0,
     cacheHits: 0,
@@ -32,6 +38,9 @@ export let cache = {
     lastFetch: null
   }
 };
+
+// TTL for team data (5 minutes - shorter since it can change)
+export const TEAM_CACHE_TTL = 5 * 60 * 1000;
 
 // ============================================================================
 // ERA MANAGEMENT
@@ -46,6 +55,43 @@ export function getCurrentEra() {
   const now = new Date();
   const hour = now.getUTCHours();
   return (hour >= 5 && hour < 17) ? 'morning' : 'evening';
+}
+
+/**
+ * Get the most recent GitHub update time (5am or 5pm UTC)
+ * @returns {Date} Most recent update boundary
+ */
+export function getLastGithubUpdateTime() {
+  const now = new Date();
+  const hour = now.getUTCHours();
+
+  const boundary = new Date(now);
+  boundary.setUTCMinutes(0, 0, 0);
+
+  if (hour >= 17) {
+    // After 5pm - last update was 5pm today
+    boundary.setUTCHours(17);
+  } else if (hour >= 5) {
+    // Between 5am and 5pm - last update was 5am today
+    boundary.setUTCHours(5);
+  } else {
+    // Before 5am - last update was 5pm yesterday
+    boundary.setUTCHours(17);
+    boundary.setUTCDate(boundary.getUTCDate() - 1);
+  }
+
+  return boundary;
+}
+
+/**
+ * Check if cache was updated before the last GitHub update boundary
+ * @param {number} cacheTimestamp - Cache timestamp in ms
+ * @returns {boolean} True if cache is from before last update
+ */
+export function isCacheBeforeLastUpdate(cacheTimestamp) {
+  if (!cacheTimestamp) return true;
+  const lastUpdate = getLastGithubUpdateTime();
+  return cacheTimestamp < lastUpdate.getTime();
 }
 
 // ============================================================================
@@ -109,7 +155,8 @@ export function shouldRefreshFixtures() {
 }
 
 /**
- * Determine if GitHub data needs refresh based on era
+ * Determine if GitHub data needs refresh based on update boundaries
+ * GitHub updates at 5am and 5pm UTC - refresh if cache is from before last update
  * @returns {boolean} True if refresh needed
  */
 export function shouldRefreshGithub() {
@@ -118,14 +165,16 @@ export function shouldRefreshGithub() {
     return true;
   }
 
-  const currentEra = getCurrentEra();
-  const shouldRefresh = cache.github.era !== currentEra;
+  // Check if cache was updated before the last 5am/5pm UTC boundary
+  const needsRefresh = isCacheBeforeLastUpdate(cache.github.timestamp);
 
-  if (shouldRefresh) {
-    logger.log(`🔄 GitHub cache stale (era changed: ${cache.github.era} → ${currentEra})`);
+  if (needsRefresh) {
+    const lastUpdate = getLastGithubUpdateTime();
+    const cacheAge = Math.round((Date.now() - cache.github.timestamp) / 1000 / 60);
+    logger.log(`🔄 GitHub cache stale (${cacheAge}min old, last update boundary: ${lastUpdate.toISOString()})`);
   }
 
-  return shouldRefresh;
+  return needsRefresh;
 }
 
 // ============================================================================
@@ -165,6 +214,83 @@ export function updateGithubCache(data) {
     timestamp: Date.now(),
     era: getCurrentEra()
   };
+}
+
+// ============================================================================
+// TEAM CACHE
+// ============================================================================
+
+/**
+ * Get cached team data if fresh
+ * @param {string|number} teamId - Team ID
+ * @returns {Object|null} Cached data or null if stale/missing
+ */
+export function getCachedTeamData(teamId) {
+  const cached = cache.teams.entries.get(String(teamId));
+  if (!cached) return null;
+
+  const age = Date.now() - cached.timestamp;
+  if (age > TEAM_CACHE_TTL) {
+    cache.teams.entries.delete(String(teamId));
+    return null;
+  }
+
+  return cached.data;
+}
+
+/**
+ * Update team data cache
+ * @param {string|number} teamId - Team ID
+ * @param {Object} data - Team data
+ */
+export function updateTeamCache(teamId, data) {
+  cache.teams.entries.set(String(teamId), {
+    data,
+    timestamp: Date.now()
+  });
+}
+
+/**
+ * Get cached team picks if fresh
+ * @param {string|number} teamId - Team ID
+ * @param {number} gameweek - Gameweek number
+ * @returns {Object|null} Cached picks or null if stale/missing
+ */
+export function getCachedTeamPicks(teamId, gameweek) {
+  const key = `${teamId}-${gameweek}`;
+  const cached = cache.teams.picks.get(key);
+  if (!cached) return null;
+
+  const age = Date.now() - cached.timestamp;
+  if (age > TEAM_CACHE_TTL) {
+    cache.teams.picks.delete(key);
+    return null;
+  }
+
+  return cached.data;
+}
+
+/**
+ * Update team picks cache
+ * @param {string|number} teamId - Team ID
+ * @param {number} gameweek - Gameweek number
+ * @param {Object} data - Picks data
+ */
+export function updateTeamPicksCache(teamId, gameweek, data) {
+  const key = `${teamId}-${gameweek}`;
+  cache.teams.picks.set(key, {
+    data,
+    timestamp: Date.now()
+  });
+}
+
+/**
+ * Clear all team caches (useful when GW changes)
+ */
+export function clearTeamCaches() {
+  cache.teams.entries.clear();
+  cache.teams.picks.clear();
+  logger.log('🗑️ Team caches cleared');
 }
 
 /**
@@ -229,11 +355,23 @@ export function loadCacheFromDisk() {
       // Only restore if backup is less than 24 hours old
       const backupAge = Date.now() - (backup.bootstrap?.timestamp || 0);
       if (backupAge < 24 * 60 * 60 * 1000) {
-        cache = backup;
+        // Restore main cache data
+        cache.bootstrap = backup.bootstrap || { data: null, timestamp: null };
+        cache.fixtures = backup.fixtures || { data: null, timestamp: null };
+        cache.github = backup.github || { data: null, timestamp: null, era: null };
+        cache.stats = backup.stats || { totalFetches: 0, cacheHits: 0, cacheMisses: 0, lastFetch: null };
+
+        // Restore team caches from arrays back to Maps
+        if (backup.teams) {
+          cache.teams.entries = new Map(backup.teams.entries || []);
+          cache.teams.picks = new Map(backup.teams.picks || []);
+        }
+
         logger.log('✅ Cache restored from disk');
         logger.log(`   Bootstrap: ${cache.bootstrap.data ? 'loaded' : 'empty'}`);
         logger.log(`   Fixtures: ${cache.fixtures.data ? 'loaded' : 'empty'}`);
         logger.log(`   GitHub: ${cache.github.data ? 'loaded' : 'empty'}`);
+        logger.log(`   Teams: ${cache.teams.entries.size} entries, ${cache.teams.picks.size} picks`);
       } else {
         logger.log('⚠️ Cache backup too old (>24h), starting fresh');
       }
@@ -251,7 +389,19 @@ export function loadCacheFromDisk() {
  */
 export function saveCacheToDisk() {
   try {
-    fs.writeFileSync(SERVER.CACHE_BACKUP_PATH, JSON.stringify(cache, null, 2));
+    // Convert Maps to arrays for JSON serialization
+    const serializable = {
+      bootstrap: cache.bootstrap,
+      fixtures: cache.fixtures,
+      github: cache.github,
+      teams: {
+        entries: Array.from(cache.teams.entries.entries()),
+        picks: Array.from(cache.teams.picks.entries())
+      },
+      stats: cache.stats
+    };
+
+    fs.writeFileSync(SERVER.CACHE_BACKUP_PATH, JSON.stringify(serializable, null, 2));
     logger.log('💾 Cache backed up to disk');
   } catch (err) {
     logger.error('❌ Failed to backup cache:', err.message);
