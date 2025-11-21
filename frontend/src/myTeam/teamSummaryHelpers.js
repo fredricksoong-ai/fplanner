@@ -22,7 +22,9 @@ export function calculateBenchPoints(players, gameweek) {
         const player = getPlayerById(pick.element);
         if (player) {
             const hasGWStats = player.github_gw && player.github_gw.gw === gameweek;
-            const gwPoints = hasGWStats ? player.github_gw.total_points : player.event_points;
+            // Prioritize live_stats from enriched bootstrap
+            const gwPoints = player.live_stats?.total_points ??
+                            (hasGWStats ? player.github_gw.total_points : player.event_points);
             benchPoints += gwPoints || 0;
         }
     });

@@ -25,6 +25,10 @@ export let cache = {
     timestamp: null,
     era: null  // 'morning' or 'evening'
   },
+  live: {
+    // Map of gameweek -> { data, timestamp }
+    entries: new Map()
+  },
   teams: {
     // Map of teamId -> { data, timestamp }
     entries: new Map(),
@@ -39,8 +43,32 @@ export let cache = {
   }
 };
 
-// TTL for team data (5 minutes - shorter since it can change)
-export const TEAM_CACHE_TTL = 5 * 60 * 1000;
+// TTL for live data during active gameweek
+export const LIVE_CACHE_TTL = 2 * 60 * 1000;  // 2 minutes
+
+// TTL for team data - dynamic based on GW status
+export const TEAM_CACHE_TTL_LIVE = 2 * 60 * 1000;      // 2 minutes during live GW
+export const TEAM_CACHE_TTL_FINISHED = 12 * 60 * 60 * 1000;  // 12 hours when GW finished
+
+/**
+ * Get appropriate team cache TTL based on current GW status
+ * @returns {number} TTL in milliseconds
+ */
+export function getTeamCacheTTL() {
+  if (!cache.bootstrap?.data?.events) {
+    return TEAM_CACHE_TTL_LIVE; // Default to short TTL if we can't determine
+  }
+
+  const currentEvent = cache.bootstrap.data.events.find(e => e.is_current);
+
+  // If no current event or it's finished, use long TTL
+  if (!currentEvent || currentEvent.finished) {
+    return TEAM_CACHE_TTL_FINISHED;
+  }
+
+  // GW in progress - use short TTL
+  return TEAM_CACHE_TTL_LIVE;
+}
 
 // ============================================================================
 // ERA MANAGEMENT
@@ -230,7 +258,9 @@ export function getCachedTeamData(teamId) {
   if (!cached) return null;
 
   const age = Date.now() - cached.timestamp;
-  if (age > TEAM_CACHE_TTL) {
+  const ttl = getTeamCacheTTL();
+
+  if (age > ttl) {
     cache.teams.entries.delete(String(teamId));
     return null;
   }
@@ -262,7 +292,9 @@ export function getCachedTeamPicks(teamId, gameweek) {
   if (!cached) return null;
 
   const age = Date.now() - cached.timestamp;
-  if (age > TEAM_CACHE_TTL) {
+  const ttl = getTeamCacheTTL();
+
+  if (age > ttl) {
     cache.teams.picks.delete(key);
     return null;
   }
@@ -291,6 +323,59 @@ export function clearTeamCaches() {
   cache.teams.entries.clear();
   cache.teams.picks.clear();
   logger.log('🗑️ Team caches cleared');
+}
+
+// ============================================================================
+// LIVE DATA CACHE
+// ============================================================================
+
+/**
+ * Get cached live data if fresh
+ * @param {number} gameweek - Gameweek number
+ * @returns {Object|null} Cached live data or null if stale/missing
+ */
+export function getCachedLiveData(gameweek) {
+  const cached = cache.live.entries.get(gameweek);
+  if (!cached) return null;
+
+  const age = Date.now() - cached.timestamp;
+  if (age > LIVE_CACHE_TTL) {
+    cache.live.entries.delete(gameweek);
+    return null;
+  }
+
+  return cached.data;
+}
+
+/**
+ * Update live data cache
+ * @param {number} gameweek - Gameweek number
+ * @param {Object} data - Live data from FPL API
+ */
+export function updateLiveCache(gameweek, data) {
+  cache.live.entries.set(gameweek, {
+    data,
+    timestamp: Date.now()
+  });
+}
+
+/**
+ * Get live cache age in seconds
+ * @param {number} gameweek - Gameweek number
+ * @returns {number|null} Age in seconds or null if not cached
+ */
+export function getLiveCacheAge(gameweek) {
+  const cached = cache.live.entries.get(gameweek);
+  if (!cached) return null;
+  return Math.round((Date.now() - cached.timestamp) / 1000);
+}
+
+/**
+ * Clear all live data caches
+ */
+export function clearLiveCaches() {
+  cache.live.entries.clear();
+  logger.log('🗑️ Live data caches cleared');
 }
 
 /**
@@ -336,7 +421,8 @@ export function getCacheStats() {
       ? Math.round((Date.now() - cache.github.timestamp) / 1000 / 60)
       : null,
     githubEra: cache.github.era,
-    currentEra: getCurrentEra()
+    currentEra: getCurrentEra(),
+    liveCacheEntries: cache.live.entries.size
   };
 }
 
@@ -367,6 +453,11 @@ export function loadCacheFromDisk() {
           cache.teams.picks = new Map(backup.teams.picks || []);
         }
 
+        // Restore live cache from arrays back to Map
+        if (backup.live) {
+          cache.live.entries = new Map(backup.live.entries || []);
+        }
+
         logger.log('✅ Cache restored from disk');
         logger.log(`   Bootstrap: ${cache.bootstrap.data ? 'loaded' : 'empty'}`);
         logger.log(`   Fixtures: ${cache.fixtures.data ? 'loaded' : 'empty'}`);
@@ -394,6 +485,9 @@ export function saveCacheToDisk() {
       bootstrap: cache.bootstrap,
       fixtures: cache.fixtures,
       github: cache.github,
+      live: {
+        entries: Array.from(cache.live.entries.entries())
+      },
       teams: {
         entries: Array.from(cache.teams.entries.entries()),
         picks: Array.from(cache.teams.picks.entries())

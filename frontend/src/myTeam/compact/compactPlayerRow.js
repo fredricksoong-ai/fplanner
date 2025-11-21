@@ -42,10 +42,13 @@ export function renderCompactPlayerRow(pick, player, gwNumber) {
     const matchStatus = getMatchStatus(player.team, gwNumber, player);
     const statusColors = calculateStatusColor(matchStatus);
 
-    // Get GW-specific stats
+    // Get GW-specific stats - prioritize live_stats from enriched bootstrap
     const hasGWStats = player.github_gw && player.github_gw.gw === gwNumber;
-    const gwPoints = hasGWStats ? player.github_gw.total_points : (player.event_points || 0);
+    const liveStats = player.live_stats;
+    const gwPoints = liveStats?.total_points ??
+                     (hasGWStats ? player.github_gw.total_points : (player.event_points || 0));
     const displayPoints = isCaptain ? (gwPoints * 2) : gwPoints;
+    const isLive = !!liveStats;
 
     // Use GW points for heatmap (not season total)
     const ptsHeatmap = getPtsHeatmap(displayPoints, 'gw_pts');

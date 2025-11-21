@@ -7,12 +7,17 @@ import express from 'express';
 import {
   fetchBootstrap,
   fetchTeamData,
-  fetchTeamPicks
+  fetchTeamPicks,
+  fetchLiveGameweekData
 } from '../services/fplService.js';
 import {
   cache,
   shouldRefreshBootstrap
 } from '../services/cacheManager.js';
+import {
+  getGameweekStatus,
+  GW_STATUS
+} from '../services/gameweekUtils.js';
 import { isValidTeamId } from '../config.js';
 import logger from '../logger.js';
 
@@ -59,14 +64,48 @@ router.get('/api/team/:teamId', async (req, res) => {
       fetchTeamPicks(teamId, currentGW)
     ]);
 
+    // Check if GW is live and enrich with live data
+    const gwStatus = getGameweekStatus(currentGW);
+    let liveData = null;
+    let enrichedPicks = teamPicks;
+
+    if (gwStatus === GW_STATUS.LIVE) {
+      try {
+        liveData = await fetchLiveGameweekData(currentGW);
+
+        // Create lookup map for live stats
+        const liveStatsMap = new Map();
+        for (const element of liveData.elements) {
+          liveStatsMap.set(element.id, element.stats);
+        }
+
+        // Enrich each pick with live stats
+        enrichedPicks = {
+          ...teamPicks,
+          picks: teamPicks.picks.map(pick => ({
+            ...pick,
+            live_stats: liveStatsMap.get(pick.element) || null
+          }))
+        };
+
+        logger.log(`   ⚡ Enriched with live data (${liveData.elements.length} players)`);
+      } catch (err) {
+        logger.warn(`⚠️ Failed to fetch live data: ${err.message}`);
+        // Continue without live data
+      }
+    }
+
     const response = {
       team: teamInfo,
-      picks: teamPicks,
+      picks: enrichedPicks,
       gameweek: currentGW,
+      gwStatus: gwStatus,
+      isLive: gwStatus === GW_STATUS.LIVE,
+      liveTimestamp: liveData ? new Date().toISOString() : null,
       timestamp: new Date().toISOString()
     };
 
-    logger.log(`✅ Team data ready`);
+    logger.log(`✅ Team data ready (GW ${gwStatus})`);
     logger.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
     res.json(response);

@@ -19,11 +19,24 @@ import {
  * @returns {string} HTML for compact header
  */
 export function renderCompactHeader(teamData, gwNumber) {
-    const { picks, team } = teamData;
+    const { picks, team, isLive } = teamData;
     const entry = picks.entry_history;
 
-    // Use team.summary_* fields (most accurate, from /api/entry/{teamId}/)
-    const gwPoints = team.summary_event_points || 0;
+    // Calculate GW points - use live_stats from enriched bootstrap if available
+    let gwPoints = team.summary_event_points || 0;
+    if (isLive && picks.picks) {
+        // Calculate live points from starting XI (positions 1-11)
+        const livePoints = picks.picks
+            .filter(p => p.position <= 11)
+            .reduce((sum, p) => {
+                const player = getPlayerById(p.element);
+                const pts = player?.live_stats?.total_points || 0;
+                const mult = p.is_captain ? 2 : 1;
+                return sum + (pts * mult);
+            }, 0);
+        if (livePoints > 0) gwPoints = livePoints;
+    }
+
     const totalPoints = team.summary_overall_points || 0;
     const overallRankNum = team.summary_overall_rank || 0;
     const gwRankNum = team.summary_event_rank || 0;
@@ -132,8 +145,9 @@ export function renderCompactHeader(teamData, gwNumber) {
                             ${gwPoints}
                         </div>
                         <div style="font-size: 0.6rem; color: var(--text-secondary); margin-top: 0.1rem; font-weight: 600;">
-                            GW ${gwNumber}
+                            GW ${gwNumber}${isLive ? ' <span style="color: #22c55e; animation: pulse 2s infinite;">⚡ LIVE</span>' : ''}
                         </div>
+                        ${isLive ? '<style>@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }</style>' : ''}
                         ${leagueInfo}
                     </div>
                 </div>

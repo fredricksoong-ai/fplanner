@@ -38,6 +38,15 @@ export let githubData = null;
 /** @type {number|null} Current gameweek number (latest finished GW) */
 export let currentGW = null;
 
+/** @type {number|null} Auto-refresh interval ID */
+let autoRefreshInterval = null;
+
+/** @type {Function|null} Callback for when data is refreshed */
+let onDataRefreshCallback = null;
+
+/** Auto-refresh interval in milliseconds (2 minutes) */
+const AUTO_REFRESH_INTERVAL = 2 * 60 * 1000;
+
 // ============================================================================
 // GAMEWEEK STATUS
 // ============================================================================
@@ -189,6 +198,167 @@ export async function loadFPLData(queryParams = '') {
     } catch (err) {
         console.error('❌ Failed to load FPL data:', err);
         throw err;
+    }
+}
+
+/**
+ * Load enriched bootstrap data with live stats merged into elements
+ * This is the preferred way to load data during live GWs as all players get live_stats
+ * @returns {Promise<Object>} Enriched bootstrap data
+ * @throws {Error} If API request fails
+ * @example
+ * const data = await loadEnrichedBootstrap();
+ * const player = data.elements.find(p => p.id === 123);
+ * console.log(player.live_stats?.total_points); // Live points if GW is live
+ */
+export async function loadEnrichedBootstrap() {
+    console.log('🔄 Loading enriched bootstrap data...');
+
+    try {
+        const response = await fetch(`${API_BASE}/bootstrap/enriched`);
+
+        if (!response.ok) {
+            throw new Error(`Failed to load enriched bootstrap`);
+        }
+
+        const data = await response.json();
+
+        console.log('✅ Enriched bootstrap loaded');
+        console.log(`   GW${data.meta.gameweek}: ${data.meta.gwStatus}`);
+        console.log(`   Live: ${data.meta.isLive}`);
+        if (data.meta.liveDataAge !== null) {
+            console.log(`   Live data age: ${data.meta.liveDataAge}s`);
+        }
+
+        // Update module-level bootstrap with enriched data
+        fplBootstrap = data;
+        detectCurrentGW();
+
+        return data;
+    } catch (err) {
+        console.error('❌ Failed to load enriched bootstrap:', err);
+        throw err;
+    }
+}
+
+/**
+ * Load live gameweek data (real-time player stats during matches)
+ * @param {number} gameweek - Gameweek number
+ * @returns {Promise<Object>} Live data with player stats
+ * @throws {Error} If API request fails
+ * @example
+ * const liveData = await loadLiveData(12);
+ * console.log(liveData.elements); // Array of player live stats
+ */
+export async function loadLiveData(gameweek) {
+    console.log(`🔄 Loading live data for GW${gameweek}...`);
+
+    try {
+        const response = await fetch(`${API_BASE}/live/${gameweek}`);
+
+        if (!response.ok) {
+            throw new Error(`Failed to load live data for GW${gameweek}`);
+        }
+
+        const data = await response.json();
+
+        console.log(`✅ Live data loaded for GW${gameweek}`);
+        console.log(`   Status: ${data.status}`);
+        console.log(`   Players: ${data.elements.length}`);
+
+        return data;
+    } catch (err) {
+        console.error(`❌ Failed to load live data:`, err);
+        throw err;
+    }
+}
+
+// ============================================================================
+// AUTO-REFRESH
+// ============================================================================
+
+/**
+ * Start auto-refresh polling during live GW
+ * Automatically refreshes enriched bootstrap data every 2 minutes
+ * @param {Function} [onRefresh] - Callback when data is refreshed
+ * @example
+ * startAutoRefresh(() => {
+ *     console.log('Data refreshed!');
+ *     renderMyTeam(); // Re-render UI
+ * });
+ */
+export function startAutoRefresh(onRefresh = null) {
+    // Stop any existing interval
+    stopAutoRefresh();
+
+    onDataRefreshCallback = onRefresh;
+
+    // Check if we should auto-refresh (only during live GW)
+    const activeGW = getActiveGW();
+    const status = getGameweekStatus(activeGW);
+
+    if (status !== GW_STATUS.LIVE) {
+        console.log(`ℹ️ Auto-refresh not started (GW${activeGW} is ${status})`);
+        return;
+    }
+
+    console.log(`🔄 Starting auto-refresh for live GW${activeGW} (every ${AUTO_REFRESH_INTERVAL / 1000}s)`);
+
+    autoRefreshInterval = setInterval(async () => {
+        try {
+            // Check if still live before refreshing
+            const currentStatus = getGameweekStatus(getActiveGW());
+            if (currentStatus !== GW_STATUS.LIVE) {
+                console.log('ℹ️ GW no longer live, stopping auto-refresh');
+                stopAutoRefresh();
+                return;
+            }
+
+            console.log('🔄 Auto-refreshing enriched bootstrap...');
+            await loadEnrichedBootstrap();
+
+            if (onDataRefreshCallback) {
+                onDataRefreshCallback();
+            }
+        } catch (err) {
+            console.error('❌ Auto-refresh failed:', err);
+        }
+    }, AUTO_REFRESH_INTERVAL);
+}
+
+/**
+ * Stop auto-refresh polling
+ */
+export function stopAutoRefresh() {
+    if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+        autoRefreshInterval = null;
+        console.log('⏹️ Auto-refresh stopped');
+    }
+}
+
+/**
+ * Check if auto-refresh is currently active
+ * @returns {boolean} True if auto-refresh is running
+ */
+export function isAutoRefreshActive() {
+    return autoRefreshInterval !== null;
+}
+
+/**
+ * Get live stats for a specific player
+ * @param {number} playerId - Player element ID
+ * @param {number} gameweek - Gameweek number
+ * @returns {Promise<Object|null>} Player's live stats or null if not found
+ */
+export async function getPlayerLiveStats(playerId, gameweek) {
+    try {
+        const liveData = await loadLiveData(gameweek);
+        const playerStats = liveData.elements.find(e => e.id === playerId);
+        return playerStats || null;
+    } catch (err) {
+        console.error(`❌ Failed to get live stats for player ${playerId}:`, err);
+        return null;
     }
 }
 
