@@ -242,6 +242,193 @@ async function fetchPlayerHistory(playerId) {
 }
 
 /**
+ * Calculate points breakdown from live_stats or github_gw data
+ * @param {Object} player - Player object
+ * @param {Object} liveStats - Live stats object (if GW is live)
+ * @param {Object} gwStats - GitHub GW stats (if GW is finished)
+ * @returns {Object} Points breakdown object with all components
+ */
+function calculateGWPointsBreakdown(player, liveStats, gwStats) {
+    const position = getPositionShort(player);
+    const positionType = player.element_type; // 1=GKP, 2=DEF, 3=MID, 4=FWD
+    
+    // Use live_stats if available, otherwise fall back to github_gw
+    const stats = liveStats || gwStats || {};
+    const minutes = stats.minutes || 0;
+    
+    const breakdown = {};
+    
+    // [Minutes] Appearance points: 1pt (<60min), 2pts (60+min)
+    if (minutes > 0) {
+        breakdown.minutes = {
+            label: 'Minutes',
+            value: minutes >= 60 ? 2 : 1,
+            points: minutes >= 60 ? 2 : 1
+        };
+    }
+    
+    // [Goals] Goal points: position_multiplier × goals_scored
+    const goals = stats.goals_scored || 0;
+    if (goals > 0) {
+        const goalMultiplier = positionType === 1 ? 10 : (positionType === 2 ? 6 : (positionType === 3 ? 5 : 4));
+        breakdown.goals = {
+            label: 'Goals',
+            value: goals,
+            points: goals * goalMultiplier
+        };
+    }
+    
+    // [Assists] Assist points: assists × 3
+    const assists = stats.assists || 0;
+    if (assists > 0) {
+        breakdown.assists = {
+            label: 'Assists',
+            value: assists,
+            points: assists * 3
+        };
+    }
+    
+    // [Clean Sheet] Clean sheet points: position_multiplier × clean_sheets
+    const cleanSheets = stats.clean_sheets || 0;
+    if (cleanSheets > 0) {
+        const csMultiplier = (positionType === 1 || positionType === 2) ? 4 : (positionType === 3 ? 1 : 0);
+        if (csMultiplier > 0) {
+            breakdown.cleanSheet = {
+                label: 'Clean Sheet',
+                value: cleanSheets,
+                points: cleanSheets * csMultiplier
+            };
+        }
+    }
+    
+    // [Saves] Saves points (GKP only): Math.floor(saves / 3)
+    const saves = stats.saves || 0;
+    if (positionType === 1 && saves > 0) {
+        const savesPoints = Math.floor(saves / 3);
+        if (savesPoints > 0) {
+            breakdown.saves = {
+                label: 'Saves',
+                value: saves,
+                points: savesPoints
+            };
+        }
+    }
+    
+    // [PK Save] Penalty saves (GKP only): penalties_saved × 5
+    const penaltiesSaved = stats.penalties_saved || 0;
+    if (positionType === 1 && penaltiesSaved > 0) {
+        breakdown.pkSave = {
+            label: 'PK Save',
+            value: penaltiesSaved,
+            points: penaltiesSaved * 5
+        };
+    }
+    
+    // [DEFCON] Defensive contributions: DEF (10 DCs = 2pts), MID/FWD (12 DCs = 2pts)
+    // Calculate from individual defensive action fields
+    let defCon = 0;
+    let defConPoints = 0;
+    
+    if (positionType === 2 || positionType === 3 || positionType === 4) {
+        // For DEF: clearances + blocks + interceptions + tackles
+        // For MID/FWD: clearances + blocks + interceptions + tackles + recoveries
+        const clearances = stats.clearances || 0;
+        const blocks = stats.blocks || 0;
+        const interceptions = stats.interceptions || 0;
+        const tackles = stats.tackles || 0;
+        const recoveries = stats.recoveries || 0;
+        
+        if (positionType === 2) {
+            // DEF: CBIT (10 = 2pts)
+            defCon = clearances + blocks + interceptions + tackles;
+            if (defCon >= 10) {
+                defConPoints = 2;
+            }
+        } else {
+            // MID/FWD: CBIRT (12 = 2pts)
+            defCon = clearances + blocks + interceptions + tackles + recoveries;
+            if (defCon >= 12) {
+                defConPoints = 2;
+            }
+        }
+        
+        // Only show if points were earned (threshold reached)
+        if (defConPoints > 0) {
+            breakdown.defCon = {
+                label: 'DEFCON',
+                value: defCon,
+                points: defConPoints
+            };
+        }
+    }
+    
+    // [PK Miss] Penalty misses: penalties_missed × -2
+    const penaltiesMissed = stats.penalties_missed || 0;
+    if (penaltiesMissed > 0) {
+        breakdown.pkMiss = {
+            label: 'PK Miss',
+            value: penaltiesMissed,
+            points: penaltiesMissed * -2
+        };
+    }
+    
+    // [Conceded] Goals conceded (GKP/DEF only): Math.floor(goals_conceded / 2) × -1
+    const goalsConceded = stats.goals_conceded || 0;
+    if ((positionType === 1 || positionType === 2) && goalsConceded > 0) {
+        const concededPoints = Math.floor(goalsConceded / 2) * -1;
+        if (concededPoints < 0) {
+            breakdown.conceded = {
+                label: 'Conceded',
+                value: goalsConceded,
+                points: concededPoints
+            };
+        }
+    }
+    
+    // [Yellow Cards] Yellow cards: yellow_cards × -1
+    const yellowCards = stats.yellow_cards || 0;
+    if (yellowCards > 0) {
+        breakdown.yellowCards = {
+            label: 'Yellow Cards',
+            value: yellowCards,
+            points: yellowCards * -1
+        };
+    }
+    
+    // [Red Cards] Red cards: red_cards × -3
+    const redCards = stats.red_cards || 0;
+    if (redCards > 0) {
+        breakdown.redCards = {
+            label: 'Red Cards',
+            value: redCards,
+            points: redCards * -3
+        };
+    }
+    
+    // [Own Goal] Own goals: own_goals × -2
+    const ownGoals = stats.own_goals || 0;
+    if (ownGoals > 0) {
+        breakdown.ownGoal = {
+            label: 'Own Goal',
+            value: ownGoals,
+            points: ownGoals * -2
+        };
+    }
+    
+    // [Bonus] Bonus points: bonus or provisional_bonus (1-3 points)
+    const bonus = liveStats?.provisional_bonus ?? liveStats?.bonus ?? stats.bonus ?? 0;
+    if (bonus > 0) {
+        breakdown.bonus = {
+            label: 'Bonus',
+            value: bonus,
+            points: bonus
+        };
+    }
+    
+    return breakdown;
+}
+
+/**
  * Show player modal with details
  * @param {number} playerId - Player ID
  * @param {Object} myTeamState - Optional state object for league ownership
@@ -271,9 +458,10 @@ export async function showPlayerModal(playerId, myTeamState = null) {
     const gwPoints = liveStats?.total_points ?? player.event_points ?? 0;
     const minutes = liveStats?.minutes ?? gwStats.minutes ?? 0;
     const bps = liveStats?.bps ?? gwStats.bps ?? 0;
-    const goals = liveStats?.goals_scored ?? gwStats.goals_scored ?? 0;
-    const assists = liveStats?.assists ?? gwStats.assists ?? 0;
-    const bonus = liveStats?.provisional_bonus ?? liveStats?.bonus ?? 0;
+    
+    // Calculate points breakdown
+    const pointsBreakdown = calculateGWPointsBreakdown(player, liveStats, gwStats);
+    
     const xG = gwStats.expected_goals ? parseFloat(gwStats.expected_goals).toFixed(2) : '0.00';
     const xA = gwStats.expected_assists ? parseFloat(gwStats.expected_assists).toFixed(2) : '0.00';
 
@@ -310,10 +498,9 @@ export async function showPlayerModal(playerId, myTeamState = null) {
         gwPoints,
         minutes,
         bps,
-        goals,
-        assists,
         xG,
         xA,
+        pointsBreakdown,
         ownership,
         leagueOwnership,
         past3GW,
@@ -412,7 +599,8 @@ function showLoadingModal(player, team, position, price) {
 function buildModalHTML(data) {
     const {
         player, team, position, price, currentGW,
-        gwPoints, minutes, bps, goals, assists, xG, xA,
+        gwPoints, minutes, bps, xG, xA,
+        pointsBreakdown,
         ownership, leagueOwnership, past3GW, upcomingFixtures, isLive,
         risks, comparisonPlayers
     } = data;
@@ -437,41 +625,84 @@ function buildModalHTML(data) {
         </span>
     ` : '';
 
-    // GW Stats section (top-left)
-    const gwStatsHTML = `
+    // GW Stats section (top-left) - Points Breakdown
+    let gwStatsHTML = `
         <div style="flex: 1; min-width: 140px;">
             <div style="font-size: 0.7rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem; text-transform: uppercase;">
                 GW ${currentGW} Stats${liveIndicator}
             </div>
             <div style="display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.7rem;">
-                <div style="display: flex; justify-content: space-between;">
-                    <span style="color: var(--text-secondary);">Points</span>
-                    <span style="font-weight: 600;">${gwPoints}${isLive ? '*' : ''}</span>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem; padding-bottom: 0.25rem; border-bottom: 1px solid var(--border-color);">
+                    <span style="color: var(--text-secondary); font-weight: 600;">Total Points</span>
+                    <span style="font-weight: 700; font-size: 0.8rem;">${gwPoints}${isLive ? '*' : ''}</span>
                 </div>
-                <div style="display: flex; justify-content: space-between;">
-                    <span style="color: var(--text-secondary);">Minutes</span>
-                    <span style="font-weight: 600;">${minutes}</span>
+                <div style="display: flex; flex-direction: column; gap: 0.15rem; font-size: 0.65rem;">
+    `;
+    
+    // Display points breakdown (only show fields with values)
+    const breakdownItems = Object.entries(pointsBreakdown);
+    
+    if (breakdownItems.length > 0) {
+        breakdownItems.forEach(([key, item]) => {
+            const isPositive = item.points > 0;
+            const pointColor = isPositive ? '#22c55e' : '#ef4444';
+            const prefix = isPositive ? '+' : '';
+            
+            gwStatsHTML += `
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color: var(--text-secondary);">[${item.label}]</span>
+                    <span style="color: ${pointColor}; font-weight: 600;">${prefix}${item.points}</span>
                 </div>
-                <div style="display: flex; justify-content: space-between;">
-                    <span style="color: var(--text-secondary);">BPS</span>
-                    <span style="font-weight: 600;">${bps}</span>
+            `;
+        });
+    } else {
+        gwStatsHTML += `
+            <div style="color: var(--text-secondary); font-size: 0.6rem;">
+                No stats available yet
+            </div>
+        `;
+    }
+    
+    // Add supporting stats at bottom (minutes, BPS, xG/xA)
+    if (minutes > 0 || bps > 0 || parseFloat(xG) > 0 || parseFloat(xA) > 0) {
+        gwStatsHTML += `
                 </div>
+                <div style="margin-top: 0.25rem; padding-top: 0.25rem; border-top: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 0.15rem; font-size: 0.6rem; color: var(--text-secondary);">
+        `;
+        
+        if (minutes > 0) {
+            gwStatsHTML += `
                 <div style="display: flex; justify-content: space-between;">
-                    <span style="color: var(--text-secondary);">Goals</span>
-                    <span style="font-weight: 600;">${goals}</span>
+                    <span>Minutes</span>
+                    <span style="font-weight: 500;">${minutes}</span>
                 </div>
+            `;
+        }
+        
+        if (bps > 0) {
+            gwStatsHTML += `
                 <div style="display: flex; justify-content: space-between;">
-                    <span style="color: var(--text-secondary);">Assists</span>
-                    <span style="font-weight: 600;">${assists}</span>
+                    <span>BPS</span>
+                    <span style="font-weight: 500;">${bps}</span>
                 </div>
+            `;
+        }
+        
+        if (parseFloat(xG) > 0 || parseFloat(xA) > 0) {
+            gwStatsHTML += `
                 <div style="display: flex; justify-content: space-between;">
-                    <span style="color: var(--text-secondary);">xG</span>
-                    <span style="font-weight: 600;">${xG}</span>
+                    <span>xG/xA</span>
+                    <span style="font-weight: 500;">${xG}/${xA}</span>
                 </div>
-                <div style="display: flex; justify-content: space-between;">
-                    <span style="color: var(--text-secondary);">xA</span>
-                    <span style="font-weight: 600;">${xA}</span>
-                </div>
+            `;
+        }
+        
+        gwStatsHTML += `</div>`;
+    } else {
+        gwStatsHTML += `</div>`;
+    }
+    
+    gwStatsHTML += `
             </div>
         </div>
     `;
