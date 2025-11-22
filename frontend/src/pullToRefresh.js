@@ -102,6 +102,13 @@ class PullToRefresh {
     }
 
     async triggerRefresh() {
+        // Prevent multiple simultaneous refreshes
+        if (this.refreshing) {
+            console.log('⏸️ Refresh already in progress, ignoring pull...');
+            this.reset();
+            return;
+        }
+
         this.refreshing = true;
 
         // Show loading state
@@ -112,6 +119,7 @@ class PullToRefresh {
             await this.onRefresh();
         } catch (error) {
             console.error('Refresh failed:', error);
+            throw error; // Re-throw to let caller handle it
         } finally {
             // Delay reset for visual feedback
             setTimeout(() => {
