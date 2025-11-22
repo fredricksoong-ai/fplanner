@@ -269,7 +269,8 @@ export async function loadLeagueStandingsForTab(leagueId, myTeamState, updateLea
  * @param {Object} myTeamState - Current state object
  */
 export async function loadMobileLeagueStandings(leagueId, myTeamState) {
-    const container = document.getElementById('mobile-league-standings');
+    // Support both mobile and desktop containers
+    const container = document.getElementById('mobile-league-standings') || document.getElementById('desktop-league-standings');
     if (!container) return;
 
     // Show loading state
@@ -348,7 +349,7 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
         const rowsHtml = results.slice(0, 50).map((entry, index) => {
             const captainName = captainNames[index];
             const isUser = entry.entry === userTeamId;
-            const bgColor = isUser ? 'rgba(56, 189, 248, 0.1)' : (index % 2 === 0 ? 'var(--bg-primary)' : 'var(--bg-secondary)');
+            const bgColor = isUser ? 'rgba(56, 189, 248, 0.1)' : 'var(--bg-primary)';
             const rankChange = entry.last_rank - entry.rank;
             const rankChangeIcon = rankChange > 0 ? '▲' : rankChange < 0 ? '▼' : '━';
             const rankChangeColor = rankChange > 0 ? '#22c55e' : rankChange < 0 ? '#ef4444' : 'var(--text-secondary)';
@@ -426,9 +427,9 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
         `;
     }
 
-    // Desktop: Traditional table layout
+    // Desktop: Use mobile table format (removed desktop HTML table)
     return `
-        <div style="background: var(--bg-primary); padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px var(--shadow); margin-bottom: 2rem;">
+        <div style="background: var(--bg-secondary); padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px var(--shadow); margin-bottom: 2rem;">
             <div style="margin-bottom: 1rem;">
                 <h4 style="font-size: 1.125rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem;">
                     <i class="fas fa-trophy"></i> ${escapeHtml(league.name)}
@@ -454,7 +455,7 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
                     <tbody>
                         ${results.slice(0, 50).map((entry, index) => {
                             const isUser = entry.entry === userTeamId;
-                            const rowBg = isUser ? 'rgba(56, 189, 248, 0.1)' : (index % 2 === 0 ? 'var(--bg-secondary)' : 'var(--bg-primary)');
+                            const rowBg = isUser ? 'rgba(56, 189, 248, 0.1)' : 'var(--bg-primary)';
                             const rankChange = entry.last_rank - entry.rank;
                             const rankChangeIcon = rankChange > 0 ? '▲' : rankChange < 0 ? '▼' : '━';
                             const rankChangeColor = rankChange > 0 ? '#22c55e' : rankChange < 0 ? '#ef4444' : 'var(--text-secondary)';

@@ -112,7 +112,8 @@ import {
     renderCompactHeader,
     renderCompactTeamList,
     renderMatchSchedule,
-    attachPlayerRowListeners
+    attachPlayerRowListeners,
+    showPlayerModal
 } from './renderMyTeamCompact.js';
 
 import {
@@ -469,6 +470,13 @@ export function renderMyTeam(teamData, subTab = 'overview') {
         container.innerHTML = tabHTML + contentHTML;
     }
     attachRiskTooltipListeners();
+
+    // Attach player modal listeners for desktop table rows
+    if (!useMobile) {
+        requestAnimationFrame(() => {
+            attachDesktopPlayerRowListeners(myTeamState);
+        });
+    }
 
     // Add tab click event listeners
     const tabButtons = document.querySelectorAll('.my-team-tab-btn');
