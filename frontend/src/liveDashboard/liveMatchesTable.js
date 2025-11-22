@@ -1,12 +1,10 @@
 // ============================================================================
 // LIVE MATCHES TABLE
-// Showing matches where my players are playing, with same styling as Top Performers
+// Showing matches where my players are playing, with one row per player
 // ============================================================================
 
 import { fplFixtures, fplBootstrap, getPlayerById } from '../data.js';
-import { getTeamShortName, escapeHtml, formatDecimal, getPtsHeatmap, getFormHeatmap, getHeatmapStyle } from '../utils.js';
-import { getMatchStatus } from '../fixtures.js';
-import { getActiveGW } from '../data.js';
+import { getTeamShortName, escapeHtml } from '../utils.js';
 
 // Team colors (from playerModal.js)
 const TEAM_COLORS = {
@@ -31,7 +29,7 @@ function isColorDark(hex) {
 }
 
 /**
- * Render live matches table (same styling as Top Performers)
+ * Render live matches table (one row per player per match)
  * @param {Object} teamData - Team data
  * @param {number} gameweek - Gameweek number
  * @param {string} status - GW status
@@ -42,9 +40,6 @@ export function renderLiveMatchesTable(teamData, gameweek, status) {
     if (!picks || !picks.picks || !fplFixtures || !fplBootstrap) {
         return '<div style="background: var(--bg-secondary); padding: 1rem; border-radius: 12px; text-align: center; color: var(--text-secondary); margin-bottom: 1rem;">No fixtures data</div>';
     }
-    
-    const currentGW = getActiveGW();
-    const isLive = status === 'LIVE';
     
     // Get map of team -> players from my team
     const myTeamIds = new Set();
@@ -74,6 +69,9 @@ export function renderLiveMatchesTable(teamData, gameweek, status) {
         `;
     }
     
+    // Build rows: one row per player per match
+    const rows = [];
+    
     // Separate live and finished matches
     const liveMatches = relevantFixtures.filter(f => f.started && !f.finished);
     const finishedMatches = relevantFixtures.filter(f => f.finished);
@@ -82,7 +80,30 @@ export function renderLiveMatchesTable(teamData, gameweek, status) {
     // Sort: live first, then upcoming, then finished
     const sortedMatches = [...liveMatches, ...upcomingMatches, ...finishedMatches];
     
-    // Header row (same as Top Performers: Match, Opp, Status, Pts, Form, Players)
+    sortedMatches.forEach(fixture => {
+        const homeTeamId = fixture.team_h;
+        const awayTeamId = fixture.team_a;
+        
+        // Get my players in this match (both teams)
+        const homePlayers = teamToPlayers.get(homeTeamId) || [];
+        const awayPlayers = teamToPlayers.get(awayTeamId) || [];
+        const matchPlayers = [...homePlayers, ...awayPlayers];
+        
+        // Create one row per player
+        matchPlayers.forEach(({ player, pick }) => {
+            rows.push({ fixture, player, pick });
+        });
+    });
+    
+    if (rows.length === 0) {
+        return `
+            <div style="background: var(--bg-secondary); padding: 1rem; border-radius: 12px; text-align: center; color: var(--text-secondary); margin-bottom: 1rem;">
+                No players in matches for this GW
+            </div>
+        `;
+    }
+    
+    // Header row (Match, Status, Players)
     let html = `
         <div style="background: var(--bg-secondary); border-radius: 12px; box-shadow: 0 2px 8px var(--shadow); overflow: hidden; margin-bottom: 1rem;">
             <div style="padding: 0.5rem 0.75rem; background: var(--bg-secondary); border-bottom: 1px solid var(--border-color);">
@@ -91,17 +112,15 @@ export function renderLiveMatchesTable(teamData, gameweek, status) {
                 </h4>
             </div>
             <div class="mobile-table">
-                <div class="mobile-table-header" style="grid-template-columns: 2fr 1fr 0.7fr 0.7fr 1.5fr; padding-bottom: 2px !important; padding-top: 2px !important;">
+                <div class="mobile-table-header" style="grid-template-columns: 2fr 1fr 1.5fr; padding-bottom: 2px !important; padding-top: 2px !important;">
                     <div>Match</div>
                     <div style="text-align: center;">Status</div>
-                    <div style="text-align: center;">Pts</div>
-                    <div style="text-align: center;">Form</div>
                     <div style="text-align: center;">Players</div>
                 </div>
     `;
     
-    // Render rows (same styling as Top Performers)
-    sortedMatches.forEach(fixture => {
+    // Render rows (one per player)
+    rows.forEach(({ fixture, player, pick }) => {
         const homeTeamId = fixture.team_h;
         const awayTeamId = fixture.team_a;
         const homeShort = getTeamShortName(homeTeamId);
@@ -111,31 +130,6 @@ export function renderLiveMatchesTable(teamData, gameweek, status) {
         const awayColor = getTeamColor(awayTeamId);
         const homeBg = isColorDark(homeColor) ? 'rgba(255, 255, 255, 0.9)' : 'rgba(255, 255, 255, 0.1)';
         const awayBg = isColorDark(awayColor) ? 'rgba(255, 255, 255, 0.9)' : 'rgba(255, 255, 255, 0.1)';
-        
-        // Get my players in this match (both teams)
-        const homePlayers = teamToPlayers.get(homeTeamId) || [];
-        const awayPlayers = teamToPlayers.get(awayTeamId) || [];
-        const matchPlayers = [...homePlayers, ...awayPlayers];
-        
-        // Calculate total points and average form from my players in this match
-        let totalPoints = 0;
-        let totalForm = 0;
-        const playerNames = [];
-        
-        matchPlayers.forEach(({ player, pick }) => {
-            const gwPoints = isLive ? (player.live_stats?.total_points || 0) : (player.event_points || 0);
-            const mult = pick.is_captain ? 2 : 1;
-            totalPoints += gwPoints * mult;
-            totalForm += parseFloat(player.form) || 0;
-            
-            const name = pick.is_captain ? `${player.web_name} (C)` : 
-                        pick.is_vice_captain ? `${player.web_name} (VC)` : 
-                        player.web_name;
-            playerNames.push(name);
-        });
-        
-        const avgForm = matchPlayers.length > 0 ? totalForm / matchPlayers.length : 0;
-        const playersList = playerNames.length > 0 ? playerNames.join(', ') : '—';
         
         // Match display (same format as before)
         let matchDisplay = '';
@@ -165,7 +159,7 @@ export function renderLiveMatchesTable(teamData, gameweek, status) {
                     font-size: 0.6rem;
                 ">${awayShort}</span>
             `;
-            statusDisplay = '<span style="color: var(--text-secondary); font-size: 0.6rem;">FT</span>';
+            statusDisplay = '<span style="color: #22c55e; font-weight: 600; font-size: 0.6rem;">FT</span>';
             rowStyle = 'background: var(--bg-primary); opacity: 0.6; color: var(--text-secondary);';
         } else if (fixture.started && !fixture.finished) {
             // Live: MCI 1-5 LIV
@@ -190,21 +184,19 @@ export function renderLiveMatchesTable(teamData, gameweek, status) {
                     font-size: 0.6rem;
                 ">${awayShort}</span>
             `;
-            statusDisplay = '<span style="color: #ef4444; font-weight: 700; font-size: 0.6rem;">LIVE</span>';
+            statusDisplay = '<span style="color: #ef4444; font-weight: 600; font-size: 0.6rem;">LIVE</span>';
         } else {
-            // Upcoming: MUN vs. BOU Sat 2200 (SGT)
+            // Upcoming: MUN vs. BOU Sat 2200 (SGT) - reference fixtures page format
             const kickoffDate = new Date(fixture.kickoff_time);
-            const sgtTime = new Date(kickoffDate.getTime() + (8 * 60 * 60 * 1000));
-            const dayStr = sgtTime.toLocaleString('en-SG', { 
+            // Use Singapore timezone (like fixtures page but with SGT)
+            const timeStr = kickoffDate.toLocaleString('en-SG', {
                 timeZone: 'Asia/Singapore',
-                weekday: 'short' 
-            });
-            const timeStr = sgtTime.toLocaleString('en-SG', {
-                timeZone: 'Asia/Singapore',
+                month: 'short',
+                day: 'numeric',
                 hour: '2-digit',
                 minute: '2-digit',
                 hour12: false
-            }).replace(':', '');
+            });
             
             matchDisplay = `
                 <span style="
@@ -225,40 +217,28 @@ export function renderLiveMatchesTable(teamData, gameweek, status) {
                     font-size: 0.6rem;
                 ">${awayShort}</span>
             `;
-            statusDisplay = `<span style="color: var(--text-secondary); font-size: 0.6rem;">${dayStr} ${timeStr}</span>`;
+            statusDisplay = `<span style="color: var(--text-secondary); font-size: 0.6rem;">${timeStr}</span>`;
         }
         
-        // Points and Form styling (same as Top Performers)
-        const ptsHeatmap = getPtsHeatmap(totalPoints, 'gw_pts');
-        const ptsStyle = getHeatmapStyle(ptsHeatmap);
-        const formHeatmap = getFormHeatmap(avgForm);
-        const formStyle = getHeatmapStyle(formHeatmap);
-        
-        // Status styling (same as Top Performers)
-        let statusColor = 'var(--text-secondary)';
-        let statusWeight = '400';
-        let statusBgColor = 'transparent';
-        
-        if (fixture.finished) {
-            statusColor = '#22c55e';
-            statusWeight = '700';
-        } else if (fixture.started && !fixture.finished) {
-            statusColor = '#ef4444';
-            statusWeight = '700';
-        }
+        // Player name with C/VC indicator
+        const playerName = pick.is_captain ? `${player.web_name} (C)` : 
+                          pick.is_vice_captain ? `${player.web_name} (VC)` : 
+                          player.web_name;
         
         html += `
             <div
                 class="mobile-table-row"
-                style="grid-template-columns: 2fr 1fr 0.7fr 0.7fr 1.5fr; padding-bottom: 3px !important; padding-top: 3px !important; ${rowStyle}"
+                style="grid-template-columns: 2fr 1fr 1.5fr; padding-bottom: 3px !important; padding-top: 3px !important; ${rowStyle}"
             >
                 <div style="font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 0.25rem;">
                     ${matchDisplay}
                 </div>
-                <div style="text-align: center; font-size: 0.6rem; font-weight: ${statusWeight}; color: ${statusColor}; background: ${statusBgColor}; padding: 0.08rem 0.25rem; border-radius: 0.25rem;">${statusDisplay}</div>
-                <div style="text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 700; padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-size: 0.6rem;">${totalPoints}</div>
-                <div style="text-align: center; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 700; padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-size: 0.6rem;">${formatDecimal(avgForm)}</div>
-                <div style="text-align: center; font-size: 0.6rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(playersList)}">${escapeHtml(playersList)}</div>
+                <div style="text-align: center; font-size: 0.6rem; color: var(--text-secondary);">
+                    ${statusDisplay}
+                </div>
+                <div style="font-size: 0.6rem; color: var(--text-primary); font-weight: 600;">
+                    ${escapeHtml(playerName)}
+                </div>
             </div>
         `;
     });
