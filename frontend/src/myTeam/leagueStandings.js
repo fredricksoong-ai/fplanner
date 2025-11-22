@@ -205,6 +205,20 @@ export async function updateLeagueContentUI(myTeamState) {
     }
 }
 
+// Cache expiration time in milliseconds (5 minutes)
+const LEAGUE_CACHE_EXPIRATION = 5 * 60 * 1000;
+
+/**
+ * Check if cached league data is still valid (not expired)
+ * @param {Object} cachedData - Cached data with timestamp
+ * @returns {boolean} True if cache is valid
+ */
+function isCacheValid(cachedData) {
+    if (!cachedData || !cachedData._timestamp) return false;
+    const age = Date.now() - cachedData._timestamp;
+    return age < LEAGUE_CACHE_EXPIRATION;
+}
+
 /**
  * Load standings for a specific league tab (with caching)
  * @param {number} leagueId - League ID to load
@@ -222,11 +236,17 @@ export async function loadLeagueStandingsForTab(leagueId, myTeamState, updateLea
         return;
     }
 
-    // Check cache first
-    if (myTeamState.leagueStandingsCache.has(leagueId)) {
+    // Check cache first - only use if not expired
+    const cachedData = myTeamState.leagueStandingsCache.get(leagueId);
+    if (cachedData && isCacheValid(cachedData)) {
         console.log(`✅ Using cached data for league ${leagueId}`);
         updateLeagueContentUI();
         return;
+    }
+
+    // Cache expired or not present, need to fetch fresh data
+    if (cachedData) {
+        console.log(`🔄 Cache expired for league ${leagueId}, refreshing...`);
     }
 
     // Show loading state
@@ -238,8 +258,9 @@ export async function loadLeagueStandingsForTab(leagueId, myTeamState, updateLea
     `;
 
     try {
-        // Fetch and cache
+        // Fetch and cache with timestamp
         const data = await loadLeagueStandings(leagueId);
+        data._timestamp = Date.now();
         myTeamState.leagueStandingsCache.set(leagueId, data);
 
         // Update content if still active tab
@@ -282,7 +303,11 @@ export async function loadMobileLeagueStandings(leagueId, myTeamState) {
     `;
 
     try {
+        // Fetch and cache with timestamp
         const leagueData = await loadLeagueStandings(leagueId);
+        leagueData._timestamp = Date.now();
+        myTeamState.leagueStandingsCache.set(leagueId, leagueData);
+
         const html = await renderLeagueStandings(leagueData, myTeamState);
         container.innerHTML = html;
 
