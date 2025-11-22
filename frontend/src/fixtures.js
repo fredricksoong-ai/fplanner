@@ -185,6 +185,11 @@ export function getMatchStatus(teamId, gameweek, player) {
 
     // 2. Match LIVE (started but not finished)
     if (fixture.started && !fixture.finished) {
+        // Check for live stats minutes from enriched bootstrap
+        if (player && player.live_stats && player.live_stats.minutes !== null && player.live_stats.minutes !== undefined) {
+            const liveMinutes = player.live_stats.minutes;
+            return `LIVE (${liveMinutes})`;
+        }
         return 'LIVE';
     }
 
