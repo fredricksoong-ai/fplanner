@@ -47,6 +47,15 @@ let onDataRefreshCallback = null;
 /** Auto-refresh interval in milliseconds (2 minutes) */
 const AUTO_REFRESH_INTERVAL = 2 * 60 * 1000;
 
+/** @type {boolean} Flag to prevent concurrent refresh calls */
+let isRefreshing = false;
+
+/** @type {number} Timestamp of last refresh */
+let lastRefreshTime = 0;
+
+/** Minimum time between refresh attempts (30 seconds) */
+const MIN_REFRESH_INTERVAL = 30 * 1000;
+
 // ============================================================================
 // GAMEWEEK STATUS
 // ============================================================================
@@ -211,14 +220,48 @@ export async function loadFPLData(queryParams = '') {
  * const player = data.elements.find(p => p.id === 123);
  * console.log(player.live_stats?.total_points); // Live points if GW is live
  */
-export async function loadEnrichedBootstrap() {
+/**
+ * Check if we can refresh (not already refreshing and enough time has passed)
+ * @returns {boolean} True if refresh is allowed
+ */
+function canRefresh() {
+    if (isRefreshing) {
+        console.log('⏸️ Refresh already in progress, skipping...');
+        return false;
+    }
+
+    const now = Date.now();
+    const timeSinceLastRefresh = now - lastRefreshTime;
+    
+    if (timeSinceLastRefresh < MIN_REFRESH_INTERVAL) {
+        const waitTime = Math.ceil((MIN_REFRESH_INTERVAL - timeSinceLastRefresh) / 1000);
+        console.log(`⏸️ Too soon to refresh, please wait ${waitTime}s...`);
+        return false;
+    }
+
+    return true;
+}
+
+export async function loadEnrichedBootstrap(force = false) {
+    // Check if we can refresh (unless forced)
+    if (!force && !canRefresh()) {
+        throw new Error('Refresh already in progress or too soon to refresh again');
+    }
+
+    // Set refreshing flag
+    isRefreshing = true;
+    lastRefreshTime = Date.now();
+
     console.log('🔄 Loading enriched bootstrap data...');
 
     try {
         const response = await fetch(`${API_BASE}/bootstrap/enriched`);
 
         if (!response.ok) {
-            throw new Error(`Failed to load enriched bootstrap`);
+            if (response.status === 429) {
+                throw new Error('429 Too many requests. Please wait before refreshing.');
+            }
+            throw new Error(`Failed to load enriched bootstrap (${response.status})`);
         }
 
         const data = await response.json();
@@ -238,6 +281,11 @@ export async function loadEnrichedBootstrap() {
     } catch (err) {
         console.error('❌ Failed to load enriched bootstrap:', err);
         throw err;
+    } finally {
+        // Clear refreshing flag after a short delay to prevent rapid successive calls
+        setTimeout(() => {
+            isRefreshing = false;
+        }, 1000);
     }
 }
 
@@ -304,6 +352,10 @@ export function startAutoRefresh(onRefresh = null) {
 
     console.log(`🔄 Starting auto-refresh for live GW${activeGW} (every ${AUTO_REFRESH_INTERVAL / 1000}s)`);
 
+    // Track last refresh time to prevent rapid-fire requests
+    let lastRefreshTime = 0;
+    const MIN_REFRESH_INTERVAL = 120000; // 2 minutes minimum (same as AUTO_REFRESH_INTERVAL)
+    
     autoRefreshInterval = setInterval(async () => {
         try {
             // Check if still live before refreshing
@@ -314,6 +366,11 @@ export function startAutoRefresh(onRefresh = null) {
                 return;
             }
 
+            // Client-side throttling: Don't refresh if already refreshing or too soon
+            if (!canRefresh()) {
+                return; // Skip this cycle
+            }
+
             console.log('🔄 Auto-refreshing enriched bootstrap...');
             await loadEnrichedBootstrap();
 
@@ -321,7 +378,16 @@ export function startAutoRefresh(onRefresh = null) {
                 onDataRefreshCallback();
             }
         } catch (err) {
-            console.error('❌ Auto-refresh failed:', err);
+            // Handle rate limit errors gracefully
+            if (err.message && err.message.includes('429')) {
+                console.warn('⚠️ Rate limit hit, stopping auto-refresh. Please refresh manually.');
+                stopAutoRefresh();
+            } else if (err.message && err.message.includes('already in progress')) {
+                // Skip if already refreshing (handled by canRefresh)
+                return;
+            } else {
+                console.error('❌ Auto-refresh failed:', err);
+            }
         }
     }, AUTO_REFRESH_INTERVAL);
 }

@@ -12,14 +12,17 @@ import {
     startAutoRefresh,
     stopAutoRefresh,
     isAutoRefreshActive,
-    loadMyTeam
+    loadMyTeam,
+    loadEnrichedBootstrap
 } from './data.js';
 import { renderDashboardHeader } from './liveDashboard/dashboardHeader.js';
 import { renderLiveMatchesTable } from './liveDashboard/liveMatchesTable.js';
 import { renderTopPlayersTable } from './liveDashboard/topPlayersTable.js';
+import { initPullToRefresh, showRefreshToast } from './pullToRefresh.js';
 
 let dashboardRefreshInterval = null;
 let myTeamData = null;
+let pullToRefreshInstance = null;
 
 /**
  * Render the live gameweek dashboard
@@ -63,10 +66,17 @@ export async function renderLiveDashboard() {
             return;
         }
 
+        // Initial load: refresh enriched bootstrap immediately
+        console.log('🔄 Initial refresh on dashboard entry...');
+        await loadEnrichedBootstrap(true); // Force refresh on page entry
+        
         myTeamData = await loadMyTeam(teamId);
         await renderDashboardContent();
         
-        // Setup auto-refresh if GW is live
+        // Initialize pull-to-refresh
+        await setupPullToRefresh();
+        
+        // Setup auto-refresh - will start 2 minutes after initial refresh
         setupAutoRefresh();
         
     } catch (error) {
@@ -123,22 +133,62 @@ async function renderDashboardContent() {
 }
 
 /**
+ * Setup pull-to-refresh for dashboard
+ */
+async function setupPullToRefresh() {
+    // Destroy existing instance if any
+    if (pullToRefreshInstance) {
+        pullToRefreshInstance.destroy();
+        pullToRefreshInstance = null;
+    }
+
+    // Initialize pull-to-refresh with throttled refresh
+    pullToRefreshInstance = initPullToRefresh(async () => {
+        console.log('🔄 Pull-to-refresh triggered');
+        try {
+            // Refresh enriched bootstrap (with client-side throttling)
+            await loadEnrichedBootstrap(true); // Force refresh on pull
+            // Re-render dashboard content
+            await renderDashboardContent();
+            showRefreshToast('✅ Dashboard refreshed!');
+        } catch (error) {
+            console.error('Pull-to-refresh failed:', error);
+            if (error.message && error.message.includes('429')) {
+                showRefreshToast('⚠️ Rate limit hit. Please wait before refreshing.');
+            } else if (error.message && error.message.includes('already in progress')) {
+                showRefreshToast('⏸️ Refresh already in progress');
+            } else {
+                showRefreshToast('⚠️ Failed to refresh');
+            }
+        }
+    });
+}
+
+/**
  * Setup auto-refresh for live GW
+ * Starts 2 minutes after initial refresh
  */
 function setupAutoRefresh() {
     const activeGW = getActiveGW();
     const isLive = isGameweekLive(activeGW);
     
     if (isLive) {
-        // Start auto-refresh
-        startAutoRefresh(async () => {
-            // Reload team data and re-render
-            const teamId = localStorage.getItem('fplanner_team_id');
-            if (teamId) {
-                myTeamData = await loadMyTeam(teamId);
-                await renderDashboardContent();
+        // Don't start immediately - wait 2 minutes after initial refresh
+        console.log('⏰ Auto-refresh will start in 2 minutes...');
+        
+        setTimeout(() => {
+            const stillLive = isGameweekLive(getActiveGW());
+            if (stillLive) {
+                // Start auto-refresh - only refresh enriched bootstrap, don't reload team data
+                // Team data doesn't change frequently enough to warrant refreshing every 2 min
+                // The enriched bootstrap contains live player stats which is what we need
+                startAutoRefresh(async () => {
+                    // Just re-render with updated enriched bootstrap data
+                    // No need to reload team data every 2 minutes
+                    await renderDashboardContent();
+                });
             }
-        });
+        }, 2 * 60 * 1000); // 2 minutes delay
     } else {
         // Stop auto-refresh if not live
         stopAutoRefresh();

@@ -111,7 +111,7 @@ export function calculateGWTextColor(gwRankNum, overallRankNum) {
  * @returns {Object} Color styling for status
  */
 export function calculateStatusColor(matchStatus) {
-    const isLive = matchStatus === 'LIVE';
+    const isLive = matchStatus.startsWith('LIVE');
     const isFinished = matchStatus.startsWith('FT');
 
     let statusColor = 'var(--text-secondary)';

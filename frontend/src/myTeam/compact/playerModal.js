@@ -279,7 +279,7 @@ export async function showPlayerModal(playerId, myTeamState = null) {
 
     // Check if player's match is live
     const matchStatus = getMatchStatus(player.team, activeGW, player);
-    const isLive = matchStatus === 'LIVE';
+    const isLive = matchStatus.startsWith('LIVE');
 
     // Ownership stats
     const ownership = parseFloat(player.selected_by_percent) || 0;
