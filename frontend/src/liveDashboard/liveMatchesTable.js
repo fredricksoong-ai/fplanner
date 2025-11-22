@@ -3,8 +3,9 @@
 // Showing matches where my players are playing, with one row per player
 // ============================================================================
 
-import { fplFixtures, fplBootstrap, getPlayerById } from '../data.js';
+import { fplFixtures, fplBootstrap, getPlayerById, getAllPlayers } from '../data.js';
 import { getTeamShortName, escapeHtml } from '../utils.js';
+import { getMatchStatus } from '../fixtures.js';
 
 // Team colors (from playerModal.js)
 const TEAM_COLORS = {
@@ -136,7 +137,12 @@ export function renderLiveMatchesTable(teamData, gameweek, status) {
         let statusDisplay = '';
         let rowStyle = 'background: var(--bg-primary);';
         
-        if (fixture.finished) {
+        // Use getMatchStatus for this player to determine status consistently
+        const playerMatchStatus = getMatchStatus(player.team, gameweek, player);
+        const isFinished = fixture.finished || playerMatchStatus.startsWith('FT');
+        const isLive = !isFinished && (fixture.started && !fixture.finished) || playerMatchStatus.startsWith('LIVE');
+        
+        if (isFinished) {
             // Finished: MCI 1-5 LIV (grey)
             const homeScore = fixture.team_h_score ?? '-';
             const awayScore = fixture.team_a_score ?? '-';
@@ -159,9 +165,11 @@ export function renderLiveMatchesTable(teamData, gameweek, status) {
                     font-size: 0.6rem;
                 ">${awayShort}</span>
             `;
-            statusDisplay = '<span style="color: #22c55e; font-weight: 600; font-size: 0.6rem;">FT</span>';
+            // Use playerMatchStatus for consistent display (includes minutes if available)
+            const statusText = playerMatchStatus.startsWith('FT') ? playerMatchStatus : 'FT';
+            statusDisplay = `<span style="color: #22c55e; font-weight: 600; font-size: 0.6rem;">${statusText}</span>`;
             rowStyle = 'background: var(--bg-primary); opacity: 0.6; color: var(--text-secondary);';
-        } else if (fixture.started && !fixture.finished) {
+        } else if (isLive) {
             // Live: MCI 1-5 LIV
             const homeScore = fixture.team_h_score ?? '-';
             const awayScore = fixture.team_a_score ?? '-';
@@ -184,7 +192,9 @@ export function renderLiveMatchesTable(teamData, gameweek, status) {
                     font-size: 0.6rem;
                 ">${awayShort}</span>
             `;
-            statusDisplay = '<span style="color: #ef4444; font-weight: 600; font-size: 0.6rem;">LIVE</span>';
+            // Use playerMatchStatus for consistent display (includes minutes if available)
+            const statusText = playerMatchStatus.startsWith('LIVE') ? playerMatchStatus : 'LIVE';
+            statusDisplay = `<span style="color: #ef4444; font-weight: 600; font-size: 0.6rem;">${statusText}</span>`;
         } else {
             // Upcoming: MUN vs. BOU Sat 2200 (SGT) - reference fixtures page format
             const kickoffDate = new Date(fixture.kickoff_time);

@@ -63,7 +63,7 @@ import {
 import { renderTeamSummary } from './myTeam/teamSummary.js';
 import { renderTeamComparison } from './myTeam/teamComparison.js';
 import { renderManagerInfo } from './myTeam/managerInfo.js';
-import { renderFixturesTab, renderMobileFixturesTab } from './myTeam/fixturesTab.js';
+import { renderFixturesTab, renderMobileFixturesTab, attachFixtureRowListeners, attachMobileFixtureRowListeners } from './myTeam/fixturesTab.js';
 import { renderTeamTable } from './myTeam/teamTable.js';
 
 import {
@@ -299,8 +299,22 @@ async function handleTeamRefresh() {
     // Update last refresh timestamp
     localStorage.setItem('fplanner_last_refresh', now.toString());
 
+    // Invalidate league standings cache so they refresh with updated points
+    if (myTeamState.activeLeagueTab) {
+        console.log('🔄 Invalidating league standings cache...');
+        myTeamState.leagueStandingsCache.delete(myTeamState.activeLeagueTab);
+    }
+
     // Re-render with fresh data
     renderMyTeam(freshData, myTeamState.currentTab);
+
+    // Refresh active league standings if on leagues tab
+    if (myTeamState.currentTab === 'leagues' && myTeamState.activeLeagueTab) {
+        console.log('🔄 Refreshing active league standings...');
+        setTimeout(() => {
+            loadLeagueStandingsForTab(myTeamState.activeLeagueTab);
+        }, 500); // Small delay to ensure DOM is ready
+    }
 
     console.log('✅ Team data refreshed');
 }
@@ -350,12 +364,14 @@ export function renderMyTeam(teamData, subTab = 'overview') {
         }
         container.innerHTML = contentHTML;
 
-        // Attach player row click listeners for team overview
-        if (subTab === 'overview') {
-            requestAnimationFrame(() => {
+        // Attach event listeners based on tab
+        requestAnimationFrame(() => {
+            if (subTab === 'overview') {
                 attachPlayerRowListeners(myTeamState);
-            });
-        }
+            } else if (subTab === 'fixtures') {
+                attachMobileFixtureRowListeners();
+            }
+        });
     } else {
         // Desktop: Show header and tabs
         const tabHTML = `
@@ -468,6 +484,17 @@ export function renderMyTeam(teamData, subTab = 'overview') {
         }
 
         container.innerHTML = tabHTML + contentHTML;
+        
+        // Attach fixture row listeners if on fixtures tab
+        if (subTab === 'fixtures') {
+            requestAnimationFrame(() => {
+                if (useMobile) {
+                    attachMobileFixtureRowListeners();
+                } else {
+                    attachFixtureRowListeners();
+                }
+            });
+        }
     }
     attachRiskTooltipListeners();
 
