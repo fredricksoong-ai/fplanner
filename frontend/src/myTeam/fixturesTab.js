@@ -6,10 +6,213 @@
 import {
     fplFixtures as getFixturesData,
     fplBootstrap as getBootstrapData,
-    getActiveGW
+    getActiveGW,
+    getAllPlayers,
+    isGameweekLive
 } from '../data.js';
 
-import { escapeHtml } from '../utils.js';
+import { 
+    escapeHtml, 
+    getPositionShort,
+    formatDecimal
+} from '../utils.js';
+
+/**
+ * Get top performers for a fixture (both teams)
+ * @param {Object} fixture - Fixture object
+ * @param {number} gameweek - Gameweek number
+ * @param {boolean} isLive - Whether GW is live
+ * @returns {Object} Top performers for home and away teams
+ */
+function getFixtureTopPerformers(fixture, gameweek, isLive) {
+    const allPlayers = getAllPlayers();
+    if (!allPlayers || allPlayers.length === 0) {
+        return { home: [], away: [] };
+    }
+
+    // Filter players by team
+    const homePlayers = allPlayers.filter(p => p.team === fixture.team_h);
+    const awayPlayers = allPlayers.filter(p => p.team === fixture.team_a);
+
+    // Get GW stats for each player
+    const getPlayerGWStats = (player) => {
+        const liveStats = player.live_stats;
+        const gwStats = player.github_gw || {};
+        
+        // For live GWs, use live_stats if available
+        // For finished GWs, use github_gw if available, otherwise event_points
+        let gwPoints = 0;
+        let minutes = 0;
+        let goals = 0;
+        let assists = 0;
+        let bonus = 0;
+        let bps = 0;
+        
+        if (isLive && liveStats) {
+            // Live stats available during live GW
+            gwPoints = liveStats.total_points || 0;
+            minutes = liveStats.minutes || 0;
+            goals = liveStats.goals_scored || 0;
+            assists = liveStats.assists || 0;
+            bonus = liveStats.provisional_bonus ?? liveStats.bonus ?? 0;
+            bps = liveStats.bps || 0;
+        } else if (gwStats.gw === gameweek || gwStats.total_points !== undefined) {
+            // GitHub GW stats (finished GW)
+            gwPoints = gwStats.total_points || 0;
+            minutes = gwStats.minutes || 0;
+            goals = gwStats.goals_scored || 0;
+            assists = gwStats.assists || 0;
+            bonus = gwStats.bonus || 0;
+            bps = gwStats.bps || 0;
+        } else if (player.event_points !== undefined && !isLive) {
+            // Fallback to bootstrap event_points (only if GW is finished)
+            gwPoints = player.event_points || 0;
+            // For event_points, we don't have detailed stats, so skip if no points
+            if (gwPoints === 0) return null;
+        } else {
+            // No stats available for this GW
+            return null;
+        }
+
+        // Only return if player has points or meaningful stats
+        if (gwPoints === 0 && minutes === 0 && goals === 0 && assists === 0) {
+            return null;
+        }
+
+        return {
+            player,
+            points: gwPoints,
+            minutes,
+            goals,
+            assists,
+            bonus,
+            bps
+        };
+    };
+
+    // Process home and away players
+    const homePerformers = homePlayers
+        .map(getPlayerGWStats)
+        .filter(p => p !== null)
+        .sort((a, b) => b.points - a.points || b.bps - a.bps)
+        .slice(0, 5); // Top 5 per team
+
+    const awayPerformers = awayPlayers
+        .map(getPlayerGWStats)
+        .filter(p => p !== null)
+        .sort((a, b) => b.points - a.points || b.bps - a.bps)
+        .slice(0, 5); // Top 5 per team
+
+    return {
+        home: homePerformers,
+        away: awayPerformers
+    };
+}
+
+/**
+ * Render player stats for a fixture (expandable section)
+ * @param {Object} fixture - Fixture object
+ * @param {number} gameweek - Gameweek number
+ * @param {boolean} isLive - Whether GW is live
+ * @param {boolean} isFinished - Whether fixture is finished
+ * @param {boolean} isDesktop - Whether desktop layout
+ * @param {Object} fplBootstrap - Bootstrap data for team names
+ * @returns {string} HTML for player stats section
+ */
+function renderFixturePlayerStats(fixture, gameweek, isLive, isFinished, isDesktop, fplBootstrap) {
+    // Only show for finished or live fixtures
+    if (!isFinished && !isLive) {
+        return '';
+    }
+
+    const performers = getFixtureTopPerformers(fixture, gameweek, isLive);
+    
+    // Don't show if no performers
+    if (performers.home.length === 0 && performers.away.length === 0) {
+        return '';
+    }
+
+    const renderPlayerRow = (performer) => {
+        const { player, points, minutes, goals, assists, bonus, bps } = performer;
+        const position = getPositionShort(player);
+        
+        return `
+            <div style="
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                padding: 0.4rem 0.5rem;
+                background: var(--bg-primary);
+                border-radius: 0.25rem;
+                font-size: 0.65rem;
+                border-left: 2px solid var(--primary-color);
+            ">
+                <div style="font-weight: 700; min-width: 2.5rem; color: var(--primary-color);">${points}</div>
+                <div style="font-weight: 600; color: var(--text-secondary); min-width: 2rem;">${position}</div>
+                <div style="flex: 1; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(player.web_name)}</div>
+                ${goals > 0 ? `<div style="color: #22c55e; font-weight: 700; min-width: 1.5rem; text-align: center;">⚽${goals}</div>` : ''}
+                ${assists > 0 ? `<div style="color: #3b82f6; font-weight: 700; min-width: 1.5rem; text-align: center;">🎯${assists}</div>` : ''}
+                ${bonus > 0 ? `<div style="color: #fbbf24; font-weight: 700; min-width: 1.5rem; text-align: center;">⭐${bonus}</div>` : ''}
+                ${minutes > 0 ? `<div style="color: var(--text-secondary); font-size: 0.6rem; min-width: 2rem; text-align: right;">${minutes}'</div>` : ''}
+            </div>
+        `;
+    };
+
+    const homeStatsHTML = performers.home.length > 0 
+        ? performers.home.map(renderPlayerRow).join('')
+        : '<div style="padding: 0.5rem; color: var(--text-secondary); font-size: 0.65rem; text-align: center;">No stats</div>';
+
+    const awayStatsHTML = performers.away.length > 0
+        ? performers.away.map(renderPlayerRow).join('')
+        : '<div style="padding: 0.5rem; color: var(--text-secondary); font-size: 0.65rem; text-align: center;">No stats</div>';
+
+    const homeTeam = fplBootstrap?.teams?.find(t => t.id === fixture.team_h);
+    const awayTeam = fplBootstrap?.teams?.find(t => t.id === fixture.team_a);
+
+    return `
+        <div id="fixture-stats-${fixture.id}" style="
+            display: none;
+            background: var(--bg-primary);
+            border-top: 2px solid var(--border-color);
+            padding: 0.75rem;
+        ">
+            <div style="
+                display: grid;
+                grid-template-columns: ${isDesktop ? '1fr 1fr' : '1fr'};
+                gap: 0.75rem;
+            ">
+                <div>
+                    <div style="
+                        font-size: 0.7rem;
+                        font-weight: 700;
+                        color: var(--text-secondary);
+                        margin-bottom: 0.5rem;
+                        text-transform: uppercase;
+                    ">
+                        ${homeTeam?.short_name || 'Home'}
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                        ${homeStatsHTML}
+                    </div>
+                </div>
+                <div>
+                    <div style="
+                        font-size: 0.7rem;
+                        font-weight: 700;
+                        color: var(--text-secondary);
+                        margin-bottom: 0.5rem;
+                        text-transform: uppercase;
+                    ">
+                        ${awayTeam?.short_name || 'Away'}
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                        ${awayStatsHTML}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
 
 /**
  * Render fixtures tab (desktop)
@@ -65,6 +268,8 @@ export function renderFixturesTab() {
                 const awayScore = fixture.team_a_score !== null ? fixture.team_a_score : '-';
                 const isFinished = fixture.finished;
                 const isStarted = fixture.started;
+                const isLive = isStarted && !isFinished;
+                const canShowStats = isFinished || isLive; // Only show stats for finished or live fixtures
 
                 // Format kickoff time
                 const kickoffDate = new Date(fixture.kickoff_time);
@@ -86,8 +291,26 @@ export function renderFixturesTab() {
                     statusBadge = '<span style="color: #ef4444; font-weight: 600; font-size: 0.75rem;">LIVE</span>';
                 }
 
+                // Expand/collapse icon if stats available
+                const expandIcon = canShowStats 
+                    ? '<i class="fas fa-chevron-down" style="font-size: 0.7rem; margin-left: 0.5rem; transition: transform 0.2s;"></i>'
+                    : '';
+
+                const statsSection = canShowStats 
+                    ? renderFixturePlayerStats(fixture, fixture.event, isLive, isFinished, true, fplBootstrap)
+                    : '';
+
                 return `
-                    <tr style="border-bottom: 1px solid var(--border-color); ${isStarted && !isFinished ? 'background: rgba(239, 68, 68, 0.05);' : ''}">
+                    <tr 
+                        class="fixture-row" 
+                        data-fixture-id="${fixture.id}"
+                        style="
+                            border-bottom: 1px solid var(--border-color); 
+                            ${isLive ? 'background: rgba(239, 68, 68, 0.05);' : ''}
+                            ${canShowStats ? 'cursor: pointer;' : ''}
+                        "
+                        ${canShowStats ? `onclick="toggleFixtureStats(${fixture.id})"` : ''}
+                    >
                         <td style="padding: 1rem 0.75rem; color: var(--text-secondary); font-size: 0.875rem; white-space: nowrap;">
                             ${timeStr}
                         </td>
@@ -103,9 +326,10 @@ export function renderFixturesTab() {
                             ${escapeHtml(awayTeam?.name || 'TBD')}
                         </td>
                         <td style="padding: 1rem 0.75rem; text-align: center;">
-                            ${statusBadge}
+                            ${statusBadge}${expandIcon}
                         </td>
                     </tr>
+                    ${canShowStats ? `<tr><td colspan="5" style="padding: 0;">${statsSection}</td></tr>` : ''}
                 `;
             }).join('');
 
@@ -134,10 +358,31 @@ export function renderFixturesTab() {
             `;
         }).join('');
 
-    return gwSections || `
+    const html = gwSections || `
         <div style="background: var(--bg-secondary); padding: 2rem; border-radius: 12px; text-align: center; margin-bottom: 2rem;">
             <p style="color: var(--text-secondary);">No recent fixtures found.</p>
         </div>
+    `;
+
+    // Add script once at the end
+    return html + `
+        <script>
+            if (typeof window.toggleFixtureStats === 'undefined') {
+                window.toggleFixtureStats = function(fixtureId) {
+                    const statsDiv = document.getElementById('fixture-stats-' + fixtureId);
+                    const row = document.querySelector('[data-fixture-id="' + fixtureId + '"]');
+                    const icon = row?.querySelector('.fa-chevron-down');
+                    
+                    if (statsDiv && row) {
+                        const isVisible = statsDiv.style.display !== 'none';
+                        statsDiv.style.display = isVisible ? 'none' : 'block';
+                        if (icon) {
+                            icon.style.transform = isVisible ? 'rotate(0deg)' : 'rotate(180deg)';
+                        }
+                    }
+                };
+            }
+        </script>
     `;
 }
 
@@ -195,6 +440,8 @@ export function renderMobileFixturesTab() {
                 const awayScore = fixture.team_a_score !== null ? fixture.team_a_score : '-';
                 const isFinished = fixture.finished;
                 const isStarted = fixture.started;
+                const isLive = isStarted && !isFinished;
+                const canShowStats = isFinished || isLive; // Only show stats for finished or live fixtures
 
                 const kickoffDate = new Date(fixture.kickoff_time);
                 const timeStr = kickoffDate.toLocaleString('en-GB', {
@@ -212,21 +459,37 @@ export function renderMobileFixturesTab() {
                     statusBadge = '<span style="color: #ef4444; font-weight: 600; font-size: 0.65rem;">LIVE</span>';
                 }
 
+                // Expand/collapse icon if stats available
+                const expandIcon = canShowStats 
+                    ? '<i class="fas fa-chevron-down" style="font-size: 0.6rem; margin-left: 0.25rem; transition: transform 0.2s;"></i>'
+                    : '';
+
                 return `
-                    <div class="mobile-table-row mobile-table-fixtures" style="background: ${isStarted && !isFinished ? 'rgba(239, 68, 68, 0.05)' : 'transparent'};">
-                        <div style="color: var(--text-secondary); font-size: 0.6rem; white-space: nowrap;">${timeStr.split(',')[1] || timeStr}</div>
-                        <div style="text-align: right; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                            ${homeTeam?.short_name || 'TBD'}
+                    <div>
+                        <div 
+                            class="mobile-table-row mobile-table-fixtures fixture-row-mobile" 
+                            data-fixture-id="${fixture.id}"
+                            style="
+                                background: ${isLive ? 'rgba(239, 68, 68, 0.05)' : 'transparent'};
+                                ${canShowStats ? 'cursor: pointer;' : ''}
+                            "
+                            ${canShowStats ? `onclick="toggleFixtureStatsMobile(${fixture.id})"` : ''}
+                        >
+                            <div style="color: var(--text-secondary); font-size: 0.6rem; white-space: nowrap;">${timeStr.split(',')[1] || timeStr}</div>
+                            <div style="text-align: right; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                ${homeTeam?.short_name || 'TBD'}
+                            </div>
+                            <div style="text-align: center; font-weight: 700; color: ${isFinished ? 'var(--text-primary)' : 'var(--text-secondary)'};">
+                                ${homeScore}-${awayScore}
+                            </div>
+                            <div style="text-align: left; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                ${awayTeam?.short_name || 'TBD'}
+                            </div>
+                            <div style="text-align: center;">
+                                ${statusBadge}${expandIcon}
+                            </div>
                         </div>
-                        <div style="text-align: center; font-weight: 700; color: ${isFinished ? 'var(--text-primary)' : 'var(--text-secondary)'};">
-                            ${homeScore}-${awayScore}
-                        </div>
-                        <div style="text-align: left; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                            ${awayTeam?.short_name || 'TBD'}
-                        </div>
-                        <div style="text-align: center;">
-                            ${statusBadge}
-                        </div>
+                        ${canShowStats ? renderFixturePlayerStats(fixture, fixture.event, isLive, isFinished, false, fplBootstrap) : ''}
                     </div>
                 `;
             }).join('');
@@ -255,9 +518,30 @@ export function renderMobileFixturesTab() {
             `;
         }).join('');
 
-    return gwSections || `
+    const html = gwSections || `
         <div style="padding: 2rem; text-align: center;">
             <p style="color: var(--text-secondary);">No recent fixtures found.</p>
         </div>
+    `;
+
+    // Add script once at the end
+    return html + `
+        <script>
+            if (typeof window.toggleFixtureStatsMobile === 'undefined') {
+                window.toggleFixtureStatsMobile = function(fixtureId) {
+                    const statsDiv = document.getElementById('fixture-stats-' + fixtureId);
+                    const row = document.querySelector('[data-fixture-id="' + fixtureId + '"]');
+                    const icon = row?.querySelector('.fa-chevron-down');
+                    
+                    if (statsDiv && row) {
+                        const isVisible = statsDiv.style.display !== 'none';
+                        statsDiv.style.display = isVisible ? 'none' : 'block';
+                        if (icon) {
+                            icon.style.transform = isVisible ? 'rotate(0deg)' : 'rotate(180deg)';
+                        }
+                    }
+                };
+            }
+        </script>
     `;
 }
