@@ -309,8 +309,17 @@ async function handleTeamRefresh() {
     renderMyTeam(freshData, myTeamState.currentTab);
 
     // Refresh active league standings if on leagues tab
+    // First invalidate cache for ALL selected leagues, not just active one
+    myTeamState.selectedLeagues.forEach(leagueId => {
+        myTeamState.leagueStandingsCache.delete(leagueId);
+        console.log(`🔄 Invalidated cache for league ${leagueId}`);
+    });
+    
+    // Refresh active league standings if on leagues tab
     if (myTeamState.currentTab === 'leagues' && myTeamState.activeLeagueTab) {
         console.log('🔄 Refreshing active league standings...');
+        // Force reload by clearing cache first
+        myTeamState.leagueStandingsCache.delete(myTeamState.activeLeagueTab);
         setTimeout(() => {
             loadLeagueStandingsForTab(myTeamState.activeLeagueTab);
         }, 500); // Small delay to ensure DOM is ready

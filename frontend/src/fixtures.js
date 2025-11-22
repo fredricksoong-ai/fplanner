@@ -161,8 +161,14 @@ export function getMatchStatus(teamId, gameweek, player) {
     const hasGWStats = player && player.github_gw && player.github_gw.gw === gameweek;
     const gwMinutes = hasGWStats ? player.github_gw.minutes : null;
 
+    // Determine if match is finished - check multiple sources for accuracy
+    const isMatchFinished = fixture.finished || 
+                           (hasGWStats && gwMinutes !== null && gwMinutes !== undefined) ||
+                           (fixture.team_h_score !== null && fixture.team_a_score !== null && 
+                            !fixture.started); // Has scores but not started = finished
+
     // 1. Match FINISHED
-    if (fixture.finished) {
+    if (isMatchFinished) {
         // Try github_gw minutes first, then fall back to player's latest event minutes
         let minutes = gwMinutes;
 
@@ -177,6 +183,11 @@ export function getMatchStatus(teamId, gameweek, player) {
             }
         }
 
+        // Also check live_stats minutes as fallback (might have final minutes from live data)
+        if (minutes === null && player && player.live_stats && player.live_stats.minutes !== null && player.live_stats.minutes !== undefined) {
+            minutes = player.live_stats.minutes;
+        }
+
         if (minutes !== null && minutes !== undefined) {
             return `FT (${minutes})`;
         }
@@ -184,7 +195,7 @@ export function getMatchStatus(teamId, gameweek, player) {
     }
 
     // 2. Match LIVE (started but not finished)
-    if (fixture.started && !fixture.finished) {
+    if (fixture.started && !isMatchFinished) {
         // Check for live stats minutes from enriched bootstrap
         if (player && player.live_stats && player.live_stats.minutes !== null && player.live_stats.minutes !== undefined) {
             const liveMinutes = player.live_stats.minutes;

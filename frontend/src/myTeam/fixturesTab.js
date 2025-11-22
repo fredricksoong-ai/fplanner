@@ -381,13 +381,52 @@ export function renderFixturesTab() {
 }
 
 /**
+ * Toggle fixture stats visibility
+ */
+function toggleFixtureStats(fixtureId) {
+    const statsDiv = document.getElementById('fixture-stats-' + fixtureId);
+    if (!statsDiv) {
+        console.warn(`Fixture stats div not found for fixture ${fixtureId}`);
+        return;
+    }
+    
+    const row = document.querySelector(`[data-fixture-id="${fixtureId}"]`);
+    if (!row) {
+        console.warn(`Fixture row not found for fixture ${fixtureId}`);
+        return;
+    }
+
+    const icon = row.querySelector('.fa-chevron-down');
+    const isVisible = statsDiv.style.display !== 'none';
+    
+    statsDiv.style.display = isVisible ? 'none' : 'block';
+    if (icon) {
+        icon.style.transform = isVisible ? 'rotate(0deg)' : 'rotate(180deg)';
+    }
+}
+
+// Store toggle function globally so event listeners can access it
+window.toggleFixtureStats = toggleFixtureStats;
+
+/**
  * Attach event listeners for expandable fixture rows (desktop)
  */
 export function attachFixtureRowListeners() {
-    // Use event delegation on the fixtures container
+    // Remove existing listener if any to prevent duplicates
     const fixturesContainer = document.getElementById('app-container');
-    if (!fixturesContainer) return;
+    if (!fixturesContainer) {
+        console.warn('App container not found for fixture listeners');
+        return;
+    }
 
+    // Use event delegation - attach once to the container
+    // Check if listener is already attached
+    if (fixturesContainer.hasAttribute('data-fixture-listeners-attached')) {
+        return; // Already attached
+    }
+    
+    fixturesContainer.setAttribute('data-fixture-listeners-attached', 'true');
+    
     fixturesContainer.addEventListener('click', (e) => {
         const row = e.target.closest('.fixture-row');
         if (!row) return;
@@ -400,23 +439,6 @@ export function attachFixtureRowListeners() {
 
         toggleFixtureStats(fixtureId);
     });
-}
-
-/**
- * Toggle fixture stats visibility
- */
-function toggleFixtureStats(fixtureId) {
-    const statsDiv = document.getElementById('fixture-stats-' + fixtureId);
-    const row = document.querySelector(`[data-fixture-id="${fixtureId}"]`);
-    if (!statsDiv || !row) return;
-
-    const icon = row.querySelector('.fa-chevron-down');
-    const isVisible = statsDiv.style.display !== 'none';
-    
-    statsDiv.style.display = isVisible ? 'none' : 'block';
-    if (icon) {
-        icon.style.transform = isVisible ? 'rotate(0deg)' : 'rotate(180deg)';
-    }
 }
 
 /**
@@ -576,10 +598,21 @@ export function renderMobileFixturesTab() {
  * Attach event listeners for expandable fixture rows (mobile)
  */
 export function attachMobileFixtureRowListeners() {
-    // Use event delegation on the fixtures container
+    // Remove existing listener if any to prevent duplicates
     const fixturesContainer = document.getElementById('app-container');
-    if (!fixturesContainer) return;
+    if (!fixturesContainer) {
+        console.warn('App container not found for mobile fixture listeners');
+        return;
+    }
 
+    // Use event delegation - attach once to the container
+    // Check if listener is already attached
+    if (fixturesContainer.hasAttribute('data-fixture-mobile-listeners-attached')) {
+        return; // Already attached
+    }
+    
+    fixturesContainer.setAttribute('data-fixture-mobile-listeners-attached', 'true');
+    
     fixturesContainer.addEventListener('click', (e) => {
         const row = e.target.closest('.fixture-row-mobile');
         if (!row) return;
