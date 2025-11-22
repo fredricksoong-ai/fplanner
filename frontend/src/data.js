@@ -218,7 +218,10 @@ export async function loadEnrichedBootstrap() {
         const response = await fetch(`${API_BASE}/bootstrap/enriched`);
 
         if (!response.ok) {
-            throw new Error(`Failed to load enriched bootstrap`);
+            if (response.status === 429) {
+                throw new Error('429 Too many requests. Please wait before refreshing.');
+            }
+            throw new Error(`Failed to load enriched bootstrap (${response.status})`);
         }
 
         const data = await response.json();
@@ -304,6 +307,10 @@ export function startAutoRefresh(onRefresh = null) {
 
     console.log(`🔄 Starting auto-refresh for live GW${activeGW} (every ${AUTO_REFRESH_INTERVAL / 1000}s)`);
 
+    // Track last refresh time to prevent rapid-fire requests
+    let lastRefreshTime = 0;
+    const MIN_REFRESH_INTERVAL = 120000; // 2 minutes minimum (same as AUTO_REFRESH_INTERVAL)
+    
     autoRefreshInterval = setInterval(async () => {
         try {
             // Check if still live before refreshing
@@ -314,14 +321,30 @@ export function startAutoRefresh(onRefresh = null) {
                 return;
             }
 
+            // Throttle: Don't refresh if less than 2 minutes since last refresh
+            const now = Date.now();
+            const timeSinceLastRefresh = now - lastRefreshTime;
+            if (timeSinceLastRefresh < MIN_REFRESH_INTERVAL) {
+                const waitTime = Math.ceil((MIN_REFRESH_INTERVAL - timeSinceLastRefresh) / 1000);
+                console.log(`⏳ Skipping auto-refresh, waiting ${waitTime}s more...`);
+                return;
+            }
+
             console.log('🔄 Auto-refreshing enriched bootstrap...');
+            lastRefreshTime = now;
             await loadEnrichedBootstrap();
 
             if (onDataRefreshCallback) {
                 onDataRefreshCallback();
             }
         } catch (err) {
-            console.error('❌ Auto-refresh failed:', err);
+            // Handle rate limit errors gracefully
+            if (err.message && err.message.includes('429')) {
+                console.warn('⚠️ Rate limit hit, stopping auto-refresh. Please refresh manually.');
+                stopAutoRefresh();
+            } else {
+                console.error('❌ Auto-refresh failed:', err);
+            }
         }
     }, AUTO_REFRESH_INTERVAL);
 }

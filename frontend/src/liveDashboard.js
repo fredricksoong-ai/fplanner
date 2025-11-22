@@ -130,14 +130,13 @@ function setupAutoRefresh() {
     const isLive = isGameweekLive(activeGW);
     
     if (isLive) {
-        // Start auto-refresh
+        // Start auto-refresh - only refresh enriched bootstrap, don't reload team data
+        // Team data doesn't change frequently enough to warrant refreshing every 2 min
+        // The enriched bootstrap contains live player stats which is what we need
         startAutoRefresh(async () => {
-            // Reload team data and re-render
-            const teamId = localStorage.getItem('fplanner_team_id');
-            if (teamId) {
-                myTeamData = await loadMyTeam(teamId);
-                await renderDashboardContent();
-            }
+            // Just re-render with updated enriched bootstrap data
+            // No need to reload team data every 2 minutes
+            await renderDashboardContent();
         });
     } else {
         // Stop auto-refresh if not live
