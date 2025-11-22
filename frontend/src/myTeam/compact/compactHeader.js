@@ -22,25 +22,38 @@ export function renderCompactHeader(teamData, gwNumber) {
     const { picks, team, isLive } = teamData;
     const entry = picks.entry_history;
 
-    // Calculate GW points from multiple sources
-    // FPL API entry_history: points = GW points, total_points = season cumulative
-    // team.summary_event_points = GW points from team summary
-    // Prefer team.summary_event_points as it's most reliable, then entry_history.points
-    let gwPoints = team?.summary_event_points ?? entry?.points ?? 0;
-    
-    // If live, try to calculate from live_stats (more accurate during live GW)
-    if (isLive && picks.picks) {
-        // Calculate live points from starting XI (positions 1-11)
-        const livePoints = picks.picks
+    // Calculate GW points by tallying from picks (consistent with team table)
+    // This ensures we include provisional bonus during live matches
+    let gwPoints = 0;
+
+    if (picks.picks) {
+        // Calculate from starting XI (positions 1-11)
+        gwPoints = picks.picks
             .filter(p => p.position <= 11)
             .reduce((sum, p) => {
                 const player = getPlayerById(p.element);
-                const pts = player?.live_stats?.total_points || 0;
+                if (!player) return sum;
+
+                // Get points from live_stats, github_gw, or event_points
+                const liveStats = player.live_stats;
+                const hasGWStats = player.github_gw && player.github_gw.gw === gwNumber;
+
+                let pts = liveStats?.total_points ??
+                          (hasGWStats ? player.github_gw.total_points : (player.event_points || 0));
+
+                // Add provisional bonus during live (not included in total_points)
+                if (liveStats?.provisional_bonus) {
+                    pts += liveStats.provisional_bonus;
+                }
+
                 const mult = p.is_captain ? 2 : 1;
                 return sum + (pts * mult);
             }, 0);
-        // Use live points if calculated and greater than 0
-        if (livePoints > 0) gwPoints = livePoints;
+    }
+
+    // Fallback to API values if calculation failed
+    if (gwPoints === 0) {
+        gwPoints = team?.summary_event_points ?? entry?.points ?? 0;
     }
 
     const totalPoints = team.summary_overall_points || 0;
