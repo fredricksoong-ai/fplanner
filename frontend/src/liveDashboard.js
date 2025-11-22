@@ -15,7 +15,6 @@ import {
     loadMyTeam
 } from './data.js';
 import { renderDashboardHeader } from './liveDashboard/dashboardHeader.js';
-import { renderMyTeamLiveTable } from './liveDashboard/myTeamLiveTable.js';
 import { renderLiveMatchesTable } from './liveDashboard/liveMatchesTable.js';
 import { renderTopPlayersTable } from './liveDashboard/topPlayersTable.js';
 
@@ -113,16 +112,12 @@ async function renderDashboardContent() {
     
     // Render dashboard components
     const header = renderDashboardHeader(myTeamData, displayGW, displayStatus, isAutoRefreshActive());
-    const teamTable = renderMyTeamLiveTable(myTeamData, displayGW, isLive);
     const matchesTable = renderLiveMatchesTable(myTeamData, displayGW, displayStatus);
     const topPlayers = renderTopPlayersTable(myTeamData, displayGW, isLive);
     
     container.innerHTML = `
         ${header}
-        <div id="dashboard-two-column" style="display: grid; grid-template-columns: 3fr 1fr; gap: 0.75rem; margin-bottom: 1rem;">
-            ${teamTable}
-            ${matchesTable}
-        </div>
+        ${matchesTable}
         ${topPlayers}
     `;
 }

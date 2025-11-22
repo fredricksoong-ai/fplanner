@@ -67,13 +67,12 @@ export function renderTopPlayersTable(teamData, gameweek, isLive) {
                 </h4>
             </div>
             <div class="mobile-table">
-                <div class="mobile-table-header" style="grid-template-columns: 2fr 1.2fr 1fr 0.7fr 0.7fr 0.8fr; padding-bottom: 2px !important; padding-top: 2px !important;">
+                <div class="mobile-table-header" style="grid-template-columns: 2fr 1.2fr 1fr 0.7fr 0.7fr; padding-bottom: 2px !important; padding-top: 2px !important;">
                     <div>Player</div>
                     <div style="text-align: center;">Opp</div>
                     <div style="text-align: center;">Status</div>
                     <div style="text-align: center;">Pts</div>
                     <div style="text-align: center;">Form</div>
-                    <div style="text-align: center;">GW Pts</div>
                 </div>
     `;
     
@@ -150,7 +149,7 @@ export function renderTopPlayersTable(teamData, gameweek, isLive) {
         html += `
             <div
                 class="player-row mobile-table-row"
-                style="grid-template-columns: 2fr 1.2fr 1fr 0.7fr 0.7fr 0.8fr; cursor: pointer; padding-bottom: 3px !important; padding-top: 3px !important; border-left: ${leftBorderStyle}; background: ${bgColor};"
+                style="grid-template-columns: 2fr 1.2fr 1fr 0.7fr 0.7fr; cursor: pointer; padding-bottom: 3px !important; padding-top: 3px !important; border-left: ${leftBorderStyle}; background: ${bgColor};"
                 data-player-id="${player.id}"
             >
                 <div style="font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
@@ -165,7 +164,6 @@ export function renderTopPlayersTable(teamData, gameweek, isLive) {
                 <div style="text-align: center; font-size: 0.6rem; font-weight: ${statusWeight}; color: ${statusColor}; background: ${statusBgColor}; padding: 0.08rem 0.25rem; border-radius: 0.25rem;">${matchStatus}</div>
                 <div style="text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 700; padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-size: 0.6rem;">${gwPoints}</div>
                 <div style="text-align: center; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 700; padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-size: 0.6rem;">${formatDecimal(player.form)}</div>
-                <div style="text-align: center; background: ${gwPtsStyle.background}; color: ${gwPtsStyle.color}; font-weight: 700; padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-size: 0.6rem;">${gwPoints}</div>
             </div>
         `;
     });
