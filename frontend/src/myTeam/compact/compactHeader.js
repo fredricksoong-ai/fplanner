@@ -22,10 +22,11 @@ export function renderCompactHeader(teamData, gwNumber) {
     const { picks, team, isLive } = teamData;
     const entry = picks.entry_history;
 
-    // Calculate GW points from entry_history
-    // FPL API returns: points (GW points before deductions), total_points (season cumulative)
-    // Some API versions may only have total_points which represents GW points in entry_history context
-    let gwPoints = entry?.points ?? entry?.total_points ?? team?.summary_event_points ?? 0;
+    // Calculate GW points from multiple sources
+    // FPL API entry_history: points = GW points, total_points = season cumulative
+    // team.summary_event_points = GW points from team summary
+    // Prefer team.summary_event_points as it's most reliable, then entry_history.points
+    let gwPoints = team?.summary_event_points ?? entry?.points ?? 0;
     
     // If live, try to calculate from live_stats (more accurate during live GW)
     if (isLive && picks.picks) {
