@@ -105,10 +105,7 @@ import {
 } from './myTeam/problemPlayers.js';
 
 import {
-    shouldUseMobileLayout,
-    renderMobileManagerInfo,
-    renderMobileTeamSummary,
-    renderSwipeablePlayerCards
+    shouldUseMobileLayout
 } from './renderMyTeamMobile.js';
 
 import {
@@ -119,7 +116,6 @@ import {
 } from './renderMyTeamCompact.js';
 
 import {
-    initPullToRefresh,
     showRefreshToast
 } from './pullToRefresh.js';
 

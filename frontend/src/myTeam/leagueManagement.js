@@ -31,7 +31,7 @@ export function renderLeaguesTab(teamData, myTeamState, loadLeagueStandingsForTa
         <div style="display: ${useMobile ? 'flex' : 'grid'}; ${useMobile ? 'flex-direction: column;' : 'grid-template-columns: 300px 1fr;'} gap: 1.5rem; ${useMobile ? '' : 'min-height: calc(100vh - 300px);'}">
             <!-- Left Sidebar: League Selection -->
             <div id="league-selection-sidebar" style="background: var(--bg-secondary); padding: ${useMobile ? '1rem' : '1.5rem'}; border-radius: 12px; ${useMobile ? '' : 'overflow-y: auto;'}">
-                <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem;">
+                <h3 class="heading-section" style="margin-bottom: 0.5rem;">
                     <i class="fas fa-trophy"></i> Your Leagues
                 </h3>
                 <p style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 1.5rem;">

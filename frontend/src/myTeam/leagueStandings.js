@@ -771,7 +771,7 @@ function renderMobileRivalModal(rivalTeamData) {
                     border-bottom: 2px solid var(--border-color);
                 ">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                        <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-primary); margin: 0;">
+                        <h3 class="heading-section" style="margin: 0;">
                             ${escapeHtml(teamName)}
                         </h3>
                         <button class="close-rival-modal-btn" style="

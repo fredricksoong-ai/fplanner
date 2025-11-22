@@ -134,7 +134,7 @@ function renderComparisonTeamColumn(picks, title, ownPlayerIds, otherPlayerIds, 
 
     return `
         <div style="background: var(--bg-primary); padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px var(--shadow);">
-            <h4 style="font-size: 1rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem; border-bottom: 2px solid ${accentColor}; padding-bottom: 0.5rem;">
+            <h4 class="heading-section" style="margin-bottom: 1rem; border-bottom: 2px solid ${accentColor}; padding-bottom: 0.5rem;">
                 ${title}
             </h4>
             <div style="font-size: 0.875rem;">
