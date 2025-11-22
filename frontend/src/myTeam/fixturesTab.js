@@ -17,7 +17,6 @@ import {
     formatDecimal
 } from '../utils.js';
 import { getMatchStatus } from '../fixtures.js';
-import { getAllPlayers } from '../data.js';
 
 /**
  * Get top performers for a fixture (both teams)
