@@ -453,15 +453,15 @@ export async function showPlayerModal(playerId, myTeamState = null) {
     const liveStats = player.live_stats;
     const hasLiveStats = !!liveStats;
 
-    // Get GW stats - only use github_gw if it's for the active GW
-    const gwStats = player.github_gw && player.github_gw.gw === activeGW ? player.github_gw : {};
-    const gwPoints = liveStats?.total_points ?? player.event_points ?? 0;
+    // Get GW stats - use github_gw if available (contains detailed breakdown for last GW played)
+    const gwStats = player.github_gw || {};
+    const gwPoints = liveStats?.total_points ?? gwStats.total_points ?? player.event_points ?? 0;
     
-    // Only use minutes if match has started/finished (don't show 90 from previous GW)
+    // Only use minutes if match has started/finished
     let minutes = null;
     if (liveStats?.minutes !== null && liveStats?.minutes !== undefined) {
         minutes = liveStats.minutes;
-    } else if (gwStats.minutes !== null && gwStats.minutes !== undefined && gwStats.gw === activeGW) {
+    } else if (gwStats.minutes !== null && gwStats.minutes !== undefined) {
         minutes = gwStats.minutes;
     }
     

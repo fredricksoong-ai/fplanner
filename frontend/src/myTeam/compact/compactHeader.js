@@ -22,8 +22,8 @@ export function renderCompactHeader(teamData, gwNumber) {
     const { picks, team, isLive } = teamData;
     const entry = picks.entry_history;
 
-    // Calculate GW points - prioritize entry_history.total_points (most reliable)
-    let gwPoints = entry?.total_points ?? team?.summary_event_points ?? 0;
+    // Calculate GW points - prioritize entry_history.points (GW points, not season total)
+    let gwPoints = entry?.points ?? team?.summary_event_points ?? 0;
     
     // If live, try to calculate from live_stats (more accurate during live GW)
     if (isLive && picks.picks) {

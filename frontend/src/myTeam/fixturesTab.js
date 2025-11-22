@@ -35,20 +35,23 @@ function getFixtureTopPerformers(fixture, gameweek, isLive) {
     const homePlayers = allPlayers.filter(p => p.team === fixture.team_h);
     const awayPlayers = allPlayers.filter(p => p.team === fixture.team_a);
 
+    // Get the active GW for comparison
+    const activeGW = getActiveGW();
+
     // Get GW stats for each player
     const getPlayerGWStats = (player) => {
         const liveStats = player.live_stats;
         const gwStats = player.github_gw || {};
-        
+
         // For live GWs, use live_stats if available
-        // For finished GWs, use github_gw if available, otherwise event_points
+        // For finished GWs, use github_gw if GW matches, otherwise event_points only for current GW
         let gwPoints = 0;
         let minutes = 0;
         let goals = 0;
         let assists = 0;
         let bonus = 0;
         let bps = 0;
-        
+
         if (isLive && liveStats) {
             // Live stats available during live GW
             gwPoints = liveStats.total_points || 0;
@@ -57,16 +60,16 @@ function getFixtureTopPerformers(fixture, gameweek, isLive) {
             assists = liveStats.assists || 0;
             bonus = liveStats.provisional_bonus ?? liveStats.bonus ?? 0;
             bps = liveStats.bps || 0;
-        } else if (gwStats.gw === gameweek || gwStats.total_points !== undefined) {
-            // GitHub GW stats (finished GW)
+        } else if (gwStats.gw === gameweek) {
+            // GitHub GW stats (must match the fixture's GW)
             gwPoints = gwStats.total_points || 0;
             minutes = gwStats.minutes || 0;
             goals = gwStats.goals_scored || 0;
             assists = gwStats.assists || 0;
             bonus = gwStats.bonus || 0;
             bps = gwStats.bps || 0;
-        } else if (player.event_points !== undefined && !isLive) {
-            // Fallback to bootstrap event_points (only if GW is finished)
+        } else if (player.event_points !== undefined && !isLive && gameweek === activeGW) {
+            // Fallback to bootstrap event_points only if fixture matches current active GW
             gwPoints = player.event_points || 0;
             // For event_points, we don't have detailed stats, so skip if no points
             if (gwPoints === 0) return null;

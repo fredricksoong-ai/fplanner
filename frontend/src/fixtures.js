@@ -162,10 +162,8 @@ export function getMatchStatus(teamId, gameweek, player) {
     const gwMinutes = hasGWStats ? player.github_gw.minutes : null;
 
     // Determine if match is finished - check multiple sources for accuracy
-    const isMatchFinished = fixture.finished || 
-                           (hasGWStats && gwMinutes !== null && gwMinutes !== undefined) ||
-                           (fixture.team_h_score !== null && fixture.team_a_score !== null && 
-                            !fixture.started); // Has scores but not started = finished
+    const isMatchFinished = fixture.finished ||
+                           (hasGWStats && gwMinutes !== null && gwMinutes !== undefined);
 
     // 1. Match FINISHED
     if (isMatchFinished) {
