@@ -22,38 +22,45 @@ export function renderCompactHeader(teamData, gwNumber) {
     const { picks, team, isLive } = teamData;
     const entry = picks.entry_history;
 
-    // Calculate GW points by tallying from picks (consistent with team table)
-    // This ensures we include provisional bonus during live matches
+    // Calculate GW points
+    // For finished GWs: use entry_history.points (accounts for auto-subs, chips, etc.)
+    // For live GWs: calculate projected points from live_stats
     let gwPoints = 0;
 
-    if (picks.picks) {
-        // Calculate from starting XI (positions 1-11)
-        gwPoints = picks.picks
-            .filter(p => p.position <= 11)
-            .reduce((sum, p) => {
-                const player = getPlayerById(p.element);
-                if (!player) return sum;
+    if (isLive && picks.picks) {
+        // Live GW: calculate projected points
+        const activeChip = picks.active_chip;
+        const isBenchBoost = activeChip === 'bboost';
+        const isTripleCaptain = activeChip === '3xc';
 
-                // Get points from live_stats, github_gw, or event_points
-                const liveStats = player.live_stats;
-                const hasGWStats = player.github_gw && player.github_gw.gw === gwNumber;
+        // Filter players based on chip
+        const playersToCount = isBenchBoost
+            ? picks.picks  // All 15 players
+            : picks.picks.filter(p => p.position <= 11);  // Starting XI only
 
-                let pts = liveStats?.total_points ??
-                          (hasGWStats ? player.github_gw.total_points : (player.event_points || 0));
+        gwPoints = playersToCount.reduce((sum, p) => {
+            const player = getPlayerById(p.element);
+            if (!player) return sum;
 
-                // Add provisional bonus during live (not included in total_points)
-                if (liveStats?.provisional_bonus) {
-                    pts += liveStats.provisional_bonus;
-                }
+            const liveStats = player.live_stats;
+            let pts = liveStats?.total_points || 0;
 
-                const mult = p.is_captain ? 2 : 1;
-                return sum + (pts * mult);
-            }, 0);
-    }
+            // Add provisional bonus (not included in total_points during live)
+            if (liveStats?.provisional_bonus) {
+                pts += liveStats.provisional_bonus;
+            }
 
-    // Fallback to API values if calculation failed
-    if (gwPoints === 0) {
-        gwPoints = team?.summary_event_points ?? entry?.points ?? 0;
+            // Apply captain multiplier
+            let mult = 1;
+            if (p.is_captain) {
+                mult = isTripleCaptain ? 3 : 2;
+            }
+
+            return sum + (pts * mult);
+        }, 0);
+    } else {
+        // Finished GW: use entry_history.points (definitive score with auto-subs applied)
+        gwPoints = entry?.points ?? team?.summary_event_points ?? 0;
     }
 
     const totalPoints = team.summary_overall_points || 0;
