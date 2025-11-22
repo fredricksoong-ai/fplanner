@@ -28,9 +28,15 @@ export function renderFixturesTab() {
         `;
     }
 
-    // Get recent GW fixtures (current and previous GW)
+    // Check if current GW is finished
+    const currentEvent = fplBootstrap?.events?.find(e => e.id === currentGW);
+    const isCurrentGWFinished = currentEvent?.finished || false;
+    const nextGW = currentGW + 1;
+    
+    // Get fixtures: if current GW finished, include next GW at top
+    const gwToShow = isCurrentGWFinished ? [nextGW, currentGW, currentGW - 1] : [currentGW, currentGW - 1];
     const recentFixtures = fplFixtures
-        .filter(f => f.event === currentGW || f.event === currentGW - 1)
+        .filter(f => gwToShow.includes(f.event))
         .sort((a, b) => {
             // Sort by event (GW) descending, then by kickoff time
             if (b.event !== a.event) return b.event - a.event;
@@ -152,9 +158,15 @@ export function renderMobileFixturesTab() {
         `;
     }
 
-    // Get recent GW fixtures
+    // Check if current GW is finished
+    const currentEvent = fplBootstrap?.events?.find(e => e.id === currentGW);
+    const isCurrentGWFinished = currentEvent?.finished || false;
+    const nextGW = currentGW + 1;
+    
+    // Get fixtures: if current GW finished, include next GW at top
+    const gwToShow = isCurrentGWFinished ? [nextGW, currentGW, currentGW - 1] : [currentGW, currentGW - 1];
     const recentFixtures = fplFixtures
-        .filter(f => f.event === currentGW || f.event === currentGW - 1)
+        .filter(f => gwToShow.includes(f.event))
         .sort((a, b) => {
             if (b.event !== a.event) return b.event - a.event;
             return new Date(b.kickoff_time) - new Date(a.kickoff_time);

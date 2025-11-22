@@ -99,6 +99,9 @@ function renderPage() {
         case 'search':
             renderSearch();
             break;
+        case 'dashboard':
+            renderDashboard();
+            break;
         default:
             container.innerHTML = '<p>Page not found</p>';
     }
@@ -131,6 +134,11 @@ async function renderCharts() {
 async function renderSearch() {
     const { renderSearch: render } = await import('./renderSearch.js');
     render();
+}
+
+async function renderDashboard() {
+    const { renderLiveDashboard } = await import('./liveDashboard.js');
+    renderLiveDashboard();
 }
 
 // ============================================================================
