@@ -25,26 +25,45 @@ export function renderLeaguesTab(teamData, myTeamState, loadLeagueStandingsForTa
         sharedState.activeLeagueTab = myTeamState.activeLeagueTab;
     }
 
-    const useMobile = shouldUseMobileLayout();
+    // Use dropdown selector for both mobile and desktop (matching mobile style)
+    const leagues = team.leagues?.classic || [];
+    const teamId = team.id;
+    const selectedLeagueId = localStorage.getItem(`fpl_selected_league_${teamId}`) || (leagues.length > 0 ? leagues[0].id.toString() : '');
 
     const html = `
-        <div style="display: ${useMobile ? 'flex' : 'grid'}; ${useMobile ? 'flex-direction: column;' : 'grid-template-columns: 300px 1fr;'} gap: 1.5rem; ${useMobile ? '' : 'min-height: calc(100vh - 300px);'}">
-            <!-- Left Sidebar: League Selection -->
-            <div id="league-selection-sidebar" style="background: var(--bg-secondary); padding: ${useMobile ? '1rem' : '1.5rem'}; border-radius: 12px; ${useMobile ? '' : 'overflow-y: auto;'}">
-                <h3 class="heading-section" style="margin-bottom: 0.5rem;">
-                    <i class="fas fa-trophy"></i> Your Leagues
-                </h3>
-                <p style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 1.5rem;">
-                    Select up to 3 leagues to track
-                </p>
-                ${renderLeagueSideMenu(team, myTeamState)}
+        <div>
+            <!-- League Selector -->
+            <div style="margin-bottom: 0.75rem; padding-top: 0.75rem;">
+                <label style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-bottom: 0.25rem; padding: 0 0.75rem;">
+                    Select League
+                </label>
+                <select
+                    id="desktop-leagues-dropdown"
+                    style="
+                        width: calc(100% - 1.5rem);
+                        margin: 0 0.75rem;
+                        padding: 0.5rem;
+                        font-size: 0.85rem;
+                        background: var(--bg-secondary);
+                        border: 1px solid var(--border-color);
+                        border-radius: 0.5rem;
+                        color: var(--text-primary);
+                        cursor: pointer;
+                    "
+                >
+                    ${leagues.map(league => `
+                        <option value="${league.id}" ${league.id.toString() === selectedLeagueId ? 'selected' : ''}>
+                            ${escapeHtml(league.name)} (Rank: ${league.entry_rank || 'N/A'})
+                        </option>
+                    `).join('')}
+                </select>
             </div>
 
-            <!-- Right Content: League Tabs and Standings -->
-            <div style="display: flex; flex-direction: column; background: var(--bg-primary); border-radius: 12px; overflow: hidden; ${useMobile ? 'min-height: 400px' : ''}">
-                ${renderLeagueTabs(myTeamState)}
-                <div id="league-content-container" style="flex: 1; overflow-y: auto; padding: ${useMobile ? '1rem' : '1.5rem'};">
-                    ${renderLeagueContent(myTeamState)}
+            <!-- League Standings Container -->
+            <div id="desktop-league-standings">
+                <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                    <i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                    <p>Loading league standings...</p>
                 </div>
             </div>
 
@@ -54,13 +73,35 @@ export function renderLeaguesTab(teamData, myTeamState, loadLeagueStandingsForTa
     `;
 
     // Load standings after DOM is ready
-    requestAnimationFrame(() => {
-        if (myTeamState.activeLeagueTab) {
-            loadLeagueStandingsForTab(myTeamState.activeLeagueTab);
+    requestAnimationFrame(async () => {
+        if (selectedLeagueId) {
+            await loadDesktopLeagueStandings(selectedLeagueId, myTeamState);
+        }
+
+        // Add event listener for league selector
+        const dropdown = document.getElementById('desktop-leagues-dropdown');
+        if (dropdown) {
+            dropdown.addEventListener('change', async (e) => {
+                const leagueId = e.target.value;
+                localStorage.setItem(`fpl_selected_league_${teamId}`, leagueId);
+                await loadDesktopLeagueStandings(leagueId, myTeamState);
+            });
         }
     });
 
     return html;
+}
+
+/**
+ * Load and render league standings for desktop view
+ * @param {string} leagueId - League ID to load
+ * @param {Object} myTeamState - Current state object
+ */
+async function loadDesktopLeagueStandings(leagueId, myTeamState) {
+    // Import here to avoid circular dependency
+    return import('./leagueStandings.js').then(({ loadMobileLeagueStandings }) => {
+        return loadMobileLeagueStandings(leagueId, myTeamState);
+    });
 }
 
 /**

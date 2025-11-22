@@ -256,18 +256,13 @@ function updateCountdown() {
 }
 
 /**
- * Load saved theme preference (defaults to dark mode)
+ * Load theme - always force dark mode
  */
 function loadTheme() {
-    const savedTheme = localStorage.getItem('theme') || 'dark';
-    document.documentElement.setAttribute('data-theme', savedTheme);
-
-    const button = document.getElementById('theme-toggle');
-    if (savedTheme === 'dark') {
-        button.innerHTML = '<i class="fas fa-sun"></i>';
-    }
-
-    console.log(`🎨 Theme loaded: ${savedTheme}`);
+    // Always use dark mode
+    document.documentElement.setAttribute('data-theme', 'dark');
+    localStorage.setItem('theme', 'dark');
+    console.log('🎨 Theme loaded: dark (forced)');
 }
 
 // ============================================================================
@@ -451,23 +446,7 @@ window.loadTeam = async () => {
     }
 };
 
-window.toggleTheme = toggleTheme;
-
-// Setup theme toggle click handler and hover effects
-document.addEventListener('DOMContentLoaded', () => {
-    const themeButton = document.getElementById('theme-toggle');
-    if (themeButton) {
-        themeButton.addEventListener('click', toggleTheme);
-
-        // Add hover effects
-        themeButton.addEventListener('mouseenter', () => {
-            themeButton.style.background = 'rgba(255,255,255,0.3)';
-        });
-        themeButton.addEventListener('mouseleave', () => {
-            themeButton.style.background = 'rgba(255,255,255,0.2)';
-        });
-    }
-});
+// Theme toggle removed - always dark mode
 
 // Import and expose render functions
 Promise.all([
