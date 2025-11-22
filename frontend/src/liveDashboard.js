@@ -18,11 +18,10 @@ import {
 import { renderDashboardHeader } from './liveDashboard/dashboardHeader.js';
 import { renderLiveMatchesTable } from './liveDashboard/liveMatchesTable.js';
 import { renderTopPlayersTable } from './liveDashboard/topPlayersTable.js';
-import { initPullToRefresh, showRefreshToast } from './pullToRefresh.js';
 
 let dashboardRefreshInterval = null;
 let myTeamData = null;
-let pullToRefreshInstance = null;
+let teamDataRefreshCount = 0; // Track refresh cycles for periodic team data refresh
 
 /**
  * Render the live gameweek dashboard
@@ -72,9 +71,6 @@ export async function renderLiveDashboard() {
         
         myTeamData = await loadMyTeam(teamId);
         await renderDashboardContent();
-        
-        // Initialize pull-to-refresh
-        await setupPullToRefresh();
         
         // Setup auto-refresh - will start 2 minutes after initial refresh
         setupAutoRefresh();
@@ -133,38 +129,6 @@ async function renderDashboardContent() {
 }
 
 /**
- * Setup pull-to-refresh for dashboard
- */
-async function setupPullToRefresh() {
-    // Destroy existing instance if any
-    if (pullToRefreshInstance) {
-        pullToRefreshInstance.destroy();
-        pullToRefreshInstance = null;
-    }
-
-    // Initialize pull-to-refresh with throttled refresh
-    pullToRefreshInstance = initPullToRefresh(async () => {
-        console.log('🔄 Pull-to-refresh triggered');
-        try {
-            // Refresh enriched bootstrap (with client-side throttling)
-            await loadEnrichedBootstrap(true); // Force refresh on pull
-            // Re-render dashboard content
-            await renderDashboardContent();
-            showRefreshToast('✅ Dashboard refreshed!');
-        } catch (error) {
-            console.error('Pull-to-refresh failed:', error);
-            if (error.message && error.message.includes('429')) {
-                showRefreshToast('⚠️ Rate limit hit. Please wait before refreshing.');
-            } else if (error.message && error.message.includes('already in progress')) {
-                showRefreshToast('⏸️ Refresh already in progress');
-            } else {
-                showRefreshToast('⚠️ Failed to refresh');
-            }
-        }
-    });
-}
-
-/**
  * Setup auto-refresh for live GW
  * Starts 2 minutes after initial refresh
  */
@@ -179,13 +143,27 @@ function setupAutoRefresh() {
         setTimeout(() => {
             const stillLive = isGameweekLive(getActiveGW());
             if (stillLive) {
-                // Start auto-refresh - only refresh enriched bootstrap, don't reload team data
-                // Team data doesn't change frequently enough to warrant refreshing every 2 min
-                // The enriched bootstrap contains live player stats which is what we need
+                // Start auto-refresh - refresh enriched bootstrap every 2 min, team data every 6 min
+                teamDataRefreshCount = 0; // Reset counter when starting auto-refresh
                 startAutoRefresh(async () => {
-                    // Just re-render with updated enriched bootstrap data
-                    // No need to reload team data every 2 minutes
+                    // Refresh enriched bootstrap (every 2 min)
                     await renderDashboardContent();
+                    
+                    // Refresh team data every 3rd cycle (every 6 min) to update league points
+                    teamDataRefreshCount++;
+                    if (teamDataRefreshCount >= 3) {
+                        teamDataRefreshCount = 0;
+                        const teamId = localStorage.getItem('fplanner_team_id');
+                        if (teamId) {
+                            console.log('🔄 Refreshing team data for league points update...');
+                            try {
+                                myTeamData = await loadMyTeam(teamId);
+                                await renderDashboardContent();
+                            } catch (err) {
+                                console.error('Failed to refresh team data:', err);
+                            }
+                        }
+                    }
                 });
             }
         }, 2 * 60 * 1000); // 2 minutes delay

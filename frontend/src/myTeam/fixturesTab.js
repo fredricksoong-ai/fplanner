@@ -16,6 +16,8 @@ import {
     getPositionShort,
     formatDecimal
 } from '../utils.js';
+import { getMatchStatus } from '../fixtures.js';
+import { getAllPlayers } from '../data.js';
 
 /**
  * Get top performers for a fixture (both teams)
@@ -283,11 +285,25 @@ export function renderFixturesTab() {
                     hour12: false
                 });
 
-                // Status badge
+                // Status badge - use getMatchStatus for consistency
+                // Get a sample player from one of the teams to use getMatchStatus
+                const sampleHomePlayer = getAllPlayers().find(p => p.team === fixture.team_h);
                 let statusBadge = '';
+                
                 if (isFinished) {
-                    statusBadge = '<span style="color: #22c55e; font-weight: 600; font-size: 0.75rem;">FT</span>';
-                } else if (isStarted) {
+                    // Try to get minutes from a player who played
+                    let minutes = null;
+                    if (sampleHomePlayer) {
+                        const matchStatus = getMatchStatus(fixture.team_h, fixture.event, sampleHomePlayer);
+                        const minutesMatch = matchStatus.match(/\((\d+)\)/);
+                        if (minutesMatch) {
+                            minutes = parseInt(minutesMatch[1]);
+                        }
+                    }
+                    statusBadge = minutes !== null 
+                        ? `<span style="color: #22c55e; font-weight: 600; font-size: 0.75rem;">FT (${minutes})</span>`
+                        : '<span style="color: #22c55e; font-weight: 600; font-size: 0.75rem;">FT</span>';
+                } else if (isStarted && !isFinished) {
                     statusBadge = '<span style="color: #ef4444; font-weight: 600; font-size: 0.75rem;">LIVE</span>';
                 }
 
@@ -304,12 +320,12 @@ export function renderFixturesTab() {
                     <tr 
                         class="fixture-row" 
                         data-fixture-id="${fixture.id}"
+                        data-can-expand="${canShowStats}"
                         style="
                             border-bottom: 1px solid var(--border-color); 
                             ${isLive ? 'background: rgba(239, 68, 68, 0.05);' : ''}
                             ${canShowStats ? 'cursor: pointer;' : ''}
                         "
-                        ${canShowStats ? `onclick="toggleFixtureStats(${fixture.id})"` : ''}
                     >
                         <td style="padding: 1rem 0.75rem; color: var(--text-secondary); font-size: 0.875rem; white-space: nowrap;">
                             ${timeStr}
@@ -358,32 +374,50 @@ export function renderFixturesTab() {
             `;
         }).join('');
 
-    const html = gwSections || `
+    return gwSections || `
         <div style="background: var(--bg-secondary); padding: 2rem; border-radius: 12px; text-align: center; margin-bottom: 2rem;">
             <p style="color: var(--text-secondary);">No recent fixtures found.</p>
         </div>
     `;
+}
 
-    // Add script once at the end
-    return html + `
-        <script>
-            if (typeof window.toggleFixtureStats === 'undefined') {
-                window.toggleFixtureStats = function(fixtureId) {
-                    const statsDiv = document.getElementById('fixture-stats-' + fixtureId);
-                    const row = document.querySelector('[data-fixture-id="' + fixtureId + '"]');
-                    const icon = row?.querySelector('.fa-chevron-down');
-                    
-                    if (statsDiv && row) {
-                        const isVisible = statsDiv.style.display !== 'none';
-                        statsDiv.style.display = isVisible ? 'none' : 'block';
-                        if (icon) {
-                            icon.style.transform = isVisible ? 'rotate(0deg)' : 'rotate(180deg)';
-                        }
-                    }
-                };
-            }
-        </script>
-    `;
+/**
+ * Attach event listeners for expandable fixture rows (desktop)
+ */
+export function attachFixtureRowListeners() {
+    // Use event delegation on the fixtures container
+    const fixturesContainer = document.getElementById('app-container');
+    if (!fixturesContainer) return;
+
+    fixturesContainer.addEventListener('click', (e) => {
+        const row = e.target.closest('.fixture-row');
+        if (!row) return;
+
+        const canExpand = row.getAttribute('data-can-expand') === 'true';
+        if (!canExpand) return;
+
+        const fixtureId = row.getAttribute('data-fixture-id');
+        if (!fixtureId) return;
+
+        toggleFixtureStats(fixtureId);
+    });
+}
+
+/**
+ * Toggle fixture stats visibility
+ */
+function toggleFixtureStats(fixtureId) {
+    const statsDiv = document.getElementById('fixture-stats-' + fixtureId);
+    const row = document.querySelector(`[data-fixture-id="${fixtureId}"]`);
+    if (!statsDiv || !row) return;
+
+    const icon = row.querySelector('.fa-chevron-down');
+    const isVisible = statsDiv.style.display !== 'none';
+    
+    statsDiv.style.display = isVisible ? 'none' : 'block';
+    if (icon) {
+        icon.style.transform = isVisible ? 'rotate(0deg)' : 'rotate(180deg)';
+    }
 }
 
 /**
@@ -452,10 +486,24 @@ export function renderMobileFixturesTab() {
                     hour12: false
                 });
 
+                // Status badge - use getMatchStatus for consistency
+                const sampleHomePlayer = getAllPlayers().find(p => p.team === fixture.team_h);
                 let statusBadge = '';
+                
                 if (isFinished) {
-                    statusBadge = '<span style="color: #22c55e; font-weight: 600; font-size: 0.65rem;">FT</span>';
-                } else if (isStarted) {
+                    // Try to get minutes from a player who played
+                    let minutes = null;
+                    if (sampleHomePlayer) {
+                        const matchStatus = getMatchStatus(fixture.team_h, fixture.event, sampleHomePlayer);
+                        const minutesMatch = matchStatus.match(/\((\d+)\)/);
+                        if (minutesMatch) {
+                            minutes = parseInt(minutesMatch[1]);
+                        }
+                    }
+                    statusBadge = minutes !== null 
+                        ? `<span style="color: #22c55e; font-weight: 600; font-size: 0.65rem;">FT (${minutes})</span>`
+                        : '<span style="color: #22c55e; font-weight: 600; font-size: 0.65rem;">FT</span>';
+                } else if (isStarted && !isFinished) {
                     statusBadge = '<span style="color: #ef4444; font-weight: 600; font-size: 0.65rem;">LIVE</span>';
                 }
 
@@ -469,11 +517,11 @@ export function renderMobileFixturesTab() {
                         <div 
                             class="mobile-table-row mobile-table-fixtures fixture-row-mobile" 
                             data-fixture-id="${fixture.id}"
+                            data-can-expand="${canShowStats}"
                             style="
                                 background: ${isLive ? 'rgba(239, 68, 68, 0.05)' : 'transparent'};
                                 ${canShowStats ? 'cursor: pointer;' : ''}
                             "
-                            ${canShowStats ? `onclick="toggleFixtureStatsMobile(${fixture.id})"` : ''}
                         >
                             <div style="color: var(--text-secondary); font-size: 0.6rem; white-space: nowrap;">${timeStr.split(',')[1] || timeStr}</div>
                             <div style="text-align: right; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
@@ -518,30 +566,31 @@ export function renderMobileFixturesTab() {
             `;
         }).join('');
 
-    const html = gwSections || `
+    return gwSections || `
         <div style="padding: 2rem; text-align: center;">
             <p style="color: var(--text-secondary);">No recent fixtures found.</p>
         </div>
     `;
+}
 
-    // Add script once at the end
-    return html + `
-        <script>
-            if (typeof window.toggleFixtureStatsMobile === 'undefined') {
-                window.toggleFixtureStatsMobile = function(fixtureId) {
-                    const statsDiv = document.getElementById('fixture-stats-' + fixtureId);
-                    const row = document.querySelector('[data-fixture-id="' + fixtureId + '"]');
-                    const icon = row?.querySelector('.fa-chevron-down');
-                    
-                    if (statsDiv && row) {
-                        const isVisible = statsDiv.style.display !== 'none';
-                        statsDiv.style.display = isVisible ? 'none' : 'block';
-                        if (icon) {
-                            icon.style.transform = isVisible ? 'rotate(0deg)' : 'rotate(180deg)';
-                        }
-                    }
-                };
-            }
-        </script>
-    `;
+/**
+ * Attach event listeners for expandable fixture rows (mobile)
+ */
+export function attachMobileFixtureRowListeners() {
+    // Use event delegation on the fixtures container
+    const fixturesContainer = document.getElementById('app-container');
+    if (!fixturesContainer) return;
+
+    fixturesContainer.addEventListener('click', (e) => {
+        const row = e.target.closest('.fixture-row-mobile');
+        if (!row) return;
+
+        const canExpand = row.getAttribute('data-can-expand') === 'true';
+        if (!canExpand) return;
+
+        const fixtureId = row.getAttribute('data-fixture-id');
+        if (!fixtureId) return;
+
+        toggleFixtureStats(fixtureId);
+    });
 }

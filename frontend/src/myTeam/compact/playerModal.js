@@ -650,7 +650,7 @@ function buildModalHTML(data) {
             
             gwStatsHTML += `
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span style="color: var(--text-secondary);">[${item.label}]</span>
+                    <span style="color: var(--text-secondary);">${item.label}</span>
                     <span style="color: ${pointColor}; font-weight: 600;">${prefix}${item.points}</span>
                 </div>
             `;
