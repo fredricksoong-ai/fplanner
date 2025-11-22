@@ -38,9 +38,9 @@ export function renderFixturesTab() {
     const recentFixtures = fplFixtures
         .filter(f => gwToShow.includes(f.event))
         .sort((a, b) => {
-            // Sort by event (GW) descending, then by kickoff time
+            // Sort by event (GW) descending, then by kickoff time ascending (chronological)
             if (b.event !== a.event) return b.event - a.event;
-            return new Date(b.kickoff_time) - new Date(a.kickoff_time);
+            return new Date(a.kickoff_time) - new Date(b.kickoff_time);
         });
 
     // Group fixtures by GW
@@ -168,8 +168,9 @@ export function renderMobileFixturesTab() {
     const recentFixtures = fplFixtures
         .filter(f => gwToShow.includes(f.event))
         .sort((a, b) => {
+            // Sort by event (GW) descending, then by kickoff time ascending (chronological)
             if (b.event !== a.event) return b.event - a.event;
-            return new Date(b.kickoff_time) - new Date(a.kickoff_time);
+            return new Date(a.kickoff_time) - new Date(b.kickoff_time);
         });
 
     // Group fixtures by GW
