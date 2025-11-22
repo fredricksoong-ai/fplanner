@@ -110,7 +110,7 @@ export async function renderCharts(chartType = 'points-price') {
             <div id="chart-content-container"></div>
 
             <!-- Legend -->
-            <div style="background: var(--bg-secondary); border-radius: 8px; padding: 1rem; margin-top: 1rem;">
+            <div class="card-secondary" style="border-radius: 8px; margin-top: 1rem;">
                 <div style="display: flex; gap: 2rem; flex-wrap: wrap; justify-content: center; font-size: 0.875rem;">
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                         <div style="width: 16px; height: 16px; background: #fbbf24; border-radius: 50%;"></div>

@@ -75,11 +75,11 @@ export function renderSearch() {
 
             <!-- Position Filter Buttons -->
             <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
-                <button class="position-filter-btn" data-position="all" style="padding: 0.5rem 1rem; background: var(--primary-color); color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 600; transition: all 0.2s;">All</button>
-                <button class="position-filter-btn" data-position="1" style="padding: 0.5rem 1rem; background: var(--bg-secondary); color: var(--text-primary); border: none; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s;">GKP</button>
-                <button class="position-filter-btn" data-position="2" style="padding: 0.5rem 1rem; background: var(--bg-secondary); color: var(--text-primary); border: none; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s;">DEF</button>
-                <button class="position-filter-btn" data-position="3" style="padding: 0.5rem 1rem; background: var(--bg-secondary); color: var(--text-primary); border: none; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s;">MID</button>
-                <button class="position-filter-btn" data-position="4" style="padding: 0.5rem 1rem; background: var(--bg-secondary); color: var(--text-primary); border: none; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s;">FWD</button>
+                <button class="position-filter-btn btn-filter-active" data-position="all">All</button>
+                <button class="position-filter-btn btn-filter" data-position="1">GKP</button>
+                <button class="position-filter-btn btn-filter" data-position="2">DEF</button>
+                <button class="position-filter-btn btn-filter" data-position="3">MID</button>
+                <button class="position-filter-btn btn-filter" data-position="4">FWD</button>
             </div>
 
             <!-- Advanced Filters Toggle -->
@@ -605,7 +605,7 @@ function updateSearchResults() {
     }
 
     resultsContainer.innerHTML = `
-        <div style="color: var(--text-secondary); margin-bottom: 1rem; padding: 1rem; background: var(--bg-secondary); border-radius: 0.5rem; border-left: 4px solid var(--primary-color);">
+        <div class="card-info">
             <strong style="color: var(--primary-color);">${limitedPlayers.length}</strong> player${limitedPlayers.length !== 1 ? 's' : ''} shown
             ${players.length > displayLimit ? ` (of ${players.length} matching)` : ''}
             ${players.length < totalPlayers ? ` • <span style="color: var(--warning-color);">${totalPlayers - players.length} filtered out</span>` : ''}
@@ -691,7 +691,7 @@ function displayActiveFilters(totalPlayers, filteredCount) {
     }
 
     container.innerHTML = `
-        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; padding: 1rem; background: var(--bg-secondary); border-radius: 0.5rem; border: 1px solid var(--border-color);">
+        <div class="card-secondary" style="display: flex; gap: 0.5rem; flex-wrap: wrap; border: 1px solid var(--border-color);">
             <strong style="color: var(--text-primary); margin-right: 0.5rem;">Active Filters:</strong>
             ${badges.map(badge => `
                 <span style="
@@ -729,11 +729,11 @@ window.filterByPosition = function(position) {
     // Update button styles
     document.querySelectorAll('.position-filter-btn').forEach(btn => {
         if (btn.dataset.position == position) {
-            btn.style.background = 'var(--primary-color)';
-            btn.style.color = 'white';
+            btn.classList.remove('btn-filter');
+            btn.classList.add('btn-filter-active');
         } else {
-            btn.style.background = 'var(--bg-secondary)';
-            btn.style.color = 'var(--text-primary)';
+            btn.classList.remove('btn-filter-active');
+            btn.classList.add('btn-filter');
         }
     });
 

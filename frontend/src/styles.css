@@ -155,12 +155,6 @@ body {
     }
   }
 
-  /* Mobile-friendly scrolling */
-  .scroll-mobile {
-    -webkit-overflow-scrolling: touch;
-    scroll-behavior: smooth;
-  }
-
   /* Prevent text selection on mobile (for buttons/cards) */
   .no-select {
     -webkit-user-select: none;
@@ -170,32 +164,54 @@ body {
     -webkit-tap-highlight-color: transparent;
   }
 
-  /* Mobile card layout */
-  .mobile-card {
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: 0.75rem;
-    padding: 1rem;
-    margin-bottom: 0.75rem;
-  }
-
-  /* Swipeable container */
-  .swipeable {
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    display: flex;
-    gap: 1rem;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .swipeable > * {
-    scroll-snap-align: start;
-    flex-shrink: 0;
-  }
-
   /* Bottom navigation safe area */
   .bottom-nav {
     padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
+  }
+
+  /* Button utilities */
+  .btn-filter {
+    padding: 0.5rem 1rem;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: none;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-filter-active {
+    padding: 0.5rem 1rem;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+
+  /* Heading utilities */
+  .heading-section {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  /* Card utilities */
+  .card-secondary {
+    background: var(--bg-secondary);
+    border-radius: 0.5rem;
+    padding: 1rem;
+  }
+
+  .card-info {
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+    padding: 1rem;
+    background: var(--bg-secondary);
+    border-radius: 0.5rem;
+    border-left: 4px solid var(--primary-color);
   }
 }
 
@@ -281,20 +297,6 @@ body {
   button:active {
     transform: scale(0.98);
     transition: transform 0.1s ease;
-  }
-
-  /* Swipeable cards smooth scroll */
-  .swipeable {
-    scroll-padding: 1rem;
-  }
-
-  /* Mobile card hover/active state */
-  .mobile-card {
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-  }
-
-  .mobile-card:active {
-    transform: translateY(2px);
   }
 
   /* Refresh button pulse on mobile */
