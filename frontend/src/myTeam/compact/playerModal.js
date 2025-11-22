@@ -453,22 +453,23 @@ export async function showPlayerModal(playerId, myTeamState = null) {
     const liveStats = player.live_stats;
     const hasLiveStats = !!liveStats;
 
-    // Get GW stats - use github_gw if available (contains detailed breakdown for last GW played)
-    const gwStats = player.github_gw || {};
+    // Get GW stats - prioritize live_stats during live GW, otherwise use github_gw for finished GWs
+    // Only use github_gw if not in live state or if live_stats not available
+    const gwStats = (!hasLiveStats && player.github_gw) ? player.github_gw : {};
     const gwPoints = liveStats?.total_points ?? gwStats.total_points ?? player.event_points ?? 0;
-    
+
     // Only use minutes if match has started/finished
     let minutes = null;
     if (liveStats?.minutes !== null && liveStats?.minutes !== undefined) {
         minutes = liveStats.minutes;
-    } else if (gwStats.minutes !== null && gwStats.minutes !== undefined) {
+    } else if (!hasLiveStats && gwStats.minutes !== null && gwStats.minutes !== undefined) {
         minutes = gwStats.minutes;
     }
     
     const bps = liveStats?.bps ?? gwStats.bps ?? 0;
     
-    // Calculate points breakdown
-    const pointsBreakdown = calculateGWPointsBreakdown(player, liveStats, gwStats);
+    // Calculate points breakdown - always pass liveStats if available, it takes priority
+    const pointsBreakdown = calculateGWPointsBreakdown(player, liveStats, hasLiveStats ? {} : gwStats);
     
     const xG = gwStats.expected_goals ? parseFloat(gwStats.expected_goals).toFixed(2) : '0.00';
     const xA = gwStats.expected_assists ? parseFloat(gwStats.expected_assists).toFixed(2) : '0.00';
