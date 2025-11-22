@@ -17,21 +17,31 @@ import { getPlayerById } from '../data.js';
 export function renderDashboardHeader(teamData, gameweek, status, isAutoRefreshActive) {
     const { team, picks } = teamData;
     
-    // Get GW points and rank
-    let gwPoints = team.summary_event_points || 0;
-    let gwRank = team.summary_event_rank || 0;
+    // Get overall total points and rank
+    const totalPoints = team.summary_overall_points || 0;
+    const overallRank = team.summary_overall_rank || 0;
     
-    // If live, calculate from live stats
-    if (status === 'LIVE' && picks?.picks) {
-        const livePoints = picks.picks
-            .filter(p => p.position <= 11)
-            .reduce((sum, p) => {
-                const player = getPlayerById(p.element);
-                const pts = player?.live_stats?.total_points || 0;
-                const mult = p.is_captain ? 2 : 1;
-                return sum + (pts * mult);
-            }, 0);
-        if (livePoints > 0) gwPoints = livePoints;
+    // Get GW points and rank (only if not UPCOMING)
+    let gwPoints = null;
+    let gwRank = null;
+    
+    if (status !== 'UPCOMING') {
+        gwPoints = team.summary_event_points || 0;
+        gwRank = team.summary_event_rank || 0;
+        
+        // If live, calculate from live stats
+        if (status === 'LIVE' && picks?.picks) {
+            const livePoints = picks.picks
+                .filter(p => p.position <= 11)
+                .reduce((sum, p) => {
+                    const player = getPlayerById(p.element);
+                    if (!player) return sum;
+                    const pts = player.live_stats?.total_points || player.event_points || 0;
+                    const mult = p.is_captain ? 2 : 1;
+                    return sum + (pts * mult);
+                }, 0);
+            if (livePoints > 0) gwPoints = livePoints;
+        }
     }
     
     // Status badge
@@ -64,21 +74,39 @@ export function renderDashboardHeader(teamData, gameweek, status, isAutoRefreshA
             margin-bottom: 1rem;
             box-shadow: 0 2px 8px var(--shadow);
         ">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
-                <div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div style="flex: 1;">
                     <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem;">
                         Gameweek ${gameweek}
                     </div>
                     <div style="font-size: 2rem; font-weight: 800; color: var(--text-primary); line-height: 1;">
-                        ${gwPoints}
+                        ${totalPoints}
                     </div>
                     <div style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.25rem;">
-                        Rank: ${gwRank ? gwRank.toLocaleString() : 'N/A'}
+                        Total Pts
+                    </div>
+                    <div style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin-top: 0.75rem;">
+                        ${gwPoints !== null ? gwPoints : '—'}
+                    </div>
+                    <div style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                        ${status === 'UPCOMING' ? 'GW Points will be updated once GW begins' : 'GW Pts'}
                     </div>
                 </div>
-                <div style="text-align: right;">
+                <div style="text-align: right; flex: 1;">
                     ${statusBadge}
                     ${refreshIndicator}
+                    <div style="margin-top: 1rem; font-size: 0.875rem; color: var(--text-secondary);">
+                        <div style="margin-bottom: 0.5rem;">
+                            <div style="font-size: 0.65rem; color: var(--text-secondary); margin-bottom: 0.15rem;">Overall Rank</div>
+                            <div style="font-weight: 700; color: var(--text-primary);">${overallRank ? overallRank.toLocaleString() : 'N/A'}</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.65rem; color: var(--text-secondary); margin-bottom: 0.15rem;">GW Rank</div>
+                            <div style="font-weight: 700; color: var(--text-primary);">
+                                ${status === 'UPCOMING' ? '<span style="font-size: 0.7rem; color: var(--text-secondary); font-weight: 400;">GW Rank will be updated once GW begins</span>' : (gwRank ? gwRank.toLocaleString() : 'N/A')}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

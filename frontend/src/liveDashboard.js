@@ -119,26 +119,12 @@ async function renderDashboardContent() {
     
     container.innerHTML = `
         ${header}
-        <div id="dashboard-two-column" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1rem;">
+        <div id="dashboard-two-column" style="display: grid; grid-template-columns: 3fr 1fr; gap: 0.75rem; margin-bottom: 1rem;">
             ${teamTable}
             ${matchesTable}
         </div>
         ${topPlayers}
     `;
-    
-    // Add responsive CSS for mobile
-    if (!document.getElementById('dashboard-responsive-style')) {
-        const style = document.createElement('style');
-        style.id = 'dashboard-responsive-style';
-        style.textContent = `
-            @media (max-width: 767px) {
-                #dashboard-two-column {
-                    grid-template-columns: 1fr !important;
-                }
-            }
-        `;
-        document.head.appendChild(style);
-    }
 }
 
 /**
