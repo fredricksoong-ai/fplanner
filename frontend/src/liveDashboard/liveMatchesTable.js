@@ -71,7 +71,7 @@ export function renderLiveMatchesTable(teamData, gameweek, status) {
     const sortedMatches = [...liveMatches, ...upcomingMatches, ...finishedMatches];
     
     const headerRow = `
-        <div class="mobile-table-header mobile-table-header-sticky" style="top: calc(3.5rem + env(safe-area-inset-top));">
+        <div class="mobile-table-header mobile-table-header-sticky mobile-table-dashboard-matches" style="top: calc(3.5rem + env(safe-area-inset-top));">
             <div>Match</div>
             <div style="text-align: center;">Status</div>
         </div>
@@ -179,7 +179,7 @@ export function renderLiveMatchesTable(teamData, gameweek, status) {
         }
         
         return `
-            <div class="mobile-table-row" style="${rowStyle}">
+            <div class="mobile-table-row mobile-table-dashboard-matches" style="${rowStyle}">
                 <div style="display: flex; align-items: center; gap: 0.25rem; flex-wrap: wrap;">
                     ${matchDisplay}
                 </div>

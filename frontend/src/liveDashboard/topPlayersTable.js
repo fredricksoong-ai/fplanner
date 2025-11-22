@@ -47,7 +47,7 @@ export function renderTopPlayersTable(teamData, gameweek, isLive) {
     }
     
     const headerRow = `
-        <div class="mobile-table-header mobile-table-header-sticky" style="top: calc(3.5rem + env(safe-area-inset-top));">
+        <div class="mobile-table-header mobile-table-header-sticky mobile-table-dashboard-top" style="top: calc(3.5rem + env(safe-area-inset-top));">
             <div style="text-align: center;">Rank</div>
             <div>Player</div>
             <div style="text-align: center;">Pts</div>
@@ -61,7 +61,7 @@ export function renderTopPlayersTable(teamData, gameweek, isLive) {
         const borderLeft = item.isMyPlayer ? '3px solid var(--primary-color)' : 'none';
         
         return `
-            <div class="mobile-table-row" style="background: ${bgColor}; border-left: ${borderLeft};">
+            <div class="mobile-table-row mobile-table-dashboard-top" style="background: ${bgColor}; border-left: ${borderLeft};">
                 <div style="text-align: center; font-weight: 600;">${rank}</div>
                 <div>
                     <div style="font-size: 0.7rem; font-weight: 600; color: var(--text-primary);">

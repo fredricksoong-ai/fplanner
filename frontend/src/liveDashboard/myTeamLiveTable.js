@@ -53,7 +53,7 @@ export function renderMyTeamLiveTable(teamData, gameweek, isLive) {
     rows.push(...otherPlayers);
     
     const headerRow = `
-        <div class="mobile-table-header mobile-table-header-sticky" style="top: calc(3.5rem + env(safe-area-inset-top));">
+        <div class="mobile-table-header mobile-table-header-sticky mobile-table-dashboard-team" style="top: calc(3.5rem + env(safe-area-inset-top));">
             <div>Player</div>
             <div style="text-align: center;">Pts</div>
             <div style="text-align: center;">Min</div>
@@ -68,7 +68,7 @@ export function renderMyTeamLiveTable(teamData, gameweek, isLive) {
                           item.isVice ? '3px solid var(--text-secondary)' : 'none';
         
         return `
-            <div class="mobile-table-row" style="background: ${bgColor}; border-left: ${borderLeft};">
+            <div class="mobile-table-row mobile-table-dashboard-team" style="background: ${bgColor}; border-left: ${borderLeft};">
                 <div>
                     <div style="font-size: 0.7rem; font-weight: 600; color: var(--text-primary);">
                         ${item.isCaptain ? '(C) ' : item.isVice ? '(VC) ' : ''}${escapeHtml(item.player.web_name)}

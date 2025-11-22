@@ -93,22 +93,21 @@ async function renderDashboardContent() {
     const gwStatus = getGameweekStatus(activeGW);
     const isLive = isGameweekLive(activeGW);
     
-    // Check 24-hour transition rule
+    // Check 24-hour transition rule (use same logic as countdown timer)
     let displayGW = activeGW;
     let displayStatus = gwStatus;
     
-    if (gwStatus === 'FINISHED') {
-        // Check if within 24 hours of next GW deadline
-        const nextEvent = fplBootstrap?.events?.find(e => e.id === activeGW + 1);
-        if (nextEvent) {
-            const deadline = new Date(nextEvent.deadline_time);
-            const now = new Date();
-            const hoursUntilDeadline = (deadline - now) / (1000 * 60 * 60);
-            
-            if (hoursUntilDeadline < 24) {
-                displayGW = activeGW + 1;
-                displayStatus = 'UPCOMING';
-            }
+    // Get next event (the one with is_next flag, same as countdown timer)
+    const nextEvent = fplBootstrap?.events?.find(e => e.is_next);
+    if (nextEvent) {
+        const deadline = new Date(nextEvent.deadline_time);
+        const now = new Date();
+        const hoursUntilDeadline = (deadline - now) / (1000 * 60 * 60);
+        
+        // If within 24 hours of next GW deadline, show next GW
+        if (hoursUntilDeadline < 24 && hoursUntilDeadline > 0) {
+            displayGW = nextEvent.id;
+            displayStatus = 'UPCOMING';
         }
     }
     
@@ -120,7 +119,7 @@ async function renderDashboardContent() {
     
     container.innerHTML = `
         ${header}
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1rem; @media (max-width: 767px) { grid-template-columns: 1fr; }">
+        <div id="dashboard-two-column" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1rem;">
             ${teamTable}
             ${matchesTable}
         </div>
@@ -133,7 +132,7 @@ async function renderDashboardContent() {
         style.id = 'dashboard-responsive-style';
         style.textContent = `
             @media (max-width: 767px) {
-                #app-container > div[style*="grid-template-columns: 1fr 1fr"] {
+                #dashboard-two-column {
                     grid-template-columns: 1fr !important;
                 }
             }
