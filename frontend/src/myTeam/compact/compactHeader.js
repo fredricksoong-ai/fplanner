@@ -22,8 +22,10 @@ export function renderCompactHeader(teamData, gwNumber) {
     const { picks, team, isLive } = teamData;
     const entry = picks.entry_history;
 
-    // Calculate GW points - use live_stats from enriched bootstrap if available
-    let gwPoints = team.summary_event_points || 0;
+    // Calculate GW points - prioritize entry_history.total_points (most reliable)
+    let gwPoints = entry?.total_points ?? team?.summary_event_points ?? 0;
+    
+    // If live, try to calculate from live_stats (more accurate during live GW)
     if (isLive && picks.picks) {
         // Calculate live points from starting XI (positions 1-11)
         const livePoints = picks.picks
@@ -34,6 +36,7 @@ export function renderCompactHeader(teamData, gwNumber) {
                 const mult = p.is_captain ? 2 : 1;
                 return sum + (pts * mult);
             }, 0);
+        // Use live points if calculated and greater than 0
         if (livePoints > 0) gwPoints = livePoints;
     }
 

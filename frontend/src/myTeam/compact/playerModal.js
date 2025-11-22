@@ -453,10 +453,18 @@ export async function showPlayerModal(playerId, myTeamState = null) {
     const liveStats = player.live_stats;
     const hasLiveStats = !!liveStats;
 
-    // Get GW stats - prioritize live_stats, then GitHub, then bootstrap
-    const gwStats = player.github_gw || {};
+    // Get GW stats - only use github_gw if it's for the active GW
+    const gwStats = player.github_gw && player.github_gw.gw === activeGW ? player.github_gw : {};
     const gwPoints = liveStats?.total_points ?? player.event_points ?? 0;
-    const minutes = liveStats?.minutes ?? gwStats.minutes ?? 0;
+    
+    // Only use minutes if match has started/finished (don't show 90 from previous GW)
+    let minutes = null;
+    if (liveStats?.minutes !== null && liveStats?.minutes !== undefined) {
+        minutes = liveStats.minutes;
+    } else if (gwStats.minutes !== null && gwStats.minutes !== undefined && gwStats.gw === activeGW) {
+        minutes = gwStats.minutes;
+    }
+    
     const bps = liveStats?.bps ?? gwStats.bps ?? 0;
     
     // Calculate points breakdown
@@ -496,7 +504,7 @@ export async function showPlayerModal(playerId, myTeamState = null) {
         price,
         currentGW: activeGW,  // Use activeGW for display
         gwPoints,
-        minutes,
+        minutes: minutes ?? 0,
         bps,
         xG,
         xA,
