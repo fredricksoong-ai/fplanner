@@ -207,6 +207,29 @@ export function renderMyTeamForm() {
 
     const cachedTeamId = localStorage.getItem('fplanner_team_id') || '';
 
+    // Check URL hash for subtab (e.g., #my-team/fixtures)
+    const hash = window.location.hash.slice(1);
+    const [page, subTab] = hash.split('/');
+    const targetSubTab = subTab || 'overview';
+
+    // Special case: fixtures tab doesn't require team data
+    if (targetSubTab === 'fixtures' && !cachedTeamId) {
+        // Render fixtures tab without requiring team
+        const useMobile = shouldUseMobileLayout();
+        if (useMobile) {
+            container.innerHTML = renderMobileFixturesTab();
+            requestAnimationFrame(() => {
+                attachMobileFixtureRowListeners();
+            });
+        } else {
+            container.innerHTML = renderFixturesTab();
+            requestAnimationFrame(() => {
+                attachFixtureRowListeners();
+            });
+        }
+        return;
+    }
+
     // Auto-load if cached team exists
     if (cachedTeamId) {
         container.innerHTML = `
@@ -216,10 +239,7 @@ export function renderMyTeamForm() {
             </div>
         `;
 
-        // Check URL hash for subtab (e.g., #my-team/leagues)
-        const hash = window.location.hash.slice(1);
-        const [page, subTab] = hash.split('/');
-        const targetSubTab = subTab || 'overview';
+        // targetSubTab already set above
 
         // Auto-load the cached team
         setTimeout(() => {
@@ -390,11 +410,36 @@ window.handleTeamRefresh = handleTeamRefresh;
 
 /**
  * Render My Team page with loaded data
- * @param {Object} teamData - Team data from API
- * @param {string} subTab - Current sub-tab ('overview' or 'leagues')
+ * @param {Object} teamData - Team data from API (can be null for fixtures tab)
+ * @param {string} subTab - Current sub-tab ('overview', 'leagues', or 'fixtures')
  */
 export function renderMyTeam(teamData, subTab = 'overview') {
     const container = document.getElementById('app-container');
+    
+    // Special case: fixtures tab can render without team data
+    if (subTab === 'fixtures' && !teamData) {
+        const useMobile = shouldUseMobileLayout();
+        if (useMobile) {
+            container.innerHTML = renderMobileFixturesTab();
+            requestAnimationFrame(() => {
+                attachMobileFixtureRowListeners();
+            });
+        } else {
+            container.innerHTML = renderFixturesTab();
+            requestAnimationFrame(() => {
+                attachFixtureRowListeners();
+            });
+        }
+        return;
+    }
+    
+    // Rest of function requires teamData
+    if (!teamData) {
+        console.warn('⚠️ Team data required for non-fixtures tabs');
+        renderMyTeamForm();
+        return;
+    }
+    
     const { picks, gameweek, team } = teamData;
 
     console.log(`🎨 Rendering My Team for ${team.player_first_name} ${team.player_last_name}...`);
