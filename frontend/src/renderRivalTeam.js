@@ -265,10 +265,10 @@ function renderRivalCompactHeader(teamData, gwNumber) {
                         border-radius: 6px;
                         padding: 0.3rem 0.6rem;
                         text-align: center;
-                        min-width: 175px;
+                        min-width: 90px;
                         display: flex;
                         flex-direction: column;
-                        justify-content: right;
+                        justify-content: center;
                         box-shadow: 0 1px 3px var(--shadow);
                     ">
                         <div style="font-size: 2rem; font-weight: 800; color: ${gwIndicator.color}; line-height: 1;">
