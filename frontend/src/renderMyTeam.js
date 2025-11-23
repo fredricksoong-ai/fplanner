@@ -8,7 +8,13 @@ import {
     loadMyTeam,
     loadLeagueStandings,
     fplFixtures as getFixturesData,
-    fplBootstrap as getBootstrapData
+    fplBootstrap as getBootstrapData,
+    loadEnrichedBootstrap,
+    isGameweekLive,
+    getActiveGW,
+    startAutoRefresh,
+    stopAutoRefresh,
+    isAutoRefreshActive
 } from './data.js';
 
 import { sharedState } from './sharedState.js';
@@ -139,8 +145,59 @@ let myTeamState = {
     leagueStandingsCache: sharedState.leagueStandingsCache, // Shared cache for league standings
     rivalTeamCache: sharedState.rivalTeamCache, // Shared cache for rival team data
     captainCache: sharedState.captainCache, // Shared cache for captain names
-    pullToRefreshInstance: null // Pull-to-refresh instance
+    pullToRefreshInstance: null, // Pull-to-refresh instance
+    autoRefreshStarted: false // Track if auto-refresh has been started
 };
+
+let teamDataRefreshCount = 0; // Track refresh cycles for periodic team data refresh
+
+/**
+ * Setup auto-refresh for Team page during live GW
+ */
+function setupTeamAutoRefresh() {
+    const activeGW = getActiveGW();
+    const isLive = isGameweekLive(activeGW);
+
+    if (isLive && !myTeamState.autoRefreshStarted) {
+        myTeamState.autoRefreshStarted = true;
+        console.log('⏰ Auto-refresh will start in 2 minutes...');
+
+        setTimeout(() => {
+            const stillLive = isGameweekLive(getActiveGW());
+            if (stillLive) {
+                teamDataRefreshCount = 0;
+                startAutoRefresh(async () => {
+                    // Refresh enriched bootstrap every 2 min
+                    await loadEnrichedBootstrap(true);
+
+                    // Refresh team data every 3rd cycle (every 6 min)
+                    teamDataRefreshCount++;
+                    if (teamDataRefreshCount >= 3) {
+                        teamDataRefreshCount = 0;
+                        const teamId = localStorage.getItem('fplanner_team_id');
+                        if (teamId) {
+                            console.log('🔄 Refreshing team data...');
+                            try {
+                                const teamData = await loadMyTeam(teamId);
+                                myTeamState.teamData = teamData;
+                            } catch (err) {
+                                console.error('Failed to refresh team data:', err);
+                            }
+                        }
+                    }
+
+                    // Re-render current tab
+                    if (myTeamState.teamData) {
+                        renderMyTeam(myTeamState.teamData, myTeamState.currentTab);
+                    }
+                });
+            }
+        }, 2 * 60 * 1000); // 2 minutes delay
+    } else if (!isLive) {
+        stopAutoRefresh();
+        myTeamState.autoRefreshStarted = false;
+    }
+}
 
 /**
  * Render My Team input form
@@ -345,6 +402,9 @@ export function renderMyTeam(teamData, subTab = 'overview') {
     // Cache team data and update state
     myTeamState.teamData = teamData;
     myTeamState.currentTab = subTab;
+
+    // Setup auto-refresh for live GW
+    setupTeamAutoRefresh();
 
     // Load selected leagues from localStorage
     const savedLeagues = localStorage.getItem('fplanner_selected_leagues');
@@ -690,7 +750,7 @@ function renderTeamOverviewTab(teamData) {
     if (useMobile) {
         // Mobile ultra-compact layout
         return `
-            ${renderCompactHeader(teamData, gameweek)}
+            ${renderCompactHeader(teamData, gameweek, isAutoRefreshActive())}
             ${renderCompactTeamList(allPlayers, gameweek)}
             ${renderMatchSchedule(allPlayers, gameweek)}
         `;

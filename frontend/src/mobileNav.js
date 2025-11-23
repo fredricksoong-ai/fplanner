@@ -13,7 +13,7 @@ export function createMobileNav(currentPage, onNavigate) {
     const navItems = [
         { id: 'league', label: 'League', icon: 'fa-trophy', action: 'league' },
         { id: 'my-team', label: 'Team', icon: 'fa-users' },
-        { id: 'dashboard', label: 'Dashboard', icon: 'fa-tachometer-alt', action: 'dashboard', isGreen: true },
+        { id: 'refresh', label: 'Refresh', icon: 'fa-sync-alt', action: 'refresh', isGreen: true },
         { id: 'fixtures', label: 'Fixtures', icon: 'fa-calendar-alt', action: 'fixtures' },
         { id: 'stats', label: 'Stats', icon: 'fa-chart-bar', action: 'stats' }
     ];
@@ -120,9 +120,9 @@ export function initMobileNav(navigateCallback) {
                 navigateCallback('data-analysis');
                 return;
             }
-            if (action === 'dashboard') {
-                console.log('📊 Dashboard button clicked - navigating to dashboard');
-                navigateCallback('dashboard');
+            if (action === 'refresh') {
+                console.log('🔄 Refresh button clicked - triggering refresh');
+                navigateCallback('refresh');
                 return;
             }
 
@@ -136,8 +136,8 @@ export function initMobileNav(navigateCallback) {
         // Add touch feedback
         item.addEventListener('touchstart', () => {
             if (!item.disabled) {
-                const isDashboard = item.dataset.action === 'dashboard';
-                if (!isDashboard) {
+                const isRefresh = item.dataset.action === 'refresh';
+                if (!isRefresh) {
                     item.style.background = 'var(--border-dark)';
                 }
             }
@@ -147,8 +147,8 @@ export function initMobileNav(navigateCallback) {
             if (!item.disabled) {
                 const page = item.dataset.page;
                 const currentPage = getCurrentPage();
-                const isDashboard = item.dataset.action === 'dashboard';
-                item.style.background = isDashboard ? 'transparent' : (currentPage === page ? 'var(--bg-tertiary)' : 'transparent');
+                const isRefresh = item.dataset.action === 'refresh';
+                item.style.background = isRefresh ? 'transparent' : (currentPage === page ? 'var(--bg-tertiary)' : 'transparent');
             }
         });
     });
@@ -176,27 +176,25 @@ export function updateMobileNav(activePage, subTab = 'overview') {
             isActive = true;
         } else if (action === 'stats' && activePage === 'data-analysis') {
             isActive = true;
-        } else if (action === 'dashboard' && activePage === 'dashboard') {
-            isActive = true;
         } else if (page === activePage && subTab === 'overview') {
             isActive = true;
         } else {
             isActive = false;
         }
 
-        const isDashboard = action === 'dashboard';
+        const isRefresh = action === 'refresh';
 
-        item.style.background = isDashboard ? 'transparent' : (isActive ? 'var(--bg-tertiary)' : 'transparent');
+        item.style.background = isRefresh ? 'transparent' : (isActive ? 'var(--bg-tertiary)' : 'transparent');
         const label = item.querySelector('span');
         if (label) {
-            label.style.fontWeight = isActive || isDashboard ? '700' : '500';
-            if (isDashboard) {
+            label.style.fontWeight = isActive || isRefresh ? '700' : '500';
+            if (isRefresh) {
                 label.style.color = '#00ff88';
             }
         }
 
-        // Set icon color for dashboard button
-        if (isDashboard) {
+        // Set icon color for refresh button
+        if (isRefresh) {
             const icon = item.querySelector('i');
             if (icon) {
                 icon.style.color = '#00ff88';
