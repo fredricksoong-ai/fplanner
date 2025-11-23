@@ -236,7 +236,7 @@ function updateCountdown() {
         const diff = targetDate - now;
         
         if (diff <= 0 && isLive) {
-            countdownText.innerHTML = `<span style="color: #00ff88;">⚽ GW${gwNumber} LIVE</span>`;
+            countdownText.innerHTML = `<span style="color: #ef4444;">⚽ GW${gwNumber} LIVE</span>`;
             return;
         }
         

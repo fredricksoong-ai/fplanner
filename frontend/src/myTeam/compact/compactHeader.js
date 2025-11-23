@@ -139,7 +139,7 @@ export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = fa
                             ${gwPoints}
                         </div>
                         <div style="font-size: 0.6rem; color: var(--text-secondary); margin-top: 0.1rem; font-weight: 600;">
-                            GW ${gwNumber}${isLive ? ' <span style="color: #22c55e; animation: pulse 2s infinite;">⚡ LIVE</span>' : ''}
+                            GW ${gwNumber}${isLive ? ' <span style="color: #ef4444; animation: pulse 2s infinite;">⚽ LIVE</span>' : ''}
                         </div>
                         ${isLive ? '<style>@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }</style>' : ''}
                         ${isAutoRefreshActive ? `
