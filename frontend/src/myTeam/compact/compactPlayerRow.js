@@ -17,7 +17,6 @@ import {
     calculateStatusColor,
     calculatePlayerBgColor
 } from './compactStyleHelpers.js';
-import { calculateGWPointsBreakdown } from './playerModal.js';
 
 /**
  * Render compact player row with ownership and transfer momentum
@@ -46,11 +45,10 @@ export function renderCompactPlayerRow(pick, player, gwNumber) {
     // Get GW-specific stats - prioritize live_stats from enriched bootstrap
     const hasGWStats = player.github_gw && player.github_gw.gw === gwNumber;
     const liveStats = player.live_stats;
-    const gwStats = (!liveStats && hasGWStats) ? player.github_gw : {};
 
-    // Calculate GW points by summing the breakdown (consistent with player modal)
-    const pointsBreakdown = calculateGWPointsBreakdown(player, liveStats, gwStats);
-    const gwPoints = Object.values(pointsBreakdown).reduce((sum, item) => sum + item.points, 0);
+    // Calculate GW points from live stats or fallback sources
+    let gwPoints = liveStats?.total_points ??
+                   (hasGWStats ? player.github_gw.total_points : (player.event_points || 0));
 
     const displayPoints = isCaptain ? (gwPoints * 2) : gwPoints;
     const isLive = !!liveStats;

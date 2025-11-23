@@ -86,27 +86,27 @@ app.use(cors({
   credentials: false
 }));
 
-// Rate limiting - Prevent abuse
-const limiter = rateLimit({
-  windowMs: RATE_LIMIT.WINDOW_MS,
-  max: RATE_LIMIT.MAX_REQUESTS,
-  message: {
-    error: RATE_LIMIT.MESSAGE,
-    retryAfter: '15 minutes'
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-  handler: (req, res) => {
-    logger.warn(`⚠️ Rate limit exceeded: ${req.ip}`);
-    res.status(429).json({
-      error: 'Too many requests',
-      message: RATE_LIMIT.MESSAGE
-    });
-  }
-});
+// Rate limiting - Disabled for development
+// const limiter = rateLimit({
+//   windowMs: RATE_LIMIT.WINDOW_MS,
+//   max: RATE_LIMIT.MAX_REQUESTS,
+//   message: {
+//     error: RATE_LIMIT.MESSAGE,
+//     retryAfter: '15 minutes'
+//   },
+//   standardHeaders: true,
+//   legacyHeaders: false,
+//   handler: (req, res) => {
+//     logger.warn(`⚠️ Rate limit exceeded: ${req.ip}`);
+//     res.status(429).json({
+//       error: 'Too many requests',
+//       message: RATE_LIMIT.MESSAGE
+//     });
+//   }
+// });
 
-// Apply rate limiting to all API routes
-app.use('/api/', limiter);
+// Apply rate limiting to all API routes (disabled)
+// app.use('/api/', limiter);
 
 // Request size limiting
 app.use(express.json({ limit: '1mb' }));
