@@ -8,8 +8,8 @@ import { escapeHtml } from '../../utils.js';
 import { getGWOpponent } from '../../fixtures.js';
 import {
     renderOpponentBadge,
-    calculateRankColor,
-    calculateGWTextColor
+    calculateRankIndicator,
+    calculateGWIndicator
 } from './compactStyleHelpers.js';
 
 /**
@@ -40,14 +40,14 @@ export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = fa
     const freeTransfers = entry.event_transfers || 0;
     const transferCost = entry.event_transfers_cost || 0;
 
-    // Calculate rank color using helper
-    const rankColor = calculateRankColor(team.id, overallRankNum);
+    // Calculate rank indicator (chevron) using helper
+    const rankIndicator = calculateRankIndicator(team.id, overallRankNum);
 
     // Get captain and vice captain info
     const { captainInfo, viceInfo } = getCaptainViceInfo(picks.picks, gwNumber);
 
-    // Calculate GW text color using helper
-    const gwTextColor = calculateGWTextColor(gwRankNum, overallRankNum);
+    // Calculate GW indicator (chevron) using helper
+    const gwIndicator = calculateGWIndicator(gwRankNum, overallRankNum);
 
     // Get selected league info
     const selectedLeagueId = localStorage.getItem(`fpl_selected_league_${team.id}`);
@@ -102,7 +102,7 @@ export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = fa
                     </div>
 
                     <div style="font-size: 0.7rem; color: var(--text-secondary);">
-                        Overall Rank: <span style="color: ${rankColor};">${overallRank}</span>
+                        Overall Rank: ${overallRank} <span style="color: ${rankIndicator.color};">${rankIndicator.chevron}</span>
                     </div>
 
                     <div style="font-size: 0.7rem; color: var(--text-secondary);">
@@ -110,7 +110,7 @@ export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = fa
                     </div>
 
                     <div style="font-size: 0.7rem; color: var(--text-secondary);">
-                        GW Rank: <span style="color: ${gwTextColor};">${gwRank}</span>
+                        GW Rank: ${gwRank} <span style="color: ${gwIndicator.color};">${gwIndicator.chevron}</span>
                     </div>
 
                     <div style="font-size: 0.7rem; color: var(--text-secondary);">
@@ -135,7 +135,7 @@ export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = fa
                         justify-content: right;
                         box-shadow: 0 1px 3px var(--shadow);
                     ">
-                        <div style="font-size: 2rem; font-weight: 800; color: ${gwTextColor}; line-height: 1;">
+                        <div style="font-size: 2rem; font-weight: 800; color: ${gwIndicator.color}; line-height: 1;">
                             ${gwPoints}
                         </div>
                         <div style="font-size: 0.6rem; color: var(--text-secondary); margin-top: 0.1rem; font-weight: 600;">

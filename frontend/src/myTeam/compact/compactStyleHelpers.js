@@ -44,15 +44,16 @@ export function renderStatCard(value, label) {
 }
 
 /**
- * Calculate rank color based on cached comparison
- * @param {number} teamId - Team ID
+ * Calculate rank indicator (chevron) based on rank change
+ * @param {number} teamId - Team ID for caching
  * @param {number} overallRankNum - Current overall rank
- * @returns {string} Color for rank display
+ * @returns {Object} Chevron icon and color for rank display
  */
-export function calculateRankColor(teamId, overallRankNum) {
+export function calculateRankIndicator(teamId, overallRankNum) {
     const cacheKey = `fpl_rank_${teamId}`;
     const cachedRank = localStorage.getItem(cacheKey);
-    let rankColor = 'var(--text-secondary)';
+    let chevron = '▬';
+    let color = '#eab308'; // Yellow for no change
 
     if (cachedRank && overallRankNum > 0) {
         const previousRank = parseInt(cachedRank, 10);
@@ -60,10 +61,12 @@ export function calculateRankColor(teamId, overallRankNum) {
 
         if (rankChange > 0) {
             // Rank improved (number went down)
-            rankColor = '#22c55e';
+            chevron = '▲';
+            color = '#22c55e'; // Green
         } else if (rankChange < 0) {
             // Rank worsened (number went up)
-            rankColor = '#ef4444';
+            chevron = '▼';
+            color = '#ef4444'; // Red
         }
     }
 
@@ -72,37 +75,52 @@ export function calculateRankColor(teamId, overallRankNum) {
         localStorage.setItem(cacheKey, overallRankNum.toString());
     }
 
-    return rankColor;
+    return { chevron, color };
+}
+
+// Keep old function for backward compatibility
+export function calculateRankColor(teamId, overallRankNum) {
+    return calculateRankIndicator(teamId, overallRankNum).color;
 }
 
 /**
- * Calculate GW text color based on performance
+ * Calculate GW rank indicator (chevron) based on performance
  * @param {number} gwRankNum - GW rank
  * @param {number} overallRankNum - Overall rank
- * @returns {string} Color for GW points display
+ * @returns {Object} Chevron icon and color for GW display
  */
-export function calculateGWTextColor(gwRankNum, overallRankNum) {
-    let gwTextColor = 'var(--text-primary)';
+export function calculateGWIndicator(gwRankNum, overallRankNum) {
+    let chevron = '▬';
+    let color = '#eab308'; // Yellow for on par
 
     if (overallRankNum > 0 && gwRankNum > 0) {
         const rankRatio = gwRankNum / overallRankNum;
 
         if (rankRatio <= 0.5) {
             // Exceptional: GW rank is 50% or better than overall rank
-            gwTextColor = '#9333ea'; // Purple
+            chevron = '▲▲';
+            color = '#9333ea'; // Purple
         } else if (rankRatio < 1.0) {
             // Outperforming: GW rank is better than overall rank
-            gwTextColor = '#22c55e'; // Green
+            chevron = '▲';
+            color = '#22c55e'; // Green
         } else if (rankRatio <= 1.2) {
             // On par: Within 20% of overall rank
-            gwTextColor = '#eab308'; // Yellow
+            chevron = '▬';
+            color = '#eab308'; // Yellow
         } else {
             // Underperforming: Worse than 20% of overall rank
-            gwTextColor = '#ef4444'; // Red
+            chevron = '▼';
+            color = '#ef4444'; // Red
         }
     }
 
-    return gwTextColor;
+    return { chevron, color };
+}
+
+// Keep old function for backward compatibility
+export function calculateGWTextColor(gwRankNum, overallRankNum) {
+    return calculateGWIndicator(gwRankNum, overallRankNum).color;
 }
 
 /**
