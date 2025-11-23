@@ -22,6 +22,7 @@ let currentPage = 'my-team';
 let currentSubTab = 'overview'; // For Data Analysis sub-tabs
 let currentTeamId = null;
 let myTeamData = null;
+let currentRivalId = null; // For rival team page
 
 // ============================================================================
 // NAVIGATION
@@ -105,6 +106,9 @@ function renderPage() {
         case 'my-team':
             renderMyTeamPage();
             break;
+        case 'rival':
+            renderRivalTeamPage();
+            break;
         case 'team-builder':
             renderTeamBuilderPage();
             break;
@@ -129,6 +133,11 @@ function renderPage() {
 async function renderMyTeamPage() {
     const { renderMyTeamForm } = await import('./renderMyTeam.js');
     renderMyTeamForm();
+}
+
+async function renderRivalTeamPage() {
+    const { renderRivalTeam } = await import('./renderRivalTeam.js');
+    renderRivalTeam(currentRivalId);
 }
 
 async function renderTeamBuilderPage() {
@@ -317,7 +326,11 @@ async function initializeApp() {
         const [page, subTab, position] = hash.split('/');
 
         if (page) {
-            if (page === 'data-analysis' && position) {
+            if (page === 'rival' && subTab) {
+                // Handle rival/{teamId} route
+                currentRivalId = parseInt(subTab);
+                navigate('rival');
+            } else if (page === 'data-analysis' && position) {
                 currentPage = page;
                 currentSubTab = subTab || 'overview';
                 updateNavLinks();
@@ -435,6 +448,12 @@ function setupNavigation() {
 
 window.navigateToPage = (page) => {
     navigate(page);
+};
+
+window.navigateToRival = (rivalId) => {
+    currentRivalId = rivalId;
+    window.location.hash = `#rival/${rivalId}`;
+    navigate('rival');
 };
 
 window.switchAnalysisTab = (tab) => {
