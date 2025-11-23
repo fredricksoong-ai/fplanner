@@ -248,7 +248,7 @@ async function fetchPlayerHistory(playerId) {
  * @param {Object} gwStats - GitHub GW stats (if GW is finished)
  * @returns {Object} Points breakdown object with all components
  */
-export function calculateGWPointsBreakdown(player, liveStats, gwStats) {
+function calculateGWPointsBreakdown(player, liveStats, gwStats) {
     const position = getPositionShort(player);
     const positionType = player.element_type; // 1=GKP, 2=DEF, 3=MID, 4=FWD
     
@@ -457,6 +457,12 @@ export async function showPlayerModal(playerId, myTeamState = null) {
     // Only use github_gw if not in live state or if live_stats not available
     const gwStats = (!hasLiveStats && player.github_gw) ? player.github_gw : {};
 
+    // Calculate GW points - during live, add provisional bonus since total_points doesn't include it
+    let gwPoints = liveStats?.total_points ?? gwStats.total_points ?? player.event_points ?? 0;
+    if (hasLiveStats && liveStats.provisional_bonus) {
+        gwPoints += liveStats.provisional_bonus;
+    }
+
     // Only use minutes if match has started/finished
     let minutes = null;
     if (liveStats?.minutes !== null && liveStats?.minutes !== undefined) {
@@ -469,10 +475,7 @@ export async function showPlayerModal(playerId, myTeamState = null) {
     
     // Calculate points breakdown - always pass liveStats if available, it takes priority
     const pointsBreakdown = calculateGWPointsBreakdown(player, liveStats, hasLiveStats ? {} : gwStats);
-
-    // Calculate total GW points by summing the breakdown (most reliable method)
-    let gwPoints = Object.values(pointsBreakdown).reduce((sum, item) => sum + item.points, 0);
-
+    
     const xG = gwStats.expected_goals ? parseFloat(gwStats.expected_goals).toFixed(2) : '0.00';
     const xA = gwStats.expected_assists ? parseFloat(gwStats.expected_assists).toFixed(2) : '0.00';
 
