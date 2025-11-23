@@ -146,7 +146,7 @@ export function getGWOpponent(teamId, gameweek) {
  * Get match status display for a player
  * @param {number} teamId - Player's team ID
  * @param {number} gameweek - Gameweek number
- * @param {Object} player - Player object (with github_gw data if available)
+ * @param {Object} player - Player object (with live_stats and github_gw data if available)
  * @returns {string} Status display string
  */
 export function getMatchStatus(teamId, gameweek, player) {
@@ -157,18 +157,22 @@ export function getMatchStatus(teamId, gameweek, player) {
         return '—';
     }
 
+    // Check for live_stats (prioritize - most up-to-date during live GW)
+    const hasLiveStats = player && player.live_stats && player.live_stats.minutes !== null && player.live_stats.minutes !== undefined;
+    const liveMinutes = hasLiveStats ? player.live_stats.minutes : null;
+
     // Check GitHub GW data for minutes (available after match finishes)
     const hasGWStats = player && player.github_gw && player.github_gw.gw === gameweek;
     const gwMinutes = hasGWStats ? player.github_gw.minutes : null;
 
-    // Determine if match is finished - check multiple sources for accuracy
+    // Determine if match is finished
     const isMatchFinished = fixture.finished ||
                            (hasGWStats && gwMinutes !== null && gwMinutes !== undefined);
 
     // 1. Match FINISHED
     if (isMatchFinished) {
-        // Try github_gw minutes first, then fall back to player's latest event minutes
-        let minutes = gwMinutes;
+        // Priority: live_stats > github_gw > explain
+        let minutes = liveMinutes ?? gwMinutes;
 
         // Fallback: check if player has explain data for this event
         if (minutes === null && player && player.explain) {
@@ -181,11 +185,6 @@ export function getMatchStatus(teamId, gameweek, player) {
             }
         }
 
-        // Also check live_stats minutes as fallback (might have final minutes from live data)
-        if (minutes === null && player && player.live_stats && player.live_stats.minutes !== null && player.live_stats.minutes !== undefined) {
-            minutes = player.live_stats.minutes;
-        }
-
         if (minutes !== null && minutes !== undefined) {
             return `FT (${minutes})`;
         }
@@ -194,9 +193,7 @@ export function getMatchStatus(teamId, gameweek, player) {
 
     // 2. Match LIVE (started but not finished)
     if (fixture.started && !isMatchFinished) {
-        // Check for live stats minutes from enriched bootstrap
-        if (player && player.live_stats && player.live_stats.minutes !== null && player.live_stats.minutes !== undefined) {
-            const liveMinutes = player.live_stats.minutes;
+        if (liveMinutes !== null) {
             return `LIVE (${liveMinutes})`;
         }
         return 'LIVE';
