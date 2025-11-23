@@ -769,7 +769,7 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
     // Header row
     let html = `
         <div class="mobile-table">
-            <div class="mobile-table-header mobile-table-stats" style="padding-bottom: 2px !important; padding-top: 2px !important;">
+            <div class="mobile-table-header" style="display: grid; grid-template-columns: 2fr 1.2fr 1fr 0.7fr 0.7fr 0.8fr; padding-bottom: 2px !important; padding-top: 2px !important;">
                 <div>Player</div>
                 <div style="text-align: center;">Opp</div>
                 <div style="text-align: center;">Status</div>
@@ -868,8 +868,8 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
 
         html += `
             <div
-                class="player-row mobile-table-row mobile-table-stats"
-                style="cursor: pointer; padding-bottom: 3px !important; padding-top: 3px !important; border-left: ${leftBorderStyle};"
+                class="player-row mobile-table-row"
+                style="display: grid; grid-template-columns: 2fr 1.2fr 1fr 0.7fr 0.7fr 0.8fr; cursor: pointer; padding-bottom: 3px !important; padding-top: 3px !important; border-left: ${leftBorderStyle};"
                 data-player-id="${player.id}"
             >
                 <div style="font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">

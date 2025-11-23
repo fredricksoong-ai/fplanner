@@ -18,6 +18,11 @@ import {
 
 import { escapeHtml } from './utils.js';
 
+import {
+    calculateRankIndicator,
+    calculateGWIndicator
+} from './myTeam/compact/compactStyleHelpers.js';
+
 import { sharedState } from './sharedState.js';
 
 // State for rival team page
@@ -173,7 +178,7 @@ function renderRivalTeamView(teamData) {
 }
 
 /**
- * Render compact header for rival team with position and gap info
+ * Render compact header for rival team (same as Team page, no league info)
  * @param {Object} teamData - Team data
  * @param {number} gwNumber - Gameweek number
  * @returns {string} HTML for header
@@ -182,7 +187,7 @@ function renderRivalCompactHeader(teamData, gwNumber) {
     const { picks, team, isLive } = teamData;
     const entry = picks.entry_history;
 
-    // Calculate GW points from entry_history.points
+    // Calculate GW points
     let gwPoints = entry?.points ?? 0;
 
     const totalPoints = team.summary_overall_points || 0;
@@ -192,63 +197,14 @@ function renderRivalCompactHeader(teamData, gwNumber) {
     const gwRank = gwRankNum ? gwRankNum.toLocaleString() : 'N/A';
 
     // Team value and bank
-    const teamValue = ((entry.value || 0) / 10).toFixed(1);
     const bank = ((entry.bank || 0) / 10).toFixed(1);
     const squadValue = ((entry.value || 0) / 10 - (entry.bank || 0) / 10).toFixed(1);
     const freeTransfers = entry.event_transfers || 0;
     const transferCost = entry.event_transfers_cost || 0;
 
-    // Get league info from cache if available
-    let leagueInfo = '';
-    const leagueId = rivalTeamState.leagueContext;
-    if (leagueId && rivalTeamState.leagueStandingsCache.has(leagueId)) {
-        const standings = rivalTeamState.leagueStandingsCache.get(leagueId);
-        const rivalEntry = standings.standings.results.find(e => e.entry === team.id);
-        const userTeamId = parseInt(localStorage.getItem('fplanner_team_id'));
-        const userEntry = standings.standings.results.find(e => e.entry === userTeamId);
-
-        if (rivalEntry) {
-            let gapText = '';
-            let gapColor = 'var(--text-secondary)';
-            if (userEntry) {
-                const gap = userEntry.total - rivalEntry.total;
-                if (gap > 0) {
-                    gapText = `You lead by ${gap} pts`;
-                    gapColor = '#22c55e';
-                } else if (gap < 0) {
-                    gapText = `Behind you by ${Math.abs(gap)} pts`;
-                    gapColor = '#ef4444';
-                } else {
-                    gapText = 'Level with you';
-                    gapColor = '#eab308';
-                }
-            }
-
-            leagueInfo = `
-                <div style="margin-top: 0.35rem; padding-top: 0.35rem; border-top: 1px solid var(--border-color);">
-                    <div style="font-size: 0.65rem; color: var(--text-secondary);">
-                        League Rank: <span style="font-weight: 600; color: var(--text-primary);">${rivalEntry.rank}</span>
-                        ${gapText ? `<span style="margin-left: 0.5rem; color: ${gapColor};">${gapText}</span>` : ''}
-                    </div>
-                </div>
-            `;
-        }
-    }
-
-    // Captain info
-    const captainPick = picks.picks.find(p => p.is_captain);
-    const vicePick = picks.picks.find(p => p.is_vice_captain);
-    const captain = captainPick ? getPlayerById(captainPick.element) : null;
-    const vice = vicePick ? getPlayerById(vicePick.element) : null;
-
-    // Get captain points
-    let captainPts = 0;
-    if (captain) {
-        const captainLiveStats = captain.live_stats;
-        if (captainLiveStats) {
-            captainPts = (captainLiveStats.total_points || 0) * (captainPick.multiplier || 2);
-        }
-    }
+    // Calculate rank indicators (chevrons) using helpers
+    const rankIndicator = calculateRankIndicator(team.id, overallRankNum);
+    const gwIndicator = calculateGWIndicator(gwRankNum, overallRankNum);
 
     return `
         <div
@@ -286,11 +242,11 @@ function renderRivalCompactHeader(teamData, gwNumber) {
                     </div>
 
                     <div style="font-size: 0.7rem; color: var(--text-secondary);">
-                        Overall Rank: ${overallRank}
+                        Overall Rank: ${overallRank} <span style="color: ${rankIndicator.color};">${rankIndicator.chevron}</span>
                     </div>
 
                     <div style="font-size: 0.7rem; color: var(--text-secondary);">
-                        GW Rank: ${gwRank}
+                        GW Rank: ${gwRank} <span style="color: ${gwIndicator.color};">${gwIndicator.chevron}</span>
                     </div>
 
                     <div style="font-size: 0.7rem; color: var(--text-secondary);">
@@ -298,33 +254,31 @@ function renderRivalCompactHeader(teamData, gwNumber) {
                     </div>
 
                     <div style="font-size: 0.7rem; color: var(--text-secondary);">
-                        Transfers: ${freeTransfers}${transferCost > 0 ? ` <span style="color: #ef4444;">(-${transferCost})</span>` : ''}
+                        Transfers: ${freeTransfers} FT${transferCost > 0 ? ` (-${transferCost} pts)` : ''}
                     </div>
-
-                    ${leagueInfo}
                 </div>
 
-                <!-- GW Points Card -->
-                <div style="
-                    background: var(--bg-secondary);
-                    border-radius: 0.5rem;
-                    padding: 0.5rem;
-                    min-width: 5rem;
-                    text-align: center;
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: center;
-                ">
-                    <div style="font-size: 0.6rem; color: var(--text-secondary); margin-bottom: 0.15rem;">
-                        GW${gwNumber}
+                <div style="display: flex; align-items: stretch;">
+                    <div style="
+                        background: var(--bg-primary);
+                        border: 1px solid var(--border-color);
+                        border-radius: 6px;
+                        padding: 0.3rem 0.6rem;
+                        text-align: center;
+                        min-width: 175px;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: right;
+                        box-shadow: 0 1px 3px var(--shadow);
+                    ">
+                        <div style="font-size: 2rem; font-weight: 800; color: ${gwIndicator.color}; line-height: 1;">
+                            ${gwPoints}
+                        </div>
+                        <div style="font-size: 0.6rem; color: var(--text-secondary); margin-top: 0.1rem; font-weight: 600;">
+                            GW ${gwNumber}${isLive ? ' <span style="color: #ef4444; animation: pulse 2s infinite;">⚽ LIVE</span>' : ''}
+                        </div>
+                        ${isLive ? '<style>@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }</style>' : ''}
                     </div>
-                    <div style="font-size: 1.5rem; font-weight: 800; color: var(--primary-color); line-height: 1;">
-                        ${gwPoints}
-                    </div>
-                    <div style="font-size: 0.55rem; color: var(--text-secondary); margin-top: 0.2rem;">
-                        ${captain ? `(C) ${captain.web_name}` : ''}
-                    </div>
-                    ${captain ? `<div style="font-size: 0.55rem; color: var(--text-secondary);">${captainPts} pts</div>` : ''}
                 </div>
             </div>
         </div>
