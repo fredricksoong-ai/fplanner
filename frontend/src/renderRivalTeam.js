@@ -30,8 +30,11 @@ let rivalTeamState = {
 /**
  * Render rival team page
  * @param {number} rivalId - Rival team ID to load and display
+ * @param {number} leagueId - League ID context (for showing league rank)
  */
-export async function renderRivalTeam(rivalId) {
+export async function renderRivalTeam(rivalId, leagueId = null) {
+    // Store league context for this rival view
+    rivalTeamState.leagueContext = leagueId;
     const container = document.getElementById('app-container');
 
     if (!rivalId) {
@@ -90,6 +93,11 @@ export async function renderRivalTeam(rivalId) {
                 console.error('Failed to parse saved leagues:', err);
                 rivalTeamState.selectedLeagues = [];
             }
+        }
+
+        // Set league context for the rival team so compactHeader can show league info
+        if (rivalTeamState.leagueContext) {
+            localStorage.setItem(`fpl_selected_league_${rivalId}`, rivalTeamState.leagueContext);
         }
 
         // Render the rival team view
@@ -158,7 +166,7 @@ function renderRivalTeamView(teamData) {
         ">
             <button
                 id="back-to-leagues-btn"
-                onclick="window.navigateToPage('my-team'); setTimeout(() => { const event = new CustomEvent('switchToLeagues'); window.dispatchEvent(event); }, 100);"
+                onclick="window.navigateToPage('my-team', 'leagues');"
                 style="
                     background: transparent;
                     border: 1px solid var(--border-color);

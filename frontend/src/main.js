@@ -23,6 +23,7 @@ let currentSubTab = 'overview'; // For Data Analysis sub-tabs
 let currentTeamId = null;
 let myTeamData = null;
 let currentRivalId = null; // For rival team page
+let currentLeagueContext = null; // League ID when viewing rivals
 
 // ============================================================================
 // NAVIGATION
@@ -137,7 +138,7 @@ async function renderMyTeamPage() {
 
 async function renderRivalTeamPage() {
     const { renderRivalTeam } = await import('./renderRivalTeam.js');
-    renderRivalTeam(currentRivalId);
+    renderRivalTeam(currentRivalId, currentLeagueContext);
 }
 
 async function renderTeamBuilderPage() {
@@ -221,34 +222,23 @@ function updateCountdown() {
         }
 
         const activeGW = getActiveGW();
-        const activeEvent = getGameweekEvent(activeGW);
         const nextEvent = fplBootstrap.events.find(e => e.is_next);
 
         let targetDate;
         let gwNumber;
-        let isLive = isGameweekLive(activeGW);
 
-        if (activeEvent && isLive) {
-            // Current GW is live
-            targetDate = new Date(activeEvent.deadline_time);
-            gwNumber = activeGW;
-        } else if (nextEvent) {
-            // Next GW deadline
+        // Always show countdown to next GW deadline
+        if (nextEvent) {
             targetDate = new Date(nextEvent.deadline_time);
             gwNumber = nextEvent.id;
         } else {
             countdownText.textContent = 'Season ended';
             return;
         }
-        
+
         const now = new Date();
         const diff = targetDate - now;
-        
-        if (diff <= 0 && isLive) {
-            countdownText.innerHTML = `<span style="color: #ef4444;">⚽ GW${gwNumber} LIVE</span>`;
-            return;
-        }
-        
+
         if (diff <= 0) {
             countdownText.textContent = 'Updating...';
             return;
@@ -318,6 +308,15 @@ async function initializeApp() {
         console.log('📡 Loading data from backend...');
         await loadFPLData();
         console.log('✅ Data loaded successfully');
+
+        // Load enriched bootstrap for live_stats (includes minutes played)
+        try {
+            await loadEnrichedBootstrap(true);
+            console.log('✅ Enriched data loaded');
+        } catch (err) {
+            console.warn('⚠️ Could not load enriched data:', err.message);
+        }
+
         startCountdown();
 
 
@@ -446,12 +445,13 @@ function setupNavigation() {
 // GLOBAL FUNCTION BINDINGS (for onclick handlers)
 // ============================================================================
 
-window.navigateToPage = (page) => {
-    navigate(page);
+window.navigateToPage = (page, subTab = 'overview') => {
+    navigate(page, subTab);
 };
 
-window.navigateToRival = (rivalId) => {
+window.navigateToRival = (rivalId, leagueId = null) => {
     currentRivalId = rivalId;
+    currentLeagueContext = leagueId;
     window.location.hash = `#rival/${rivalId}`;
     navigate('rival');
 };
