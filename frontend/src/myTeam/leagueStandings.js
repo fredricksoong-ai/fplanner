@@ -569,7 +569,8 @@ export function attachMobileRivalListeners(myTeamState) {
         row.addEventListener('click', () => {
             const rivalId = parseInt(row.getAttribute('data-rival-id'));
             if (rivalId) {
-                showMobileRivalTeam(rivalId, myTeamState);
+                // Navigate to rival team page instead of showing modal
+                window.navigateToRival(rivalId);
             }
         });
     });

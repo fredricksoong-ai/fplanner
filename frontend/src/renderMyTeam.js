@@ -719,7 +719,8 @@ export function renderMyTeam(teamData, subTab = 'overview') {
         const row = e.target.closest('.rival-team-row');
         if (row) {
             const rivalId = parseInt(row.dataset.rivalId);
-            loadAndCompareRivalTeam(rivalId);
+            // Navigate to rival team page instead of showing modal
+            window.navigateToRival(rivalId);
         }
     });
 
