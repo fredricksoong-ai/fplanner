@@ -384,8 +384,4 @@ body {
   .mobile-table-fixtures {
     grid-template-columns: 0.8fr 2fr 1fr 2fr 0.6fr;
   }
-
-  .mobile-table-stats {
-    grid-template-columns: 2fr 1.2fr 1fr 0.7fr 0.7fr 0.8fr;
-  }
 }

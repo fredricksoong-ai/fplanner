@@ -173,81 +173,36 @@ function renderRivalTeamView(teamData) {
 }
 
 /**
- * Render compact header for rival team with position and gap info
+ * Render compact header for rival team
  * @param {Object} teamData - Team data
  * @param {number} gwNumber - Gameweek number
  * @returns {string} HTML for header
  */
 function renderRivalCompactHeader(teamData, gwNumber) {
-    const { picks, team, isLive } = teamData;
+    const { picks, team } = teamData;
     const entry = picks.entry_history;
 
-    // Calculate GW points from entry_history.points
+    // Calculate GW points
     let gwPoints = entry?.points ?? 0;
 
     const totalPoints = team.summary_overall_points || 0;
-    const overallRankNum = team.summary_overall_rank || 0;
-    const gwRankNum = team.summary_event_rank || 0;
-    const overallRank = overallRankNum ? overallRankNum.toLocaleString() : 'N/A';
-    const gwRank = gwRankNum ? gwRankNum.toLocaleString() : 'N/A';
+    const overallRank = team.summary_overall_rank ? team.summary_overall_rank.toLocaleString() : 'N/A';
+    const gwRank = team.summary_event_rank ? team.summary_event_rank.toLocaleString() : 'N/A';
 
     // Team value and bank
-    const teamValue = ((entry.value || 0) / 10).toFixed(1);
     const bank = ((entry.bank || 0) / 10).toFixed(1);
     const squadValue = ((entry.value || 0) / 10 - (entry.bank || 0) / 10).toFixed(1);
     const freeTransfers = entry.event_transfers || 0;
     const transferCost = entry.event_transfers_cost || 0;
 
-    // Get league info from cache if available
-    let leagueInfo = '';
-    const leagueId = rivalTeamState.leagueContext;
-    if (leagueId && rivalTeamState.leagueStandingsCache.has(leagueId)) {
-        const standings = rivalTeamState.leagueStandingsCache.get(leagueId);
-        const rivalEntry = standings.standings.results.find(e => e.entry === team.id);
-        const userTeamId = parseInt(localStorage.getItem('fplanner_team_id'));
-        const userEntry = standings.standings.results.find(e => e.entry === userTeamId);
-
-        if (rivalEntry) {
-            let gapText = '';
-            let gapColor = 'var(--text-secondary)';
-            if (userEntry) {
-                const gap = userEntry.total - rivalEntry.total;
-                if (gap > 0) {
-                    gapText = `You lead by ${gap} pts`;
-                    gapColor = '#22c55e';
-                } else if (gap < 0) {
-                    gapText = `Behind you by ${Math.abs(gap)} pts`;
-                    gapColor = '#ef4444';
-                } else {
-                    gapText = 'Level with you';
-                    gapColor = '#eab308';
-                }
-            }
-
-            leagueInfo = `
-                <div style="margin-top: 0.35rem; padding-top: 0.35rem; border-top: 1px solid var(--border-color);">
-                    <div style="font-size: 0.65rem; color: var(--text-secondary);">
-                        League Rank: <span style="font-weight: 600; color: var(--text-primary);">${rivalEntry.rank}</span>
-                        ${gapText ? `<span style="margin-left: 0.5rem; color: ${gapColor};">${gapText}</span>` : ''}
-                    </div>
-                </div>
-            `;
-        }
-    }
-
     // Captain info
     const captainPick = picks.picks.find(p => p.is_captain);
-    const vicePick = picks.picks.find(p => p.is_vice_captain);
     const captain = captainPick ? getPlayerById(captainPick.element) : null;
-    const vice = vicePick ? getPlayerById(vicePick.element) : null;
 
     // Get captain points
     let captainPts = 0;
-    if (captain) {
-        const captainLiveStats = captain.live_stats;
-        if (captainLiveStats) {
-            captainPts = (captainLiveStats.total_points || 0) * (captainPick.multiplier || 2);
-        }
+    if (captain && captain.live_stats) {
+        captainPts = (captain.live_stats.total_points || 0) * (captainPick.multiplier || 2);
     }
 
     return `
@@ -300,8 +255,6 @@ function renderRivalCompactHeader(teamData, gwNumber) {
                     <div style="font-size: 0.7rem; color: var(--text-secondary);">
                         Transfers: ${freeTransfers}${transferCost > 0 ? ` <span style="color: #ef4444;">(-${transferCost})</span>` : ''}
                     </div>
-
-                    ${leagueInfo}
                 </div>
 
                 <!-- GW Points Card -->
