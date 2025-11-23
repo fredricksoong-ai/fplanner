@@ -16,9 +16,10 @@ import {
  * Render ultra-compact header with team info and GW card
  * @param {Object} teamData - Team data with picks and team info
  * @param {number} gwNumber - Current gameweek number
+ * @param {boolean} isAutoRefreshActive - Whether auto-refresh is active
  * @returns {string} HTML for compact header
  */
-export function renderCompactHeader(teamData, gwNumber) {
+export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = false) {
     const { picks, team, isLive } = teamData;
     const entry = picks.entry_history;
 
@@ -109,6 +110,10 @@ export function renderCompactHeader(teamData, gwNumber) {
                     </div>
 
                     <div style="font-size: 0.7rem; color: var(--text-secondary);">
+                        GW Rank: <span style="color: ${gwTextColor};">${gwRank}</span>
+                    </div>
+
+                    <div style="font-size: 0.7rem; color: var(--text-secondary);">
                         Squad Value: £${squadValue}m + £${bank}m
                     </div>
 
@@ -137,6 +142,12 @@ export function renderCompactHeader(teamData, gwNumber) {
                             GW ${gwNumber}${isLive ? ' <span style="color: #22c55e; animation: pulse 2s infinite;">⚡ LIVE</span>' : ''}
                         </div>
                         ${isLive ? '<style>@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }</style>' : ''}
+                        ${isAutoRefreshActive ? `
+                            <div style="display: flex; align-items: center; justify-content: center; gap: 0.25rem; margin-top: 0.3rem; font-size: 0.6rem; color: var(--text-secondary);">
+                                <i class="fas fa-sync-alt fa-spin" style="font-size: 0.55rem; color: #00ff88;"></i>
+                                <span>Auto-refreshing</span>
+                            </div>
+                        ` : ''}
                         ${leagueInfo}
                     </div>
                 </div>

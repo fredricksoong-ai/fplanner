@@ -4,7 +4,7 @@
 // ============================================================================
 
 import './styles.css';
-import { loadFPLData, loadMyTeam, refreshData, currentGW } from './data.js';
+import { loadFPLData, loadMyTeam, refreshData, currentGW, loadEnrichedBootstrap } from './data.js';
 import { escapeHtml } from './utils.js';
 import {
     updateOwnershipThreshold as updateAnalysisOwnership,
@@ -29,21 +29,39 @@ let myTeamData = null;
 
 /**
  * Navigate to a specific page
- * @param {string} page - Page name ('my-team', 'team-builder', 'data-analysis', 'charts', 'search')
+ * @param {string} page - Page name ('my-team', 'team-builder', 'data-analysis', 'charts', 'search', 'refresh')
  * @param {string} subTab - Optional sub-tab for pages with tabs
  */
-export function navigate(page, subTab = 'overview') {
+export async function navigate(page, subTab = 'overview') {
+    // Handle refresh action
+    if (page === 'refresh') {
+        console.log('🔄 Refresh triggered - reloading data...');
+        try {
+            await loadEnrichedBootstrap(true); // Force refresh
+            console.log('✅ Data refreshed');
+            // Re-render current page (default to my-team)
+            if (currentPage === 'my-team') {
+                renderPage();
+            } else {
+                navigate('my-team', subTab);
+            }
+        } catch (err) {
+            console.error('❌ Failed to refresh:', err);
+        }
+        return;
+    }
+
     console.log(`🧭 Navigating to: ${page}${subTab !== 'overview' ? `/${subTab}` : ''}`);
-    
+
     currentPage = page;
     currentSubTab = subTab;
-    
+
     // Update URL hash
     window.location.hash = subTab !== 'overview' ? `#${page}/${subTab}` : `#${page}`;
-    
+
     // Update active nav link
     updateNavLinks();
-    
+
     // Render the appropriate page
     renderPage();
 }
@@ -99,9 +117,6 @@ function renderPage() {
         case 'search':
             renderSearch();
             break;
-        case 'dashboard':
-            renderDashboard();
-            break;
         default:
             container.innerHTML = '<p>Page not found</p>';
     }
@@ -134,11 +149,6 @@ async function renderCharts() {
 async function renderSearch() {
     const { renderSearch: render } = await import('./renderSearch.js');
     render();
-}
-
-async function renderDashboard() {
-    const { renderLiveDashboard } = await import('./liveDashboard.js');
-    renderLiveDashboard();
 }
 
 // ============================================================================
