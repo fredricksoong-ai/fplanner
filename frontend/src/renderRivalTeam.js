@@ -6,15 +6,17 @@
 import {
     loadMyTeam,
     isGameweekLive,
-    getActiveGW
+    getActiveGW,
+    getPlayerById
 } from './data.js';
 
 import {
-    renderCompactHeader,
     renderCompactTeamList,
     renderMatchSchedule,
     attachPlayerRowListeners
 } from './renderMyTeamCompact.js';
+
+import { escapeHtml } from './utils.js';
 
 import { sharedState } from './sharedState.js';
 
@@ -150,44 +152,8 @@ function renderRivalTeamView(teamData) {
         isLive: isLive
     };
 
-    // Build HTML with back button and compact view
+    // Build HTML with compact view (no back button - use nav bar)
     const html = `
-        <!-- Back Navigation -->
-        <div style="
-            position: sticky;
-            top: env(safe-area-inset-top);
-            background: var(--bg-primary);
-            z-index: 200;
-            padding: 0.5rem 1rem;
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        ">
-            <button
-                id="back-to-leagues-btn"
-                onclick="window.navigateToPage('my-team', 'leagues');"
-                style="
-                    background: transparent;
-                    border: 1px solid var(--border-color);
-                    border-radius: 0.3rem;
-                    padding: 0.4rem 0.6rem;
-                    color: var(--text-secondary);
-                    cursor: pointer;
-                    display: flex;
-                    align-items: center;
-                    gap: 0.3rem;
-                    font-size: 0.8rem;
-                "
-            >
-                <i class="fas fa-arrow-left"></i>
-                <span>Back to Leagues</span>
-            </button>
-            <div style="font-size: 0.75rem; color: var(--text-secondary);">
-                Viewing rival team
-            </div>
-        </div>
-
         <!-- Compact Header (modified for rival) -->
         ${renderRivalCompactHeader(compactTeamData, gwNumber)}
 
@@ -207,27 +173,160 @@ function renderRivalTeamView(teamData) {
 }
 
 /**
- * Render compact header for rival team (without change team button)
+ * Render compact header for rival team with position and gap info
  * @param {Object} teamData - Team data
  * @param {number} gwNumber - Gameweek number
  * @returns {string} HTML for header
  */
 function renderRivalCompactHeader(teamData, gwNumber) {
-    // Use the standard compact header but we'll modify the team name display
-    const headerHtml = renderCompactHeader(teamData, gwNumber, false);
+    const { picks, team, isLive } = teamData;
+    const entry = picks.entry_history;
 
-    // Replace the change team button with a rival indicator
-    return headerHtml.replace(
-        /<button\s+id="change-team-btn"[\s\S]*?<\/button>/,
-        `<div style="
-            background: var(--bg-tertiary);
-            border-radius: 0.3rem;
-            padding: 0.2rem 0.35rem;
-            display: flex;
-            align-items: center;
-            gap: 0.3rem;
-        ">
-            <i class="fas fa-user-friends" style="font-size: 0.7rem; color: var(--text-secondary);"></i>
-        </div>`
-    );
+    // Calculate GW points from entry_history.points
+    let gwPoints = entry?.points ?? 0;
+
+    const totalPoints = team.summary_overall_points || 0;
+    const overallRankNum = team.summary_overall_rank || 0;
+    const gwRankNum = team.summary_event_rank || 0;
+    const overallRank = overallRankNum ? overallRankNum.toLocaleString() : 'N/A';
+    const gwRank = gwRankNum ? gwRankNum.toLocaleString() : 'N/A';
+
+    // Team value and bank
+    const teamValue = ((entry.value || 0) / 10).toFixed(1);
+    const bank = ((entry.bank || 0) / 10).toFixed(1);
+    const squadValue = ((entry.value || 0) / 10 - (entry.bank || 0) / 10).toFixed(1);
+    const freeTransfers = entry.event_transfers || 0;
+    const transferCost = entry.event_transfers_cost || 0;
+
+    // Get league info from cache if available
+    let leagueInfo = '';
+    const leagueId = rivalTeamState.leagueContext;
+    if (leagueId && rivalTeamState.leagueStandingsCache.has(leagueId)) {
+        const standings = rivalTeamState.leagueStandingsCache.get(leagueId);
+        const rivalEntry = standings.standings.results.find(e => e.entry === team.id);
+        const userTeamId = parseInt(localStorage.getItem('fplanner_team_id'));
+        const userEntry = standings.standings.results.find(e => e.entry === userTeamId);
+
+        if (rivalEntry) {
+            let gapText = '';
+            let gapColor = 'var(--text-secondary)';
+            if (userEntry) {
+                const gap = userEntry.total - rivalEntry.total;
+                if (gap > 0) {
+                    gapText = `You lead by ${gap} pts`;
+                    gapColor = '#22c55e';
+                } else if (gap < 0) {
+                    gapText = `Behind you by ${Math.abs(gap)} pts`;
+                    gapColor = '#ef4444';
+                } else {
+                    gapText = 'Level with you';
+                    gapColor = '#eab308';
+                }
+            }
+
+            leagueInfo = `
+                <div style="margin-top: 0.35rem; padding-top: 0.35rem; border-top: 1px solid var(--border-color);">
+                    <div style="font-size: 0.65rem; color: var(--text-secondary);">
+                        League Rank: <span style="font-weight: 600; color: var(--text-primary);">${rivalEntry.rank}</span>
+                        ${gapText ? `<span style="margin-left: 0.5rem; color: ${gapColor};">${gapText}</span>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    // Captain info
+    const captainPick = picks.picks.find(p => p.is_captain);
+    const vicePick = picks.picks.find(p => p.is_vice_captain);
+    const captain = captainPick ? getPlayerById(captainPick.element) : null;
+    const vice = vicePick ? getPlayerById(vicePick.element) : null;
+
+    // Get captain points
+    let captainPts = 0;
+    if (captain) {
+        const captainLiveStats = captain.live_stats;
+        if (captainLiveStats) {
+            captainPts = (captainLiveStats.total_points || 0) * (captainPick.multiplier || 2);
+        }
+    }
+
+    return `
+        <div
+            id="compact-header"
+            style="
+                position: sticky;
+                top: calc(3.5rem + env(safe-area-inset-top));
+                background: var(--bg-primary);
+                z-index: 100;
+                padding: 0.5rem 0;
+                border-bottom: 2px solid var(--border-color);
+                margin: 0;
+            "
+        >
+            <div style="display: flex; justify-content: space-between; align-items: stretch; gap: 0.5rem;">
+                <div style="flex: 1; display: grid; gap: 0.2rem;">
+                    <div style="display: flex; align-items: center; gap: 0.4rem;">
+                        <div style="
+                            background: var(--bg-tertiary);
+                            border-radius: 0.3rem;
+                            padding: 0.2rem 0.35rem;
+                            display: flex;
+                            align-items: center;
+                            gap: 0.3rem;
+                        ">
+                            <i class="fas fa-user-friends" style="font-size: 0.7rem; color: var(--text-secondary);"></i>
+                        </div>
+                        <div style="font-size: 0.95rem; font-weight: 700; color: var(--text-primary); line-height: 1.2; flex: 1;">
+                            ${escapeHtml(team.name)}
+                        </div>
+                    </div>
+
+                    <div style="font-size: 0.7rem; color: var(--text-secondary);">
+                        Overall Points: ${totalPoints.toLocaleString()}
+                    </div>
+
+                    <div style="font-size: 0.7rem; color: var(--text-secondary);">
+                        Overall Rank: ${overallRank}
+                    </div>
+
+                    <div style="font-size: 0.7rem; color: var(--text-secondary);">
+                        GW Rank: ${gwRank}
+                    </div>
+
+                    <div style="font-size: 0.7rem; color: var(--text-secondary);">
+                        Squad Value: £${squadValue}m + £${bank}m
+                    </div>
+
+                    <div style="font-size: 0.7rem; color: var(--text-secondary);">
+                        Transfers: ${freeTransfers}${transferCost > 0 ? ` <span style="color: #ef4444;">(-${transferCost})</span>` : ''}
+                    </div>
+
+                    ${leagueInfo}
+                </div>
+
+                <!-- GW Points Card -->
+                <div style="
+                    background: var(--bg-secondary);
+                    border-radius: 0.5rem;
+                    padding: 0.5rem;
+                    min-width: 5rem;
+                    text-align: center;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                ">
+                    <div style="font-size: 0.6rem; color: var(--text-secondary); margin-bottom: 0.15rem;">
+                        GW${gwNumber}
+                    </div>
+                    <div style="font-size: 1.5rem; font-weight: 800; color: var(--primary-color); line-height: 1;">
+                        ${gwPoints}
+                    </div>
+                    <div style="font-size: 0.55rem; color: var(--text-secondary); margin-top: 0.2rem;">
+                        ${captain ? `(C) ${captain.web_name}` : ''}
+                    </div>
+                    ${captain ? `<div style="font-size: 0.55rem; color: var(--text-secondary);">${captainPts} pts</div>` : ''}
+                </div>
+            </div>
+        </div>
+    `;
 }
