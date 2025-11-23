@@ -21,7 +21,10 @@ import { sharedState } from './sharedState.js';
 // State for rival team page
 let rivalTeamState = {
     teamData: null,
-    rivalTeamCache: sharedState.rivalTeamCache
+    rivalTeamCache: sharedState.rivalTeamCache,
+    selectedLeagues: [], // For league ownership comparison
+    leagueStandingsCache: sharedState.leagueStandingsCache,
+    captainCache: sharedState.captainCache
 };
 
 /**
@@ -77,6 +80,17 @@ export async function renderRivalTeam(rivalId) {
         }
 
         rivalTeamState.teamData = rivalTeamData;
+
+        // Load selected leagues from localStorage for ownership comparison
+        const savedLeagues = localStorage.getItem('fplanner_selected_leagues');
+        if (savedLeagues) {
+            try {
+                rivalTeamState.selectedLeagues = JSON.parse(savedLeagues);
+            } catch (err) {
+                console.error('Failed to parse saved leagues:', err);
+                rivalTeamState.selectedLeagues = [];
+            }
+        }
 
         // Render the rival team view
         renderRivalTeamView(rivalTeamData);
