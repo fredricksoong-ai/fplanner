@@ -4,6 +4,7 @@
 // ============================================================================
 
 import { fplBootstrap, currentGW } from './data.js';
+import { memoize } from './utils/memoize.js';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -344,10 +345,15 @@ export function getTeamByCode(teamCode) {
  * // Player with 100 points costing £12.5m (125 tenths)
  * calculatePPM({ total_points: 100, now_cost: 125 }) // Returns 8.0
  */
-export function calculatePPM(player) {
+function _calculatePPM(player) {
     if (!player.now_cost || player.now_cost === 0) return 0;
     return (player.total_points || 0) / (player.now_cost / 10);
 }
+
+// Memoized version - caches by player ID and cost/points
+export const calculatePPM = memoize(_calculatePPM, {
+    keyGenerator: (player) => `${player.id}-${player.now_cost}-${player.total_points}`
+});
 
 /**
  * Calculate points per 90 minutes (PP90) - efficiency metric
@@ -371,11 +377,19 @@ export function calculatePP90(player) {
  * // Player with 810 minutes in 10 gameweeks
  * calculateMinutesPercentage({ minutes: 810 }, 10) // Returns 90.0 (90%)
  */
-export function calculateMinutesPercentage(player, gw = null) {
+function _calculateMinutesPercentage(player, gw = null) {
     const currentGw = gw || getCurrentGW();
     if (currentGw === 0) return 0;
     return ((player.minutes || 0) / (currentGw * 90)) * 100;
 }
+
+// Memoized version - caches by player ID, minutes, and gameweek
+export const calculateMinutesPercentage = memoize(_calculateMinutesPercentage, {
+    keyGenerator: (player, gw = null) => {
+        const currentGw = gw || getCurrentGW();
+        return `${player.id}-${player.minutes || 0}-${currentGw}`;
+    }
+});
 
 /**
  * Get player form trend

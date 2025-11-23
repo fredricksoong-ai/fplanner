@@ -41,6 +41,8 @@ import {
     attachRiskTooltipListeners
 } from './renderHelpers.js';
 
+import { debounce } from './utils/debounce.js';
+
 import {
     loadAndRenderInsights
 } from './renderInsightBanner.js';
@@ -262,26 +264,45 @@ export function renderDataAnalysis(subTab = 'overview', position = 'all') {
         });
     });
 
-    // Add event listener for ownership threshold slider
+    // Add debounced event listener for ownership threshold slider
     const ownershipSlider = document.getElementById('ownership-threshold-slider');
     if (ownershipSlider) {
+        // Update display immediately, but debounce the re-render
         ownershipSlider.addEventListener('input', (e) => {
-            window.updateOwnershipThreshold(e.target.value);
+            const value = e.target.value;
+            document.getElementById('ownership-value').textContent = `${value}%`;
+        });
+        
+        // Debounce the actual filter update and re-render (300ms)
+        const debouncedUpdate = debounce((value) => {
+            window.updateOwnershipThreshold(value);
+        }, 300);
+        
+        ownershipSlider.addEventListener('input', (e) => {
+            debouncedUpdate(e.target.value);
         });
     }
 
-    // Add event listeners for filter checkboxes
+    // Add debounced event listeners for filter checkboxes
     const fixtureCheckbox = document.getElementById('fixture-filter-checkbox');
     if (fixtureCheckbox) {
+        const debouncedToggle = debounce((checked) => {
+            window.toggleFixtureFilter(checked);
+        }, 300);
+        
         fixtureCheckbox.addEventListener('change', (e) => {
-            window.toggleFixtureFilter(e.target.checked);
+            debouncedToggle(e.target.checked);
         });
     }
 
     const momentumCheckbox = document.getElementById('momentum-filter-checkbox');
     if (momentumCheckbox) {
+        const debouncedToggle = debounce((checked) => {
+            window.toggleMomentumFilter(checked);
+        }, 300);
+        
         momentumCheckbox.addEventListener('change', (e) => {
-            window.toggleMomentumFilter(e.target.checked);
+            debouncedToggle(e.target.checked);
         });
     }
 
@@ -298,6 +319,32 @@ export function renderDataAnalysis(subTab = 'overview', position = 'all') {
     attachPlayerRowListeners(sharedState.getTeamState());
 
     attachRiskTooltipListeners();
+
+    // Add event delegation for "Load More" buttons
+    container.addEventListener('click', (e) => {
+        const loadMoreBtn = e.target.closest('.load-more-players-btn');
+        if (loadMoreBtn) {
+            const totalCount = parseInt(loadMoreBtn.dataset.totalCount);
+            const currentCount = parseInt(loadMoreBtn.dataset.currentCount);
+            const loadMore = 20; // Load 20 more items
+            
+            // Update the count
+            const newCount = Math.min(currentCount + loadMore, totalCount);
+            loadMoreBtn.dataset.currentCount = newCount;
+            
+            // Re-render the table with more items
+            const hash = window.location.hash.slice(1);
+            const parts = hash.split('/');
+            const tab = parts[1] || 'overview';
+            const position = parts[2] || 'all';
+            
+            // Temporarily store the desired count
+            window._tempPlayerLimit = newCount;
+            
+            // Re-render
+            renderDataAnalysis(tab, position);
+        }
+    });
 }
 
 function renderAnalysisOverview(position = 'all') {
@@ -643,8 +690,11 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
 
     const currentGW = getActiveGW(); // Use active GW for status/opponent display
 
-    // Limit to top 15 for mobile
-    const mobilePlayers = players.slice(0, 15);
+    // Limit to top 20 for mobile initially (can be expanded with load more)
+    // Check if there's a temporary limit set (from load more button)
+    const initialCount = window._tempPlayerLimit || 20;
+    const mobilePlayers = players.slice(0, initialCount);
+    const hasMore = players.length > initialCount;
 
     // Context column header and value function
     const contextConfig = {
@@ -889,6 +939,33 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
     });
 
     html += `</div>`;
+    
+    // Add "Load More" button if there are more items (mobile only)
+    if (hasMore && isMobileDevice()) {
+        const remaining = players.length - initialCount;
+        html += `
+            <div style="text-align: center; padding: 1rem; margin-top: 0.5rem;">
+                <button
+                    class="load-more-players-btn"
+                    data-total-count="${players.length}"
+                    data-current-count="${initialCount}"
+                    style="
+                        padding: 0.75rem 1.5rem;
+                        background: var(--primary-color);
+                        color: white;
+                        border: none;
+                        border-radius: 8px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        font-size: 0.875rem;
+                    "
+                >
+                    Load More (${remaining} remaining)
+                </button>
+            </div>
+        `;
+    }
+    
     return html;
 }
 

@@ -3,6 +3,8 @@
 // Handles all API calls to backend
 // ============================================================================
 
+import { memoizeWithDependency } from './utils/memoize.js';
+
 /**
  * @typedef {Object} FPLDataResponse
  * @property {Object} bootstrap - FPL bootstrap data (events, teams, elements)
@@ -43,6 +45,12 @@ let autoRefreshInterval = null;
 
 /** @type {Function|null} Callback for when data is refreshed */
 let onDataRefreshCallback = null;
+
+/** @type {Array|null} Cached enriched players array */
+let cachedEnrichedPlayers = null;
+
+/** @type {number|null} Cache key based on data timestamps */
+let playersCacheKey = null;
 
 /** Auto-refresh interval in milliseconds (2 minutes) */
 const AUTO_REFRESH_INTERVAL = 2 * 60 * 1000;
@@ -200,6 +208,9 @@ export async function loadFPLData(queryParams = '') {
         fplFixtures = data.fixtures;
         githubData = data.github;
         
+        // Clear players cache when data is refreshed
+        clearPlayersCache();
+        
         // Detect current gameweek
         detectCurrentGW();
         
@@ -275,6 +286,10 @@ export async function loadEnrichedBootstrap(force = false) {
 
         // Update module-level bootstrap with enriched data
         fplBootstrap = data;
+        
+        // Clear players cache when enriched data is loaded
+        clearPlayersCache();
+        
         detectCurrentGW();
 
         return data;
@@ -610,6 +625,7 @@ function enrichPlayerData(players) {
 
 /**
  * Get all players with enriched data (FPL + GitHub stats)
+ * Memoized to avoid re-processing all players on every call
  * @returns {Array<import('./utils.js').Player>} All players with github_season, github_gw, github_transfers
  * @example
  * const players = getAllPlayers();
@@ -621,7 +637,32 @@ export function getAllPlayers() {
         return [];
     }
 
-    return enrichPlayerData(fplBootstrap.elements);
+    // Generate cache key based on data state
+    // Cache invalidates when bootstrap or github data changes
+    const bootstrapTimestamp = fplBootstrap.events?.[0]?.id || 0;
+    const githubTimestamp = githubData?.currentGW || 0;
+    const currentKey = `${bootstrapTimestamp}-${githubTimestamp}-${currentGW || 0}`;
+
+    // Return cached data if available and valid
+    if (cachedEnrichedPlayers && playersCacheKey === currentKey) {
+        return cachedEnrichedPlayers;
+    }
+
+    // Process and cache
+    const enriched = enrichPlayerData([...fplBootstrap.elements]); // Create copy to avoid mutating original
+    cachedEnrichedPlayers = enriched;
+    playersCacheKey = currentKey;
+
+    return enriched;
+}
+
+/**
+ * Clear the players cache (called when data is refreshed)
+ * @private
+ */
+function clearPlayersCache() {
+    cachedEnrichedPlayers = null;
+    playersCacheKey = null;
 }
 
 /**

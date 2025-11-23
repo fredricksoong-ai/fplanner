@@ -5,6 +5,7 @@
 
 import { fplFixtures, fplBootstrap, currentGW } from './data.js';
 import { getTeamByCode } from './utils.js';
+import { memoizeWithDependency } from './utils/memoize.js';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -224,7 +225,7 @@ export function getMatchStatus(teamId, gameweek, player) {
  * @example
  * calculateFixtureDifficulty(1, 5) // 2.4 (good fixtures)
  */
-export function calculateFixtureDifficulty(teamId, count = 5) {
+function _calculateFixtureDifficulty(teamId, count = 5) {
     const fixtures = getFixtures(teamId, count, false);
 
     if (fixtures.length === 0) return 3;
@@ -232,6 +233,16 @@ export function calculateFixtureDifficulty(teamId, count = 5) {
     const totalDifficulty = fixtures.reduce((sum, f) => sum + f.difficulty, 0);
     return totalDifficulty / fixtures.length;
 }
+
+// Memoized version - auto-invalidates when gameweek changes
+// Cache key includes teamId, count, and currentGW (via dependency)
+export const calculateFixtureDifficulty = memoizeWithDependency(
+    _calculateFixtureDifficulty,
+    () => currentGW || 0, // Dependency: invalidate when gameweek changes
+    {
+        keyGenerator: (teamId, count) => `${teamId}-${count}`
+    }
+);
 
 /**
  * Get fixture difficulty rating classification
