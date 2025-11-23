@@ -408,6 +408,7 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
             return `
                 <div class="mobile-table-row mobile-table-league ${!isUser ? 'mobile-rival-team-row' : ''}"
                      data-rival-id="${entry.entry}"
+                     data-league-id="${leagueData.league.id}"
                      style="background: ${bgColor}; ${isUser ? 'border-left: 3px solid var(--primary-color);' : ''} ${!isUser ? 'cursor: pointer;' : ''}">
                     <div style="text-align: center;">
                         <div style="font-weight: 600;">${entry.rank}</div>
@@ -516,6 +517,7 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
                                 <tr
                                     class="${!isUser ? 'rival-team-row' : ''}"
                                     data-rival-id="${entry.entry}"
+                                    data-league-id="${standings.league.id}"
                                     style="background: ${rowBg}; ${isUser ? 'border-left: 4px solid var(--primary-color);' : ''} ${!isUser ? 'cursor: pointer;' : ''}"
                                 >
                                     <td style="padding: 0.75rem 0.5rem; text-align: center;">
@@ -568,9 +570,10 @@ export function attachMobileRivalListeners(myTeamState) {
     mobileRivalRows.forEach(row => {
         row.addEventListener('click', () => {
             const rivalId = parseInt(row.getAttribute('data-rival-id'));
+            const leagueId = parseInt(row.getAttribute('data-league-id'));
             if (rivalId) {
-                // Navigate to rival team page instead of showing modal
-                window.navigateToRival(rivalId);
+                // Navigate to rival team page with league context
+                window.navigateToRival(rivalId, leagueId || null);
             }
         });
     });
