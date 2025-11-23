@@ -46,12 +46,9 @@ export function renderCompactPlayerRow(pick, player, gwNumber) {
     const hasGWStats = player.github_gw && player.github_gw.gw === gwNumber;
     const liveStats = player.live_stats;
 
-    // Calculate GW points - during live, add provisional bonus since total_points doesn't include it
+    // Calculate GW points from live stats or fallback sources
     let gwPoints = liveStats?.total_points ??
                    (hasGWStats ? player.github_gw.total_points : (player.event_points || 0));
-    if (liveStats?.provisional_bonus) {
-        gwPoints += liveStats.provisional_bonus;
-    }
 
     const displayPoints = isCaptain ? (gwPoints * 2) : gwPoints;
     const isLive = !!liveStats;

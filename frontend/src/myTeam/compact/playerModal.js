@@ -457,11 +457,8 @@ export async function showPlayerModal(playerId, myTeamState = null) {
     // Only use github_gw if not in live state or if live_stats not available
     const gwStats = (!hasLiveStats && player.github_gw) ? player.github_gw : {};
 
-    // Calculate GW points - during live, add provisional bonus since total_points doesn't include it
+    // Calculate GW points from live stats or fallback sources
     let gwPoints = liveStats?.total_points ?? gwStats.total_points ?? player.event_points ?? 0;
-    if (hasLiveStats && liveStats.provisional_bonus) {
-        gwPoints += liveStats.provisional_bonus;
-    }
 
     // Only use minutes if match has started/finished
     let minutes = null;
