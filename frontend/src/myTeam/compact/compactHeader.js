@@ -102,11 +102,11 @@ export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = fa
                     </div>
 
                     <div style="font-size: 0.7rem; color: var(--text-secondary);">
-                        Overall Rank: ${overallRank} <span style="color: ${rankIndicator.color};">${rankIndicator.chevron}</span>
+                        Overall Points: ${totalPoints.toLocaleString()}
                     </div>
 
                     <div style="font-size: 0.7rem; color: var(--text-secondary);">
-                        Overall Points: ${totalPoints.toLocaleString()}
+                        Overall Rank: ${overallRank} <span style="color: ${rankIndicator.color};">${rankIndicator.chevron}</span>
                     </div>
 
                     <div style="font-size: 0.7rem; color: var(--text-secondary);">
