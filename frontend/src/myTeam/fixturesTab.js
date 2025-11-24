@@ -163,12 +163,13 @@ function renderFixturePlayerStats(fixture, gameweek, isLive, isFinished, isDeskt
             ownGoals: 0
         };
 
-        if (isLive && liveStats) {
+        // Prefer live_stats if available (has bonus data during/after match)
+        if (liveStats && liveStats.minutes > 0) {
             stats.points = liveStats.total_points || 0;
             stats.minutes = liveStats.minutes || 0;
             stats.goals = liveStats.goals_scored || 0;
             stats.assists = liveStats.assists || 0;
-            stats.bonus = liveStats.provisional_bonus ?? liveStats.bonus ?? 0;
+            stats.bonus = liveStats.bonus || liveStats.provisional_bonus || 0;
             stats.bps = liveStats.bps || 0;
             stats.yellowCards = liveStats.yellow_cards || 0;
             stats.redCards = liveStats.red_cards || 0;
@@ -256,7 +257,7 @@ function renderFixturePlayerStats(fixture, gameweek, isLive, isFinished, isDeskt
     // BPS Rankings (top 10)
     const bpsRanked = playerStats.filter(p => p.bps > 0).sort((a, b) => b.bps - a.bps).slice(0, 10);
     const bpsHtml = bpsRanked.length > 0
-        ? bpsRanked.map(p => renderPlayerItem(p.player.web_name, p.bps, 'var(--primary-color)')).join('')
+        ? bpsRanked.map(p => renderPlayerItem(p.player.web_name, p.bps, '#a78bfa')).join('')
         : '<div style="color: var(--text-secondary); text-align: center;">-</div>';
 
     // Defensive Contributions (clean sheets, own goals)
