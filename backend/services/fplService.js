@@ -249,6 +249,35 @@ export async function fetchElementSummary(playerId) {
 }
 
 // ============================================================================
+// TRANSFER HISTORY
+// ============================================================================
+
+/**
+ * Fetch transfer history for a team
+ * @param {string|number} teamId - FPL team ID
+ * @returns {Promise<Array>} Array of transfers
+ */
+export async function fetchTransferHistory(teamId) {
+  logger.log(`📡 Fetching transfer history for team ${teamId}...`);
+
+  try {
+    const response = await axios.get(`${FPL_BASE_URL}/entry/${teamId}/transfers/`, {
+      timeout: 10000,
+      headers: {
+        'User-Agent': 'FPLanner/1.0'
+      }
+    });
+
+    logger.log(`✅ Transfer history fetched for team ${teamId} (${response.data.length} transfers)`);
+    recordFetch();
+    return response.data;
+  } catch (err) {
+    logger.error(`❌ Failed to fetch transfer history for team ${teamId}:`, err.message);
+    throw new Error(`Transfer history unavailable for team ${teamId}`);
+  }
+}
+
+// ============================================================================
 // LEAGUE DATA
 // ============================================================================
 

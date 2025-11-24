@@ -512,6 +512,32 @@ export async function loadLeagueStandings(leagueId, page = 1) {
 }
 
 /**
+ * Load transfer history for a team
+ * @param {string|number} teamId - Team ID
+ * @returns {Promise<Array>} Array of transfers
+ */
+export async function loadTransferHistory(teamId) {
+    console.log(`🔄 Loading transfer history for team ${teamId}...`);
+
+    try {
+        const response = await fetch(`${API_BASE}/team/${teamId}/transfers`);
+
+        if (!response.ok) {
+            throw new Error(`Failed to load transfer history for team ${teamId}`);
+        }
+
+        const data = await response.json();
+
+        console.log(`✅ Transfer history loaded (${data.count} transfers)`);
+
+        return data.transfers || [];
+    } catch (err) {
+        console.error(`❌ Failed to load transfer history:`, err);
+        throw err;
+    }
+}
+
+/**
  * Detect current gameweek from bootstrap data
  * Sets the module-level currentGW variable to latest finished gameweek
  * @private

@@ -3,7 +3,7 @@
 // Team info, GW points, rank, and captain/vice info for mobile view
 // ============================================================================
 
-import { getPlayerById } from '../../data.js';
+import { getPlayerById, loadTransferHistory, getActiveGW } from '../../data.js';
 import { escapeHtml } from '../../utils.js';
 import { getGWOpponent } from '../../fixtures.js';
 import {
@@ -11,6 +11,9 @@ import {
     calculateRankIndicator,
     calculateGWIndicator
 } from './compactStyleHelpers.js';
+
+// Cache for transfer history
+let transferHistoryCache = new Map();
 
 /**
  * Render ultra-compact header with team info and GW card
@@ -117,8 +120,16 @@ export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = fa
                         Squad Value: £${squadValue}m + £${bank}m
                     </div>
 
-                    <div style="font-size: 0.7rem; color: var(--text-secondary);">
-                        Transfers: ${freeTransfers} FT${transferCost > 0 ? ` (-${transferCost} pts)` : ''}
+                    <div
+                        id="transfers-row"
+                        data-team-id="${team.id}"
+                        style="font-size: 0.7rem; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; gap: 0.25rem;"
+                    >
+                        <span>Transfers: ${freeTransfers} FT${transferCost > 0 ? ` <span style="color: #ef4444;">(-${transferCost} pts)</span>` : ''}</span>
+                        <i class="fas fa-chevron-down" id="transfers-chevron" style="font-size: 0.55rem; transition: transform 0.2s;"></i>
+                    </div>
+                    <div id="transfers-details" style="display: none; font-size: 0.65rem; padding-top: 0.25rem; margin-top: 0.25rem; border-top: 1px dashed var(--border-color);">
+                        <div style="color: var(--text-secondary); text-align: center;">Loading transfers...</div>
                     </div>
                 </div>
 
@@ -188,4 +199,110 @@ function getCaptainViceInfo(picks, gwNumber) {
     }
 
     return { captainInfo, viceInfo };
+}
+
+/**
+ * Attach event listeners for expandable transfers
+ */
+export function attachTransferListeners() {
+    const transfersRow = document.getElementById('transfers-row');
+    if (!transfersRow) return;
+
+    transfersRow.addEventListener('click', async () => {
+        const detailsDiv = document.getElementById('transfers-details');
+        const chevron = document.getElementById('transfers-chevron');
+        const teamId = transfersRow.dataset.teamId;
+
+        if (!detailsDiv) return;
+
+        const isVisible = detailsDiv.style.display !== 'none';
+
+        if (isVisible) {
+            // Collapse
+            detailsDiv.style.display = 'none';
+            if (chevron) chevron.style.transform = 'rotate(0deg)';
+        } else {
+            // Expand
+            detailsDiv.style.display = 'block';
+            if (chevron) chevron.style.transform = 'rotate(180deg)';
+
+            // Load transfer history if not cached
+            if (!transferHistoryCache.has(teamId)) {
+                try {
+                    const transfers = await loadTransferHistory(teamId);
+                    transferHistoryCache.set(teamId, transfers);
+                    renderTransferDetails(detailsDiv, transfers);
+                } catch (err) {
+                    detailsDiv.innerHTML = '<div style="color: #ef4444;">Failed to load transfers</div>';
+                }
+            } else {
+                renderTransferDetails(detailsDiv, transferHistoryCache.get(teamId));
+            }
+        }
+    });
+}
+
+/**
+ * Render transfer details in the expandable section
+ * @param {HTMLElement} container - Container element
+ * @param {Array} transfers - Transfer history array
+ */
+function renderTransferDetails(container, transfers) {
+    const currentGW = getActiveGW();
+
+    // Filter to current GW transfers
+    const gwTransfers = transfers.filter(t => t.event === currentGW);
+
+    if (gwTransfers.length === 0) {
+        container.innerHTML = '<div style="color: var(--text-secondary); text-align: center;">No transfers this GW</div>';
+        return;
+    }
+
+    const transfersHtml = gwTransfers.map(transfer => {
+        const playerIn = getPlayerById(transfer.element_in);
+        const playerOut = getPlayerById(transfer.element_out);
+
+        if (!playerIn || !playerOut) return '';
+
+        // Get GW points for both players
+        const inPoints = playerIn.live_stats?.total_points ?? playerIn.event_points ?? 0;
+        const outPoints = playerOut.live_stats?.total_points ?? playerOut.event_points ?? 0;
+        const netDiff = inPoints - outPoints;
+
+        // Color based on net difference
+        let diffColor = 'var(--text-secondary)';
+        let diffSymbol = '';
+        if (netDiff > 0) {
+            diffColor = '#22c55e';
+            diffSymbol = '+';
+        } else if (netDiff < 0) {
+            diffColor = '#ef4444';
+            diffSymbol = '';
+        }
+
+        return `
+            <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0;">
+                <div style="flex: 1;">
+                    <div style="display: flex; align-items: center; gap: 0.25rem;">
+                        <span style="color: #ef4444;">OUT</span>
+                        <span style="color: var(--text-primary); font-weight: 600;">${escapeHtml(playerOut.web_name)}</span>
+                        <span style="color: var(--text-secondary);">(${outPoints})</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.25rem;">
+                        <span style="color: #22c55e;">IN</span>
+                        <span style="color: var(--text-primary); font-weight: 600;">${escapeHtml(playerIn.web_name)}</span>
+                        <span style="color: var(--text-secondary);">(${inPoints})</span>
+                    </div>
+                </div>
+                <div style="text-align: right; min-width: 2.5rem;">
+                    <div style="font-weight: 700; color: ${diffColor};">
+                        ${diffSymbol}${netDiff}
+                    </div>
+                    <div style="font-size: 0.55rem; color: var(--text-secondary);">net</div>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    container.innerHTML = transfersHtml || '<div style="color: var(--text-secondary); text-align: center;">No transfers this GW</div>';
 }
