@@ -80,25 +80,37 @@ export async function renderPlanner() {
             return { ...player, pick };
         }).filter(p => p.id);
 
-        // Identify problem players
-        const problemPlayerIds = new Set();
+        // Identify players with risks and categorize by severity
+        const riskPlayerMap = new Map(); // playerId -> {risks, highestSeverity}
+        let highCount = 0, mediumCount = 0, lowCount = 0;
+
         myPlayers.forEach(player => {
             const risks = analyzePlayerRisks(player);
-            if (hasHighRisk(risks) || hasMediumRisk(risks)) {
-                problemPlayerIds.add(player.id);
+            if (risks.length > 0) {
+                // Determine highest severity
+                const hasHigh = risks.some(r => r.severity === 'high');
+                const hasMedium = risks.some(r => r.severity === 'medium');
+                const highestSeverity = hasHigh ? 'high' : (hasMedium ? 'medium' : 'low');
+
+                riskPlayerMap.set(player.id, { risks, highestSeverity });
+
+                // Count by severity
+                if (hasHigh) highCount++;
+                else if (hasMedium) mediumCount++;
+                else lowCount++;
             }
         });
 
         // Build page HTML
         const html = `
             <div style="padding: 0.5rem;">
-                ${renderPlannerHeader(gwNumber, problemPlayerIds.size)}
-                ${renderUnifiedFixtureTable(myPlayers, problemPlayerIds, teamData.picks, gwNumber)}
+                ${renderPlannerHeader(gwNumber, highCount, mediumCount, lowCount)}
+                ${renderUnifiedFixtureTable(myPlayers, riskPlayerMap, teamData.picks, gwNumber)}
             </div>
         `;
 
         container.innerHTML = html;
-        attachPlannerListeners(myPlayers, problemPlayerIds, teamData.picks, gwNumber);
+        attachPlannerListeners(myPlayers, riskPlayerMap, teamData.picks, gwNumber);
 
     } catch (err) {
         console.error('Failed to load planner:', err);
@@ -116,7 +128,9 @@ export async function renderPlanner() {
 // HEADER
 // ============================================================================
 
-function renderPlannerHeader(gwNumber, problemCount) {
+function renderPlannerHeader(gwNumber, highCount, mediumCount, lowCount) {
+    const totalIssues = highCount + mediumCount + lowCount;
+
     return `
         <div style="
             position: sticky;
@@ -135,7 +149,13 @@ function renderPlannerHeader(gwNumber, problemCount) {
                     </h1>
                     <p style="font-size: 0.7rem; color: var(--text-secondary); margin: 0.2rem 0 0 0;">
                         GW ${gwNumber + 1} → GW ${gwNumber + 5}
-                        ${problemCount > 0 ? `<span style="color: #fb923c; margin-left: 0.5rem;">⚠️ ${problemCount} issue${problemCount !== 1 ? 's' : ''}</span>` : ''}
+                        ${totalIssues > 0 ? `
+                            <span style="margin-left: 0.5rem;">
+                                ${highCount > 0 ? `<span style="color: #ef4444;">🔴 ${highCount}</span>` : ''}
+                                ${mediumCount > 0 ? `<span style="color: #fb923c; margin-left: 0.3rem;">🟠 ${mediumCount}</span>` : ''}
+                                ${lowCount > 0 ? `<span style="color: #eab308; margin-left: 0.3rem;">🟡 ${lowCount}</span>` : ''}
+                            </span>
+                        ` : ''}
                     </p>
                 </div>
             </div>
@@ -147,7 +167,7 @@ function renderPlannerHeader(gwNumber, problemCount) {
 // UNIFIED FIXTURE TABLE
 // ============================================================================
 
-function renderUnifiedFixtureTable(myPlayers, problemPlayerIds, picks, gwNumber) {
+function renderUnifiedFixtureTable(myPlayers, riskPlayerMap, picks, gwNumber) {
     const next5GWs = [gwNumber + 1, gwNumber + 2, gwNumber + 3, gwNumber + 4, gwNumber + 5];
 
     // Sort by position then by fixture difficulty
@@ -172,22 +192,33 @@ function renderUnifiedFixtureTable(myPlayers, problemPlayerIds, picks, gwNumber)
                             <th style="text-align: center; padding: 0.5rem; min-width: 40px;">FDR</th>
                             <th style="text-align: center; padding: 0.5rem; min-width: 45px;">Form</th>
                             ${next5GWs.map(gw => `<th style="text-align: center; padding: 0.5rem; min-width: 50px;">GW${gw}</th>`).join('')}
-                            <th style="text-align: center; padding: 0.5rem; min-width: 30px;"></th>
                         </tr>
                     </thead>
                     <tbody>
                         ${sortedPlayers.map((player, idx) => {
-                            const isProblem = problemPlayerIds.has(player.id);
-                            const risks = isProblem ? analyzePlayerRisks(player) : [];
+                            const riskData = riskPlayerMap.get(player.id);
+                            const hasRisk = !!riskData;
+                            const risks = riskData?.risks || [];
+                            const severity = riskData?.highestSeverity || null;
+
+                            // Determine border color based on severity
+                            let borderColor = '';
+                            if (severity === 'high') borderColor = '#ef4444';
+                            else if (severity === 'medium') borderColor = '#fb923c';
+                            else if (severity === 'low') borderColor = '#eab308';
+
+                            // Show chevron only for HIGH and MEDIUM
+                            const showChevron = severity === 'high' || severity === 'medium';
+
                             const next5Fixtures = getFixtures(player.team, 5, false);
                             const avgFDR = calculateFixtureDifficulty(player.team, 5);
                             const formHeatmap = getFormHeatmap(player.form);
                             const formStyle = getHeatmapStyle(formHeatmap);
-                            const rowBg = isProblem ? 'rgba(251, 146, 60, 0.15)' : (idx % 2 === 0 ? 'var(--bg-primary)' : 'var(--bg-secondary)');
+                            const rowBg = idx % 2 === 0 ? 'var(--bg-primary)' : 'var(--bg-secondary)';
                             const fdrColor = avgFDR <= 2.5 ? '#22c55e' : avgFDR <= 3.5 ? '#eab308' : '#ef4444';
 
                             return `
-                                <tr style="background: ${rowBg}; ${isProblem ? 'border-left: 3px solid #fb923c;' : ''}" data-player-id="${player.id}">
+                                <tr style="background: ${rowBg}; ${hasRisk ? `border-left: 4px solid ${borderColor};` : ''}" data-player-id="${player.id}">
                                     <td style="
                                         position: sticky;
                                         left: 0;
@@ -197,11 +228,27 @@ function renderUnifiedFixtureTable(myPlayers, problemPlayerIds, picks, gwNumber)
                                         border-right: 1px solid var(--border-color);
                                     ">
                                         <div style="display: flex; align-items: center; gap: 0.3rem;">
-                                            ${isProblem ? `<span style="font-size: 0.7rem;">${risks[0]?.icon || '⚠️'}</span>` : ''}
+                                            ${hasRisk ? `<span style="font-size: 0.7rem;">${risks[0]?.icon || '⚠️'}</span>` : ''}
                                             <span style="font-size: 0.6rem; color: var(--text-secondary);">${getPositionShort(player)}</span>
                                             <strong style="font-size: 0.7rem;">${escapeHtml(player.web_name)}</strong>
+                                            ${showChevron ? `
+                                                <button
+                                                    class="expand-replacements-btn"
+                                                    data-player-id="${player.id}"
+                                                    style="
+                                                        background: none;
+                                                        border: none;
+                                                        cursor: pointer;
+                                                        color: var(--primary-color);
+                                                        padding: 0;
+                                                        margin-left: 0.2rem;
+                                                    "
+                                                >
+                                                    <i class="fas fa-chevron-down" id="chevron-${player.id}" style="font-size: 0.6rem; transition: transform 0.2s;"></i>
+                                                </button>
+                                            ` : ''}
                                         </div>
-                                        ${isProblem ? `<div style="font-size: 0.6rem; color: #fb923c; margin-top: 0.1rem;">${risks[0]?.message || 'Issue'}</div>` : ''}
+                                        ${hasRisk ? `<div style="font-size: 0.6rem; color: ${borderColor}; margin-top: 0.1rem;">${risks[0]?.message || 'Issue'}</div>` : ''}
                                     </td>
                                     <td style="text-align: center; padding: 0.5rem; color: ${fdrColor}; font-weight: 700;">
                                         ${avgFDR.toFixed(1)}
@@ -220,27 +267,10 @@ function renderUnifiedFixtureTable(myPlayers, problemPlayerIds, picks, gwNumber)
                                         `;
                                     }).join('')}
                                     ${next5Fixtures.length < 5 ? Array(5 - next5Fixtures.length).fill('<td style="text-align: center; padding: 0.5rem;">—</td>').join('') : ''}
-                                    <td style="text-align: center; padding: 0.5rem;">
-                                        ${isProblem ? `
-                                            <button
-                                                class="expand-replacements-btn"
-                                                data-player-id="${player.id}"
-                                                style="
-                                                    background: none;
-                                                    border: none;
-                                                    cursor: pointer;
-                                                    color: var(--primary-color);
-                                                    padding: 0.2rem;
-                                                "
-                                            >
-                                                <i class="fas fa-chevron-down" id="chevron-${player.id}" style="font-size: 0.7rem; transition: transform 0.2s;"></i>
-                                            </button>
-                                        ` : ''}
-                                    </td>
                                 </tr>
-                                ${isProblem ? `
+                                ${showChevron ? `
                                     <tr id="replacements-${player.id}" style="display: none;">
-                                        <td colspan="9" style="padding: 0; background: var(--bg-tertiary);">
+                                        <td colspan="8" style="padding: 0; background: var(--bg-tertiary);">
                                             <div id="replacements-content-${player.id}" style="padding: 0.5rem;">
                                                 <div style="text-align: center; color: var(--text-secondary); font-size: 0.7rem;">
                                                     Loading replacements...
@@ -655,8 +685,8 @@ function renderTransferTargets(myPlayers, picks, gwNumber) {
 // EVENT LISTENERS
 // ============================================================================
 
-function attachPlannerListeners(myPlayers, problemPlayerIds, picks, gwNumber) {
-    // Problem player expansion buttons
+function attachPlannerListeners(myPlayers, riskPlayerMap, picks, gwNumber) {
+    // Risk player expansion buttons
     const expandButtons = document.querySelectorAll('.expand-replacements-btn');
     expandButtons.forEach(button => {
         button.addEventListener('click', async (e) => {

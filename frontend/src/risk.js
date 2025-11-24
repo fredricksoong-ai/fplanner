@@ -92,7 +92,7 @@ export function analyzePlayerRisks(player) {
         if (minutesPct < 50 && player.minutes > 0) {
             risks.push({
                 type: 'rotation',
-                severity: minutesPct < 30 ? 'high' : 'medium',
+                severity: minutesPct < 30 ? 'medium' : 'low',
                 icon: '🔄',
                 message: `${minutesPct.toFixed(0)}% minutes`,
                 details: `Low playing time - rotation risk (${minutesPct.toFixed(0)}% of available minutes)`
@@ -103,14 +103,14 @@ export function analyzePlayerRisks(player) {
     // 4. POOR FORM
     const form = parseFloat(player.form) || 0;
     const avgPoints = gw > 0 ? (player.total_points || 0) / gw : 0;
-    
+
     if (form < 3 && gw >= 3 && player.minutes > 180) {
         risks.push({
             type: 'form',
-            severity: form < 2 ? 'high' : 'medium',
+            severity: 'low',
             icon: '📉',
             message: `Form: ${form.toFixed(1)}`,
-            details: `Poor recent form (${form.toFixed(1)} pts/game)`
+            details: `Poor recent form (${form.toFixed(1)})`
         });
     }
     
