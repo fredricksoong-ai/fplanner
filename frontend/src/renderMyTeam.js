@@ -119,6 +119,7 @@ import {
     renderCompactTeamList,
     renderMatchSchedule,
     attachPlayerRowListeners,
+    attachTransferListeners,
     showPlayerModal
 } from './renderMyTeamCompact.js';
 
@@ -482,6 +483,7 @@ export function renderMyTeam(teamData, subTab = 'overview') {
         requestAnimationFrame(() => {
             if (subTab === 'overview') {
                 attachPlayerRowListeners(myTeamState);
+                attachTransferListeners();
             } else if (subTab === 'fixtures') {
                 attachMobileFixtureRowListeners();
             }

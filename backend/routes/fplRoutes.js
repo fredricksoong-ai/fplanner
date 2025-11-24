@@ -8,7 +8,8 @@ import {
   fetchBootstrap,
   fetchFixtures,
   fetchElementSummary,
-  fetchLiveGameweekData
+  fetchLiveGameweekData,
+  fetchTransferHistory
 } from '../services/fplService.js';
 import { fetchGithubCSV } from '../services/githubService.js';
 import {
@@ -405,6 +406,45 @@ router.get('/api/player/:playerId/summary', async (req, res) => {
     logger.error(`❌ Error fetching player ${id} summary:`, err.message);
     res.status(500).json({
       error: 'Failed to fetch player summary',
+      message: err.message
+    });
+  }
+});
+
+// ============================================================================
+// TRANSFER HISTORY ENDPOINT
+// ============================================================================
+
+/**
+ * GET /api/team/:teamId/transfers
+ * Returns transfer history for a team
+ */
+router.get('/api/team/:teamId/transfers', async (req, res) => {
+  const { teamId } = req.params;
+
+  logger.log(`📥 GET /api/team/${teamId}/transfers`);
+
+  // Validate team ID
+  const id = parseInt(teamId);
+  if (isNaN(id) || id <= 0) {
+    return res.status(400).json({
+      error: 'Invalid team ID',
+      message: 'Team ID must be a positive integer'
+    });
+  }
+
+  try {
+    const transfers = await fetchTransferHistory(id);
+
+    res.json({
+      transfers: transfers || [],
+      count: transfers?.length || 0,
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    logger.error(`❌ Error fetching transfers for team ${id}:`, err.message);
+    res.status(500).json({
+      error: 'Failed to fetch transfer history',
       message: err.message
     });
   }
