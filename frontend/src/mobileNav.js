@@ -13,7 +13,7 @@ export function createMobileNav(currentPage, onNavigate) {
     const navItems = [
         { id: 'fixtures', label: 'Fixtures', icon: 'fa-calendar-alt', action: 'fixtures' },
         { id: 'league', label: 'Leagues', icon: 'fa-trophy', action: 'league' },
-        { id: 'my-team', label: 'Team', icon: 'fa-users' },
+        { id: 'my-team', label: 'Team', icon: 'fa-users', isGreen: true },
         { id: 'planner', label: 'Planner', icon: 'fa-calendar-check', action: 'planner' },
         { id: 'stats', label: 'Stats', icon: 'fa-chart-bar', action: 'stats' }
     ];
@@ -137,8 +137,8 @@ export function initMobileNav(navigateCallback) {
         // Add touch feedback
         item.addEventListener('touchstart', () => {
             if (!item.disabled) {
-                const isRefresh = item.dataset.action === 'refresh';
-                if (!isRefresh) {
+                const isTeam = item.dataset.page === 'my-team';
+                if (!isTeam) {
                     item.style.background = 'var(--border-dark)';
                 }
             }
@@ -148,8 +148,8 @@ export function initMobileNav(navigateCallback) {
             if (!item.disabled) {
                 const page = item.dataset.page;
                 const currentPage = getCurrentPage();
-                const isRefresh = item.dataset.action === 'refresh';
-                item.style.background = isRefresh ? 'transparent' : (currentPage === page ? 'var(--bg-tertiary)' : 'transparent');
+                const isTeam = page === 'my-team';
+                item.style.background = isTeam ? 'transparent' : (currentPage === page ? 'var(--bg-tertiary)' : 'transparent');
             }
         });
     });
@@ -185,10 +185,23 @@ export function updateMobileNav(activePage, subTab = 'overview') {
             isActive = false;
         }
 
-        item.style.background = isActive ? 'var(--bg-tertiary)' : 'transparent';
+        const isTeam = page === 'my-team';
+
+        item.style.background = isTeam ? 'transparent' : (isActive ? 'var(--bg-tertiary)' : 'transparent');
         const label = item.querySelector('span');
         if (label) {
-            label.style.fontWeight = isActive ? '700' : '500';
+            label.style.fontWeight = isActive || isTeam ? '700' : '500';
+            if (isTeam) {
+                label.style.color = '#00ff88';
+            }
+        }
+
+        // Set icon color for Team button
+        if (isTeam) {
+            const icon = item.querySelector('i');
+            if (icon) {
+                icon.style.color = '#00ff88';
+            }
         }
     });
 }
