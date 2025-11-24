@@ -13,7 +13,7 @@ export function createMobileNav(currentPage, onNavigate) {
     const navItems = [
         { id: 'fixtures', label: 'Fixtures', icon: 'fa-calendar-alt', action: 'fixtures' },
         { id: 'league', label: 'Leagues', icon: 'fa-trophy', action: 'league' },
-        { id: 'my-team', label: 'Team', icon: 'fa-users' },
+        { id: 'my-team', label: 'Team', icon: 'fa-users', isGreen: true },
         { id: 'planner', label: 'Planner', icon: 'fa-calendar-check', action: 'planner' },
         { id: 'stats', label: 'Stats', icon: 'fa-chart-bar', action: 'stats' }
     ];
@@ -54,10 +54,11 @@ export function createMobileNav(currentPage, onNavigate) {
                         align-items: center;
                         justify-content: center;
                         gap: 0.2rem;
-                        background: ${item.isGreen ? 'transparent' : (currentPage === item.id ? 'var(--bg-tertiary)' : 'transparent')};
+                        background: transparent;
                         border: none;
+                        border-top: 3px solid ${item.isGreen ? 'transparent' : (currentPage === item.id ? 'var(--primary-color)' : 'transparent')};
                         padding: 0.35rem 0.4rem;
-                        border-radius: 0.5rem;
+                        padding-top: ${item.isGreen ? '0.35rem' : (currentPage === item.id ? 'calc(0.35rem - 3px)' : '0.35rem')};
                         color: ${item.isGreen ? '#00ff88' : (item.disabled ? 'var(--text-tertiary)' : 'var(--text-primary)')};
                         cursor: ${item.disabled ? 'not-allowed' : 'pointer'};
                         transition: all 0.2s;
@@ -137,19 +138,16 @@ export function initMobileNav(navigateCallback) {
         // Add touch feedback
         item.addEventListener('touchstart', () => {
             if (!item.disabled) {
-                const isRefresh = item.dataset.action === 'refresh';
-                if (!isRefresh) {
-                    item.style.background = 'var(--border-dark)';
+                const isTeam = item.dataset.page === 'my-team';
+                if (!isTeam) {
+                    item.style.opacity = '0.6';
                 }
             }
         });
 
         item.addEventListener('touchend', () => {
             if (!item.disabled) {
-                const page = item.dataset.page;
-                const currentPage = getCurrentPage();
-                const isRefresh = item.dataset.action === 'refresh';
-                item.style.background = isRefresh ? 'transparent' : (currentPage === page ? 'var(--bg-tertiary)' : 'transparent');
+                item.style.opacity = '1';
             }
         });
     });
@@ -185,10 +183,27 @@ export function updateMobileNav(activePage, subTab = 'overview') {
             isActive = false;
         }
 
-        item.style.background = isActive ? 'var(--bg-tertiary)' : 'transparent';
+        const isTeam = page === 'my-team';
+
+        // Update border indicator instead of background
+        item.style.background = 'transparent';
+        item.style.borderTop = isTeam ? 'transparent' : (isActive ? '3px solid var(--primary-color)' : 'transparent');
+        item.style.paddingTop = isTeam || !isActive ? '0.35rem' : 'calc(0.35rem - 3px)';
+
         const label = item.querySelector('span');
         if (label) {
-            label.style.fontWeight = isActive ? '700' : '500';
+            label.style.fontWeight = isActive || isTeam ? '700' : '500';
+            if (isTeam) {
+                label.style.color = '#00ff88';
+            }
+        }
+
+        // Set icon color for Team button
+        if (isTeam) {
+            const icon = item.querySelector('i');
+            if (icon) {
+                icon.style.color = '#00ff88';
+            }
         }
     });
 }

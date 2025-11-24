@@ -35,7 +35,7 @@ import {
  */
 export async function renderPlanner() {
     const container = document.getElementById('app-container');
-    const teamId = localStorage.getItem('fpl_team_id');
+    const teamId = localStorage.getItem('fplanner_team_id');
 
     if (!teamId) {
         container.innerHTML = `
