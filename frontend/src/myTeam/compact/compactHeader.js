@@ -123,9 +123,10 @@ export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = fa
                     <div
                         id="transfers-row"
                         data-team-id="${team.id}"
+                        data-transfer-cost="${transferCost}"
                         style="font-size: 0.7rem; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; gap: 0.25rem;"
                     >
-                        <span>Transfers: ${freeTransfers} FT${transferCost > 0 ? ` <span style="color: #ef4444;">(-${transferCost} pts)</span>` : ''}</span>
+                        <span>Transfers: ${freeTransfers}${transferCost > 0 ? ` <span style="color: #ef4444;">(-${transferCost} pts)</span>` : ''}</span>
                         <i class="fas fa-chevron-down" id="transfers-chevron" style="font-size: 0.55rem; transition: transform 0.2s;"></i>
                     </div>
                     <div id="transfers-details" style="display: none; font-size: 0.65rem; padding-top: 0.25rem; margin-top: 0.25rem; border-top: 1px dashed var(--border-color);">
@@ -212,6 +213,7 @@ export function attachTransferListeners() {
         const detailsDiv = document.getElementById('transfers-details');
         const chevron = document.getElementById('transfers-chevron');
         const teamId = transfersRow.dataset.teamId;
+        const transferCost = parseInt(transfersRow.dataset.transferCost) || 0;
 
         if (!detailsDiv) return;
 
@@ -231,12 +233,12 @@ export function attachTransferListeners() {
                 try {
                     const transfers = await loadTransferHistory(teamId);
                     transferHistoryCache.set(teamId, transfers);
-                    renderTransferDetails(detailsDiv, transfers);
+                    renderTransferDetails(detailsDiv, transfers, transferCost);
                 } catch (err) {
                     detailsDiv.innerHTML = '<div style="color: #ef4444;">Failed to load transfers</div>';
                 }
             } else {
-                renderTransferDetails(detailsDiv, transferHistoryCache.get(teamId));
+                renderTransferDetails(detailsDiv, transferHistoryCache.get(teamId), transferCost);
             }
         }
     });
@@ -246,8 +248,9 @@ export function attachTransferListeners() {
  * Render transfer details in the expandable section
  * @param {HTMLElement} container - Container element
  * @param {Array} transfers - Transfer history array
+ * @param {number} transferCost - Transfer cost (hits)
  */
-function renderTransferDetails(container, transfers) {
+function renderTransferDetails(container, transfers, transferCost = 0) {
     const currentGW = getActiveGW();
 
     // Filter to current GW transfers
@@ -258,7 +261,9 @@ function renderTransferDetails(container, transfers) {
         return;
     }
 
-    const transfersHtml = gwTransfers.map(transfer => {
+    let totalPointsDiff = 0;
+
+    const transferRows = gwTransfers.map(transfer => {
         const playerIn = getPlayerById(transfer.element_in);
         const playerOut = getPlayerById(transfer.element_out);
 
@@ -267,42 +272,42 @@ function renderTransferDetails(container, transfers) {
         // Get GW points for both players
         const inPoints = playerIn.live_stats?.total_points ?? playerIn.event_points ?? 0;
         const outPoints = playerOut.live_stats?.total_points ?? playerOut.event_points ?? 0;
-        const netDiff = inPoints - outPoints;
-
-        // Color based on net difference
-        let diffColor = 'var(--text-secondary)';
-        let diffSymbol = '';
-        if (netDiff > 0) {
-            diffColor = '#22c55e';
-            diffSymbol = '+';
-        } else if (netDiff < 0) {
-            diffColor = '#ef4444';
-            diffSymbol = '';
-        }
+        totalPointsDiff += (inPoints - outPoints);
 
         return `
-            <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0;">
-                <div style="flex: 1;">
-                    <div style="display: flex; align-items: center; gap: 0.25rem;">
-                        <span style="color: #ef4444;">OUT</span>
-                        <span style="color: var(--text-primary); font-weight: 600;">${escapeHtml(playerOut.web_name)}</span>
-                        <span style="color: var(--text-secondary);">(${outPoints})</span>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 0.25rem;">
-                        <span style="color: #22c55e;">IN</span>
-                        <span style="color: var(--text-primary); font-weight: 600;">${escapeHtml(playerIn.web_name)}</span>
-                        <span style="color: var(--text-secondary);">(${inPoints})</span>
-                    </div>
-                </div>
-                <div style="text-align: right; min-width: 2.5rem; white-space: nowrap;">
-                    <div style="font-weight: 700; color: ${diffColor};">
-                        ${diffSymbol}${netDiff}
-                    </div>
-                    <div style="font-size: 0.55rem; color: var(--text-secondary);">net</div>
-                </div>
+            <div style="display: grid; grid-template-columns: 1fr auto 1fr auto; gap: 0.25rem; padding: 0.2rem 0; align-items: center;">
+                <div style="color: var(--text-primary); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(playerOut.web_name)}</div>
+                <div style="color: #ef4444; font-weight: 700; text-align: right; min-width: 1.5rem;">${outPoints}</div>
+                <div style="color: var(--text-primary); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(playerIn.web_name)}</div>
+                <div style="color: #22c55e; font-weight: 700; text-align: right; min-width: 1.5rem;">${inPoints}</div>
             </div>
         `;
     }).join('');
 
-    container.innerHTML = transfersHtml || '<div style="color: var(--text-secondary); text-align: center;">No transfers this GW</div>';
+    // Calculate net with transfer cost
+    const netWithCost = totalPointsDiff - transferCost;
+    const netColor = netWithCost > 0 ? '#22c55e' : netWithCost < 0 ? '#ef4444' : 'var(--text-secondary)';
+    const netSymbol = netWithCost > 0 ? '+' : '';
+
+    container.innerHTML = `
+        <div style="display: grid; grid-template-columns: 1fr auto 1fr auto; gap: 0.25rem; padding-bottom: 0.25rem; margin-bottom: 0.25rem; border-bottom: 1px solid var(--border-color); font-size: 0.55rem; color: var(--text-secondary); text-transform: uppercase;">
+            <div>Out</div>
+            <div style="text-align: right;">Pts</div>
+            <div>In</div>
+            <div style="text-align: right;">Pts</div>
+        </div>
+        ${transferRows}
+        <div style="margin-top: 0.35rem; padding-top: 0.35rem; border-top: 1px solid var(--border-color);">
+            ${transferCost > 0 ? `
+                <div style="display: flex; justify-content: space-between; color: var(--text-secondary); font-size: 0.6rem;">
+                    <span>Transfer Cost:</span>
+                    <span style="color: #ef4444; font-weight: 600;">-${transferCost}</span>
+                </div>
+            ` : ''}
+            <div style="display: flex; justify-content: space-between; font-weight: 700;">
+                <span style="color: var(--text-secondary); font-size: 0.6rem;">Net Points:</span>
+                <span style="color: ${netColor};">${netSymbol}${netWithCost}</span>
+            </div>
+        </div>
+    `;
 }

@@ -7,8 +7,12 @@ import {
     loadMyTeam,
     isGameweekLive,
     getActiveGW,
-    getPlayerById
+    getPlayerById,
+    loadTransferHistory
 } from './data.js';
+
+// Cache for rival transfer history
+let rivalTransferCache = new Map();
 
 import {
     renderCompactTeamList,
@@ -171,9 +175,10 @@ function renderRivalTeamView(teamData) {
 
     container.innerHTML = html;
 
-    // Attach event listeners for player rows
+    // Attach event listeners for player rows and transfers
     requestAnimationFrame(() => {
         attachPlayerRowListeners(rivalTeamState);
+        attachRivalTransferListeners();
     });
 }
 
@@ -253,8 +258,17 @@ function renderRivalCompactHeader(teamData, gwNumber) {
                         Squad Value: £${squadValue}m + £${bank}m
                     </div>
 
-                    <div style="font-size: 0.7rem; color: var(--text-secondary);">
-                        Transfers: ${freeTransfers} FT${transferCost > 0 ? ` (-${transferCost} pts)` : ''}
+                    <div
+                        id="rival-transfers-row"
+                        data-team-id="${team.id}"
+                        data-transfer-cost="${transferCost}"
+                        style="font-size: 0.7rem; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; gap: 0.25rem;"
+                    >
+                        <span>Transfers: ${freeTransfers}${transferCost > 0 ? ` <span style="color: #ef4444;">(-${transferCost} pts)</span>` : ''}</span>
+                        <i class="fas fa-chevron-down" id="rival-transfers-chevron" style="font-size: 0.55rem; transition: transform 0.2s;"></i>
+                    </div>
+                    <div id="rival-transfers-details" style="display: none; font-size: 0.65rem; padding-top: 0.25rem; margin-top: 0.25rem; border-top: 1px dashed var(--border-color);">
+                        <div style="color: var(--text-secondary); text-align: center;">Loading transfers...</div>
                     </div>
                 </div>
 
@@ -280,6 +294,106 @@ function renderRivalCompactHeader(teamData, gwNumber) {
                         ${isLive ? '<style>@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }</style>' : ''}
                     </div>
                 </div>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Attach event listeners for rival expandable transfers
+ */
+function attachRivalTransferListeners() {
+    const transfersRow = document.getElementById('rival-transfers-row');
+    if (!transfersRow) return;
+
+    transfersRow.addEventListener('click', async () => {
+        const detailsDiv = document.getElementById('rival-transfers-details');
+        const chevron = document.getElementById('rival-transfers-chevron');
+        const teamId = transfersRow.dataset.teamId;
+        const transferCost = parseInt(transfersRow.dataset.transferCost) || 0;
+
+        if (!detailsDiv) return;
+
+        const isVisible = detailsDiv.style.display !== 'none';
+
+        if (isVisible) {
+            detailsDiv.style.display = 'none';
+            if (chevron) chevron.style.transform = 'rotate(0deg)';
+        } else {
+            detailsDiv.style.display = 'block';
+            if (chevron) chevron.style.transform = 'rotate(180deg)';
+
+            if (!rivalTransferCache.has(teamId)) {
+                try {
+                    const transfers = await loadTransferHistory(teamId);
+                    rivalTransferCache.set(teamId, transfers);
+                    renderRivalTransferDetails(detailsDiv, transfers, transferCost);
+                } catch (err) {
+                    detailsDiv.innerHTML = '<div style="color: #ef4444;">Failed to load transfers</div>';
+                }
+            } else {
+                renderRivalTransferDetails(detailsDiv, rivalTransferCache.get(teamId), transferCost);
+            }
+        }
+    });
+}
+
+/**
+ * Render rival transfer details
+ */
+function renderRivalTransferDetails(container, transfers, transferCost = 0) {
+    const currentGW = getActiveGW();
+    const gwTransfers = transfers.filter(t => t.event === currentGW);
+
+    if (gwTransfers.length === 0) {
+        container.innerHTML = '<div style="color: var(--text-secondary); text-align: center;">No transfers this GW</div>';
+        return;
+    }
+
+    let totalPointsDiff = 0;
+
+    const transferRows = gwTransfers.map(transfer => {
+        const playerIn = getPlayerById(transfer.element_in);
+        const playerOut = getPlayerById(transfer.element_out);
+
+        if (!playerIn || !playerOut) return '';
+
+        const inPoints = playerIn.live_stats?.total_points ?? playerIn.event_points ?? 0;
+        const outPoints = playerOut.live_stats?.total_points ?? playerOut.event_points ?? 0;
+        totalPointsDiff += (inPoints - outPoints);
+
+        return `
+            <div style="display: grid; grid-template-columns: 1fr auto 1fr auto; gap: 0.25rem; padding: 0.2rem 0; align-items: center;">
+                <div style="color: var(--text-primary); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(playerOut.web_name)}</div>
+                <div style="color: #ef4444; font-weight: 700; text-align: right; min-width: 1.5rem;">${outPoints}</div>
+                <div style="color: var(--text-primary); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(playerIn.web_name)}</div>
+                <div style="color: #22c55e; font-weight: 700; text-align: right; min-width: 1.5rem;">${inPoints}</div>
+            </div>
+        `;
+    }).join('');
+
+    const netWithCost = totalPointsDiff - transferCost;
+    const netColor = netWithCost > 0 ? '#22c55e' : netWithCost < 0 ? '#ef4444' : 'var(--text-secondary)';
+    const netSymbol = netWithCost > 0 ? '+' : '';
+
+    container.innerHTML = `
+        <div style="display: grid; grid-template-columns: 1fr auto 1fr auto; gap: 0.25rem; padding-bottom: 0.25rem; margin-bottom: 0.25rem; border-bottom: 1px solid var(--border-color); font-size: 0.55rem; color: var(--text-secondary); text-transform: uppercase;">
+            <div>Out</div>
+            <div style="text-align: right;">Pts</div>
+            <div>In</div>
+            <div style="text-align: right;">Pts</div>
+        </div>
+        ${transferRows}
+        <div style="margin-top: 0.35rem; padding-top: 0.35rem; border-top: 1px solid var(--border-color);">
+            ${transferCost > 0 ? `
+                <div style="display: flex; justify-content: space-between; color: var(--text-secondary); font-size: 0.6rem;">
+                    <span>Transfer Cost:</span>
+                    <span style="color: #ef4444; font-weight: 600;">-${transferCost}</span>
+                </div>
+            ` : ''}
+            <div style="display: flex; justify-content: space-between; font-weight: 700;">
+                <span style="color: var(--text-secondary); font-size: 0.6rem;">Net Points:</span>
+                <span style="color: ${netColor};">${netSymbol}${netWithCost}</span>
             </div>
         </div>
     `;
