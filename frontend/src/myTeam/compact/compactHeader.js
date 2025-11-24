@@ -294,7 +294,7 @@ function renderTransferDetails(container, transfers) {
                         <span style="color: var(--text-secondary);">(${inPoints})</span>
                     </div>
                 </div>
-                <div style="text-align: right; min-width: 2.5rem;">
+                <div style="text-align: right; min-width: 2.5rem; white-space: nowrap;">
                     <div style="font-weight: 700; color: ${diffColor};">
                         ${diffSymbol}${netDiff}
                     </div>
