@@ -122,6 +122,9 @@ function renderPage() {
         case 'search':
             renderSearch();
             break;
+        case 'planner':
+            renderPlannerPage();
+            break;
         default:
             container.innerHTML = '<p>Page not found</p>';
     }
@@ -159,6 +162,11 @@ async function renderCharts() {
 async function renderSearch() {
     const { renderSearch: render } = await import('./renderSearch.js');
     render();
+}
+
+async function renderPlannerPage() {
+    const { renderPlanner } = await import('./renderPlanner.js');
+    renderPlanner();
 }
 
 // ============================================================================

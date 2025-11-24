@@ -1,0 +1,666 @@
+// ============================================================================
+// PLANNER PAGE MODULE
+// Mobile-focused planning tool for FPL managers
+// ============================================================================
+
+import {
+    loadMyTeam,
+    getPlayerById,
+    getAllPlayers,
+    getActiveGW,
+    currentGW,
+    fplBootstrap
+} from './data.js';
+
+import { analyzePlayerRisks, hasHighRisk, hasMediumRisk } from './risk.js';
+import { getFixtures, calculateFixtureDifficulty } from './fixtures.js';
+import {
+    getPositionShort,
+    formatCurrency,
+    escapeHtml,
+    calculatePPM,
+    getDifficultyClass,
+    getTeamShortName,
+    formatDecimal,
+    getFormHeatmap,
+    getHeatmapStyle
+} from './utils.js';
+
+// ============================================================================
+// MAIN RENDER FUNCTION
+// ============================================================================
+
+/**
+ * Render the Planner page
+ */
+export async function renderPlanner() {
+    const container = document.getElementById('app-container');
+    const teamId = localStorage.getItem('fpl_team_id');
+
+    if (!teamId) {
+        container.innerHTML = `
+            <div style="text-align: center; padding: 4rem 2rem; color: var(--text-secondary);">
+                <i class="fas fa-exclamation-circle" style="font-size: 3rem; margin-bottom: 1rem; color: #ef4444;"></i>
+                <p>No team ID configured</p>
+                <button
+                    onclick="window.navigateToPage('my-team')"
+                    style="
+                        margin-top: 1rem;
+                        padding: 0.5rem 1rem;
+                        background: var(--primary-color);
+                        color: white;
+                        border: none;
+                        border-radius: 6px;
+                        cursor: pointer;
+                    "
+                >
+                    <i class="fas fa-arrow-left"></i> Go to Team
+                </button>
+            </div>
+        `;
+        return;
+    }
+
+    // Show loading
+    container.innerHTML = `
+        <div style="text-align: center; padding: 4rem 2rem; color: var(--text-secondary);">
+            <i class="fas fa-spinner fa-spin" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+            <p>Loading planner...</p>
+        </div>
+    `;
+
+    try {
+        const teamData = await loadMyTeam(teamId);
+        const gwNumber = getActiveGW();
+
+        // Get player data
+        const picks = teamData.picks.picks || [];
+        const myPlayers = picks.map(pick => {
+            const player = getPlayerById(pick.element);
+            return { ...player, pick };
+        }).filter(p => p.id);
+
+        // Build page HTML
+        const html = `
+            <div style="padding: 0.5rem;">
+                ${renderPlannerHeader(gwNumber)}
+                ${renderProblemPlayersSection(myPlayers, teamData.picks, gwNumber)}
+                ${renderFixtureTicker(myPlayers, gwNumber)}
+                ${renderTransferTargets(myPlayers, teamData.picks, gwNumber)}
+            </div>
+        `;
+
+        container.innerHTML = html;
+        attachPlannerListeners(myPlayers, teamData.picks, gwNumber);
+
+    } catch (err) {
+        console.error('Failed to load planner:', err);
+        container.innerHTML = `
+            <div style="text-align: center; padding: 4rem 2rem; color: var(--text-secondary);">
+                <i class="fas fa-exclamation-triangle" style="font-size: 3rem; margin-bottom: 1rem; color: #ef4444;"></i>
+                <p>Failed to load planner data</p>
+                <p style="font-size: 0.8rem; margin-top: 0.5rem;">${err.message}</p>
+            </div>
+        `;
+    }
+}
+
+// ============================================================================
+// HEADER
+// ============================================================================
+
+function renderPlannerHeader(gwNumber) {
+    return `
+        <div style="
+            position: sticky;
+            top: calc(3.5rem + env(safe-area-inset-top));
+            background: var(--bg-primary);
+            z-index: 100;
+            padding: 0.5rem 0;
+            border-bottom: 2px solid var(--border-color);
+            margin-bottom: 0.5rem;
+        ">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h1 style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary); margin: 0;">
+                        <i class="fas fa-calendar-check" style="margin-right: 0.5rem; color: var(--primary-color);"></i>
+                        Planner
+                    </h1>
+                    <p style="font-size: 0.7rem; color: var(--text-secondary); margin: 0.2rem 0 0 0;">
+                        GW ${gwNumber} → GW ${gwNumber + 5}
+                    </p>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// ============================================================================
+// PROBLEM PLAYERS SECTION
+// ============================================================================
+
+function renderProblemPlayersSection(myPlayers, picks, gwNumber) {
+    // Find problem players
+    const problemPlayers = [];
+    myPlayers.forEach(player => {
+        const risks = analyzePlayerRisks(player);
+        if (hasHighRisk(risks) || hasMediumRisk(risks)) {
+            problemPlayers.push({ player, risks });
+        }
+    });
+
+    if (problemPlayers.length === 0) {
+        return `
+            <div style="
+                background: var(--bg-secondary);
+                border-radius: 8px;
+                padding: 1rem;
+                margin-bottom: 0.5rem;
+                border-left: 3px solid #22c55e;
+            ">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fas fa-check-circle" style="color: #22c55e;"></i>
+                    <span style="font-size: 0.85rem; color: var(--text-primary); font-weight: 600;">No problem players</span>
+                </div>
+            </div>
+        `;
+    }
+
+    const next5GWs = [gwNumber + 1, gwNumber + 2, gwNumber + 3, gwNumber + 4, gwNumber + 5];
+
+    return `
+        <div style="
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            border-left: 3px solid #fb923c;
+        ">
+            <div
+                id="planner-problems-header"
+                style="
+                    padding: 0.75rem 1rem;
+                    cursor: pointer;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                "
+            >
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fas fa-exclamation-triangle" style="color: #fb923c;"></i>
+                    <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-primary);">
+                        Problem Players (${problemPlayers.length})
+                    </span>
+                </div>
+                <i id="planner-problems-chevron" class="fas fa-chevron-down" style="font-size: 0.7rem; color: var(--text-secondary);"></i>
+            </div>
+            <div id="planner-problems-content" style="display: none;">
+                ${renderProblemPlayersTable(problemPlayers, picks, next5GWs, gwNumber)}
+            </div>
+        </div>
+    `;
+}
+
+function renderProblemPlayersTable(problemPlayers, picks, next5GWs, gwNumber) {
+    let html = `
+        <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+            <table style="width: 100%; font-size: 0.75rem; border-collapse: collapse; min-width: 600px;">
+                <thead style="background: var(--bg-tertiary);">
+                    <tr>
+                        <th style="position: sticky; left: 0; background: var(--bg-tertiary); z-index: 10; text-align: left; padding: 0.5rem; min-width: 120px;">Player</th>
+                        <th style="text-align: center; padding: 0.5rem; min-width: 50px;">Issue</th>
+                        <th style="text-align: center; padding: 0.5rem; min-width: 45px;">Form</th>
+                        ${next5GWs.map(gw => `<th style="text-align: center; padding: 0.5rem; min-width: 50px;">GW${gw}</th>`).join('')}
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    problemPlayers.forEach(({ player, risks }, idx) => {
+        const next5Fixtures = getFixtures(player.team, 5, false);
+        const formHeatmap = getFormHeatmap(player.form);
+        const formStyle = getHeatmapStyle(formHeatmap);
+        const primaryRisk = risks[0];
+        const rowBg = idx % 2 === 0 ? 'var(--bg-primary)' : 'var(--bg-secondary)';
+
+        html += `
+            <tr style="background: ${rowBg};" data-problem-idx="${idx}">
+                <td style="
+                    position: sticky;
+                    left: 0;
+                    background: ${rowBg};
+                    z-index: 5;
+                    padding: 0.5rem;
+                    border-right: 1px solid var(--border-color);
+                ">
+                    <div style="display: flex; align-items: center; gap: 0.3rem;">
+                        <span style="font-size: 0.65rem; color: var(--text-secondary);">${getPositionShort(player)}</span>
+                        <strong style="font-size: 0.75rem;">${escapeHtml(player.web_name)}</strong>
+                    </div>
+                    <div style="font-size: 0.6rem; color: var(--text-secondary);">
+                        ${getTeamShortName(player.team)} • ${formatCurrency(player.now_cost)}
+                    </div>
+                </td>
+                <td style="text-align: center; padding: 0.5rem;">
+                    <span title="${primaryRisk.details}" style="cursor: help;">
+                        ${primaryRisk.icon}
+                    </span>
+                </td>
+                <td style="text-align: center; padding: 0.5rem; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 600;">
+                    ${formatDecimal(player.form)}
+                </td>
+                ${next5Fixtures.map(fix => {
+                    const fdrClass = getDifficultyClass(fix.difficulty);
+                    return `
+                        <td style="text-align: center; padding: 0.5rem;">
+                            <span class="${fdrClass}" style="padding: 0.2rem 0.3rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem; white-space: nowrap;">
+                                ${fix.opponent}
+                            </span>
+                        </td>
+                    `;
+                }).join('')}
+                ${next5Fixtures.length < 5 ? Array(5 - next5Fixtures.length).fill('<td style="text-align: center; padding: 0.5rem;">—</td>').join('') : ''}
+            </tr>
+            <tr id="problem-replacements-${idx}" style="display: none;">
+                <td colspan="${7}" style="padding: 0; background: var(--bg-tertiary);">
+                    <div id="problem-replacements-content-${idx}" style="padding: 0.5rem;">
+                        <div style="text-align: center; color: var(--text-secondary); font-size: 0.7rem;">
+                            Loading replacements...
+                        </div>
+                    </div>
+                </td>
+            </tr>
+        `;
+    });
+
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+
+    return html;
+}
+
+// ============================================================================
+// FIXTURE TICKER
+// ============================================================================
+
+function renderFixtureTicker(myPlayers, gwNumber) {
+    const next5GWs = [gwNumber + 1, gwNumber + 2, gwNumber + 3, gwNumber + 4, gwNumber + 5];
+
+    // Sort by position then by fixture difficulty
+    const sortedPlayers = [...myPlayers].sort((a, b) => {
+        if (a.element_type !== b.element_type) return a.element_type - b.element_type;
+        const aFDR = calculateFixtureDifficulty(a.team, 5);
+        const bFDR = calculateFixtureDifficulty(b.team, 5);
+        return aFDR - bFDR;
+    });
+
+    return `
+        <div style="
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            border-left: 3px solid var(--primary-color);
+        ">
+            <div
+                id="planner-ticker-header"
+                style="
+                    padding: 0.75rem 1rem;
+                    cursor: pointer;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                "
+            >
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fas fa-calendar-alt" style="color: var(--primary-color);"></i>
+                    <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-primary);">
+                        Fixture Ticker
+                    </span>
+                </div>
+                <i id="planner-ticker-chevron" class="fas fa-chevron-down" style="font-size: 0.7rem; color: var(--text-secondary);"></i>
+            </div>
+            <div id="planner-ticker-content" style="display: none;">
+                <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                    <table style="width: 100%; font-size: 0.75rem; border-collapse: collapse; min-width: 500px;">
+                        <thead style="background: var(--bg-tertiary);">
+                            <tr>
+                                <th style="position: sticky; left: 0; background: var(--bg-tertiary); z-index: 10; text-align: left; padding: 0.5rem; min-width: 100px;">Player</th>
+                                <th style="text-align: center; padding: 0.5rem; min-width: 40px;">FDR</th>
+                                ${next5GWs.map(gw => `<th style="text-align: center; padding: 0.5rem; min-width: 50px;">GW${gw}</th>`).join('')}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${sortedPlayers.map((player, idx) => {
+                                const next5Fixtures = getFixtures(player.team, 5, false);
+                                const avgFDR = calculateFixtureDifficulty(player.team, 5);
+                                const rowBg = idx % 2 === 0 ? 'var(--bg-primary)' : 'var(--bg-secondary)';
+                                const fdrColor = avgFDR <= 2.5 ? '#22c55e' : avgFDR <= 3.5 ? '#eab308' : '#ef4444';
+
+                                return `
+                                    <tr style="background: ${rowBg};">
+                                        <td style="
+                                            position: sticky;
+                                            left: 0;
+                                            background: ${rowBg};
+                                            z-index: 5;
+                                            padding: 0.5rem;
+                                            border-right: 1px solid var(--border-color);
+                                        ">
+                                            <div style="display: flex; align-items: center; gap: 0.3rem;">
+                                                <span style="font-size: 0.6rem; color: var(--text-secondary);">${getPositionShort(player)}</span>
+                                                <strong style="font-size: 0.7rem;">${escapeHtml(player.web_name)}</strong>
+                                            </div>
+                                        </td>
+                                        <td style="text-align: center; padding: 0.5rem; color: ${fdrColor}; font-weight: 700;">
+                                            ${avgFDR.toFixed(1)}
+                                        </td>
+                                        ${next5Fixtures.map(fix => {
+                                            const fdrClass = getDifficultyClass(fix.difficulty);
+                                            return `
+                                                <td style="text-align: center; padding: 0.5rem;">
+                                                    <span class="${fdrClass}" style="padding: 0.2rem 0.3rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem; white-space: nowrap;">
+                                                        ${fix.opponent}
+                                                    </span>
+                                                </td>
+                                            `;
+                                        }).join('')}
+                                        ${next5Fixtures.length < 5 ? Array(5 - next5Fixtures.length).fill('<td style="text-align: center; padding: 0.5rem;">—</td>').join('') : ''}
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// ============================================================================
+// TRANSFER TARGETS
+// ============================================================================
+
+function renderTransferTargets(myPlayers, picks, gwNumber) {
+    const allPlayers = getAllPlayers();
+    const myPlayerIds = new Set(myPlayers.map(p => p.id));
+    const bank = picks.entry_history.bank || 0;
+
+    // Find top transfer targets by position
+    const targets = {
+        2: [], // DEF
+        3: [], // MID
+        4: []  // FWD
+    };
+
+    allPlayers.forEach(player => {
+        if (myPlayerIds.has(player.id)) return;
+        if (player.element_type < 2) return; // Skip GKs for now
+
+        const form = parseFloat(player.form) || 0;
+        const avgFDR = calculateFixtureDifficulty(player.team, 5);
+        const ppm = calculatePPM(player);
+
+        // Score based on form, fixtures, and value
+        const score = (form * 5) + ((5 - avgFDR) * 4) + (ppm * 3);
+
+        if (form >= 3 && avgFDR <= 3) {
+            targets[player.element_type].push({ player, score, avgFDR });
+        }
+    });
+
+    // Sort and take top 3 per position
+    Object.keys(targets).forEach(pos => {
+        targets[pos].sort((a, b) => b.score - a.score);
+        targets[pos] = targets[pos].slice(0, 3);
+    });
+
+    const allTargets = [...targets[2], ...targets[3], ...targets[4]];
+
+    if (allTargets.length === 0) {
+        return `
+            <div style="
+                background: var(--bg-secondary);
+                border-radius: 8px;
+                padding: 1rem;
+                margin-bottom: 0.5rem;
+                border-left: 3px solid #3b82f6;
+            ">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fas fa-search" style="color: #3b82f6;"></i>
+                    <span style="font-size: 0.85rem; color: var(--text-primary);">No strong transfer targets found</span>
+                </div>
+            </div>
+        `;
+    }
+
+    const next5GWs = [gwNumber + 1, gwNumber + 2, gwNumber + 3, gwNumber + 4, gwNumber + 5];
+
+    return `
+        <div style="
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            border-left: 3px solid #3b82f6;
+        ">
+            <div
+                id="planner-targets-header"
+                style="
+                    padding: 0.75rem 1rem;
+                    cursor: pointer;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                "
+            >
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fas fa-bullseye" style="color: #3b82f6;"></i>
+                    <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-primary);">
+                        Transfer Targets (${allTargets.length})
+                    </span>
+                </div>
+                <i id="planner-targets-chevron" class="fas fa-chevron-down" style="font-size: 0.7rem; color: var(--text-secondary);"></i>
+            </div>
+            <div id="planner-targets-content" style="display: none;">
+                <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                    <table style="width: 100%; font-size: 0.75rem; border-collapse: collapse; min-width: 550px;">
+                        <thead style="background: var(--bg-tertiary);">
+                            <tr>
+                                <th style="position: sticky; left: 0; background: var(--bg-tertiary); z-index: 10; text-align: left; padding: 0.5rem; min-width: 120px;">Player</th>
+                                <th style="text-align: center; padding: 0.5rem; min-width: 45px;">Form</th>
+                                <th style="text-align: center; padding: 0.5rem; min-width: 40px;">FDR</th>
+                                ${next5GWs.map(gw => `<th style="text-align: center; padding: 0.5rem; min-width: 50px;">GW${gw}</th>`).join('')}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${allTargets.map(({ player, avgFDR }, idx) => {
+                                const next5Fixtures = getFixtures(player.team, 5, false);
+                                const formHeatmap = getFormHeatmap(player.form);
+                                const formStyle = getHeatmapStyle(formHeatmap);
+                                const rowBg = idx % 2 === 0 ? 'var(--bg-primary)' : 'var(--bg-secondary)';
+                                const fdrColor = avgFDR <= 2.5 ? '#22c55e' : avgFDR <= 3.5 ? '#eab308' : '#ef4444';
+                                const ownership = parseFloat(player.selected_by_percent) || 0;
+
+                                return `
+                                    <tr style="background: ${rowBg};">
+                                        <td style="
+                                            position: sticky;
+                                            left: 0;
+                                            background: ${rowBg};
+                                            z-index: 5;
+                                            padding: 0.5rem;
+                                            border-right: 1px solid var(--border-color);
+                                        ">
+                                            <div style="display: flex; align-items: center; gap: 0.3rem;">
+                                                <span style="font-size: 0.65rem; color: var(--text-secondary);">${getPositionShort(player)}</span>
+                                                <strong style="font-size: 0.75rem;">${escapeHtml(player.web_name)}</strong>
+                                            </div>
+                                            <div style="font-size: 0.6rem; color: var(--text-secondary);">
+                                                ${getTeamShortName(player.team)} • ${formatCurrency(player.now_cost)} • ${ownership.toFixed(0)}%
+                                            </div>
+                                        </td>
+                                        <td style="text-align: center; padding: 0.5rem; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 600;">
+                                            ${formatDecimal(player.form)}
+                                        </td>
+                                        <td style="text-align: center; padding: 0.5rem; color: ${fdrColor}; font-weight: 700;">
+                                            ${avgFDR.toFixed(1)}
+                                        </td>
+                                        ${next5Fixtures.map(fix => {
+                                            const fdrClass = getDifficultyClass(fix.difficulty);
+                                            return `
+                                                <td style="text-align: center; padding: 0.5rem;">
+                                                    <span class="${fdrClass}" style="padding: 0.2rem 0.3rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem; white-space: nowrap;">
+                                                        ${fix.opponent}
+                                                    </span>
+                                                </td>
+                                            `;
+                                        }).join('')}
+                                        ${next5Fixtures.length < 5 ? Array(5 - next5Fixtures.length).fill('<td style="text-align: center; padding: 0.5rem;">—</td>').join('') : ''}
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// ============================================================================
+// EVENT LISTENERS
+// ============================================================================
+
+function attachPlannerListeners(myPlayers, picks, gwNumber) {
+    // Problem Players toggle
+    const problemsHeader = document.getElementById('planner-problems-header');
+    if (problemsHeader) {
+        problemsHeader.addEventListener('click', () => {
+            const content = document.getElementById('planner-problems-content');
+            const chevron = document.getElementById('planner-problems-chevron');
+            if (content && chevron) {
+                const isHidden = content.style.display === 'none';
+                content.style.display = isHidden ? 'block' : 'none';
+                chevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+            }
+        });
+    }
+
+    // Fixture Ticker toggle
+    const tickerHeader = document.getElementById('planner-ticker-header');
+    if (tickerHeader) {
+        tickerHeader.addEventListener('click', () => {
+            const content = document.getElementById('planner-ticker-content');
+            const chevron = document.getElementById('planner-ticker-chevron');
+            if (content && chevron) {
+                const isHidden = content.style.display === 'none';
+                content.style.display = isHidden ? 'block' : 'none';
+                chevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+            }
+        });
+    }
+
+    // Transfer Targets toggle
+    const targetsHeader = document.getElementById('planner-targets-header');
+    if (targetsHeader) {
+        targetsHeader.addEventListener('click', () => {
+            const content = document.getElementById('planner-targets-content');
+            const chevron = document.getElementById('planner-targets-chevron');
+            if (content && chevron) {
+                const isHidden = content.style.display === 'none';
+                content.style.display = isHidden ? 'block' : 'none';
+                chevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+            }
+        });
+    }
+
+    // Problem player row clicks for replacements
+    const problemRows = document.querySelectorAll('[data-problem-idx]');
+    problemRows.forEach(row => {
+        row.addEventListener('click', async () => {
+            const idx = row.dataset.problemIdx;
+            const replacementsRow = document.getElementById(`problem-replacements-${idx}`);
+            if (!replacementsRow) return;
+
+            const isHidden = replacementsRow.style.display === 'none';
+            replacementsRow.style.display = isHidden ? 'table-row' : 'none';
+
+            if (isHidden) {
+                // Load replacements
+                const contentDiv = document.getElementById(`problem-replacements-content-${idx}`);
+                if (contentDiv && !contentDiv.dataset.loaded) {
+                    const problemPlayers = myPlayers.filter(p => {
+                        const risks = analyzePlayerRisks(p);
+                        return hasHighRisk(risks) || hasMediumRisk(risks);
+                    });
+
+                    if (problemPlayers[idx]) {
+                        const { findReplacements } = await import('./transferHelpers.js');
+                        const replacements = findReplacements(problemPlayers[idx], picks, gwNumber);
+                        contentDiv.innerHTML = renderReplacementsList(replacements, problemPlayers[idx], gwNumber);
+                        contentDiv.dataset.loaded = 'true';
+                    }
+                }
+            }
+        });
+    });
+}
+
+function renderReplacementsList(replacements, problemPlayer, gwNumber) {
+    if (!replacements || replacements.length === 0) {
+        return `<div style="color: var(--text-secondary); font-size: 0.7rem; text-align: center;">No suitable replacements found</div>`;
+    }
+
+    const next3GWs = [gwNumber + 1, gwNumber + 2, gwNumber + 3];
+
+    return `
+        <div style="font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 0.3rem; font-weight: 600;">
+            Suggested Replacements:
+        </div>
+        ${replacements.slice(0, 3).map((rep, idx) => {
+            const player = rep.player;
+            const priceDiff = rep.priceDiff;
+            const diffSign = priceDiff >= 0 ? '+' : '';
+            const diffColor = priceDiff <= 0 ? '#22c55e' : '#ef4444';
+            const next3Fixtures = getFixtures(player.team, 3, false);
+            const formHeatmap = getFormHeatmap(player.form);
+            const formStyle = getHeatmapStyle(formHeatmap);
+
+            return `
+                <div style="
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                    padding: 0.4rem;
+                    background: var(--bg-primary);
+                    border-radius: 4px;
+                    margin-bottom: 0.3rem;
+                ">
+                    <span style="color: var(--text-tertiary); font-size: 0.65rem; width: 1rem;">${idx + 1}.</span>
+                    <div style="flex: 1;">
+                        <strong style="font-size: 0.7rem;">${escapeHtml(player.web_name)}</strong>
+                        <span style="font-size: 0.6rem; color: var(--text-secondary); margin-left: 0.3rem;">
+                            ${formatCurrency(player.now_cost)}
+                            <span style="color: ${diffColor};">(${diffSign}£${Math.abs(priceDiff / 10).toFixed(1)})</span>
+                        </span>
+                    </div>
+                    <span style="
+                        font-size: 0.65rem;
+                        font-weight: 600;
+                        padding: 0.1rem 0.3rem;
+                        border-radius: 3px;
+                        background: ${formStyle.background};
+                        color: ${formStyle.color};
+                    ">${formatDecimal(player.form)}</span>
+                    <div style="display: flex; gap: 0.2rem;">
+                        ${next3Fixtures.map(fix => {
+                            const fdrClass = getDifficultyClass(fix.difficulty);
+                            return `<span class="${fdrClass}" style="padding: 0.1rem 0.2rem; border-radius: 2px; font-size: 0.55rem; font-weight: 600;">${fix.opponent}</span>`;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+        }).join('')}
+    `;
+}
