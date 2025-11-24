@@ -3,7 +3,7 @@
 // Team info, GW points, rank, and captain/vice info for mobile view
 // ============================================================================
 
-import { getPlayerById, loadTransferHistory, getActiveGW } from '../../data.js';
+import { getPlayerById, loadTransferHistory, getActiveGW, getGameweekEvent } from '../../data.js';
 import { escapeHtml } from '../../utils.js';
 import { getGWOpponent } from '../../fixtures.js';
 import {
@@ -14,6 +14,23 @@ import {
 
 // Cache for transfer history
 let transferHistoryCache = new Map();
+
+/**
+ * Calculate color for GW points based on difference from average
+ * @param {number} points - User's GW points
+ * @param {number} average - GW average points
+ * @returns {string} Color hex code
+ */
+function calculatePointsColor(points, average) {
+    if (!average || average === 0) return 'var(--text-primary)';
+
+    const diff = points - average;
+
+    if (diff >= 15) return '#9333ea'; // Exceptional - Purple
+    if (diff >= 5) return '#22c55e';  // Above average - Green
+    if (diff >= -4) return '#eab308'; // On average - Yellow
+    return '#ef4444';                 // Below average - Red
+}
 
 /**
  * Render ultra-compact header with team info and GW card
@@ -51,6 +68,11 @@ export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = fa
 
     // Calculate GW indicator (chevron) using helper
     const gwIndicator = calculateGWIndicator(gwRankNum, overallRankNum);
+
+    // Get GW average from event data
+    const gwEvent = getGameweekEvent(gwNumber);
+    const gwAverage = gwEvent?.average_entry_score || 0;
+    const pointsColor = calculatePointsColor(gwPoints, gwAverage);
 
     // Get selected league info
     const selectedLeagueId = localStorage.getItem(`fpl_selected_league_${team.id}`);
@@ -147,12 +169,17 @@ export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = fa
                         justify-content: right;
                         box-shadow: 0 1px 3px var(--shadow);
                     ">
-                        <div style="font-size: 2rem; font-weight: 800; color: ${gwIndicator.color}; line-height: 1;">
+                        <div style="font-size: 2rem; font-weight: 800; color: ${pointsColor}; line-height: 1;">
                             ${gwPoints}
                         </div>
                         <div style="font-size: 0.6rem; color: var(--text-secondary); margin-top: 0.1rem; font-weight: 600;">
                             GW ${gwNumber}${isLive ? ' <span style="color: #ef4444; animation: pulse 2s infinite;">⚽ LIVE</span>' : ''}
                         </div>
+                        ${gwAverage > 0 ? `
+                            <div style="font-size: 0.55rem; color: var(--text-secondary); margin-top: 0.1rem;">
+                                Avg: ${gwAverage}
+                            </div>
+                        ` : ''}
                         ${isLive ? '<style>@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }</style>' : ''}
                         ${isAutoRefreshActive ? `
                             <div style="display: flex; align-items: center; justify-content: center; gap: 0.25rem; margin-top: 0.3rem; font-size: 0.6rem; color: var(--text-secondary);">
