@@ -8,11 +8,24 @@ import {
     isGameweekLive,
     getActiveGW,
     getPlayerById,
-    loadTransferHistory
+    loadTransferHistory,
+    getGameweekEvent
 } from './data.js';
 
 // Cache for rival transfer history
 let rivalTransferCache = new Map();
+
+/**
+ * Calculate color for GW points based on difference from average
+ */
+function calculatePointsColor(points, average) {
+    if (!average || average === 0) return 'var(--text-primary)';
+    const diff = points - average;
+    if (diff >= 15) return '#9333ea'; // Exceptional - Purple
+    if (diff >= 5) return '#22c55e';  // Above average - Green
+    if (diff >= -4) return '#eab308'; // On average - Yellow
+    return '#ef4444';                 // Below average - Red
+}
 
 import {
     renderCompactTeamList,
@@ -211,6 +224,11 @@ function renderRivalCompactHeader(teamData, gwNumber) {
     const rankIndicator = calculateRankIndicator(team.id, overallRankNum);
     const gwIndicator = calculateGWIndicator(gwRankNum, overallRankNum);
 
+    // Get GW average from event data
+    const gwEvent = getGameweekEvent(gwNumber);
+    const gwAverage = gwEvent?.average_entry_score || 0;
+    const pointsColor = calculatePointsColor(gwPoints, gwAverage);
+
     return `
         <div
             id="compact-header"
@@ -285,12 +303,17 @@ function renderRivalCompactHeader(teamData, gwNumber) {
                         justify-content: center;
                         box-shadow: 0 1px 3px var(--shadow);
                     ">
-                        <div style="font-size: 2rem; font-weight: 800; color: ${gwIndicator.color}; line-height: 1;">
+                        <div style="font-size: 2rem; font-weight: 800; color: ${pointsColor}; line-height: 1;">
                             ${gwPoints}
                         </div>
                         <div style="font-size: 0.6rem; color: var(--text-secondary); margin-top: 0.1rem; font-weight: 600;">
                             GW ${gwNumber}${isLive ? ' <span style="color: #ef4444; animation: pulse 2s infinite;">⚽ LIVE</span>' : ''}
                         </div>
+                        ${gwAverage > 0 ? `
+                            <div style="font-size: 0.55rem; color: var(--text-secondary); margin-top: 0.1rem;">
+                                Avg: ${gwAverage}
+                            </div>
+                        ` : ''}
                         ${isLive ? '<style>@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }</style>' : ''}
                     </div>
                 </div>
