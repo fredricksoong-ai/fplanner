@@ -54,10 +54,11 @@ export function createMobileNav(currentPage, onNavigate) {
                         align-items: center;
                         justify-content: center;
                         gap: 0.2rem;
-                        background: ${item.isGreen ? 'transparent' : (currentPage === item.id ? 'var(--bg-tertiary)' : 'transparent')};
+                        background: transparent;
                         border: none;
+                        border-top: 3px solid ${item.isGreen ? 'transparent' : (currentPage === item.id ? 'var(--primary-color)' : 'transparent')};
                         padding: 0.35rem 0.4rem;
-                        border-radius: 0.5rem;
+                        padding-top: ${item.isGreen ? '0.35rem' : (currentPage === item.id ? 'calc(0.35rem - 3px)' : '0.35rem')};
                         color: ${item.isGreen ? '#00ff88' : (item.disabled ? 'var(--text-tertiary)' : 'var(--text-primary)')};
                         cursor: ${item.disabled ? 'not-allowed' : 'pointer'};
                         transition: all 0.2s;
@@ -139,17 +140,14 @@ export function initMobileNav(navigateCallback) {
             if (!item.disabled) {
                 const isTeam = item.dataset.page === 'my-team';
                 if (!isTeam) {
-                    item.style.background = 'var(--border-dark)';
+                    item.style.opacity = '0.6';
                 }
             }
         });
 
         item.addEventListener('touchend', () => {
             if (!item.disabled) {
-                const page = item.dataset.page;
-                const currentPage = getCurrentPage();
-                const isTeam = page === 'my-team';
-                item.style.background = isTeam ? 'transparent' : (currentPage === page ? 'var(--bg-tertiary)' : 'transparent');
+                item.style.opacity = '1';
             }
         });
     });
@@ -187,7 +185,11 @@ export function updateMobileNav(activePage, subTab = 'overview') {
 
         const isTeam = page === 'my-team';
 
-        item.style.background = isTeam ? 'transparent' : (isActive ? 'var(--bg-tertiary)' : 'transparent');
+        // Update border indicator instead of background
+        item.style.background = 'transparent';
+        item.style.borderTop = isTeam ? 'transparent' : (isActive ? '3px solid var(--primary-color)' : 'transparent');
+        item.style.paddingTop = isTeam || !isActive ? '0.35rem' : 'calc(0.35rem - 3px)';
+
         const label = item.querySelector('span');
         if (label) {
             label.style.fontWeight = isActive || isTeam ? '700' : '500';
