@@ -129,90 +129,188 @@ function renderFixturePlayerStats(fixture, gameweek, isLive, isFinished, isDeskt
         return '';
     }
 
-    const performers = getFixtureTopPerformers(fixture, gameweek, isLive);
-    
-    // Don't show if no performers
-    if (performers.home.length === 0 && performers.away.length === 0) {
+    const allPlayers = getAllPlayers();
+    if (!allPlayers || allPlayers.length === 0) {
         return '';
     }
 
-    const renderPlayerRow = (performer) => {
-        const { player, points, minutes, goals, assists, bonus, bps } = performer;
-        const position = getPositionShort(player);
-        
+    // Get all players from both teams
+    const fixturePlayers = allPlayers.filter(p =>
+        p.team === fixture.team_h || p.team === fixture.team_a
+    );
+
+    // Extract stats for each player
+    const getPlayerStats = (player) => {
+        const liveStats = player.live_stats;
+        const gwStats = player.github_gw || {};
+
+        let stats = {
+            player,
+            teamId: player.team,
+            points: 0,
+            minutes: 0,
+            goals: 0,
+            assists: 0,
+            bonus: 0,
+            bps: 0,
+            yellowCards: 0,
+            redCards: 0,
+            saves: 0,
+            penaltiesSaved: 0,
+            penaltiesMissed: 0,
+            cleanSheets: 0,
+            goalsConceded: 0,
+            ownGoals: 0
+        };
+
+        if (isLive && liveStats) {
+            stats.points = liveStats.total_points || 0;
+            stats.minutes = liveStats.minutes || 0;
+            stats.goals = liveStats.goals_scored || 0;
+            stats.assists = liveStats.assists || 0;
+            stats.bonus = liveStats.provisional_bonus ?? liveStats.bonus ?? 0;
+            stats.bps = liveStats.bps || 0;
+            stats.yellowCards = liveStats.yellow_cards || 0;
+            stats.redCards = liveStats.red_cards || 0;
+            stats.saves = liveStats.saves || 0;
+            stats.penaltiesSaved = liveStats.penalties_saved || 0;
+            stats.penaltiesMissed = liveStats.penalties_missed || 0;
+            stats.cleanSheets = liveStats.clean_sheets || 0;
+            stats.goalsConceded = liveStats.goals_conceded || 0;
+            stats.ownGoals = liveStats.own_goals || 0;
+        } else if (gwStats.gw === gameweek) {
+            stats.points = gwStats.total_points || 0;
+            stats.minutes = gwStats.minutes || 0;
+            stats.goals = gwStats.goals_scored || 0;
+            stats.assists = gwStats.assists || 0;
+            stats.bonus = gwStats.bonus || 0;
+            stats.bps = gwStats.bps || 0;
+            stats.yellowCards = gwStats.yellow_cards || 0;
+            stats.redCards = gwStats.red_cards || 0;
+            stats.saves = gwStats.saves || 0;
+            stats.penaltiesSaved = gwStats.penalties_saved || 0;
+            stats.penaltiesMissed = gwStats.penalties_missed || 0;
+            stats.cleanSheets = gwStats.clean_sheets || 0;
+            stats.goalsConceded = gwStats.goals_conceded || 0;
+            stats.ownGoals = gwStats.own_goals || 0;
+        }
+
+        return stats;
+    };
+
+    const playerStats = fixturePlayers.map(getPlayerStats);
+
+    // Helper to render a stat section
+    const renderSection = (title, content) => {
+        if (!content) return '';
         return `
-            <div style="
-                display: flex;
-                align-items: center;
-                gap: 0.5rem;
-                padding: 0.4rem 0.5rem;
-                background: var(--bg-primary);
-                border-radius: 0.25rem;
-                font-size: 0.65rem;
-                border-left: 2px solid var(--primary-color);
-            ">
-                <div style="font-weight: 700; min-width: 2.5rem; color: var(--primary-color);">${points}</div>
-                <div style="font-weight: 600; color: var(--text-secondary); min-width: 2rem;">${position}</div>
-                <div style="flex: 1; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(player.web_name)}</div>
-                ${goals > 0 ? `<div style="color: #22c55e; font-weight: 700; min-width: 1.5rem; text-align: center;">⚽${goals}</div>` : ''}
-                ${assists > 0 ? `<div style="color: #3b82f6; font-weight: 700; min-width: 1.5rem; text-align: center;">🎯${assists}</div>` : ''}
-                ${bonus > 0 ? `<div style="color: #fbbf24; font-weight: 700; min-width: 1.5rem; text-align: center;">⭐${bonus}</div>` : ''}
-                ${minutes > 0 ? `<div style="color: var(--text-secondary); font-size: 0.6rem; min-width: 2rem; text-align: right;">${minutes}'</div>` : ''}
+            <div style="background: var(--bg-secondary); border-radius: 0.375rem; padding: 0.5rem;">
+                <div style="font-size: 0.6rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 0.375rem; text-transform: uppercase;">
+                    ${title}
+                </div>
+                <div style="font-size: 0.65rem;">
+                    ${content}
+                </div>
             </div>
         `;
     };
 
-    const homeStatsHTML = performers.home.length > 0 
-        ? performers.home.map(renderPlayerRow).join('')
-        : '<div style="padding: 0.5rem; color: var(--text-secondary); font-size: 0.65rem; text-align: center;">No stats</div>';
+    // Helper to render player item
+    const renderPlayerItem = (name, value, color = 'var(--text-primary)') => {
+        return `<div style="display: flex; justify-content: space-between; padding: 0.125rem 0;">
+            <span style="color: var(--text-primary);">${escapeHtml(name)}</span>
+            <span style="font-weight: 700; color: ${color};">${value}</span>
+        </div>`;
+    };
 
-    const awayStatsHTML = performers.away.length > 0
-        ? performers.away.map(renderPlayerRow).join('')
-        : '<div style="padding: 0.5rem; color: var(--text-secondary); font-size: 0.65rem; text-align: center;">No stats</div>';
+    // Goals
+    const goalScorers = playerStats.filter(p => p.goals > 0).sort((a, b) => b.goals - a.goals);
+    const goalsHtml = goalScorers.length > 0
+        ? goalScorers.map(p => renderPlayerItem(p.player.web_name, p.goals, '#22c55e')).join('')
+        : '<div style="color: var(--text-secondary); text-align: center;">-</div>';
 
-    const homeTeam = fplBootstrap?.teams?.find(t => t.id === fixture.team_h);
-    const awayTeam = fplBootstrap?.teams?.find(t => t.id === fixture.team_a);
+    // Assists
+    const assisters = playerStats.filter(p => p.assists > 0).sort((a, b) => b.assists - a.assists);
+    const assistsHtml = assisters.length > 0
+        ? assisters.map(p => renderPlayerItem(p.player.web_name, p.assists, '#3b82f6')).join('')
+        : '<div style="color: var(--text-secondary); text-align: center;">-</div>';
+
+    // Bonus Points
+    const bonusPlayers = playerStats.filter(p => p.bonus > 0).sort((a, b) => b.bonus - a.bonus);
+    const bonusHtml = bonusPlayers.length > 0
+        ? bonusPlayers.map(p => renderPlayerItem(p.player.web_name, p.bonus, '#fbbf24')).join('')
+        : '<div style="color: var(--text-secondary); text-align: center;">-</div>';
+
+    // Cards
+    const cardedPlayers = playerStats.filter(p => p.yellowCards > 0 || p.redCards > 0)
+        .sort((a, b) => (b.redCards * 2 + b.yellowCards) - (a.redCards * 2 + a.yellowCards));
+    const cardsHtml = cardedPlayers.length > 0
+        ? cardedPlayers.map(p => {
+            let cardStr = '';
+            if (p.yellowCards > 0) cardStr += `🟨${p.yellowCards > 1 ? p.yellowCards : ''}`;
+            if (p.redCards > 0) cardStr += `🟥${p.redCards > 1 ? p.redCards : ''}`;
+            return renderPlayerItem(p.player.web_name, cardStr);
+        }).join('')
+        : '<div style="color: var(--text-secondary); text-align: center;">-</div>';
+
+    // BPS Rankings (top 10)
+    const bpsRanked = playerStats.filter(p => p.bps > 0).sort((a, b) => b.bps - a.bps).slice(0, 10);
+    const bpsHtml = bpsRanked.length > 0
+        ? bpsRanked.map(p => renderPlayerItem(p.player.web_name, p.bps, 'var(--primary-color)')).join('')
+        : '<div style="color: var(--text-secondary); text-align: center;">-</div>';
+
+    // Defensive Contributions (clean sheets, own goals)
+    const defPlayers = playerStats.filter(p => p.cleanSheets > 0 || p.ownGoals > 0);
+    let defHtml = '';
+    if (defPlayers.length > 0) {
+        const csPlayers = defPlayers.filter(p => p.cleanSheets > 0);
+        const ogPlayers = defPlayers.filter(p => p.ownGoals > 0);
+        if (csPlayers.length > 0) {
+            defHtml += csPlayers.map(p => renderPlayerItem(p.player.web_name, 'CS', '#22c55e')).join('');
+        }
+        if (ogPlayers.length > 0) {
+            defHtml += ogPlayers.map(p => renderPlayerItem(p.player.web_name, `OG ${p.ownGoals}`, '#ef4444')).join('');
+        }
+    }
+    if (!defHtml) defHtml = '<div style="color: var(--text-secondary); text-align: center;">-</div>';
+
+    // Saves
+    const savers = playerStats.filter(p => p.saves > 0).sort((a, b) => b.saves - a.saves);
+    const savesHtml = savers.length > 0
+        ? savers.map(p => renderPlayerItem(p.player.web_name, p.saves, '#06b6d4')).join('')
+        : '<div style="color: var(--text-secondary); text-align: center;">-</div>';
+
+    // Penalties
+    const penPlayers = playerStats.filter(p => p.penaltiesSaved > 0 || p.penaltiesMissed > 0);
+    let penHtml = '';
+    if (penPlayers.length > 0) {
+        penPlayers.forEach(p => {
+            if (p.penaltiesSaved > 0) {
+                penHtml += renderPlayerItem(p.player.web_name, `Saved ${p.penaltiesSaved}`, '#22c55e');
+            }
+            if (p.penaltiesMissed > 0) {
+                penHtml += renderPlayerItem(p.player.web_name, `Missed ${p.penaltiesMissed}`, '#ef4444');
+            }
+        });
+    }
+    if (!penHtml) penHtml = '<div style="color: var(--text-secondary); text-align: center;">-</div>';
 
     return `
         <div id="fixture-stats-${fixture.id}" style="
             display: none;
             background: var(--bg-primary);
-            border-top: 2px solid var(--border-color);
+            border-top: 1px solid var(--border-color);
             padding: 0.75rem;
         ">
-            <div style="
-                display: grid;
-                grid-template-columns: ${isDesktop ? '1fr 1fr' : '1fr'};
-                gap: 0.75rem;
-            ">
-                <div>
-                    <div style="
-                        font-size: 0.7rem;
-                        font-weight: 700;
-                        color: var(--text-secondary);
-                        margin-bottom: 0.5rem;
-                        text-transform: uppercase;
-                    ">
-                        ${homeTeam?.short_name || 'Home'}
-                    </div>
-                    <div style="display: flex; flex-direction: column; gap: 0.25rem;">
-                        ${homeStatsHTML}
-                    </div>
-                </div>
-                <div>
-                    <div style="
-                        font-size: 0.7rem;
-                        font-weight: 700;
-                        color: var(--text-secondary);
-                        margin-bottom: 0.5rem;
-                        text-transform: uppercase;
-                    ">
-                        ${awayTeam?.short_name || 'Away'}
-                    </div>
-                    <div style="display: flex; flex-direction: column; gap: 0.25rem;">
-                        ${awayStatsHTML}
-                    </div>
-                </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                ${renderSection('Goals', goalsHtml)}
+                ${renderSection('Assists', assistsHtml)}
+                ${renderSection('Bonus Points', bonusHtml)}
+                ${renderSection('Cards', cardsHtml)}
+                ${renderSection('BPS', bpsHtml)}
+                ${renderSection('Def. Contributions', defHtml)}
+                ${renderSection('Saves', savesHtml)}
+                ${renderSection('Penalties', penHtml)}
             </div>
         </div>
     `;
