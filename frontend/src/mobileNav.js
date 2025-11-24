@@ -54,11 +54,10 @@ export function createMobileNav(currentPage, onNavigate) {
                         align-items: center;
                         justify-content: center;
                         gap: 0.2rem;
-                        background: transparent;
+                        background: ${item.isGreen ? 'transparent' : (currentPage === item.id ? 'rgba(0, 255, 136, 0.1)' : 'transparent')};
                         border: none;
-                        border-top: 3px solid ${item.isGreen ? 'transparent' : (currentPage === item.id ? 'var(--primary-color)' : 'transparent')};
+                        border-radius: ${currentPage === item.id ? '0.5rem' : '0'};
                         padding: 0.35rem 0.4rem;
-                        padding-top: ${item.isGreen ? '0.35rem' : (currentPage === item.id ? 'calc(0.35rem - 3px)' : '0.35rem')};
                         color: ${item.isGreen ? '#00ff88' : (item.disabled ? 'var(--text-tertiary)' : 'var(--text-primary)')};
                         cursor: ${item.disabled ? 'not-allowed' : 'pointer'};
                         transition: all 0.2s;
@@ -185,10 +184,9 @@ export function updateMobileNav(activePage, subTab = 'overview') {
 
         const isTeam = page === 'my-team';
 
-        // Update border indicator instead of background
-        item.style.background = 'transparent';
-        item.style.borderTop = isTeam ? 'transparent' : (isActive ? '3px solid var(--primary-color)' : 'transparent');
-        item.style.paddingTop = isTeam || !isActive ? '0.35rem' : 'calc(0.35rem - 3px)';
+        // Update subtle green background for active items
+        item.style.background = isTeam ? 'transparent' : (isActive ? 'rgba(0, 255, 136, 0.1)' : 'transparent');
+        item.style.borderRadius = isActive ? '0.5rem' : '0';
 
         const label = item.querySelector('span');
         if (label) {

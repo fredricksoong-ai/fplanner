@@ -71,7 +71,7 @@ export async function renderPlanner() {
 
     try {
         const teamData = await loadMyTeam(teamId);
-        const gwNumber = getActiveGW();
+        const gwNumber = currentGW; // Use currentGW (last finished) to match getFixtures()
 
         // Get player data
         const picks = teamData.picks.picks || [];
@@ -80,18 +80,25 @@ export async function renderPlanner() {
             return { ...player, pick };
         }).filter(p => p.id);
 
+        // Identify problem players
+        const problemPlayerIds = new Set();
+        myPlayers.forEach(player => {
+            const risks = analyzePlayerRisks(player);
+            if (hasHighRisk(risks) || hasMediumRisk(risks)) {
+                problemPlayerIds.add(player.id);
+            }
+        });
+
         // Build page HTML
         const html = `
             <div style="padding: 0.5rem;">
-                ${renderPlannerHeader(gwNumber)}
-                ${renderProblemPlayersSection(myPlayers, teamData.picks, gwNumber)}
-                ${renderFixtureTicker(myPlayers, gwNumber)}
-                ${renderTransferTargets(myPlayers, teamData.picks, gwNumber)}
+                ${renderPlannerHeader(gwNumber, problemPlayerIds.size)}
+                ${renderUnifiedFixtureTable(myPlayers, problemPlayerIds, teamData.picks, gwNumber)}
             </div>
         `;
 
         container.innerHTML = html;
-        attachPlannerListeners(myPlayers, teamData.picks, gwNumber);
+        attachPlannerListeners(myPlayers, problemPlayerIds, teamData.picks, gwNumber);
 
     } catch (err) {
         console.error('Failed to load planner:', err);
@@ -109,7 +116,7 @@ export async function renderPlanner() {
 // HEADER
 // ============================================================================
 
-function renderPlannerHeader(gwNumber) {
+function renderPlannerHeader(gwNumber, problemCount) {
     return `
         <div style="
             position: sticky;
@@ -127,7 +134,8 @@ function renderPlannerHeader(gwNumber) {
                         Planner
                     </h1>
                     <p style="font-size: 0.7rem; color: var(--text-secondary); margin: 0.2rem 0 0 0;">
-                        GW ${gwNumber} → GW ${gwNumber + 5}
+                        GW ${gwNumber + 1} → GW ${gwNumber + 5}
+                        ${problemCount > 0 ? `<span style="color: #fb923c; margin-left: 0.5rem;">⚠️ ${problemCount} issue${problemCount !== 1 ? 's' : ''}</span>` : ''}
                     </p>
                 </div>
             </div>
@@ -136,10 +144,125 @@ function renderPlannerHeader(gwNumber) {
 }
 
 // ============================================================================
-// PROBLEM PLAYERS SECTION
+// UNIFIED FIXTURE TABLE
 // ============================================================================
 
-function renderProblemPlayersSection(myPlayers, picks, gwNumber) {
+function renderUnifiedFixtureTable(myPlayers, problemPlayerIds, picks, gwNumber) {
+    const next5GWs = [gwNumber + 1, gwNumber + 2, gwNumber + 3, gwNumber + 4, gwNumber + 5];
+
+    // Sort by position then by fixture difficulty
+    const sortedPlayers = [...myPlayers].sort((a, b) => {
+        if (a.element_type !== b.element_type) return a.element_type - b.element_type;
+        const aFDR = calculateFixtureDifficulty(a.team, 5);
+        const bFDR = calculateFixtureDifficulty(b.team, 5);
+        return aFDR - bFDR;
+    });
+
+    return `
+        <div style="
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            overflow: hidden;
+        ">
+            <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                <table style="width: 100%; font-size: 0.75rem; border-collapse: collapse; min-width: 550px;">
+                    <thead style="background: var(--bg-tertiary);">
+                        <tr>
+                            <th style="position: sticky; left: 0; background: var(--bg-tertiary); z-index: 10; text-align: left; padding: 0.5rem; min-width: 110px;">Player</th>
+                            <th style="text-align: center; padding: 0.5rem; min-width: 40px;">FDR</th>
+                            <th style="text-align: center; padding: 0.5rem; min-width: 45px;">Form</th>
+                            ${next5GWs.map(gw => `<th style="text-align: center; padding: 0.5rem; min-width: 50px;">GW${gw}</th>`).join('')}
+                            <th style="text-align: center; padding: 0.5rem; min-width: 30px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${sortedPlayers.map((player, idx) => {
+                            const isProblem = problemPlayerIds.has(player.id);
+                            const risks = isProblem ? analyzePlayerRisks(player) : [];
+                            const next5Fixtures = getFixtures(player.team, 5, false);
+                            const avgFDR = calculateFixtureDifficulty(player.team, 5);
+                            const formHeatmap = getFormHeatmap(player.form);
+                            const formStyle = getHeatmapStyle(formHeatmap);
+                            const rowBg = isProblem ? 'rgba(251, 146, 60, 0.15)' : (idx % 2 === 0 ? 'var(--bg-primary)' : 'var(--bg-secondary)');
+                            const fdrColor = avgFDR <= 2.5 ? '#22c55e' : avgFDR <= 3.5 ? '#eab308' : '#ef4444';
+
+                            return `
+                                <tr style="background: ${rowBg}; ${isProblem ? 'border-left: 3px solid #fb923c;' : ''}" data-player-id="${player.id}">
+                                    <td style="
+                                        position: sticky;
+                                        left: 0;
+                                        background: ${rowBg};
+                                        z-index: 5;
+                                        padding: 0.5rem;
+                                        border-right: 1px solid var(--border-color);
+                                    ">
+                                        <div style="display: flex; align-items: center; gap: 0.3rem;">
+                                            ${isProblem ? `<span style="font-size: 0.7rem;">${risks[0]?.icon || '⚠️'}</span>` : ''}
+                                            <span style="font-size: 0.6rem; color: var(--text-secondary);">${getPositionShort(player)}</span>
+                                            <strong style="font-size: 0.7rem;">${escapeHtml(player.web_name)}</strong>
+                                        </div>
+                                        ${isProblem ? `<div style="font-size: 0.6rem; color: #fb923c; margin-top: 0.1rem;">${risks[0]?.message || 'Issue'}</div>` : ''}
+                                    </td>
+                                    <td style="text-align: center; padding: 0.5rem; color: ${fdrColor}; font-weight: 700;">
+                                        ${avgFDR.toFixed(1)}
+                                    </td>
+                                    <td style="text-align: center; padding: 0.5rem; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 600;">
+                                        ${formatDecimal(player.form)}
+                                    </td>
+                                    ${next5Fixtures.map(fix => {
+                                        const fdrClass = getDifficultyClass(fix.difficulty);
+                                        return `
+                                            <td style="text-align: center; padding: 0.5rem;">
+                                                <span class="${fdrClass}" style="padding: 0.2rem 0.3rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem; white-space: nowrap;">
+                                                    ${fix.opponent}
+                                                </span>
+                                            </td>
+                                        `;
+                                    }).join('')}
+                                    ${next5Fixtures.length < 5 ? Array(5 - next5Fixtures.length).fill('<td style="text-align: center; padding: 0.5rem;">—</td>').join('') : ''}
+                                    <td style="text-align: center; padding: 0.5rem;">
+                                        ${isProblem ? `
+                                            <button
+                                                class="expand-replacements-btn"
+                                                data-player-id="${player.id}"
+                                                style="
+                                                    background: none;
+                                                    border: none;
+                                                    cursor: pointer;
+                                                    color: var(--primary-color);
+                                                    padding: 0.2rem;
+                                                "
+                                            >
+                                                <i class="fas fa-chevron-down" id="chevron-${player.id}" style="font-size: 0.7rem; transition: transform 0.2s;"></i>
+                                            </button>
+                                        ` : ''}
+                                    </td>
+                                </tr>
+                                ${isProblem ? `
+                                    <tr id="replacements-${player.id}" style="display: none;">
+                                        <td colspan="9" style="padding: 0; background: var(--bg-tertiary);">
+                                            <div id="replacements-content-${player.id}" style="padding: 0.5rem;">
+                                                <div style="text-align: center; color: var(--text-secondary); font-size: 0.7rem;">
+                                                    Loading replacements...
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ` : ''}
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+}
+
+// ============================================================================
+// OLD SECTIONS (KEPT FOR REFERENCE - CAN BE REMOVED)
+// ============================================================================
+
+function renderProblemPlayersSection_OLD(myPlayers, picks, gwNumber) {
     // Find problem players
     const problemPlayers = [];
     myPlayers.forEach(player => {
@@ -532,75 +655,34 @@ function renderTransferTargets(myPlayers, picks, gwNumber) {
 // EVENT LISTENERS
 // ============================================================================
 
-function attachPlannerListeners(myPlayers, picks, gwNumber) {
-    // Problem Players toggle
-    const problemsHeader = document.getElementById('planner-problems-header');
-    if (problemsHeader) {
-        problemsHeader.addEventListener('click', () => {
-            const content = document.getElementById('planner-problems-content');
-            const chevron = document.getElementById('planner-problems-chevron');
-            if (content && chevron) {
-                const isHidden = content.style.display === 'none';
-                content.style.display = isHidden ? 'block' : 'none';
-                chevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
-            }
-        });
-    }
+function attachPlannerListeners(myPlayers, problemPlayerIds, picks, gwNumber) {
+    // Problem player expansion buttons
+    const expandButtons = document.querySelectorAll('.expand-replacements-btn');
+    expandButtons.forEach(button => {
+        button.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const playerId = parseInt(button.dataset.playerId);
+            const replacementsRow = document.getElementById(`replacements-${playerId}`);
+            const chevron = document.getElementById(`chevron-${playerId}`);
+            const contentDiv = document.getElementById(`replacements-content-${playerId}`);
 
-    // Fixture Ticker toggle
-    const tickerHeader = document.getElementById('planner-ticker-header');
-    if (tickerHeader) {
-        tickerHeader.addEventListener('click', () => {
-            const content = document.getElementById('planner-ticker-content');
-            const chevron = document.getElementById('planner-ticker-chevron');
-            if (content && chevron) {
-                const isHidden = content.style.display === 'none';
-                content.style.display = isHidden ? 'block' : 'none';
-                chevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
-            }
-        });
-    }
-
-    // Transfer Targets toggle
-    const targetsHeader = document.getElementById('planner-targets-header');
-    if (targetsHeader) {
-        targetsHeader.addEventListener('click', () => {
-            const content = document.getElementById('planner-targets-content');
-            const chevron = document.getElementById('planner-targets-chevron');
-            if (content && chevron) {
-                const isHidden = content.style.display === 'none';
-                content.style.display = isHidden ? 'block' : 'none';
-                chevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
-            }
-        });
-    }
-
-    // Problem player row clicks for replacements
-    const problemRows = document.querySelectorAll('[data-problem-idx]');
-    problemRows.forEach(row => {
-        row.addEventListener('click', async () => {
-            const idx = row.dataset.problemIdx;
-            const replacementsRow = document.getElementById(`problem-replacements-${idx}`);
             if (!replacementsRow) return;
 
             const isHidden = replacementsRow.style.display === 'none';
             replacementsRow.style.display = isHidden ? 'table-row' : 'none';
 
-            if (isHidden) {
-                // Load replacements
-                const contentDiv = document.getElementById(`problem-replacements-content-${idx}`);
-                if (contentDiv && !contentDiv.dataset.loaded) {
-                    const problemPlayers = myPlayers.filter(p => {
-                        const risks = analyzePlayerRisks(p);
-                        return hasHighRisk(risks) || hasMediumRisk(risks);
-                    });
+            if (chevron) {
+                chevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+            }
 
-                    if (problemPlayers[idx]) {
-                        const { findReplacements } = await import('./transferHelpers.js');
-                        const replacements = findReplacements(problemPlayers[idx], picks, gwNumber);
-                        contentDiv.innerHTML = renderReplacementsList(replacements, problemPlayers[idx], gwNumber);
-                        contentDiv.dataset.loaded = 'true';
-                    }
+            // Load replacements if not already loaded
+            if (isHidden && contentDiv && !contentDiv.dataset.loaded) {
+                const player = myPlayers.find(p => p.id === playerId);
+                if (player) {
+                    const { findReplacements } = await import('./transferHelpers.js');
+                    const replacements = findReplacements(player, picks, gwNumber);
+                    contentDiv.innerHTML = renderReplacementsList(replacements, player, gwNumber);
+                    contentDiv.dataset.loaded = 'true';
                 }
             }
         });
