@@ -11,10 +11,10 @@
  */
 export function createMobileNav(currentPage, onNavigate) {
     const navItems = [
-        { id: 'league', label: 'League', icon: 'fa-trophy', action: 'league' },
-        { id: 'my-team', label: 'Team', icon: 'fa-users' },
-        { id: 'refresh', label: 'Refresh', icon: 'fa-sync-alt', action: 'refresh', isGreen: true },
         { id: 'fixtures', label: 'Fixtures', icon: 'fa-calendar-alt', action: 'fixtures' },
+        { id: 'league', label: 'Leagues', icon: 'fa-trophy', action: 'league' },
+        { id: 'my-team', label: 'Team', icon: 'fa-users' },
+        { id: 'planner', label: 'Planner', icon: 'fa-calendar-check', action: 'planner' },
         { id: 'stats', label: 'Stats', icon: 'fa-chart-bar', action: 'stats' }
     ];
 
@@ -100,7 +100,7 @@ export function initMobileNav(navigateCallback) {
         item.addEventListener('click', (e) => {
             e.preventDefault();
 
-            // Handle action buttons (League, Fixtures, Stats, Refresh)
+            // Handle action buttons (League, Fixtures, Stats, Planner)
             const action = item.dataset.action;
             if (action === 'league') {
                 console.log('🏆 League button clicked - navigating to leagues tab');
@@ -120,9 +120,10 @@ export function initMobileNav(navigateCallback) {
                 navigateCallback('data-analysis');
                 return;
             }
-            if (action === 'refresh') {
-                console.log('🔄 Refresh button clicked - triggering refresh');
-                navigateCallback('refresh');
+            if (action === 'planner') {
+                console.log('📋 Planner button clicked - navigating to planner');
+                // Navigate to planner page
+                navigateCallback('planner');
                 return;
             }
 
@@ -176,29 +177,18 @@ export function updateMobileNav(activePage, subTab = 'overview') {
             isActive = true;
         } else if (action === 'stats' && activePage === 'data-analysis') {
             isActive = true;
+        } else if (action === 'planner' && activePage === 'planner') {
+            isActive = true;
         } else if (page === activePage && subTab === 'overview') {
             isActive = true;
         } else {
             isActive = false;
         }
 
-        const isRefresh = action === 'refresh';
-
-        item.style.background = isRefresh ? 'transparent' : (isActive ? 'var(--bg-tertiary)' : 'transparent');
+        item.style.background = isActive ? 'var(--bg-tertiary)' : 'transparent';
         const label = item.querySelector('span');
         if (label) {
-            label.style.fontWeight = isActive || isRefresh ? '700' : '500';
-            if (isRefresh) {
-                label.style.color = '#00ff88';
-            }
-        }
-
-        // Set icon color for refresh button
-        if (isRefresh) {
-            const icon = item.querySelector('i');
-            if (icon) {
-                icon.style.color = '#00ff88';
-            }
+            label.style.fontWeight = isActive ? '700' : '500';
         }
     });
 }
