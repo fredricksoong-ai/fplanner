@@ -108,36 +108,40 @@ Generate the JSON now.`;
  */
 export function parseGeminiResponse(geminiData, gameweek, page) {
   try {
-    // Extract text from Gemini response
-    const text = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const parts = geminiData.candidates?.[0]?.content?.parts || [];
 
-    if (!text) {
-      throw new Error('No text content in Gemini response');
-    }
-
-    // Try to extract JSON from response (handles markdown code blocks)
-    let jsonText = text;
-
-    // Remove markdown code blocks if present (for object structure)
-    const jsonMatch = text.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
-    if (jsonMatch) {
-      jsonText = jsonMatch[1];
+    let categories;
+    const jsonPart = parts.find(part => part.jsonValue);
+    if (jsonPart && typeof jsonPart.jsonValue === 'object') {
+      categories = jsonPart.jsonValue;
     } else {
-      // Try to find JSON object directly
-      const objectMatch = text.match(/\{[\s\S]*\}/);
-      if (objectMatch) {
-        jsonText = objectMatch[0];
+      const text = parts.find(part => part.text)?.text || '';
+
+      if (!text) {
+        throw new Error('No text content in Gemini response');
+      }
+
+      // Try to extract JSON from response (handles markdown code blocks)
+      let jsonText = text;
+
+      const jsonMatch = text.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
+      if (jsonMatch) {
+        jsonText = jsonMatch[1];
       } else {
-        const firstBrace = text.indexOf('{');
-        const lastBrace = text.lastIndexOf('}');
-        if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-          jsonText = text.slice(firstBrace, lastBrace + 1);
+        const objectMatch = text.match(/\{[\s\S]*\}/);
+        if (objectMatch) {
+          jsonText = objectMatch[0];
+        } else {
+          const firstBrace = text.indexOf('{');
+          const lastBrace = text.lastIndexOf('}');
+          if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+            jsonText = text.slice(firstBrace, lastBrace + 1);
+          }
         }
       }
-    }
 
-    // Parse JSON
-    const categories = JSON.parse(jsonText);
+      categories = JSON.parse(jsonText);
+    }
 
     // Validate structure - should be an object with category keys
     if (typeof categories !== 'object' || Array.isArray(categories)) {
@@ -246,9 +250,10 @@ export async function generateAIInsights(page, tab, position, gameweek, data) {
       // }],
       generationConfig: {
         temperature: 0.7,
-        maxOutputTokens: 8192,  // Increased for 5 categories
+        maxOutputTokens: 2048,
         topP: 0.8,
-        topK: 40
+        topK: 40,
+        responseMimeType: 'application/json'
       }
     },
     {
