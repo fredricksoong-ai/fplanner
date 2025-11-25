@@ -3,16 +3,18 @@
 // Horizontal scrolling table with comprehensive stats
 // ============================================================================
 
-import { getPlayerById, isGameweekLive } from '../../data.js';
+import { getPlayerById, isGameweekLive, currentGW } from '../../data.js';
 import {
     getPositionShort,
     formatCurrency,
     escapeHtml,
     formatDecimal,
     getFormHeatmap,
+    getPtsHeatmap,
     getHeatmapStyle,
     getDifficultyClass,
-    calculatePPM
+    calculatePPM,
+    getTeamShortName
 } from '../../utils.js';
 import { getFixtures, getGWOpponent, getMatchStatus } from '../../fixtures.js';
 import { analyzePlayerRisks } from '../../risk.js';
@@ -28,7 +30,8 @@ import { calculateStatusColor } from './compactStyleHelpers.js';
 export function renderCompactTeamList(players, gwNumber, isLive) {
     const starters = players.filter(p => p.position <= 11).sort((a, b) => a.position - b.position);
     const bench = players.filter(p => p.position > 11).sort((a, b) => a.position - b.position);
-    const next5GWs = [gwNumber + 1, gwNumber + 2, gwNumber + 3, gwNumber + 4, gwNumber + 5];
+    // Use currentGW (last finished) to match getFixtures() behavior
+    const next5GWs = [currentGW + 1, currentGW + 2, currentGW + 3, currentGW + 4, currentGW + 5];
 
     return `
         <div style="
@@ -95,7 +98,16 @@ function renderTeamSection(players, gwNumber, isLive, next5GWs, sectionType) {
 
         // GW opponent and points
         const opponent = getGWOpponent(player.team, gwNumber);
-        const gwPoints = player.live_stats?.total_points ?? player.event_points ?? 0;
+
+        // Calculate GW points with captain doubling
+        const hasGWStats = player.github_gw && player.github_gw.gw === gwNumber;
+        const liveStats = player.live_stats;
+        let gwPoints = liveStats?.total_points ?? (hasGWStats ? player.github_gw.total_points : (player.event_points || 0));
+        const displayPoints = pick.is_captain ? (gwPoints * 2) : gwPoints;
+
+        // Points heatmap styling
+        const ptsHeatmap = getPtsHeatmap(displayPoints, 'gw_pts');
+        const ptsStyle = getHeatmapStyle(ptsHeatmap);
 
         // Form styling
         const formHeatmap = getFormHeatmap(player.form);
@@ -140,9 +152,9 @@ function renderTeamSection(players, gwNumber, isLive, next5GWs, sectionType) {
 
         html += `
             <tr
-                style="background: ${rowBg}; ${borderColor ? `border-left: 4px solid ${borderColor};` : ''}"
+                style="background: ${rowBg}; ${borderColor ? `border-left: 4px solid ${borderColor};` : ''}; cursor: pointer;"
                 data-player-id="${player.id}"
-                class="player-row-interactive"
+                class="player-row"
             >
                 <td style="
                     position: sticky;
@@ -151,6 +163,7 @@ function renderTeamSection(players, gwNumber, isLive, next5GWs, sectionType) {
                     z-index: 5;
                     padding: 0.5rem;
                     border-right: 1px solid var(--border-color);
+                    min-height: 3rem;
                     ${pick.position === 11 ? 'border-bottom: 3px solid var(--border-color);' : ''}
                 ">
                     <div style="display: flex; align-items: center; gap: 0.3rem;">
@@ -159,16 +172,16 @@ function renderTeamSection(players, gwNumber, isLive, next5GWs, sectionType) {
                         ${isCaptain ? '<span style="font-size: 0.6rem; margin-left: 0.2rem;">(C)</span>' : ''}
                         ${isViceCaptain ? '<span style="font-size: 0.6rem; margin-left: 0.2rem;">(V)</span>' : ''}
                     </div>
-                    ${risks.length > 0 ? `<div style="font-size: 0.6rem; color: ${borderColor}; margin-top: 0.1rem;">${risks[0]?.message || 'Issue'}</div>` : ''}
+                    ${risks.length > 0 ? `<div style="font-size: 0.55rem; color: ${borderColor}; margin-top: 0.1rem; line-height: 1.2;">${risks[0]?.message || 'Issue'}</div>` : `<div style="height: 0.8rem;"></div>`}
                 </td>
-                <td style="text-align: center; padding: 0.5rem; font-size: 0.65rem;">
-                    ${opponent.opponent || '—'}
+                <td style="text-align: center; padding: 0.5rem; font-size: 0.65rem; font-weight: 600;">
+                    ${getTeamShortName(opponent.opponentTeam) || '—'}
                 </td>
                 <td style="text-align: center; padding: 0.5rem; font-size: 0.6rem; font-weight: ${statusColors.statusWeight}; color: ${statusColors.statusColor}; background: ${statusColors.statusBgColor}; padding: 0.08rem 0.25rem; border-radius: 0.25rem; white-space: nowrap;">
                     ${matchStatus}
                 </td>
-                <td style="text-align: center; padding: 0.5rem; font-weight: 700;">
-                    ${gwPoints}
+                <td style="text-align: center; padding: 0.5rem; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 700; border-radius: 0.25rem;">
+                    ${displayPoints}
                 </td>
                 <td style="text-align: center; padding: 0.5rem; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 600;">
                     ${formatDecimal(player.form)}
