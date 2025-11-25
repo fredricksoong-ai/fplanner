@@ -832,7 +832,7 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
                 <table style="width: 100%; font-size: 0.7rem; border-collapse: collapse; min-width: 800px;">
                     <thead style="background: var(--bg-tertiary);">
                         <tr>
-                            <th style="position: sticky; left: 0; background: var(--bg-tertiary); z-index: 10; text-align: left; padding: 0.5rem; min-width: 100px; max-width: 140px;">Player</th>
+                            <th style="position: sticky; left: 0; background: var(--bg-tertiary); z-index: 10; text-align: left; padding: 0.5rem; min-width: 100px;">Player</th>
                             <th style="text-align: center; padding: 0.5rem; min-width: 45px;">Opp</th>
                             <th style="text-align: center; padding: 0.5rem; min-width: 50px;">Status</th>
                             <th style="text-align: center; padding: 0.5rem; min-width: 35px;">Pts</th>
