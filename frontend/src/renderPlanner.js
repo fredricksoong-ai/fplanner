@@ -26,6 +26,14 @@ import {
     getHeatmapStyle
 } from './utils.js';
 
+// Planner modules
+import { plannerState } from './planner/state.js';
+import { calculateTeamMetrics, calculateProjectedTeamMetrics } from './planner/metrics.js';
+import { renderMetricIndicators } from './planner/indicators.js';
+import { renderCostSummary, getCurrentCostSummary } from './planner/costCalculator.js';
+import { attachPlannerListeners } from './planner/eventHandlers.js';
+import { loadPlannerAIInsights } from './planner/aiInsights.js';
+
 // ============================================================================
 // MAIN RENDER FUNCTION
 // ============================================================================
@@ -80,11 +88,23 @@ export async function renderPlanner() {
             return { ...player, pick };
         }).filter(p => p.id);
 
-        // Identify players with risks and categorize by severity
+        // Initialize planner state with original team data
+        const bank = teamData.picks.entry_history?.bank || 0;
+        const value = teamData.picks.entry_history?.value || 1000;
+        plannerState.initialize(myPlayers, picks, bank, value);
+
+        // Get current squad (with changes applied)
+        const currentSquad = plannerState.getCurrentSquad();
+        const currentPlayers = currentSquad.map(pick => {
+            const player = getPlayerById(pick.element);
+            return player ? { ...player, pick } : null;
+        }).filter(p => p !== null);
+
+        // Identify players with risks and categorize by severity (use current players)
         const riskPlayerMap = new Map(); // playerId -> {risks, highestSeverity}
         let highCount = 0, mediumCount = 0, lowCount = 0;
 
-        myPlayers.forEach(player => {
+        currentPlayers.forEach(player => {
             const risks = analyzePlayerRisks(player);
             if (risks.length > 0) {
                 // Determine highest severity
@@ -101,16 +121,39 @@ export async function renderPlanner() {
             }
         });
 
+        // Calculate metrics
+        const originalMetrics = calculateTeamMetrics(picks, gwNumber);
+        const changes = plannerState.getChanges();
+        const projectedMetrics = calculateProjectedTeamMetrics(picks, changes, gwNumber);
+        
+        // Add budget to metrics
+        const costSummary = getCurrentCostSummary();
+        originalMetrics.budget = bank;
+        projectedMetrics.budget = costSummary.newBank;
+
         // Build page HTML
         const html = `
             <div style="padding: 0.5rem;">
                 ${renderPlannerHeader(gwNumber, highCount, mediumCount, lowCount)}
-                ${renderUnifiedFixtureTable(myPlayers, riskPlayerMap, teamData.picks, gwNumber)}
+                <div id="planner-ai-insights"></div>
+                ${renderMetricIndicators(originalMetrics, projectedMetrics)}
+                ${renderCostSummary(costSummary)}
+                ${renderUnifiedFixtureTable(currentPlayers, riskPlayerMap, teamData.picks, gwNumber)}
             </div>
         `;
 
         container.innerHTML = html;
-        attachPlannerListeners(myPlayers, riskPlayerMap, teamData.picks, gwNumber);
+        
+        // Attach event listeners (new modular handlers)
+        attachPlannerListeners();
+        
+        // Attach old expandable replacement listeners (for backward compatibility)
+        attachOldPlannerListeners(currentPlayers, riskPlayerMap, teamData.picks, gwNumber);
+        
+        // Load AI insights (async, won't block render)
+        loadPlannerAIInsights().catch(err => {
+            console.error('Failed to load AI insights:', err);
+        });
 
     } catch (err) {
         console.error('Failed to load planner:', err);
@@ -217,8 +260,12 @@ function renderUnifiedFixtureTable(myPlayers, riskPlayerMap, picks, gwNumber) {
                             const rowBg = idx % 2 === 0 ? 'var(--bg-primary)' : 'var(--bg-secondary)';
                             const fdrColor = avgFDR <= 2.5 ? '#22c55e' : avgFDR <= 3.5 ? '#eab308' : '#ef4444';
 
+                            // Check if player has been modified
+                            const isModified = plannerState.isPlayerModified(player.id);
+                            const modifiedStyle = isModified ? 'border: 2px solid var(--primary-color);' : '';
+                            
                             return `
-                                <tr style="background: ${rowBg}; ${hasRisk ? `border-left: 4px solid ${borderColor};` : ''}" data-player-id="${player.id}">
+                                <tr style="background: ${rowBg}; ${hasRisk ? `border-left: 4px solid ${borderColor};` : ''} ${modifiedStyle}" data-player-id="${player.id}">
                                     <td style="
                                         position: sticky;
                                         left: 0;
@@ -230,6 +277,25 @@ function renderUnifiedFixtureTable(myPlayers, riskPlayerMap, picks, gwNumber) {
                                         <div style="display: flex; align-items: center; gap: 0.3rem;">
                                             <span style="font-size: 0.6rem; color: var(--text-secondary);">${getPositionShort(player)}</span>
                                             <strong style="font-size: 0.7rem;">${escapeHtml(player.web_name)}</strong>
+                                            ${isModified ? `
+                                                <button
+                                                    class="player-reset-btn"
+                                                    data-player-id="${player.id}"
+                                                    style="
+                                                        background: var(--bg-tertiary);
+                                                        border: none;
+                                                        cursor: pointer;
+                                                        color: var(--text-primary);
+                                                        padding: 0.15rem 0.3rem;
+                                                        margin-left: 0.3rem;
+                                                        border-radius: 4px;
+                                                        font-size: 0.6rem;
+                                                    "
+                                                    title="Reset this change"
+                                                >
+                                                    ↻
+                                                </button>
+                                            ` : ''}
                                             ${showChevron ? `
                                                 <button
                                                     class="expand-replacements-btn"
@@ -248,6 +314,7 @@ function renderUnifiedFixtureTable(myPlayers, riskPlayerMap, picks, gwNumber) {
                                             ` : ''}
                                         </div>
                                         ${hasRisk ? `<div style="font-size: 0.6rem; color: ${borderColor}; margin-top: 0.1rem;">${risks[0]?.message || 'Issue'}</div>` : ''}
+                                        ${isModified ? `<div style="font-size: 0.6rem; color: var(--primary-color); margin-top: 0.1rem;">Modified</div>` : ''}
                                     </td>
                                     <td style="text-align: center; padding: 0.5rem; color: ${fdrColor}; font-weight: 700;">
                                         ${avgFDR.toFixed(1)}
@@ -684,7 +751,7 @@ function renderTransferTargets(myPlayers, picks, gwNumber) {
 // EVENT LISTENERS
 // ============================================================================
 
-function attachPlannerListeners(myPlayers, riskPlayerMap, picks, gwNumber) {
+function attachOldPlannerListeners(myPlayers, riskPlayerMap, picks, gwNumber) {
     // Risk player expansion buttons
     const expandButtons = document.querySelectorAll('.expand-replacements-btn');
     expandButtons.forEach(button => {

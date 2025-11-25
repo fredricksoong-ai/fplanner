@@ -123,7 +123,12 @@ function renderPage() {
             renderSearch();
             break;
         case 'planner':
-            renderPlannerPage();
+            // Check if it's a replacement page
+            if (currentSubTab === 'replace' && position) {
+                renderPlayerReplacementPage(parseInt(position));
+            } else {
+                renderPlannerPage();
+            }
             break;
         default:
             container.innerHTML = '<p>Page not found</p>';
@@ -167,6 +172,16 @@ async function renderSearch() {
 async function renderPlannerPage() {
     const { renderPlanner } = await import('./renderPlanner.js');
     renderPlanner();
+}
+
+async function renderPlayerReplacementPage(playerId) {
+    const { renderPlayerReplacementPage } = await import('./planner/replacementPage.js');
+    const container = document.getElementById('app-container');
+    container.innerHTML = renderPlayerReplacementPage(playerId);
+    
+    // Attach event listeners
+    const { attachReplacementPageListeners } = await import('./planner/eventHandlers.js');
+    attachReplacementPageListeners();
 }
 
 // ============================================================================
@@ -337,6 +352,12 @@ async function initializeApp() {
                 // Handle rival/{teamId} route
                 currentRivalId = parseInt(subTab);
                 navigate('rival');
+            } else if (page === 'planner' && subTab === 'replace' && position) {
+                // Handle planner/replace/{playerId} route
+                currentPage = page;
+                currentSubTab = subTab;
+                updateNavLinks();
+                renderPlayerReplacementPage(parseInt(position));
             } else if (page === 'data-analysis' && position) {
                 currentPage = page;
                 currentSubTab = subTab || 'overview';
@@ -602,7 +623,9 @@ window.addEventListener('hashchange', () => {
         currentPage = page;
         currentSubTab = subTab || 'overview';
         updateNavLinks();
-        if (page === 'data-analysis' && position) {
+        if (page === 'planner' && subTab === 'replace' && position) {
+            renderPlayerReplacementPage(parseInt(position));
+        } else if (page === 'data-analysis' && position) {
             renderDataAnalysis(subTab || 'overview', position);
         } else {
             renderPage();
