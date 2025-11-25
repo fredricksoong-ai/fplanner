@@ -14,8 +14,9 @@ import {
     getDifficultyClass,
     calculatePPM
 } from '../../utils.js';
-import { getFixtures, getGWOpponent } from '../../fixtures.js';
+import { getFixtures, getGWOpponent, getMatchStatus } from '../../fixtures.js';
 import { analyzePlayerRisks } from '../../risk.js';
+import { calculateStatusColor } from './compactStyleHelpers.js';
 
 /**
  * Render comprehensive team table with horizontal scroll
@@ -128,18 +129,9 @@ function renderTeamSection(players, gwNumber, isLive, next5GWs, sectionType) {
         // Next 5 fixtures
         const next5Fixtures = getFixtures(player.team, 5, false);
 
-        // Availability status
-        let statusIcon = '✓';
-        let statusColor = '#22c55e';
-        if (player.chance_of_playing_next_round !== null && player.chance_of_playing_next_round !== undefined) {
-            if (player.chance_of_playing_next_round < 50) {
-                statusIcon = `${player.chance_of_playing_next_round}%`;
-                statusColor = '#ef4444';
-            } else if (player.chance_of_playing_next_round < 75) {
-                statusIcon = `${player.chance_of_playing_next_round}%`;
-                statusColor = '#fb923c';
-            }
-        }
+        // Match status display with color coding
+        const matchStatus = getMatchStatus(player.team, gwNumber, player);
+        const statusColors = calculateStatusColor(matchStatus);
 
         // Row styling
         const rowBg = idx % 2 === 0 ? 'var(--bg-primary)' : 'var(--bg-secondary)';
@@ -171,8 +163,8 @@ function renderTeamSection(players, gwNumber, isLive, next5GWs, sectionType) {
                 <td style="text-align: center; padding: 0.5rem; font-size: 0.65rem;">
                     ${opponent.opponent || '—'}
                 </td>
-                <td style="text-align: center; padding: 0.5rem; color: ${statusColor}; font-weight: 600; font-size: 0.65rem;">
-                    ${statusIcon}
+                <td style="text-align: center; padding: 0.5rem; font-size: 0.6rem; font-weight: ${statusColors.statusWeight}; color: ${statusColors.statusColor}; background: ${statusColors.statusBgColor}; padding: 0.08rem 0.25rem; border-radius: 0.25rem; white-space: nowrap;">
+                    ${matchStatus}
                 </td>
                 <td style="text-align: center; padding: 0.5rem; font-weight: 700;">
                     ${gwPoints}
