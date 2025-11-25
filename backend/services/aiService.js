@@ -21,6 +21,31 @@ import logger from '../logger.js';
  * @returns {string} AI prompt
  */
 export function buildAIPrompt(page, tab, position, gameweek, data) {
+  if (page === 'planner') {
+    return `You are a concise, data-driven Fantasy Premier League assistant. Analyze the manager's current squad context and produce a short list of actionable planning tips.
+
+CRITICAL INSTRUCTIONS:
+- Current FPL Gameweek is ${gameweek}
+- Base all insights on the provided squad metrics and problem players
+- Insights should guide transfer planning, chip timing, or risk mitigation
+- Be extremely concise (max 1-2 sentences per insight)
+- Reference specific player names, positions, fixtures, or stats when possible
+
+SQUAD CONTEXT:
+${JSON.stringify(data, null, 2)}
+
+OUTPUT FORMAT (MUST be valid JSON):
+{
+  "PlannerInsights": [
+    "insight 1 (concise, actionable)",
+    "insight 2 (concise, actionable)",
+    "insight 3 (concise, actionable)"
+  ]
+}
+
+Generate the JSON now.`;
+  }
+
   if (page === 'data-analysis' && tab === 'overview') {
     return `You are a concise, sharp, and highly accurate Fantasy Premier League (FPL) analyst. Your task is to analyze the current Premier League state and FPL player data to generate compelling transfer insights across multiple categories.
 
@@ -102,11 +127,32 @@ export function parseGeminiResponse(geminiData, gameweek) {
       const objectMatch = text.match(/\{[\s\S]*\}/);
       if (objectMatch) {
         jsonText = objectMatch[0];
+      } else {
+        const firstBrace = text.indexOf('{');
+        const lastBrace = text.lastIndexOf('}');
+        if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+          jsonText = text.slice(firstBrace, lastBrace + 1);
+        }
       }
     }
 
     // Parse JSON
     const categories = JSON.parse(jsonText);
+
+    // Special handling for planner insights
+    const plannerKey = Object.keys(categories).find(key => key.toLowerCase().includes('planner'));
+    if (plannerKey) {
+      const plannerInsights = (categories[plannerKey] || [])
+        .slice(0, 5)
+        .map(insight => String(insight || '').substring(0, 280))
+        .filter(Boolean);
+
+      return {
+        gameweek,
+        plannerInsights,
+        timestamp: Date.now()
+      };
+    }
 
     // Validate structure - should be an object with category keys
     if (typeof categories !== 'object' || Array.isArray(categories)) {
@@ -145,9 +191,9 @@ export function parseGeminiResponse(geminiData, gameweek) {
     logger.error('❌ Full error:', error.stack);
 
     // Return fallback insights in case of parsing error
+    // Provide generic fallback for both planner and stats pages
     const fallbackCategories = {};
     const expectedCategories = ['Overview', 'Hidden Gems', 'Differentials', 'Transfer Targets', 'Team Analysis'];
-
     for (const category of expectedCategories) {
       fallbackCategories[category] = [
         'AI insights temporarily unavailable',
@@ -159,6 +205,11 @@ export function parseGeminiResponse(geminiData, gameweek) {
     return {
       gameweek: gameweek,
       categories: fallbackCategories,
+      plannerInsights: [
+        'AI insights temporarily unavailable.',
+        'Please try refreshing the page.',
+        'Check back at the next update window.'
+      ],
       timestamp: Date.now(),
       parseError: true
     };
