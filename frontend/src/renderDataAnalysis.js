@@ -41,6 +41,8 @@ import {
     attachRiskTooltipListeners
 } from './renderHelpers.js';
 
+import { analyzePlayerRisks, renderRiskTooltip } from './risk.js';
+
 import { debounce } from './utils/debounce.js';
 
 import {
@@ -830,7 +832,7 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
                 <table style="width: 100%; font-size: 0.7rem; border-collapse: collapse; min-width: 800px;">
                     <thead style="background: var(--bg-tertiary);">
                         <tr>
-                            <th style="position: sticky; left: 0; background: var(--bg-tertiary); z-index: 10; text-align: left; padding: 0.5rem; min-width: 100px;">Player</th>
+                            <th style="position: sticky; left: 0; background: var(--bg-tertiary); z-index: 10; text-align: left; padding: 0.5rem; min-width: 100px; max-width: 140px;">Player</th>
                             <th style="text-align: center; padding: 0.5rem; min-width: 45px;">Opp</th>
                             <th style="text-align: center; padding: 0.5rem; min-width: 50px;">Status</th>
                             <th style="text-align: center; padding: 0.5rem; min-width: 35px;">Pts</th>
@@ -845,6 +847,10 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
     mobilePlayers.forEach((player, idx) => {
         const gwOpp = getGWOpponent(player.team, currentGW);
         const matchStatus = getMatchStatus(player.team, currentGW, player);
+
+        // Risk analysis
+        const risks = analyzePlayerRisks(player);
+        const riskTooltip = renderRiskTooltip(risks);
 
         // Points (GW points)
         const gwPoints = player.event_points || 0;
@@ -918,10 +924,15 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
                     z-index: 5;
                     padding: 0.5rem;
                     border-right: 1px solid var(--border-color);
+                    max-width: 140px;
+                    min-width: 100px;
                 ">
-                    <div style="display: flex; align-items: center; gap: 0.3rem;">
-                        <span style="font-size: 0.6rem; color: var(--text-secondary);">${getPositionShort(player)}</span>
-                        <strong style="font-size: 0.7rem;">${escapeHtml(player.web_name)}</strong>
+                    <div style="display: flex; align-items: center; gap: 0.3rem; overflow: hidden;">
+                        <span style="font-size: 0.6rem; color: var(--text-secondary); flex-shrink: 0;">${getPositionShort(player)}</span>
+                        <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">
+                            <strong style="font-size: 0.7rem;">${escapeHtml(player.web_name)}</strong>
+                            ${riskTooltip ? `${riskTooltip}` : ''}
+                        </div>
                     </div>
                 </td>
                 <td style="text-align: center; padding: 0.5rem;">
