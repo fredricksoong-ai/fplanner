@@ -159,6 +159,7 @@ function renderTeamSection(players, gwNumber, isLive, next5GWs, sectionType) {
                         ${isCaptain ? '<span style="font-size: 0.6rem; margin-left: 0.2rem;">(C)</span>' : ''}
                         ${isViceCaptain ? '<span style="font-size: 0.6rem; margin-left: 0.2rem;">(V)</span>' : ''}
                     </div>
+                    ${risks.length > 0 ? `<div style="font-size: 0.6rem; color: ${borderColor}; margin-top: 0.1rem;">${risks[0]?.message || 'Issue'}</div>` : ''}
                 </td>
                 <td style="text-align: center; padding: 0.5rem; font-size: 0.65rem;">
                     ${opponent.opponent || '—'}
