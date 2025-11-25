@@ -189,9 +189,9 @@ function renderUnifiedFixtureTable(myPlayers, riskPlayerMap, picks, gwNumber) {
                     <thead style="background: var(--bg-tertiary);">
                         <tr>
                             <th style="position: sticky; left: 0; background: var(--bg-tertiary); z-index: 10; text-align: left; padding: 0.5rem; min-width: 140px;">Player</th>
-                            <th style="text-align: center; padding: 0.5rem; min-width: 120px;">FDR</th>
-                            <th style="text-align: center; padding: 0.5rem; min-width: 120px;">Form</th>
-                            ${next5GWs.map(gw => `<th style="text-align: center; padding: 0.5rem; min-width: 120px;">GW${gw}</th>`).join('')}
+                            <th style="text-align: center; padding: 0.5rem; min-width: 60px;">FDR</th>
+                            <th style="text-align: center; padding: 0.5rem; min-width: 60px;">Form</th>
+                            ${next5GWs.map(gw => `<th style="text-align: center; padding: 0.5rem; min-width: 60px;">GW${gw}</th>`).join('')}
                         </tr>
                     </thead>
                     <tbody>
@@ -359,9 +359,9 @@ function renderProblemPlayersTable(problemPlayers, picks, next5GWs, gwNumber) {
                 <thead style="background: var(--bg-tertiary);">
                     <tr>
                         <th style="position: sticky; left: 0; background: var(--bg-tertiary); z-index: 10; text-align: left; padding: 0.5rem; min-width: 140px;">Player</th>
-                        <th style="text-align: center; padding: 0.5rem; min-width: 120px;">Issue</th>
-                        <th style="text-align: center; padding: 0.5rem; min-width: 120px;">Form</th>
-                        ${next5GWs.map(gw => `<th style="text-align: center; padding: 0.5rem; min-width: 120px;">GW${gw}</th>`).join('')}
+                        <th style="text-align: center; padding: 0.5rem; min-width: 60px;">Issue</th>
+                        <th style="text-align: center; padding: 0.5rem; min-width: 60px;">Form</th>
+                        ${next5GWs.map(gw => `<th style="text-align: center; padding: 0.5rem; min-width: 60px;">GW${gw}</th>`).join('')}
                     </tr>
                 </thead>
                 <tbody>
@@ -479,8 +479,8 @@ function renderFixtureTicker(myPlayers, gwNumber) {
                         <thead style="background: var(--bg-tertiary);">
                             <tr>
                                 <th style="position: sticky; left: 0; background: var(--bg-tertiary); z-index: 10; text-align: left; padding: 0.5rem; min-width: 140px;">Player</th>
-                                <th style="text-align: center; padding: 0.5rem; min-width: 120px;">FDR</th>
-                                ${next5GWs.map(gw => `<th style="text-align: center; padding: 0.5rem; min-width: 120px;">GW${gw}</th>`).join('')}
+                                <th style="text-align: center; padding: 0.5rem; min-width: 60px;">FDR</th>
+                                ${next5GWs.map(gw => `<th style="text-align: center; padding: 0.5rem; min-width: 60px;">GW${gw}</th>`).join('')}
                             </tr>
                         </thead>
                         <tbody>
@@ -620,9 +620,9 @@ function renderTransferTargets(myPlayers, picks, gwNumber) {
                         <thead style="background: var(--bg-tertiary);">
                             <tr>
                                 <th style="position: sticky; left: 0; background: var(--bg-tertiary); z-index: 10; text-align: left; padding: 0.5rem; min-width: 140px;">Player</th>
-                                <th style="text-align: center; padding: 0.5rem; min-width: 120px;">Form</th>
-                                <th style="text-align: center; padding: 0.5rem; min-width: 120px;">FDR</th>
-                                ${next5GWs.map(gw => `<th style="text-align: center; padding: 0.5rem; min-width: 120px;">GW${gw}</th>`).join('')}
+                                <th style="text-align: center; padding: 0.5rem; min-width: 60px;">Form</th>
+                                <th style="text-align: center; padding: 0.5rem; min-width: 60px;">FDR</th>
+                                ${next5GWs.map(gw => `<th style="text-align: center; padding: 0.5rem; min-width: 60px;">GW${gw}</th>`).join('')}
                             </tr>
                         </thead>
                         <tbody>
