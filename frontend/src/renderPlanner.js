@@ -126,10 +126,7 @@ export async function renderPlanner() {
         const changes = plannerState.getChanges();
         const projectedMetrics = calculateProjectedTeamMetrics(picks, changes, gwNumber);
         
-        // Add budget to metrics
         const costSummary = getCurrentCostSummary();
-        originalMetrics.budget = bank;
-        projectedMetrics.budget = costSummary.newBank;
 
         // Build page HTML
         const html = `

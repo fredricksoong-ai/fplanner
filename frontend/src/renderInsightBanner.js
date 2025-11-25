@@ -189,16 +189,23 @@ function renderCategoryInsights(insights, isMobile = false) {
  * @param {boolean} isMobile - Whether viewing on mobile device
  * @returns {string} HTML string
  */
-export function renderInsightBanner(insights, contextId, isMobile = false) {
+export function renderInsightBanner(insights, contextId, isMobile = false, options = {}) {
+    const { hideTabs = false, customTitle, customSubtitle, preferredCategory } = options;
+
     // Handle error state
-    if (insights.error || !insights.categories) {
+    if (insights.error || !insights.categories || Object.keys(insights.categories).length === 0) {
         const message = insights.message || 'Unable to load AI insights';
         return renderInsightBannerError(message, contextId);
     }
 
     const timestamp = new Date(insights.timestamp).toLocaleTimeString();
+    const categoryKeys = Object.keys(insights.categories);
+    const orderedCategories = preferredCategory && categoryKeys.includes(preferredCategory)
+        ? [preferredCategory, ...categoryKeys.filter(key => key !== preferredCategory)]
+        : categoryKeys;
 
-    const categories = ['Overview', 'Hidden Gems', 'Differentials', 'Transfer Targets', 'Team Analysis'];
+    const showTabs = !hideTabs && orderedCategories.length > 1;
+    const activeCategory = orderedCategories[0];
 
     // Mobile-specific sizing
     const bannerPadding = isMobile ? '0.75rem' : '1.5rem';
@@ -226,39 +233,50 @@ export function renderInsightBanner(insights, contextId, isMobile = false) {
                     font-size: ${headerFontSize};
                     margin: 0 0 ${isMobile ? '0.75rem' : '1rem'} 0;
                 ">
-                    🤖 AI Insights
+                    ${customTitle || '🤖 AI Insights'}
                 </h3>
+                ${customSubtitle ? `
+                    <p style="
+                        color: var(--text-secondary);
+                        margin: 0 0 ${isMobile ? '0.75rem' : '1rem'} 0;
+                        font-size: ${isMobile ? '0.7rem' : '0.8rem'};
+                    ">
+                        ${customSubtitle}
+                    </p>
+                ` : ''}
 
-                <!-- Tab Navigation -->
-                <div class="ai-insights-tabs" style="
-                    display: flex;
-                    gap: 0.5rem;
-                    flex-wrap: wrap;
-                    margin-bottom: ${isMobile ? '0.75rem' : '1rem'};
-                ">
-                    ${categories.map((category, index) => `
-                        <button
-                            class="ai-insight-tab-btn"
-                            data-category="${category}"
-                            data-context="${contextId}"
-                            data-is-active="${index === 0}"
-                            style="
-                                padding: ${tabPadding};
-                                background: ${index === 0 ? 'var(--accent-color)' : 'var(--bg-secondary)'};
-                                color: ${index === 0 ? 'white' : 'var(--text-secondary)'};
-                                border: 1px solid ${index === 0 ? 'var(--accent-color)' : 'var(--border-color)'};
-                                border-radius: 6px;
-                                cursor: pointer;
-                                font-size: ${tabFontSize};
-                                font-weight: 600;
-                                transition: all 0.2s;
-                                white-space: nowrap;
-                            "
-                        >
-                            ${category}
-                        </button>
-                    `).join('')}
-                </div>
+                ${showTabs ? `
+                    <!-- Tab Navigation -->
+                    <div class="ai-insights-tabs" style="
+                        display: flex;
+                        gap: 0.5rem;
+                        flex-wrap: wrap;
+                        margin-bottom: ${isMobile ? '0.75rem' : '1rem'};
+                    ">
+                        ${orderedCategories.map((category, index) => `
+                            <button
+                                class="ai-insight-tab-btn"
+                                data-category="${category}"
+                                data-context="${contextId}"
+                                data-is-active="${index === 0}"
+                                style="
+                                    padding: ${tabPadding};
+                                    background: ${index === 0 ? 'var(--accent-color)' : 'var(--bg-secondary)'};
+                                    color: ${index === 0 ? 'white' : 'var(--text-secondary)'};
+                                    border: 1px solid ${index === 0 ? 'var(--accent-color)' : 'var(--border-color)'};
+                                    border-radius: 6px;
+                                    cursor: pointer;
+                                    font-size: ${tabFontSize};
+                                    font-weight: 600;
+                                    transition: all 0.2s;
+                                    white-space: nowrap;
+                                "
+                            >
+                                ${category}
+                            </button>
+                        `).join('')}
+                    </div>
+                ` : ''}
             </div>
 
             <!-- Tab Content -->
@@ -268,11 +286,11 @@ export function renderInsightBanner(insights, contextId, isMobile = false) {
                 background: var(--bg-secondary);
                 border-radius: 8px;
             ">
-                ${categories.map((category, index) => `
+                ${orderedCategories.map((category, index) => `
                     <div
                         class="ai-insight-tab-content"
                         data-category="${category}"
-                        style="display: ${index === 0 ? 'block' : 'none'};"
+                        style="display: ${(!showTabs && category === activeCategory) || (showTabs && index === 0) ? 'block' : 'none'};"
                     >
                         ${renderCategoryInsights(insights.categories[category], isMobile)}
                     </div>
@@ -323,51 +341,53 @@ export function attachInsightBannerListeners(contextId, onRetry) {
 
     // Attach tab switching listeners
     const tabBtns = document.querySelectorAll(`.ai-insight-tab-btn[data-context="${contextId}"]`);
-    tabBtns.forEach(btn => {
-        // Tab click handler
-        btn.addEventListener('click', () => {
-            const targetCategory = btn.dataset.category;
+    if (tabBtns.length > 0) {
+        tabBtns.forEach(btn => {
+            // Tab click handler
+            btn.addEventListener('click', () => {
+                const targetCategory = btn.dataset.category;
 
-            // Update button styles
-            tabBtns.forEach(b => {
-                const isActive = b.dataset.category === targetCategory;
-                b.dataset.isActive = isActive;
+                // Update button styles
+                tabBtns.forEach(b => {
+                    const isActive = b.dataset.category === targetCategory;
+                    b.dataset.isActive = isActive;
 
-                if (isActive) {
-                    b.style.background = 'var(--accent-color)';
-                    b.style.color = 'white';
-                    b.style.borderColor = 'var(--accent-color)';
-                    b.style.opacity = '1';
-                } else {
-                    b.style.background = 'var(--bg-secondary)';
-                    b.style.color = 'var(--text-secondary)';
-                    b.style.borderColor = 'var(--border-color)';
-                    b.style.opacity = '1';
+                    if (isActive) {
+                        b.style.background = 'var(--accent-color)';
+                        b.style.color = 'white';
+                        b.style.borderColor = 'var(--accent-color)';
+                        b.style.opacity = '1';
+                    } else {
+                        b.style.background = 'var(--bg-secondary)';
+                        b.style.color = 'var(--text-secondary)';
+                        b.style.borderColor = 'var(--border-color)';
+                        b.style.opacity = '1';
+                    }
+                });
+
+                // Show/hide content
+                const contents = document.querySelectorAll('.ai-insight-tab-content');
+                contents.forEach(content => {
+                    if (content.dataset.category === targetCategory) {
+                        content.style.display = 'block';
+                    } else {
+                        content.style.display = 'none';
+                    }
+                });
+            });
+
+            // Hover effects (CSP-compliant)
+            btn.addEventListener('mouseenter', () => {
+                if (btn.dataset.isActive !== 'true') {
+                    btn.style.opacity = '0.7';
                 }
             });
 
-            // Show/hide content
-            const contents = document.querySelectorAll('.ai-insight-tab-content');
-            contents.forEach(content => {
-                if (content.dataset.category === targetCategory) {
-                    content.style.display = 'block';
-                } else {
-                    content.style.display = 'none';
-                }
+            btn.addEventListener('mouseleave', () => {
+                btn.style.opacity = '1';
             });
         });
-
-        // Hover effects (CSP-compliant)
-        btn.addEventListener('mouseenter', () => {
-            if (btn.dataset.isActive !== 'true') {
-                btn.style.opacity = '0.7';
-            }
-        });
-
-        btn.addEventListener('mouseleave', () => {
-            btn.style.opacity = '1';
-        });
-    });
+    }
 }
 
 /**
@@ -378,7 +398,7 @@ export function attachInsightBannerListeners(contextId, onRetry) {
  * @param {boolean} isMobile - Whether viewing on mobile device
  * @returns {Promise<void>}
  */
-export async function loadAndRenderInsights(context, containerId, isMobile = false) {
+export async function loadAndRenderInsights(context, containerId, isMobile = false, options = {}) {
     const container = document.getElementById(containerId);
     if (!container) {
         console.error(`Container ${containerId} not found`);
@@ -395,7 +415,7 @@ export async function loadAndRenderInsights(context, containerId, isMobile = fal
         const insights = await aiInsights.getInsights(context);
 
         // Render banner
-        container.innerHTML = renderInsightBanner(insights, contextId, isMobile);
+        container.innerHTML = renderInsightBanner(insights, contextId, isMobile, options);
 
         // Attach tab switching listeners
         attachInsightBannerListeners(contextId);
@@ -409,7 +429,7 @@ export async function loadAndRenderInsights(context, containerId, isMobile = fal
 
         // Attach retry listener for error state only
         attachInsightBannerListeners(contextId, () => {
-            loadAndRenderInsights(context, containerId, isMobile);
+            loadAndRenderInsights(context, containerId, isMobile, options);
         });
     }
 }

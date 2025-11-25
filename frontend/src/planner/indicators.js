@@ -35,15 +35,15 @@ export function renderMetricIndicators(originalMetrics, currentMetrics) {
             </div>
             <div style="
                 display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+                grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
                 gap: 0.5rem;
             ">
                 ${renderIndicatorCard('Avg PPM', deltas.avgPPM, 'ppm')}
                 ${renderIndicatorCard('Avg FDR', deltas.avgFDR, 'fdr')}
                 ${renderIndicatorCard('Avg Form', deltas.avgForm, 'form')}
                 ${renderIndicatorCard('Exp Pts', deltas.expectedPoints, 'points')}
-                ${renderIndicatorCard('Risk', deltas.riskCount, 'risk')}
-                ${renderIndicatorCard('Budget', deltas.budget, 'budget')}
+                ${renderIndicatorCard('Avg Own%', deltas.avgOwnership, 'ownership')}
+                ${renderIndicatorCard('Avg xGI', deltas.avgXGI, 'xgi')}
             </div>
         </div>
     `;
@@ -120,45 +120,26 @@ function renderIndicatorCard(label, delta, type) {
  */
 function calculateDeltas(original, current) {
     return {
-        avgPPM: {
-            value: current.avgPPM,
-            delta: current.avgPPM - original.avgPPM,
-            direction: current.avgPPM > original.avgPPM ? 'up' : 
-                      current.avgPPM < original.avgPPM ? 'down' : 'neutral'
-        },
-        avgFDR: {
-            value: current.avgFDR,
-            delta: current.avgFDR - original.avgFDR,
-            direction: current.avgFDR < original.avgFDR ? 'up' : // Lower FDR is better
-                       current.avgFDR > original.avgFDR ? 'down' : 'neutral'
-        },
-        avgForm: {
-            value: current.avgForm,
-            delta: current.avgForm - original.avgForm,
-            direction: current.avgForm > original.avgForm ? 'up' : 
-                      current.avgForm < original.avgForm ? 'down' : 'neutral'
-        },
-        expectedPoints: {
-            value: current.expectedPoints,
-            delta: current.expectedPoints - original.expectedPoints,
-            direction: current.expectedPoints > original.expectedPoints ? 'up' : 
-                      current.expectedPoints < original.expectedPoints ? 'down' : 'neutral'
-        },
-        riskCount: {
-            value: `${current.riskCount.high}🔴 ${current.riskCount.medium}🟠`,
-            delta: (current.riskCount.high + current.riskCount.medium) - 
-                   (original.riskCount.high + original.riskCount.medium),
-            direction: (current.riskCount.high + current.riskCount.medium) < 
-                       (original.riskCount.high + original.riskCount.medium) ? 'up' :
-                       (current.riskCount.high + current.riskCount.medium) > 
-                       (original.riskCount.high + original.riskCount.medium) ? 'down' : 'neutral'
-        },
-        budget: {
-            value: current.budget || 0,
-            delta: (current.budget || 0) - (original.budget || 0),
-            direction: (current.budget || 0) > (original.budget || 0) ? 'up' :
-                       (current.budget || 0) < (original.budget || 0) ? 'down' : 'neutral'
-        }
+        avgPPM: buildDelta(current.avgPPM, original.avgPPM, true),
+        avgFDR: buildDelta(current.avgFDR, original.avgFDR, false),
+        avgForm: buildDelta(current.avgForm, original.avgForm, true),
+        expectedPoints: buildDelta(current.expectedPoints, original.expectedPoints, true),
+        avgOwnership: buildDelta(current.avgOwnership, original.avgOwnership, true),
+        avgXGI: buildDelta(current.avgXGI, original.avgXGI, true)
+    };
+}
+
+function buildDelta(currentValue, originalValue, higherIsBetter) {
+    const delta = currentValue - originalValue;
+    let direction = 'neutral';
+    if (delta !== 0) {
+        const improved = higherIsBetter ? delta > 0 : delta < 0;
+        direction = improved ? 'up' : 'down';
+    }
+    return {
+        value: currentValue,
+        delta,
+        direction
     };
 }
 
@@ -169,13 +150,13 @@ function calculateDeltas(original, current) {
  * @returns {string} Formatted value
  */
 function formatValue(value, type) {
-    if (type === 'risk') {
-        return value; // Already formatted as string
-    }
-    if (type === 'budget') {
-        return `£${(value / 10).toFixed(1)}m`;
-    }
     if (type === 'points') {
+        return formatDecimal(value);
+    }
+    if (type === 'ownership') {
+        return `${formatDecimal(value)}%`;
+    }
+    if (type === 'xgi') {
         return formatDecimal(value);
     }
     return formatDecimal(value);
@@ -188,17 +169,16 @@ function formatValue(value, type) {
  * @returns {string} Formatted delta
  */
 function formatDelta(delta, type) {
-    if (type === 'budget') {
-        const absDelta = Math.abs(delta);
-        const sign = delta >= 0 ? '+' : '-';
-        return `${sign}£${(absDelta / 10).toFixed(1)}m`;
-    }
     if (type === 'points') {
         const sign = delta >= 0 ? '+' : '';
         return `${sign}${formatDecimal(delta)}`;
     }
+    if (type === 'ownership') {
+        const sign = delta >= 0 ? '+' : '';
+        return `${sign}${formatDecimal(delta)}%`;
+    }
     const sign = delta >= 0 ? '+' : '';
-    return `${sign}${formatDecimal(delta, 1)}`;
+    return `${sign}${formatDecimal(delta)}`;
 }
 
 /**

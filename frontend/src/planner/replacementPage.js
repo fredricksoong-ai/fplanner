@@ -3,7 +3,7 @@
  * Shows recommended replacements and full position list
  */
 
-import { getAllPlayers, getPlayerById } from '../data.js';
+import { getAllPlayers, getPlayerById, currentGW } from '../data.js';
 import { findReplacements } from '../transferHelpers.js';
 import { getFixtures, calculateFixtureDifficulty } from '../fixtures.js';
 import {
@@ -18,7 +18,7 @@ import {
     getHeatmapStyle
 } from '../utils.js';
 import { plannerState } from './state.js';
-import { currentGW } from '../data.js';
+import { calculateTeamMetrics, calculateProjectedTeamMetrics, calculateMetricsDelta } from './metrics.js';
 
 /**
  * Render player replacement page
@@ -65,12 +65,15 @@ export function renderPlayerReplacementPage(playerId) {
 
     const next5GWs = [currentGW + 1, currentGW + 2, currentGW + 3, currentGW + 4, currentGW + 5];
     const priceDiff = player.now_cost;
+    const basePicks = plannerState.getCurrentSquad();
+    const safeBasePicks = (basePicks && basePicks.length) ? basePicks : plannerState.getInitialPicks() || [];
+    const baseMetrics = calculateTeamMetrics(safeBasePicks, currentGW);
 
     return `
         <div style="padding: 0.5rem;">
             ${renderReplacementHeader(player)}
-            ${renderRecommendedReplacements(recommendations, player, next5GWs, priceDiff)}
-            ${renderAllPositionPlayers(positionPlayers, player, next5GWs, priceDiff)}
+            ${renderRecommendedReplacements(recommendations, player, next5GWs, priceDiff, safeBasePicks, baseMetrics)}
+            ${renderAllPositionPlayers(positionPlayers, player, next5GWs, priceDiff, safeBasePicks, baseMetrics)}
         </div>
     `;
 }
@@ -126,7 +129,7 @@ function renderReplacementHeader(player) {
  * @param {number} originalPrice - Original player price
  * @returns {string} HTML string
  */
-function renderRecommendedReplacements(recommendations, originalPlayer, next5GWs, originalPrice) {
+function renderRecommendedReplacements(recommendations, originalPlayer, next5GWs, originalPrice, basePicks, baseMetrics) {
     if (recommendations.length === 0) {
         return '';
     }
@@ -142,7 +145,7 @@ function renderRecommendedReplacements(recommendations, originalPlayer, next5GWs
                 <i class="fas fa-star" style="color: var(--primary-color); margin-right: 0.5rem;"></i>
                 Recommended Replacements
             </h2>
-            ${renderReplacementTable(recommendations.map(r => r.player), originalPlayer, next5GWs, originalPrice, true)}
+            ${renderReplacementTable(recommendations.map(r => r.player), originalPlayer, next5GWs, originalPrice, true, basePicks, baseMetrics)}
         </div>
     `;
 }
@@ -155,7 +158,7 @@ function renderRecommendedReplacements(recommendations, originalPlayer, next5GWs
  * @param {number} originalPrice - Original player price
  * @returns {string} HTML string
  */
-function renderAllPositionPlayers(players, originalPlayer, next5GWs, originalPrice) {
+function renderAllPositionPlayers(players, originalPlayer, next5GWs, originalPrice, basePicks, baseMetrics) {
     return `
         <div>
             <h2 style="
@@ -166,7 +169,7 @@ function renderAllPositionPlayers(players, originalPlayer, next5GWs, originalPri
             ">
                 All ${getPositionShort(originalPlayer)} Players
             </h2>
-            ${renderReplacementTable(players, originalPlayer, next5GWs, originalPrice, false)}
+            ${renderReplacementTable(players, originalPlayer, next5GWs, originalPrice, false, basePicks, baseMetrics)}
         </div>
     `;
 }
@@ -180,7 +183,7 @@ function renderAllPositionPlayers(players, originalPlayer, next5GWs, originalPri
  * @param {boolean} isRecommended - Whether this is recommended section
  * @returns {string} HTML string
  */
-function renderReplacementTable(players, originalPlayer, next5GWs, originalPrice, isRecommended) {
+function renderReplacementTable(players, originalPlayer, next5GWs, originalPrice, isRecommended, basePicks, baseMetrics) {
     if (players.length === 0) {
         return `
             <div style="
@@ -209,6 +212,10 @@ function renderReplacementTable(players, originalPlayer, next5GWs, originalPrice
                             <th style="text-align: center; padding: 0.5rem; min-width: 60px;">Form</th>
                             <th style="text-align: center; padding: 0.5rem; min-width: 70px;">Price</th>
                             <th style="text-align: center; padding: 0.5rem; min-width: 60px;">Diff</th>
+                            <th style="text-align: center; padding: 0.5rem; min-width: 70px;">ΔPPM</th>
+                            <th style="text-align: center; padding: 0.5rem; min-width: 70px;">ΔFDR</th>
+                            <th style="text-align: center; padding: 0.5rem; min-width: 70px;">ΔOwn%</th>
+                            <th style="text-align: center; padding: 0.5rem; min-width: 70px;">ΔxGI</th>
                             ${next5GWs.map(gw => `<th style="text-align: center; padding: 0.5rem; min-width: 60px;">GW${gw}</th>`).join('')}
                         </tr>
                     </thead>
@@ -223,6 +230,8 @@ function renderReplacementTable(players, originalPlayer, next5GWs, originalPrice
                             const priceDiff = player.now_cost - originalPrice;
                             const diffSign = priceDiff >= 0 ? '+' : '';
                             const diffColor = priceDiff <= 0 ? '#22c55e' : '#ef4444';
+                            const projectedMetrics = calculateProjectedTeamMetrics(basePicks, [{ out: originalPlayer.id, in: player.id }], currentGW);
+                            const deltaMetrics = calculateMetricsDelta(projectedMetrics, baseMetrics);
 
                             return `
                                 <tr 
@@ -265,6 +274,10 @@ function renderReplacementTable(players, originalPlayer, next5GWs, originalPrice
                                     <td style="text-align: center; padding: 0.5rem; color: ${diffColor}; font-weight: 600;">
                                         ${diffSign}£${Math.abs(priceDiff / 10).toFixed(1)}m
                                     </td>
+                                    ${renderDeltaCell(deltaMetrics.avgPPM)}
+                                    ${renderDeltaCell(deltaMetrics.avgFDR)}
+                                    ${renderDeltaCell(deltaMetrics.avgOwnership, 'percent')}
+                                    ${renderDeltaCell(deltaMetrics.avgXGI)}
                                     ${next5Fixtures.map(fix => {
                                         const fdrClass = getDifficultyClass(fix.difficulty);
                                         return `
@@ -283,6 +296,22 @@ function renderReplacementTable(players, originalPlayer, next5GWs, originalPrice
                 </table>
             </div>
         </div>
+    `;
+}
+
+function renderDeltaCell(deltaMetric, type = 'number') {
+    const deltaValue = deltaMetric.delta;
+    const direction = deltaMetric.direction;
+    const color = direction === 'up' ? '#22c55e' : direction === 'down' ? '#ef4444' : 'var(--text-secondary)';
+    const icon = direction === 'up' ? '↑' : direction === 'down' ? '↓' : '—';
+    const formatted = type === 'percent'
+        ? `${deltaValue >= 0 ? '+' : ''}${Math.round(deltaValue * 10) / 10}%`
+        : `${deltaValue >= 0 ? '+' : ''}${formatDecimal(deltaValue)}`;
+
+    return `
+        <td style="text-align: center; padding: 0.5rem; color: ${color}; font-weight: 600; font-size: 0.7rem;">
+            ${icon} ${formatted}
+        </td>
     `;
 }
 

@@ -19,7 +19,7 @@ import {
     calculateMinutesPercentage
 } from './utils.js';
 import { getFixtures, calculateFixtureDifficulty } from './fixtures.js';
-import { renderRiskTooltip } from './risk.js';
+import { renderRiskTooltip, analyzePlayerRisks } from './risk.js';
 
 // ============================================================================
 // PROBLEM PLAYER RENDERING
@@ -238,20 +238,35 @@ export function findReplacements(problemPlayer, picks, gameweek) {
     const maxBudget = problemPlayer.now_cost + bank;
 
     const myPlayerIds = new Set(picks.picks.map(p => p.element));
+    const playerMap = new Map(allPlayers.map(p => [p.id, p]));
+    const teamCounts = {};
+    picks.picks.forEach(pick => {
+        const pl = playerMap.get(pick.element);
+        if (pl) {
+            teamCounts[pl.team] = (teamCounts[pl.team] || 0) + 1;
+        }
+    });
+    const MAX_PER_TEAM = 3;
 
     // Filter candidates
     const candidates = allPlayers.filter(p => {
-        return p.element_type === problemPlayer.element_type &&
-               p.id !== problemPlayer.id &&
-               p.now_cost <= maxBudget &&
-               !myPlayerIds.has(p.id);
+        if (p.element_type !== problemPlayer.element_type) return false;
+        if (p.id === problemPlayer.id) return false;
+        if (p.now_cost > maxBudget) return false;
+        if (myPlayerIds.has(p.id)) return false;
+
+        const currentCount = teamCounts[p.team] || 0;
+        const adjustedCount = p.team === problemPlayer.team ? currentCount - 1 : currentCount;
+        if (adjustedCount >= MAX_PER_TEAM) return false;
+
+        return true;
     });
 
     console.log(`   📊 Found ${candidates.length} candidates for position ${problemPlayer.element_type}`);
 
     // Score each candidate
     const scored = candidates.map(c => {
-        const score = scoreReplacement(c);
+        const score = scoreReplacement(c, problemPlayer);
         return {
             player: c,
             score: score,
@@ -273,26 +288,35 @@ export function findReplacements(problemPlayer, picks, gameweek) {
  * @param {Object} candidate - Player object to score
  * @returns {number} Composite score (0-100)
  */
-function scoreReplacement(candidate) {
+function scoreReplacement(candidate, problemPlayer) {
     let score = 0;
 
-    // 1. Form (0-30 points)
-    const form = parseFloat(candidate.form) || 0;
-    score += Math.min(30, form * 5);
+    // 1. Expected points (0-35 points)
+    const epNext = parseFloat(candidate.ep_next) || 0;
+    score += Math.min(35, epNext * 7);
 
-    // 2. Fixture Difficulty (0-25 points)
+    // 2. Underlying numbers (0-20 points)
+    if (candidate.element_type >= 3) {
+        const xgi = parseFloat(candidate.expected_goal_involvements_per_90) || 0;
+        score += Math.min(20, xgi * 12);
+    } else {
+        const xgc = parseFloat(candidate.expected_goals_conceded_per_90) || 0;
+        score += Math.max(0, (2 - xgc) * 10);
+    }
+
+    // 3. Fixture Difficulty (0-25 points)
     const avgFDR = calculateFixtureDifficulty(candidate.team, 5);
     score += Math.max(0, (5 - avgFDR) * 5); // Inverted: lower FDR = higher score
 
-    // 3. Points Per Million (0-20 points)
+    // 4. Points Per Million (0-15 points)
     const ppm = calculatePPM(candidate);
-    score += Math.min(20, ppm * 10);
+    score += Math.min(15, ppm * 8);
 
-    // 4. Minutes Played (0-15 points)
+    // 5. Minutes Played (0-10 points)
     const minutesPct = calculateMinutesPercentage(candidate, currentGW);
-    score += Math.min(15, minutesPct / 6.67);
+    score += Math.min(10, minutesPct / 10);
 
-    // 5. Transfer Trends (0-10 points)
+    // 6. Transfer Trends (0-10 points)
     let netTransfers = 0;
     if (candidate.github_transfers) {
         netTransfers = candidate.github_transfers.transfers_in - candidate.github_transfers.transfers_out;
@@ -300,6 +324,23 @@ function scoreReplacement(candidate) {
         netTransfers = candidate.transfers_in_event - candidate.transfers_out_event;
     }
     score += Math.min(10, Math.max(0, netTransfers / 10000));
+
+    // 7. Recent form bonus (0-10 points)
+    const form = parseFloat(candidate.form) || 0;
+    score += Math.min(10, form * 2);
+
+    // Risk penalties
+    const risks = analyzePlayerRisks(candidate);
+    if (risks.some(r => r.severity === 'high')) {
+        score -= 30;
+    } else if (risks.some(r => r.severity === 'medium')) {
+        score -= 15;
+    }
+
+    // Slight preference for like-for-like team swaps (keeps structure)
+    if (candidate.team === problemPlayer.team) {
+        score += 2;
+    }
 
     return score;
 }
