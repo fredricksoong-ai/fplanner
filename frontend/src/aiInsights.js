@@ -33,14 +33,18 @@ export class AIInsightsService {
      * @param {Object} context.data - Page-specific data for analysis
      * @returns {Promise<Object>} AI insights response
      */
-    async getInsights(context) {
+    async getInsights(context, { forceRefresh = false } = {}) {
         console.log('🤖 AI Insights: Fetching for', context.page, context.tab);
 
-        // Check cache first
+        // Check cache first (unless force refresh)
         const cached = this.getCached(context);
-        if (cached && !this.isExpired(cached)) {
+        if (!forceRefresh && cached && !this.isExpired(cached)) {
             console.log('✨ AI Insights: Using cached data (era:', cached.era + ')');
             return cached.data;
+        }
+
+        if (forceRefresh && cached) {
+            this.clearCache(context);
         }
 
         // Fetch fresh insights from backend
