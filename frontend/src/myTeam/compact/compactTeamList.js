@@ -46,17 +46,17 @@ export function renderCompactTeamList(players, gwNumber, isLive) {
                     <thead style="background: var(--bg-tertiary);">
                         <tr>
                             <th style="position: sticky; left: 0; background: var(--bg-tertiary); z-index: 10; text-align: left; padding: 0.5rem; min-width: 140px;">Player</th>
-                            <th style="text-align: center; padding: 0.5rem; min-width: 120px;">Opp</th>
-                            <th style="text-align: center; padding: 0.5rem; min-width: 120px;">Status</th>
-                            <th style="text-align: center; padding: 0.5rem; min-width: 120px;">Pts</th>
-                            <th style="text-align: center; padding: 0.5rem; min-width: 120px;">Form</th>
-                            <th style="text-align: center; padding: 0.5rem; min-width: 120px;">Δ</th>
-                            <th style="text-align: center; padding: 0.5rem; min-width: 120px;">Price</th>
-                            <th style="text-align: center; padding: 0.5rem; min-width: 120px;">Defcon</th>
-                            <th style="text-align: center; padding: 0.5rem; min-width: 120px;">xGI/xGC</th>
-                            <th style="text-align: center; padding: 0.5rem; min-width: 120px;">PPM</th>
-                            <th style="text-align: center; padding: 0.5rem; min-width: 120px;">Own%</th>
-                            ${next5GWs.map(gw => `<th style="text-align: center; padding: 0.5rem; min-width: 120px;">GW${gw}</th>`).join('')}
+                            <th style="text-align: center; padding: 0.5rem; min-width: 60px;">Opp</th>
+                            <th style="text-align: center; padding: 0.5rem; min-width: 60px;">Status</th>
+                            <th style="text-align: center; padding: 0.5rem; min-width: 60px;">Pts</th>
+                            <th style="text-align: center; padding: 0.5rem; min-width: 60px;">Form</th>
+                            <th style="text-align: center; padding: 0.5rem; min-width: 60px;">Δ</th>
+                            <th style="text-align: center; padding: 0.5rem; min-width: 60px;">Price</th>
+                            <th style="text-align: center; padding: 0.5rem; min-width: 60px;">Defcon</th>
+                            <th style="text-align: center; padding: 0.5rem; min-width: 60px;">xGI/xGC</th>
+                            <th style="text-align: center; padding: 0.5rem; min-width: 60px;">PPM</th>
+                            <th style="text-align: center; padding: 0.5rem; min-width: 60px;">Own%</th>
+                            ${next5GWs.map(gw => `<th style="text-align: center; padding: 0.5rem; min-width: 60px;">GW${gw}</th>`).join('')}
                         </tr>
                     </thead>
                     <tbody>
