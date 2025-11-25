@@ -412,7 +412,7 @@ export async function loadAndRenderInsights(context, containerId, isMobile = fal
 
     try {
         // Fetch insights (uses era-based caching automatically)
-        const insights = await aiInsights.getInsights(context);
+        const insights = await aiInsights.getInsights(context, { forceRefresh: options.forceRefresh });
 
         // Render banner
         container.innerHTML = renderInsightBanner(insights, contextId, isMobile, options);

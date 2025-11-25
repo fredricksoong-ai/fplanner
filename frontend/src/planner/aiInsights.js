@@ -114,7 +114,8 @@ export async function loadPlannerAIInsights() {
         hideTabs: true,
         customTitle: '🤖 Planner Insights',
         customSubtitle: 'Snapshot guidance at GW ' + currentGW,
-        preferredCategory: 'Planner'
+        preferredCategory: 'Planner',
+        forceRefresh: true
     });
 }
 
