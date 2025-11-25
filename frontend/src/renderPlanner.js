@@ -228,7 +228,6 @@ function renderUnifiedFixtureTable(myPlayers, riskPlayerMap, picks, gwNumber) {
                                         border-right: 1px solid var(--border-color);
                                     ">
                                         <div style="display: flex; align-items: center; gap: 0.3rem;">
-                                            ${hasRisk ? `<span style="font-size: 0.7rem;">${risks[0]?.icon || '⚠️'}</span>` : ''}
                                             <span style="font-size: 0.6rem; color: var(--text-secondary);">${getPositionShort(player)}</span>
                                             <strong style="font-size: 0.7rem;">${escapeHtml(player.web_name)}</strong>
                                             ${showChevron ? `
@@ -260,7 +259,7 @@ function renderUnifiedFixtureTable(myPlayers, riskPlayerMap, picks, gwNumber) {
                                         const fdrClass = getDifficultyClass(fix.difficulty);
                                         return `
                                             <td style="text-align: center; padding: 0.5rem;">
-                                                <span class="${fdrClass}" style="padding: 0.2rem 0.3rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem; white-space: nowrap;">
+                                                <span class="${fdrClass}" style="display: inline-block; width: 52px; padding: 0.2rem 0.3rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem; text-align: center;">
                                                     ${fix.opponent}
                                                 </span>
                                             </td>
@@ -721,58 +720,76 @@ function attachPlannerListeners(myPlayers, riskPlayerMap, picks, gwNumber) {
 
 function renderReplacementsList(replacements, problemPlayer, gwNumber) {
     if (!replacements || replacements.length === 0) {
-        return `<div style="color: var(--text-secondary); font-size: 0.7rem; text-align: center;">No suitable replacements found</div>`;
+        return `
+            <table style="width: 100%; font-size: 0.7rem;">
+                <tr>
+                    <td colspan="8" style="text-align: center; padding: 0.5rem; color: var(--text-secondary);">
+                        No suitable replacements found
+                    </td>
+                </tr>
+            </table>
+        `;
     }
 
-    const next3GWs = [gwNumber + 1, gwNumber + 2, gwNumber + 3];
+    const next5GWs = [gwNumber + 1, gwNumber + 2, gwNumber + 3, gwNumber + 4, gwNumber + 5];
 
     return `
-        <div style="font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 0.3rem; font-weight: 600;">
-            Suggested Replacements:
-        </div>
-        ${replacements.slice(0, 3).map((rep, idx) => {
-            const player = rep.player;
-            const priceDiff = rep.priceDiff;
-            const diffSign = priceDiff >= 0 ? '+' : '';
-            const diffColor = priceDiff <= 0 ? '#22c55e' : '#ef4444';
-            const next3Fixtures = getFixtures(player.team, 3, false);
-            const formHeatmap = getFormHeatmap(player.form);
-            const formStyle = getHeatmapStyle(formHeatmap);
+        <table style="width: 100%; font-size: 0.7rem; border-collapse: collapse;">
+            <thead style="background: rgba(0,0,0,0.05);">
+                <tr>
+                    <th style="text-align: left; padding: 0.4rem; font-weight: 600; font-size: 0.65rem; color: var(--text-secondary);">Replacement</th>
+                    <th style="text-align: center; padding: 0.4rem; font-weight: 600; font-size: 0.65rem; color: var(--text-secondary);">FDR</th>
+                    <th style="text-align: center; padding: 0.4rem; font-weight: 600; font-size: 0.65rem; color: var(--text-secondary);">Form</th>
+                    ${next5GWs.map(gw => `<th style="text-align: center; padding: 0.4rem; font-weight: 600; font-size: 0.65rem; color: var(--text-secondary);">GW${gw}</th>`).join('')}
+                </tr>
+            </thead>
+            <tbody>
+                ${replacements.slice(0, 3).map((rep, idx) => {
+                    const player = rep.player;
+                    const priceDiff = rep.priceDiff;
+                    const diffSign = priceDiff >= 0 ? '+' : '';
+                    const diffColor = priceDiff <= 0 ? '#22c55e' : '#ef4444';
+                    const next5Fixtures = getFixtures(player.team, 5, false);
+                    const avgFDR = calculateFixtureDifficulty(player.team, 5);
+                    const fdrColor = avgFDR <= 2.5 ? '#22c55e' : avgFDR <= 3.5 ? '#eab308' : '#ef4444';
+                    const formHeatmap = getFormHeatmap(player.form);
+                    const formStyle = getHeatmapStyle(formHeatmap);
+                    const rowBg = idx % 2 === 0 ? 'var(--bg-primary)' : 'rgba(0,0,0,0.02)';
 
-            return `
-                <div style="
-                    display: flex;
-                    align-items: center;
-                    gap: 0.5rem;
-                    padding: 0.4rem;
-                    background: var(--bg-primary);
-                    border-radius: 4px;
-                    margin-bottom: 0.3rem;
-                ">
-                    <span style="color: var(--text-tertiary); font-size: 0.65rem; width: 1rem;">${idx + 1}.</span>
-                    <div style="flex: 1;">
-                        <strong style="font-size: 0.7rem;">${escapeHtml(player.web_name)}</strong>
-                        <span style="font-size: 0.6rem; color: var(--text-secondary); margin-left: 0.3rem;">
-                            ${formatCurrency(player.now_cost)}
-                            <span style="color: ${diffColor};">(${diffSign}£${Math.abs(priceDiff / 10).toFixed(1)})</span>
-                        </span>
-                    </div>
-                    <span style="
-                        font-size: 0.65rem;
-                        font-weight: 600;
-                        padding: 0.1rem 0.3rem;
-                        border-radius: 3px;
-                        background: ${formStyle.background};
-                        color: ${formStyle.color};
-                    ">${formatDecimal(player.form)}</span>
-                    <div style="display: flex; gap: 0.2rem;">
-                        ${next3Fixtures.map(fix => {
-                            const fdrClass = getDifficultyClass(fix.difficulty);
-                            return `<span class="${fdrClass}" style="padding: 0.1rem 0.2rem; border-radius: 2px; font-size: 0.55rem; font-weight: 600;">${fix.opponent}</span>`;
-                        }).join('')}
-                    </div>
-                </div>
-            `;
-        }).join('')}
+                    return `
+                        <tr style="background: ${rowBg};">
+                            <td style="padding: 0.4rem;">
+                                <div style="display: flex; align-items: center; gap: 0.3rem;">
+                                    <span style="color: var(--text-tertiary); font-size: 0.6rem;">${idx + 1}.</span>
+                                    <span style="font-size: 0.6rem; color: var(--text-secondary);">${getPositionShort(player)}</span>
+                                    <strong style="font-size: 0.65rem;">${escapeHtml(player.web_name)}</strong>
+                                </div>
+                                <div style="font-size: 0.6rem; color: var(--text-secondary); margin-top: 0.1rem; margin-left: 1.2rem;">
+                                    ${formatCurrency(player.now_cost)}
+                                    <span style="color: ${diffColor}; margin-left: 0.2rem;">(${diffSign}£${Math.abs(priceDiff / 10).toFixed(1)})</span>
+                                </div>
+                            </td>
+                            <td style="text-align: center; padding: 0.4rem; color: ${fdrColor}; font-weight: 700;">
+                                ${avgFDR.toFixed(1)}
+                            </td>
+                            <td style="text-align: center; padding: 0.4rem; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 600;">
+                                ${formatDecimal(player.form)}
+                            </td>
+                            ${next5Fixtures.map(fix => {
+                                const fdrClass = getDifficultyClass(fix.difficulty);
+                                return `
+                                    <td style="text-align: center; padding: 0.4rem;">
+                                        <span class="${fdrClass}" style="display: inline-block; width: 52px; padding: 0.15rem 0.25rem; border-radius: 3px; font-weight: 600; font-size: 0.6rem; text-align: center;">
+                                            ${fix.opponent}
+                                        </span>
+                                    </td>
+                                `;
+                            }).join('')}
+                            ${next5Fixtures.length < 5 ? Array(5 - next5Fixtures.length).fill('<td style="text-align: center; padding: 0.4rem;">—</td>').join('') : ''}
+                        </tr>
+                    `;
+                }).join('')}
+            </tbody>
+        </table>
     `;
 }
