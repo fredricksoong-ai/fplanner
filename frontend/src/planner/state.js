@@ -13,6 +13,7 @@ class PlannerState {
         this.changes = []; // Array of {out: playerId, in: playerId, timestamp}
         this.initialBank = 0; // Original bank balance
         this.initialValue = 0; // Original team value
+        this.teamSignature = null;
     }
 
     /**
@@ -22,11 +23,37 @@ class PlannerState {
      * @param {number} value - Original team value
      */
     initialize(initialSquad, picks, bank, value) {
+        const newSignature = this.createTeamSignature(picks);
+
+        // Only initialize if state is empty or the underlying team changed
+        if (this.teamSignature && this.teamSignature === newSignature) {
+            return;
+        }
+
         this.initialSquad = initialSquad.map(p => ({ ...p })); // Deep copy
         this.initialPicks = picks.map(p => ({ ...p })); // Deep copy
         this.initialBank = bank;
         this.initialValue = value;
         this.changes = [];
+        this.teamSignature = newSignature;
+    }
+
+    /**
+     * Create signature for a squad (used to detect changes)
+     */
+    createTeamSignature(picks) {
+        if (!picks || picks.length === 0) return null;
+        const sorted = picks
+            .map(pick => pick.element)
+            .sort((a, b) => a - b);
+        return sorted.join('-');
+    }
+
+    /**
+     * Check if planner state has been initialized
+     */
+    isInitialized() {
+        return Array.isArray(this.initialPicks) && this.initialPicks.length > 0;
     }
 
     /**
