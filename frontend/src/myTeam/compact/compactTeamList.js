@@ -3,7 +3,7 @@
 // Horizontal scrolling table with comprehensive stats
 // ============================================================================
 
-import { getPlayerById, isGameweekLive, currentGW } from '../../data.js';
+import { getPlayerById, isGameweekLive, currentGW, getActiveGW } from '../../data.js';
 import {
     getPositionShort,
     formatCurrency,
@@ -30,8 +30,9 @@ import { calculateStatusColor } from './compactStyleHelpers.js';
 export function renderCompactTeamList(players, gwNumber, isLive) {
     const starters = players.filter(p => p.position <= 11).sort((a, b) => a.position - b.position);
     const bench = players.filter(p => p.position > 11).sort((a, b) => a.position - b.position);
-    // Use currentGW (last finished) to match getFixtures() behavior
-    const next5GWs = [currentGW + 1, currentGW + 2, currentGW + 3, currentGW + 4, currentGW + 5];
+    // Next 5 fixtures AFTER the active GW (exclude current GW)
+    const activeGW = getActiveGW();
+    const next5GWs = [activeGW + 1, activeGW + 2, activeGW + 3, activeGW + 4, activeGW + 5];
 
     return `
         <div style="
@@ -59,8 +60,8 @@ export function renderCompactTeamList(players, gwNumber, isLive) {
                         </tr>
                     </thead>
                     <tbody>
-                        ${renderTeamSection(starters, gwNumber, isLive, next5GWs, 'starter')}
-                        ${renderTeamSection(bench, gwNumber, isLive, next5GWs, 'bench')}
+                        ${renderTeamSection(starters, gwNumber, isLive, next5GWs, activeGW, 'starter')}
+                        ${renderTeamSection(bench, gwNumber, isLive, next5GWs, activeGW, 'bench')}
                     </tbody>
                 </table>
             </div>
@@ -68,7 +69,7 @@ export function renderCompactTeamList(players, gwNumber, isLive) {
     `;
 }
 
-function renderTeamSection(players, gwNumber, isLive, next5GWs, sectionType) {
+function renderTeamSection(players, gwNumber, isLive, next5GWs, activeGW, sectionType) {
     const sectionLabel = sectionType === 'starter' ? 'Starting XI' : 'Bench';
     const isBench = sectionType === 'bench';
 
@@ -96,10 +97,10 @@ function renderTeamSection(players, gwNumber, isLive, next5GWs, sectionType) {
         else if (hasMediumRisk) borderColor = '#fb923c';
         else if (hasLowRisk) borderColor = '#eab308';
 
-        // GW opponent and points
-        const opponent = getGWOpponent(player.team, gwNumber);
+        // Current GW opponent for Opp column (use active GW, not gwNumber)
+        const opponent = getGWOpponent(player.team, activeGW);
 
-        // Calculate GW points with captain doubling
+        // Calculate GW points with captain doubling (use gwNumber for points data)
         const hasGWStats = player.github_gw && player.github_gw.gw === gwNumber;
         const liveStats = player.live_stats;
         let gwPoints = liveStats?.total_points ?? (hasGWStats ? player.github_gw.total_points : (player.event_points || 0));
