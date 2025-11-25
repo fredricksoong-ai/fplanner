@@ -22,7 +22,7 @@ import logger from '../logger.js';
  */
 export function buildAIPrompt(page, tab, position, gameweek, data) {
   if (page === 'planner') {
-    return `You are a concise, data-driven Fantasy Premier League assistant. Analyze the manager's current squad context and produce a short list of actionable planning tips.
+    return `You are a concise, data-driven Fantasy Premier League assistant. Analyze the manager's current squad context and produce high-quality planning tips.
 
 CRITICAL INSTRUCTIONS:
 - Current FPL Gameweek is ${gameweek}
@@ -36,7 +36,7 @@ ${JSON.stringify(data, null, 2)}
 
 OUTPUT FORMAT (MUST be valid JSON):
 {
-  "PlannerInsights": [
+  "Planner": [
     "insight 1 (concise, actionable)",
     "insight 2 (concise, actionable)",
     "insight 3 (concise, actionable)"
@@ -106,7 +106,7 @@ Generate the JSON now.`;
  * @param {number} gameweek - Current gameweek number
  * @returns {Object} Parsed insights with categories
  */
-export function parseGeminiResponse(geminiData, gameweek) {
+export function parseGeminiResponse(geminiData, gameweek, page) {
   try {
     // Extract text from Gemini response
     const text = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '';
@@ -139,28 +139,18 @@ export function parseGeminiResponse(geminiData, gameweek) {
     // Parse JSON
     const categories = JSON.parse(jsonText);
 
-    // Special handling for planner insights
-    const plannerKey = Object.keys(categories).find(key => key.toLowerCase().includes('planner'));
-    if (plannerKey) {
-      const plannerInsights = (categories[plannerKey] || [])
-        .slice(0, 5)
-        .map(insight => String(insight || '').substring(0, 280))
-        .filter(Boolean);
-
-      return {
-        gameweek,
-        plannerInsights,
-        timestamp: Date.now()
-      };
-    }
-
     // Validate structure - should be an object with category keys
     if (typeof categories !== 'object' || Array.isArray(categories)) {
       throw new Error('Parsed response is not an object');
     }
 
-    // Expected categories
-    const expectedCategories = ['Overview', 'Hidden Gems', 'Differentials', 'Transfer Targets', 'Team Analysis'];
+    // Determine expected categories based on page
+    let expectedCategories;
+    if (page === 'planner') {
+      expectedCategories = ['Planner'];
+    } else {
+      expectedCategories = ['Overview', 'Hidden Gems', 'Differentials', 'Transfer Targets', 'Team Analysis'];
+    }
 
     // Validate and sanitize each category
     const validatedCategories = {};
@@ -193,8 +183,11 @@ export function parseGeminiResponse(geminiData, gameweek) {
     // Return fallback insights in case of parsing error
     // Provide generic fallback for both planner and stats pages
     const fallbackCategories = {};
-    const expectedCategories = ['Overview', 'Hidden Gems', 'Differentials', 'Transfer Targets', 'Team Analysis'];
-    for (const category of expectedCategories) {
+    const fallbackKeys = page === 'planner'
+      ? ['Planner']
+      : ['Overview', 'Hidden Gems', 'Differentials', 'Transfer Targets', 'Team Analysis'];
+
+    for (const category of fallbackKeys) {
       fallbackCategories[category] = [
         'AI insights temporarily unavailable',
         'Please try refreshing the page',
@@ -205,11 +198,6 @@ export function parseGeminiResponse(geminiData, gameweek) {
     return {
       gameweek: gameweek,
       categories: fallbackCategories,
-      plannerInsights: [
-        'AI insights temporarily unavailable.',
-        'Please try refreshing the page.',
-        'Check back at the next update window.'
-      ],
       timestamp: Date.now(),
       parseError: true
     };
@@ -272,7 +260,7 @@ export async function generateAIInsights(page, tab, position, gameweek, data) {
   );
 
   // Parse response
-  const insights = parseGeminiResponse(geminiResponse.data, gameweek);
+  const insights = parseGeminiResponse(geminiResponse.data, gameweek, page);
 
   const categoryCount = Object.keys(insights.categories || {}).length;
   logger.log(`✅ AI Insights generated (${categoryCount} categories)`);
