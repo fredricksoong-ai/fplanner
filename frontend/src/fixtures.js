@@ -3,7 +3,7 @@
 // Handles fixture analysis, opponent lookups, and difficulty calculations
 // ============================================================================
 
-import { fplFixtures, fplBootstrap, currentGW } from './data.js';
+import { fplFixtures, fplBootstrap, currentGW, getActiveGW } from './data.js';
 import { getTeamByCode } from './utils.js';
 import { memoizeWithDependency } from './utils/memoize.js';
 
@@ -62,10 +62,12 @@ export function getFixtures(teamId, count = 3, isPast = false) {
         teamFixtures.sort((a, b) => a.event - b.event);
         
         // Get past or future fixtures
-        // CRITICAL: Use > (not >=) to exclude current gameweek for future fixtures
-        const relevantFixtures = isPast ? 
+        // CRITICAL: Use > (not >=) to exclude current/active gameweek for future fixtures
+        // For future: use activeGW to exclude current live/upcoming GW
+        // For past: use currentGW for historical data
+        const relevantFixtures = isPast ?
             teamFixtures.filter(f => f.event < currentGW).slice(-count) :
-            teamFixtures.filter(f => f.event > currentGW).slice(0, count);
+            teamFixtures.filter(f => f.event > getActiveGW()).slice(0, count);
         
         relevantFixtures.forEach(f => {
             const isHome = f.team_h === teamId;
