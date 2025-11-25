@@ -55,6 +55,8 @@ import {
     attachPlayerRowListeners
 } from './renderMyTeamCompact.js';
 
+import { calculateStatusColor } from './myTeam/compact/compactStyleHelpers.js';
+
 import { renderAnalysisOverview as renderAnalysisOverviewModule } from './dataAnalysis/overview.js';
 import { renderHiddenGems as renderHiddenGemsModule } from './dataAnalysis/hiddenGems.js';
 import { renderTransferTargets as renderTransferTargetsModule } from './dataAnalysis/transferTargets.js';
@@ -816,130 +818,138 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
 
     const config = contextConfig[contextColumn] || contextConfig.total;
 
-    // Header row
+    // Horizontal scrolling table (matching Team page design)
     let html = `
-        <div class="mobile-table">
-            <div class="mobile-table-header" style="display: grid; grid-template-columns: 2.5fr 1fr 1fr 0.8fr 0.8fr 0.8fr; padding-bottom: 2px !important; padding-top: 2px !important;">
-                <div>Player</div>
-                <div style="text-align: center;">Opp</div>
-                <div style="text-align: center;">Status</div>
-                <div style="text-align: center;">Pts</div>
-                <div style="text-align: center;">Form</div>
-                <div style="text-align: center;">${config.header}</div>
-            </div>
+        <div style="
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 0.5rem;
+        ">
+            <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                <table style="width: 100%; font-size: 0.7rem; border-collapse: collapse; min-width: 800px;">
+                    <thead style="background: var(--bg-tertiary);">
+                        <tr>
+                            <th style="position: sticky; left: 0; background: var(--bg-tertiary); z-index: 10; text-align: left; padding: 0.5rem; min-width: 100px;">Player</th>
+                            <th style="text-align: center; padding: 0.5rem; min-width: 45px;">Opp</th>
+                            <th style="text-align: center; padding: 0.5rem; min-width: 50px;">Status</th>
+                            <th style="text-align: center; padding: 0.5rem; min-width: 35px;">Pts</th>
+                            <th style="text-align: center; padding: 0.5rem; min-width: 40px;">Form</th>
+                            <th style="text-align: center; padding: 0.5rem; min-width: 50px;">${config.header}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
     `;
 
     // Render rows
-    mobilePlayers.forEach((player) => {
+    mobilePlayers.forEach((player, idx) => {
         const gwOpp = getGWOpponent(player.team, currentGW);
         const matchStatus = getMatchStatus(player.team, currentGW, player);
-        const isLive = matchStatus === 'LIVE';
-        const isFinished = matchStatus.startsWith('FT');
 
         // Points (GW points)
         const gwPoints = player.event_points || 0;
-        const ptsHeatmap = getPtsHeatmap(gwPoints, 'gw_pts');  // Use 'gw_pts' metric for gameweek points
+        const ptsHeatmap = getPtsHeatmap(gwPoints, 'gw_pts');
         const ptsStyle = getHeatmapStyle(ptsHeatmap);
 
         // Form
         const formHeatmap = getFormHeatmap(parseFloat(player.form) || 0);
         const formStyle = getHeatmapStyle(formHeatmap);
 
-        // Status styling (matching My Team logic)
-        let statusColor = 'var(--text-secondary)';
-        let statusWeight = '400';
-        let statusBgColor = 'transparent';
-
-        if (isFinished && matchStatus.includes('(')) {
-            // Extract minutes from "FT (90)" format
-            const minsMatch = matchStatus.match(/\((\d+)\)/);
-            if (minsMatch) {
-                const mins = parseInt(minsMatch[1]);
-                statusWeight = '700';
-                if (mins >= 90) {
-                    statusColor = '#86efac'; // Soft green
-                    statusBgColor = 'rgba(31, 77, 46, 1.0)';
-                } else if (mins >= 60) {
-                    statusColor = '#fcd34d'; // Soft yellow/orange
-                    statusBgColor = 'rgba(92, 74, 31, 1.0)';
-                } else {
-                    statusColor = '#fca5a5'; // Soft red
-                    statusBgColor = 'rgba(92, 31, 31, 1.0)';
-                }
-            } else {
-                statusColor = '#22c55e'; // FT but no minutes data
-            }
-        } else if (isLive) {
-            statusColor = '#ef4444';
-            statusWeight = '700';
-        }
+        // Status styling - use calculateStatusColor for consistency
+        const statusColors = calculateStatusColor(matchStatus);
 
         // Context column value and styling
         const contextValue = config.getValue(player);
 
         // Build context column styling and content
-        let contextDivStyle = 'text-align: center;';
-        let contextContent = contextValue;
+        let contextCellContent = '';
+        let contextCellStyle = 'text-align: center; padding: 0.5rem;';
 
         if (config.getClass) {
-            // Use difficulty class (for FDR) - needs a span with class
+            // Use difficulty class (for FDR) - pill style
             const contextClass = config.getClass(player);
-            contextContent = `<span class="${contextClass}" style="padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-weight: 700; font-size: 0.6rem; display: inline-block;">${contextValue}</span>`;
+            contextCellContent = `<span class="${contextClass}" style="display: inline-block; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem;">${contextValue}</span>`;
         } else if (config.getHeatmap) {
-            // Use heatmap - apply directly to div like Pts/Form columns
+            // Use heatmap - full cell background
             const heatmap = config.getHeatmap(player);
             const heatmapStyle = getHeatmapStyle(heatmap);
-            contextDivStyle = `text-align: center; background: ${heatmapStyle.background}; color: ${heatmapStyle.color}; font-weight: 700; padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-size: 0.6rem;`;
+            contextCellStyle = `text-align: center; padding: 0.5rem; background: ${heatmapStyle.background}; color: ${heatmapStyle.color}; font-weight: 600;`;
+            contextCellContent = contextValue;
         } else if (config.getColor) {
-            // Use custom color (for transfers)
+            // Use custom color with pill (for transfers)
             const contextColor = config.getColor(player);
-            contextDivStyle = `text-align: center; color: ${contextColor}; font-weight: 700; font-size: 0.7rem;`;
+            const net = player.github_transfers ? (player.github_transfers.transfers_in - player.github_transfers.transfers_out) : 0;
+            contextCellContent = `<span style="display: inline-block; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem; background: ${net > 0 ? 'rgba(34, 197, 94, 0.2)' : net < 0 ? 'rgba(239, 68, 68, 0.2)' : 'transparent'}; color: ${contextColor};">${contextValue}</span>`;
         } else {
             // Default styling
-            contextDivStyle = 'text-align: center; font-size: 0.7rem;';
+            contextCellContent = contextValue;
         }
 
-        // Colored left border for players with news/injury
+        // Colored left border for players with news/injury (use 4px to match Team page)
         let leftBorderStyle = 'none';
         if (player.news && player.news.trim() !== '') {
             const chanceOfPlaying = player.chance_of_playing_next_round;
             if (chanceOfPlaying !== null && chanceOfPlaying !== undefined) {
                 if (chanceOfPlaying <= 25) {
-                    leftBorderStyle = '3px solid #ef4444'; // Red
+                    leftBorderStyle = '4px solid #ef4444'; // Red
                 } else if (chanceOfPlaying <= 50) {
-                    leftBorderStyle = '3px solid #f97316'; // Orange
+                    leftBorderStyle = '4px solid #fb923c'; // Orange
                 } else {
-                    leftBorderStyle = '3px solid #fbbf24'; // Yellow
+                    leftBorderStyle = '4px solid #eab308'; // Yellow
                 }
             } else {
-                leftBorderStyle = '3px solid #fbbf24'; // Yellow default for news
+                leftBorderStyle = '4px solid #eab308'; // Yellow default for news
             }
         }
 
+        // Row background
+        const rowBg = idx % 2 === 0 ? 'var(--bg-primary)' : 'var(--bg-secondary)';
+
         html += `
-            <div
-                class="player-row mobile-table-row"
-                style="display: grid; grid-template-columns: 2.5fr 1fr 1fr 0.8fr 0.8fr 0.8fr; cursor: pointer; padding-bottom: 3px !important; padding-top: 3px !important; border-left: ${leftBorderStyle};"
+            <tr
+                class="player-row"
+                style="background: ${rowBg}; ${leftBorderStyle ? `border-left: ${leftBorderStyle};` : ''}; cursor: pointer;"
                 data-player-id="${player.id}"
             >
-                <div style="font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                    ${escapeHtml(player.web_name)}
-                </div>
-                <div style="text-align: center;">
-                    <span class="${getDifficultyClass(gwOpp.difficulty)}" style="padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-weight: 700; font-size: 0.6rem; min-width: 3rem; display: inline-block; text-align: center;">
+                <td style="
+                    position: sticky;
+                    left: 0;
+                    background: ${rowBg};
+                    z-index: 5;
+                    padding: 0.5rem;
+                    border-right: 1px solid var(--border-color);
+                ">
+                    <div style="display: flex; align-items: center; gap: 0.3rem;">
+                        <span style="font-size: 0.6rem; color: var(--text-secondary);">${getPositionShort(player)}</span>
+                        <strong style="font-size: 0.7rem;">${escapeHtml(player.web_name)}</strong>
+                    </div>
+                </td>
+                <td style="text-align: center; padding: 0.5rem;">
+                    <span class="${getDifficultyClass(gwOpp.difficulty)}" style="display: inline-block; width: 52px; padding: 0.2rem 0.3rem; border-radius: 3px; font-weight: 600; font-size: 0.6rem; text-align: center;">
                         ${gwOpp.name} (${gwOpp.isHome ? 'H' : 'A'})
                     </span>
-                </div>
-                <div style="text-align: center; font-size: 0.6rem; font-weight: ${statusWeight}; color: ${statusColor}; background: ${statusBgColor}; padding: 0.08rem 0.25rem; border-radius: 0.25rem; white-space: nowrap;">${matchStatus}</div>
-                <div style="text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 700; padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-size: 0.6rem;">${gwPoints}</div>
-                <div style="text-align: center; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 700; padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-size: 0.6rem;">${formatDecimal(player.form)}</div>
-                <div style="${contextDivStyle}">${contextContent}</div>
-            </div>
+                </td>
+                <td style="text-align: center; padding: 0.5rem; font-size: 0.6rem; font-weight: ${statusColors.statusWeight}; color: ${statusColors.statusColor}; background: ${statusColors.statusBgColor}; padding: 0.08rem 0.25rem; border-radius: 0.25rem; white-space: nowrap;">
+                    ${matchStatus}
+                </td>
+                <td style="text-align: center; padding: 0.5rem; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 700; border-radius: 0.25rem;">
+                    ${gwPoints}
+                </td>
+                <td style="text-align: center; padding: 0.5rem; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 600;">
+                    ${formatDecimal(player.form)}
+                </td>
+                <td style="${contextCellStyle}">${contextCellContent}</td>
+            </tr>
         `;
     });
 
-    html += `</div>`;
-    
+    html += `
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+
     // Add "Load More" button if there are more items (mobile only)
     if (hasMore && isMobileDevice()) {
         const remaining = players.length - initialCount;
