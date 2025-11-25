@@ -66,6 +66,11 @@ export async function loadPlannerAIInsights() {
         else if (risks.length > 0) lowRiskCount++;
     });
 
+    const signature = safeBasePicks
+        .map(pick => pick.element)
+        .sort((a, b) => a - b)
+        .join('-') || 'none';
+
     const contextData = {
         currentSquad: players.map(p => ({
             name: p.web_name,
@@ -98,7 +103,7 @@ export async function loadPlannerAIInsights() {
     const context = {
         page: 'planner',
         tab: 'sandbox',
-        position: 'all',
+        position: `all-${signature}`,
         gameweek: currentGW,
         data: contextData
     };
