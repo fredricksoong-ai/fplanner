@@ -50,12 +50,12 @@ export function renderCompactTeamList(players, gwNumber, isLive) {
                             <th style="text-align: center; padding: 0.5rem; min-width: 50px;">Status</th>
                             <th style="text-align: center; padding: 0.5rem; min-width: 35px;">Pts</th>
                             <th style="text-align: center; padding: 0.5rem; min-width: 40px;">Form</th>
+                            <th style="text-align: center; padding: 0.5rem; min-width: 50px;">Δ</th>
                             <th style="text-align: center; padding: 0.5rem; min-width: 45px;">Price</th>
                             <th style="text-align: center; padding: 0.5rem; min-width: 55px;">Defcon</th>
                             <th style="text-align: center; padding: 0.5rem; min-width: 50px;">xGI/xGC</th>
                             <th style="text-align: center; padding: 0.5rem; min-width: 40px;">PPM</th>
                             <th style="text-align: center; padding: 0.5rem; min-width: 45px;">Own%</th>
-                            <th style="text-align: center; padding: 0.5rem; min-width: 50px;">Δ</th>
                             ${next5GWs.map(gw => `<th style="text-align: center; padding: 0.5rem; min-width: 50px;">GW${gw}</th>`).join('')}
                         </tr>
                     </thead>
@@ -179,6 +179,11 @@ function renderTeamSection(players, gwNumber, isLive, next5GWs, activeGW, sectio
                     ${formatDecimal(player.form)}
                 </td>
                 <td style="text-align: center; padding: 0.5rem;">
+                    <span style="display: inline-block; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem; background: ${transferDelta > 0 ? 'rgba(34, 197, 94, 0.2)' : transferDelta < 0 ? 'rgba(239, 68, 68, 0.2)' : 'transparent'}; color: ${transferColor};">
+                        ${transferDelta > 0 ? '+' : ''}${(transferDelta / 1000).toFixed(0)}k
+                    </span>
+                </td>
+                <td style="text-align: center; padding: 0.5rem;">
                     ${formatCurrency(player.now_cost)}
                 </td>
                 <td style="text-align: center; padding: 0.5rem; font-weight: 600;">
@@ -192,9 +197,6 @@ function renderTeamSection(players, gwNumber, isLive, next5GWs, activeGW, sectio
                 </td>
                 <td style="text-align: center; padding: 0.5rem; font-size: 0.65rem;">
                     ${ownership.toFixed(1)}%
-                </td>
-                <td style="text-align: center; padding: 0.5rem; color: ${transferColor}; font-weight: 600; font-size: 0.65rem;">
-                    ${transferDelta > 0 ? '+' : ''}${(transferDelta / 1000).toFixed(0)}k
                 </td>
                 ${next5Fixtures.map(fix => {
                     const fdrClass = getDifficultyClass(fix.difficulty);

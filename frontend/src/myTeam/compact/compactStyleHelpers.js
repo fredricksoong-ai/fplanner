@@ -132,6 +132,7 @@ export function calculateStatusColor(matchStatus) {
     const isLive = matchStatus.startsWith('LIVE');
     const isFinished = matchStatus.startsWith('FT');
 
+    // Use same heat-* variables as Form/Pts columns for consistency
     let statusColor = 'var(--text-secondary)';
     let statusBgColor = 'transparent';
     let statusWeight = '400';
@@ -143,17 +144,19 @@ export function calculateStatusColor(matchStatus) {
             const mins = parseInt(minsMatch[1]);
             statusWeight = '700';
             if (mins >= 90) {
-                statusColor = '#86efac'; // Soft green
-                statusBgColor = 'rgba(31, 77, 46, 1.0)';
+                statusColor = 'var(--heat-dark-green-text)';
+                statusBgColor = 'var(--heat-dark-green-bg)';
             } else if (mins >= 60) {
-                statusColor = '#fcd34d'; // Soft yellow/orange
-                statusBgColor = 'rgba(92, 74, 31, 1.0)';
+                statusColor = 'var(--heat-yellow-text)';
+                statusBgColor = 'var(--heat-yellow-bg)';
             } else {
-                statusColor = '#fca5a5'; // Soft red
-                statusBgColor = 'rgba(92, 31, 31, 1.0)';
+                statusColor = 'var(--heat-red-text)';
+                statusBgColor = 'var(--heat-red-bg)';
             }
         } else {
-            statusColor = '#22c55e'; // FT but no minutes data
+            statusColor = 'var(--heat-light-green-text)';
+            statusBgColor = 'var(--heat-light-green-bg)';
+            statusWeight = '700';
         }
     } else if (isLive) {
         statusColor = '#ef4444';
