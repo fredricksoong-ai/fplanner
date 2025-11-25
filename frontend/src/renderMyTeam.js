@@ -797,10 +797,13 @@ function renderTeamOverviewTab(teamData) {
     const useMobile = shouldUseMobileLayout();
 
     if (useMobile) {
+        // Check if current gameweek is live
+        const isLive = isGameweekLive(gameweek);
+
         // Mobile ultra-compact layout
         return `
             ${renderCompactHeader(teamData, gameweek, isAutoRefreshActive())}
-            ${renderCompactTeamList(allPlayers, gameweek)}
+            ${renderCompactTeamList(allPlayers, gameweek, isLive)}
             ${renderMatchSchedule(allPlayers, gameweek)}
         `;
     } else {
