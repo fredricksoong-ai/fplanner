@@ -18,7 +18,7 @@ import {
 } from '../../utils.js';
 import { getFixtures, getGWOpponent, getMatchStatus } from '../../fixtures.js';
 import { analyzePlayerRisks } from '../../risk.js';
-import { calculateStatusColor } from './compactStyleHelpers.js';
+import { calculateStatusColor, renderOpponentBadge } from './compactStyleHelpers.js';
 
 /**
  * Render comprehensive team table with horizontal scroll
@@ -164,8 +164,8 @@ function renderTeamSection(players, gwNumber, isLive, next5GWs, activeGW, sectio
                     </div>
                     ${risks.length > 0 ? `<div style="font-size: 0.55rem; color: ${borderColor}; margin-top: 0.1rem; line-height: 1.2;">${risks[0]?.message || 'Issue'}</div>` : `<div style="height: 0.8rem;"></div>`}
                 </td>
-                <td style="text-align: center; padding: 0.5rem; font-size: 0.65rem; font-weight: 600;">
-                    ${opponent.name || '—'}
+                <td style="text-align: center; padding: 0.5rem;">
+                    ${renderOpponentBadge(opponent, 'small')}
                 </td>
                 <td style="text-align: center; padding: 0.5rem; font-size: 0.6rem; font-weight: ${statusColors.statusWeight}; color: ${statusColors.statusColor}; background: ${statusColors.statusBgColor}; padding: 0.08rem 0.25rem; border-radius: 0.25rem; white-space: nowrap;">
                     ${matchStatus}
