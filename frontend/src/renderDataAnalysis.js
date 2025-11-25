@@ -41,7 +41,7 @@ import {
     attachRiskTooltipListeners
 } from './renderHelpers.js';
 
-import { analyzePlayerRisks, renderRiskTooltip } from './risk.js';
+import { analyzePlayerRisks } from './risk.js';
 
 import { debounce } from './utils/debounce.js';
 
@@ -850,7 +850,16 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
 
         // Risk analysis
         const risks = analyzePlayerRisks(player);
-        const riskTooltip = renderRiskTooltip(risks);
+
+        // Determine border color based on risk severity
+        const hasHighRisk = risks.some(r => r.severity === 'high');
+        const hasMediumRisk = risks.some(r => r.severity === 'medium');
+        const hasLowRisk = risks.length > 0;
+
+        let borderColor = '';
+        if (hasHighRisk) borderColor = '#ef4444';
+        else if (hasMediumRisk) borderColor = '#fb923c';
+        else if (hasLowRisk) borderColor = '#eab308';
 
         // Points (GW points)
         const gwPoints = player.event_points || 0;
@@ -891,30 +900,13 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
             contextCellContent = contextValue;
         }
 
-        // Colored left border for players with news/injury (use 4px to match Team page)
-        let leftBorderStyle = 'none';
-        if (player.news && player.news.trim() !== '') {
-            const chanceOfPlaying = player.chance_of_playing_next_round;
-            if (chanceOfPlaying !== null && chanceOfPlaying !== undefined) {
-                if (chanceOfPlaying <= 25) {
-                    leftBorderStyle = '4px solid #ef4444'; // Red
-                } else if (chanceOfPlaying <= 50) {
-                    leftBorderStyle = '4px solid #fb923c'; // Orange
-                } else {
-                    leftBorderStyle = '4px solid #eab308'; // Yellow
-                }
-            } else {
-                leftBorderStyle = '4px solid #eab308'; // Yellow default for news
-            }
-        }
-
         // Row background
         const rowBg = idx % 2 === 0 ? 'var(--bg-primary)' : 'var(--bg-secondary)';
 
         html += `
             <tr
                 class="player-row"
-                style="background: ${rowBg}; ${leftBorderStyle ? `border-left: ${leftBorderStyle};` : ''}; cursor: pointer;"
+                style="background: ${rowBg}; ${borderColor ? `border-left: 4px solid ${borderColor};` : ''}; cursor: pointer;"
                 data-player-id="${player.id}"
             >
                 <td style="
@@ -924,16 +916,13 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
                     z-index: 5;
                     padding: 0.5rem;
                     border-right: 1px solid var(--border-color);
-                    max-width: 140px;
-                    min-width: 100px;
+                    min-height: 3rem;
                 ">
-                    <div style="display: flex; align-items: center; gap: 0.3rem; overflow: hidden;">
-                        <span style="font-size: 0.6rem; color: var(--text-secondary); flex-shrink: 0;">${getPositionShort(player)}</span>
-                        <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">
-                            <strong style="font-size: 0.7rem;">${escapeHtml(player.web_name)}</strong>
-                            ${riskTooltip ? `${riskTooltip}` : ''}
-                        </div>
+                    <div style="display: flex; align-items: center; gap: 0.3rem;">
+                        <span style="font-size: 0.6rem; color: var(--text-secondary);">${getPositionShort(player)}</span>
+                        <strong style="font-size: 0.7rem;">${escapeHtml(player.web_name)}</strong>
                     </div>
+                    ${risks.length > 0 ? `<div style="font-size: 0.55rem; color: ${borderColor}; margin-top: 0.1rem; line-height: 1.2;">${risks[0]?.message || 'Issue'}</div>` : `<div style="height: 0.8rem;"></div>`}
                 </td>
                 <td style="text-align: center; padding: 0.5rem;">
                     <span class="${getDifficultyClass(gwOpp.difficulty)}" style="display: inline-block; width: 52px; padding: 0.2rem 0.3rem; border-radius: 3px; font-weight: 600; font-size: 0.6rem; text-align: center;">
