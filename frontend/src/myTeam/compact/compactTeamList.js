@@ -70,17 +70,7 @@ export function renderCompactTeamList(players, gwNumber, isLive) {
 }
 
 function renderTeamSection(players, gwNumber, isLive, next5GWs, activeGW, sectionType) {
-    const sectionLabel = sectionType === 'starter' ? 'Starting XI' : 'Bench';
-    const isBench = sectionType === 'bench';
-
-    // Section header row
-    let html = `
-        <tr style="background: var(--bg-tertiary);">
-            <td colspan="16" style="padding: 0.4rem 0.5rem; font-weight: 700; font-size: 0.65rem; color: var(--text-secondary); text-transform: uppercase;">
-                ${sectionLabel}
-            </td>
-        </tr>
-    `;
+    let html = '';
 
     players.forEach((pick, idx) => {
         const player = getPlayerById(pick.element);
@@ -153,7 +143,7 @@ function renderTeamSection(players, gwNumber, isLive, next5GWs, activeGW, sectio
 
         html += `
             <tr
-                style="background: ${rowBg}; ${borderColor ? `border-left: 4px solid ${borderColor};` : ''}; cursor: pointer;"
+                style="background: ${rowBg}; ${borderColor ? `border-left: 4px solid ${borderColor};` : ''}; cursor: pointer; ${pick.position === 11 ? 'border-bottom: 3px solid var(--border-color);' : ''}"
                 data-player-id="${player.id}"
                 class="player-row"
             >
@@ -165,7 +155,6 @@ function renderTeamSection(players, gwNumber, isLive, next5GWs, activeGW, sectio
                     padding: 0.5rem;
                     border-right: 1px solid var(--border-color);
                     min-height: 3rem;
-                    ${pick.position === 11 ? 'border-bottom: 3px solid var(--border-color);' : ''}
                 ">
                     <div style="display: flex; align-items: center; gap: 0.3rem;">
                         <span style="font-size: 0.6rem; color: var(--text-secondary);">${getPositionShort(player)}</span>
@@ -176,7 +165,7 @@ function renderTeamSection(players, gwNumber, isLive, next5GWs, activeGW, sectio
                     ${risks.length > 0 ? `<div style="font-size: 0.55rem; color: ${borderColor}; margin-top: 0.1rem; line-height: 1.2;">${risks[0]?.message || 'Issue'}</div>` : `<div style="height: 0.8rem;"></div>`}
                 </td>
                 <td style="text-align: center; padding: 0.5rem; font-size: 0.65rem; font-weight: 600;">
-                    ${getTeamShortName(opponent.opponentTeam) || '—'}
+                    ${opponent.name || '—'}
                 </td>
                 <td style="text-align: center; padding: 0.5rem; font-size: 0.6rem; font-weight: ${statusColors.statusWeight}; color: ${statusColors.statusColor}; background: ${statusColors.statusBgColor}; padding: 0.08rem 0.25rem; border-radius: 0.25rem; white-space: nowrap;">
                     ${matchStatus}
