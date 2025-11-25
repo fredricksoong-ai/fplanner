@@ -829,15 +829,15 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
             margin-bottom: 0.5rem;
         ">
             <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
-                <table style="width: 100%; font-size: 0.7rem; border-collapse: collapse; min-width: 800px;">
+                <table style="width: 100%; font-size: 0.7rem; border-collapse: collapse;">
                     <thead style="background: var(--bg-tertiary);">
                         <tr>
-                            <th style="position: sticky; left: 0; background: var(--bg-tertiary); z-index: 10; text-align: left; padding: 0.5rem; min-width: 100px;">Player</th>
-                            <th style="text-align: center; padding: 0.5rem; min-width: 45px;">Opp</th>
-                            <th style="text-align: center; padding: 0.5rem; min-width: 50px;">Status</th>
-                            <th style="text-align: center; padding: 0.5rem; min-width: 35px;">Pts</th>
-                            <th style="text-align: center; padding: 0.5rem; min-width: 40px;">Form</th>
-                            <th style="text-align: center; padding: 0.5rem; min-width: 50px;">${config.header}</th>
+                            <th style="position: sticky; left: 0; background: var(--bg-tertiary); z-index: 10; text-align: left; padding: 0.5rem; min-width: 140px;">Player</th>
+                            <th style="text-align: center; padding: 0.5rem; min-width: 120px;">Opp</th>
+                            <th style="text-align: center; padding: 0.5rem; min-width: 120px;">Status</th>
+                            <th style="text-align: center; padding: 0.5rem; min-width: 120px;">Pts</th>
+                            <th style="text-align: center; padding: 0.5rem; min-width: 120px;">Form</th>
+                            <th style="text-align: center; padding: 0.5rem; min-width: 120px;">${config.header}</th>
                         </tr>
                     </thead>
                     <tbody>
