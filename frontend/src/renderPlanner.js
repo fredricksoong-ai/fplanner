@@ -157,7 +157,6 @@ export async function renderPlanner() {
         attachPlannerListeners();
         
         // Attach old expandable replacement listeners (for backward compatibility)
-        attachOldPlannerListeners(currentPlayers, riskPlayerMap, teamData.picks, gwNumber);
 
     } catch (err) {
         console.error('Failed to load planner:', err);
@@ -254,9 +253,6 @@ function renderUnifiedFixtureTable(myPlayers, riskPlayerMap, picks, gwNumber) {
                             else if (severity === 'medium') borderColor = '#fb923c';
                             else if (severity === 'low') borderColor = '#eab308';
 
-                            // Show chevron only for HIGH and MEDIUM
-                            const showChevron = severity === 'high' || severity === 'medium';
-
                             const next5Fixtures = getFixtures(player.team, 5, false);
                             const avgFDR = calculateFixtureDifficulty(player.team, 5);
                             const formHeatmap = getFormHeatmap(player.form);
@@ -269,7 +265,7 @@ function renderUnifiedFixtureTable(myPlayers, riskPlayerMap, picks, gwNumber) {
                             const modifiedStyle = isModified ? 'border: 2px solid var(--primary-color);' : '';
                             
                             return `
-                                <tr style="background: ${rowBg}; ${hasRisk ? `border-left: 4px solid ${borderColor};` : ''} ${modifiedStyle}" data-player-id="${player.id}">
+                                <tr class="planner-player-row" style="background: ${rowBg}; ${hasRisk ? `border-left: 4px solid ${borderColor};` : ''} ${modifiedStyle}" data-player-id="${player.id}">
                                     <td style="
                                         position: sticky;
                                         left: 0;
@@ -300,22 +296,6 @@ function renderUnifiedFixtureTable(myPlayers, riskPlayerMap, picks, gwNumber) {
                                                     ↻
                                                 </button>
                                             ` : ''}
-                                            ${showChevron ? `
-                                                <button
-                                                    class="expand-replacements-btn"
-                                                    data-player-id="${player.id}"
-                                                    style="
-                                                        background: none;
-                                                        border: none;
-                                                        cursor: pointer;
-                                                        color: var(--primary-color);
-                                                        padding: 0;
-                                                        margin-left: 0.2rem;
-                                                    "
-                                                >
-                                                    <i class="fas fa-chevron-down" id="chevron-${player.id}" style="font-size: 0.6rem; transition: transform 0.2s;"></i>
-                                                </button>
-                                            ` : ''}
                                         </div>
                                         ${hasRisk ? `<div style="font-size: 0.6rem; color: ${borderColor}; margin-top: 0.1rem;">${risks[0]?.message || 'Issue'}</div>` : ''}
                                         ${isModified ? `<div style="font-size: 0.6rem; color: var(--primary-color); margin-top: 0.1rem;">Modified</div>` : ''}
@@ -338,17 +318,6 @@ function renderUnifiedFixtureTable(myPlayers, riskPlayerMap, picks, gwNumber) {
                                     }).join('')}
                                     ${next5Fixtures.length < 5 ? Array(5 - next5Fixtures.length).fill('<td style="text-align: center; padding: 0.5rem;">—</td>').join('') : ''}
                                 </tr>
-                                ${showChevron ? `
-                                    <tr id="replacements-${player.id}" style="display: none;">
-                                        <td colspan="8" style="padding: 0; background: var(--bg-tertiary);">
-                                            <div id="replacements-content-${player.id}" style="padding: 0.5rem;">
-                                                <div style="text-align: center; color: var(--text-secondary); font-size: 0.7rem;">
-                                                    Loading replacements...
-                                                </div>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ` : ''}
                             `;
                         }).join('')}
                     </tbody>
@@ -751,116 +720,3 @@ function renderTransferTargets(myPlayers, picks, gwNumber) {
     `;
 }
 
-// ============================================================================
-// EVENT LISTENERS
-// ============================================================================
-
-function attachOldPlannerListeners(myPlayers, riskPlayerMap, picks, gwNumber) {
-    // Risk player expansion buttons
-    const expandButtons = document.querySelectorAll('.expand-replacements-btn');
-    expandButtons.forEach(button => {
-        button.addEventListener('click', async (e) => {
-            e.stopPropagation();
-            const playerId = parseInt(button.dataset.playerId);
-            const replacementsRow = document.getElementById(`replacements-${playerId}`);
-            const chevron = document.getElementById(`chevron-${playerId}`);
-            const contentDiv = document.getElementById(`replacements-content-${playerId}`);
-
-            if (!replacementsRow) return;
-
-            const isHidden = replacementsRow.style.display === 'none';
-            replacementsRow.style.display = isHidden ? 'table-row' : 'none';
-
-            if (chevron) {
-                chevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
-            }
-
-            // Load replacements if not already loaded
-            if (isHidden && contentDiv && !contentDiv.dataset.loaded) {
-                const player = myPlayers.find(p => p.id === playerId);
-                if (player) {
-                    const { findReplacements } = await import('./transferHelpers.js');
-                    const replacements = findReplacements(player, picks, gwNumber);
-                    contentDiv.innerHTML = renderReplacementsList(replacements, player, gwNumber);
-                    contentDiv.dataset.loaded = 'true';
-                }
-            }
-        });
-    });
-}
-
-function renderReplacementsList(replacements, problemPlayer, gwNumber) {
-    if (!replacements || replacements.length === 0) {
-        return `
-            <table style="width: 100%; font-size: 0.7rem;">
-                <tr>
-                    <td colspan="8" style="text-align: center; padding: 0.5rem; color: var(--text-secondary);">
-                        No suitable replacements found
-                    </td>
-                </tr>
-            </table>
-        `;
-    }
-
-    const next5GWs = [gwNumber + 1, gwNumber + 2, gwNumber + 3, gwNumber + 4, gwNumber + 5];
-
-    return `
-        <table style="width: 100%; font-size: 0.7rem; border-collapse: collapse;">
-            <thead style="background: rgba(0,0,0,0.05);">
-                <tr>
-                    <th style="text-align: left; padding: 0.4rem; font-weight: 600; font-size: 0.65rem; color: var(--text-secondary);">Replacement</th>
-                    <th style="text-align: center; padding: 0.4rem; font-weight: 600; font-size: 0.65rem; color: var(--text-secondary);">FDR</th>
-                    <th style="text-align: center; padding: 0.4rem; font-weight: 600; font-size: 0.65rem; color: var(--text-secondary);">Form</th>
-                    ${next5GWs.map(gw => `<th style="text-align: center; padding: 0.4rem; font-weight: 600; font-size: 0.65rem; color: var(--text-secondary);">GW${gw}</th>`).join('')}
-                </tr>
-            </thead>
-            <tbody>
-                ${replacements.slice(0, 3).map((rep, idx) => {
-                    const player = rep.player;
-                    const priceDiff = rep.priceDiff;
-                    const diffSign = priceDiff >= 0 ? '+' : '';
-                    const diffColor = priceDiff <= 0 ? '#22c55e' : '#ef4444';
-                    const next5Fixtures = getFixtures(player.team, 5, false);
-                    const avgFDR = calculateFixtureDifficulty(player.team, 5);
-                    const fdrColor = avgFDR <= 2.5 ? '#22c55e' : avgFDR <= 3.5 ? '#eab308' : '#ef4444';
-                    const formHeatmap = getFormHeatmap(player.form);
-                    const formStyle = getHeatmapStyle(formHeatmap);
-                    const rowBg = idx % 2 === 0 ? 'var(--bg-primary)' : 'rgba(0,0,0,0.02)';
-
-                    return `
-                        <tr style="background: ${rowBg};">
-                            <td style="padding: 0.4rem;">
-                                <div style="display: flex; align-items: center; gap: 0.3rem;">
-                                    <span style="color: var(--text-tertiary); font-size: 0.6rem;">${idx + 1}.</span>
-                                    <span style="font-size: 0.6rem; color: var(--text-secondary);">${getPositionShort(player)}</span>
-                                    <strong style="font-size: 0.65rem;">${escapeHtml(player.web_name)}</strong>
-                                </div>
-                                <div style="font-size: 0.6rem; color: var(--text-secondary); margin-top: 0.1rem; margin-left: 1.2rem;">
-                                    ${formatCurrency(player.now_cost)}
-                                    <span style="color: ${diffColor}; margin-left: 0.2rem;">(${diffSign}£${Math.abs(priceDiff / 10).toFixed(1)})</span>
-                                </div>
-                            </td>
-                            <td style="text-align: center; padding: 0.4rem; color: ${fdrColor}; font-weight: 700;">
-                                ${avgFDR.toFixed(1)}
-                            </td>
-                            <td style="text-align: center; padding: 0.4rem; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 600;">
-                                ${formatDecimal(player.form)}
-                            </td>
-                            ${next5Fixtures.map(fix => {
-                                const fdrClass = getDifficultyClass(fix.difficulty);
-                                return `
-                                    <td style="text-align: center; padding: 0.4rem;">
-                                        <span class="${fdrClass}" style="display: inline-block; width: 52px; padding: 0.15rem 0.25rem; border-radius: 3px; font-weight: 600; font-size: 0.6rem; text-align: center;">
-                                            ${fix.opponent}
-                                        </span>
-                                    </td>
-                                `;
-                            }).join('')}
-                            ${next5Fixtures.length < 5 ? Array(5 - next5Fixtures.length).fill('<td style="text-align: center; padding: 0.4rem;">—</td>').join('') : ''}
-                        </tr>
-                    `;
-                }).join('')}
-            </tbody>
-        </table>
-    `;
-}

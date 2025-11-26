@@ -433,7 +433,7 @@ function calculateGWPointsBreakdown(player, liveStats, gwStats) {
  * @param {number} playerId - Player ID
  * @param {Object} myTeamState - Optional state object for league ownership
  */
-export async function showPlayerModal(playerId, myTeamState = null) {
+export async function showPlayerModal(playerId, myTeamState = null, options = {}) {
     const player = getPlayerById(playerId);
     if (!player) return;
 
@@ -518,14 +518,15 @@ export async function showPlayerModal(playerId, myTeamState = null) {
         upcomingFixtures,
         isLive,
         risks,
-        comparisonPlayers
+        comparisonPlayers,
+        actionConfig: options.primaryAction || null
     });
 
     // Update modal content
     const modal = document.getElementById('player-modal');
     if (modal) {
         modal.innerHTML = modalHTML;
-        attachModalListeners();
+        attachModalListeners(options.primaryAction || null);
     }
 }
 
@@ -613,7 +614,8 @@ function buildModalHTML(data) {
         gwPoints, minutes, bps, xG, xA,
         pointsBreakdown,
         ownership, leagueOwnership, past3GW, upcomingFixtures, isLive,
-        risks, comparisonPlayers
+        risks, comparisonPlayers,
+        actionConfig
     } = data;
 
     // LIVE indicator styles
@@ -999,6 +1001,34 @@ function buildModalHTML(data) {
                     </div>
                 </div>
             </div>
+            ${actionConfig ? `
+                <div style="
+                    position: sticky;
+                    bottom: 0;
+                    padding: 0.75rem 1rem;
+                    border-top: 1px solid var(--border-color);
+                    background: var(--bg-primary);
+                    display: flex;
+                    justify-content: flex-end;
+                ">
+                    <button
+                        id="player-modal-primary-btn"
+                        style="
+                            background: ${actionConfig.color || 'var(--primary-color)'};
+                            color: white;
+                            border: none;
+                            border-radius: 999px;
+                            padding: 0.6rem 1.2rem;
+                            font-weight: 600;
+                            font-size: 0.85rem;
+                            cursor: pointer;
+                            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                        "
+                    >
+                        ${escapeHtml(actionConfig.label || 'Action')}
+                    </button>
+                </div>
+            ` : ''}
         </div>
     `;
 }
@@ -1006,12 +1036,21 @@ function buildModalHTML(data) {
 /**
  * Attach modal event listeners
  */
-function attachModalListeners() {
+function attachModalListeners(actionConfig = null) {
     const closeBtn = document.getElementById('close-player-modal');
     const modal = document.getElementById('player-modal');
+    const primaryBtn = document.getElementById('player-modal-primary-btn');
 
     if (closeBtn) {
         closeBtn.addEventListener('click', closePlayerModal);
+    }
+
+    if (primaryBtn && actionConfig?.onClick) {
+        primaryBtn.addEventListener('click', () => {
+            if (primaryBtn.disabled) return;
+            primaryBtn.disabled = true;
+            actionConfig.onClick();
+        });
     }
 
     if (modal) {

@@ -5,13 +5,15 @@
 
 import { plannerState } from './state.js';
 import { renderPlanner } from '../renderPlanner.js';
+import { showPlayerModal, closePlayerModal } from '../myTeam/compact/playerModal.js';
+import { sharedState } from '../sharedState.js';
 
 /**
  * Handle player click - navigate to replacement page
  * @param {number} playerId - Player ID clicked
  */
 export function handlePlayerClick(playerId) {
-    // Navigate to replacement page
+    closePlayerModal();
     window.location.hash = `#planner/replace/${playerId}`;
 }
 
@@ -77,20 +79,27 @@ export function attachReplacementPageListeners() {
  * Attach event listeners for planner page
  */
 export function attachPlannerListeners() {
-    // Player row clicks (navigate to replacement page)
-    const playerRows = document.querySelectorAll('[data-player-id]');
+    const playerRows = document.querySelectorAll('.planner-player-row');
+    const myTeamState = sharedState.getTeamState();
+
     playerRows.forEach(row => {
         const playerId = parseInt(row.dataset.playerId);
-        if (playerId && !row.querySelector('.expand-replacements-btn')) {
-            row.style.cursor = 'pointer';
-            row.addEventListener('click', (e) => {
-                // Don't trigger if clicking on reset button
-                if (e.target.closest('.player-reset-btn')) {
-                    return;
-                }
-                handlePlayerClick(playerId);
-            });
+        if (!playerId) {
+            return;
         }
+        row.style.cursor = 'pointer';
+        row.addEventListener('click', (e) => {
+            if (e.target.closest('.player-reset-btn')) {
+                return;
+            }
+            showPlayerModal(playerId, myTeamState, {
+                primaryAction: {
+                    label: 'Replace',
+                    color: 'var(--accent-color)',
+                    onClick: () => handlePlayerClick(playerId)
+                }
+            });
+        });
     });
 
     // Individual player reset buttons
