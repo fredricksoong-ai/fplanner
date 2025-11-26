@@ -179,7 +179,7 @@ function setupTeamAutoRefresh() {
                         if (teamId) {
                             console.log('🔄 Refreshing team data...');
                             try {
-                                const teamData = await loadMyTeam(teamId);
+                                const teamData = await loadMyTeam(teamId, { forceRefresh: true });
                                 myTeamState.teamData = teamData;
                             } catch (err) {
                                 console.error('Failed to refresh team data:', err);
@@ -372,7 +372,7 @@ async function handleTeamRefresh() {
     console.log('🔄 Refreshing team data...');
 
     // Reload team data
-    const freshData = await loadMyTeam(teamId);
+    const freshData = await loadMyTeam(teamId, { forceRefresh: true });
 
     // Update last refresh timestamp
     localStorage.setItem('fplanner_last_refresh', now.toString());

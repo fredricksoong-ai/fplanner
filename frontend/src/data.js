@@ -49,8 +49,12 @@ let onDataRefreshCallback = null;
 /** @type {Array|null} Cached enriched players array */
 let cachedEnrichedPlayers = null;
 
-/** @type {number|null} Cache key based on data timestamps */
+/** @type{number|null} Cache key based on data timestamps */
 let playersCacheKey = null;
+
+/** Team data cache (teamId -> { data, timestamp }) */
+const teamCache = new Map();
+const TEAM_CACHE_TTL = 2 * 60 * 1000; // 2 minutes
 
 /** Auto-refresh interval in milliseconds (2 minutes) */
 const AUTO_REFRESH_INTERVAL = 2 * 60 * 1000;
@@ -453,8 +457,51 @@ export async function getPlayerLiveStats(playerId, gameweek) {
  * console.log(teamData.team.name); // Team name
  * console.log(teamData.picks.entry_history.total_points); // GW points
  */
-export async function loadMyTeam(teamId) {
+function getTeamCacheEntry(teamId) {
+    const cached = teamCache.get(String(teamId));
+    if (!cached) return null;
+
+    if (Date.now() - cached.timestamp > TEAM_CACHE_TTL) {
+        teamCache.delete(String(teamId));
+        return null;
+    }
+
+    return cached.data;
+}
+
+export function getCachedTeamData(teamId) {
+    return getTeamCacheEntry(teamId);
+}
+
+function setTeamCacheEntry(teamId, data) {
+    if (!teamId || !data) {
+        return;
+    }
+    teamCache.set(String(teamId), {
+        data,
+        timestamp: Date.now()
+    });
+}
+
+export function invalidateTeamCache(teamId) {
+    if (teamId) {
+        teamCache.delete(String(teamId));
+    } else {
+        teamCache.clear();
+    }
+}
+
+export async function loadMyTeam(teamId, options = {}) {
+    const { forceRefresh = false } = options;
     console.log(`🔄 Loading team ${teamId}...`);
+
+    if (!forceRefresh) {
+        const cached = getTeamCacheEntry(teamId);
+        if (cached) {
+            console.log(`✅ Team ${teamId} loaded from in-memory cache`);
+            return cached;
+        }
+    }
 
     try {
         const response = await fetch(`${API_BASE}/team/${teamId}`);
@@ -469,6 +516,8 @@ export async function loadMyTeam(teamId) {
         console.log(`   Manager: ${data.team.player_first_name} ${data.team.player_last_name}`);
         console.log(`   Team: ${data.team.name}`);
         console.log(`   GW${data.gameweek}: ${data.picks.entry_history.total_points} pts`);
+
+        setTeamCacheEntry(teamId, data);
 
         return data;
     } catch (err) {

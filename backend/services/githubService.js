@@ -15,6 +15,17 @@ import {
 import { fetchBootstrap } from './fplService.js';
 import logger from '../logger.js';
 
+const NEXT_GW_RETRY_DELAY = 30 * 60 * 1000; // 30 minutes
+
+function shouldSkipNextGWFetch(targetGW) {
+  const status = cache.github.nextGWStatus;
+  if (!status) return false;
+  if (status.gw !== targetGW) return false;
+  if (status.available) return false;
+  if (!status.lastChecked) return false;
+  return (Date.now() - status.lastChecked) < NEXT_GW_RETRY_DELAY && status.reason === 'not_found';
+}
+
 // ============================================================================
 // GITHUB CSV DATA FETCHING
 // ============================================================================
@@ -46,6 +57,13 @@ export async function fetchGithubCSV() {
     logger.log(`📊 Latest Finished GW: ${currentGW}`);
 
     const urls = getGithubUrls(currentGW, isFinished);
+    const nextGWTarget = currentGW + 1;
+    let nextGWStatus = cache.github.nextGWStatus || {
+      gw: nextGWTarget,
+      available: false,
+      reason: 'unknown',
+      lastChecked: null
+    };
 
     // Fetch all available sources in parallel
     const fetchPromises = [];
@@ -81,18 +99,45 @@ export async function fetchGithubCSV() {
     }
 
     // 3. Next GW stats (for transfers)
-    logger.log(`📡 Fetching GW${currentGW + 1} stats for transfers...`);
-    fetchPromises.push(
-      axios.get(urls.nextGWStats, {
-        timeout: 15000,
-        headers: { 'User-Agent': 'FPLanner/1.0' }
-      })
-        .then(res => ({ type: 'nextGW', data: res.data }))
-        .catch(err => {
-          logger.warn(`⚠️ GW${currentGW + 1} stats not available yet:`, err.message);
-          return null;
+    if (shouldSkipNextGWFetch(nextGWTarget)) {
+      logger.log(`⏭️ Skipping GW${nextGWTarget} stats fetch (recent 404)`);
+      nextGWStatus = {
+        gw: nextGWTarget,
+        available: false,
+        reason: 'not_found_recent',
+        lastChecked: Date.now()
+      };
+    } else {
+      logger.log(`📡 Fetching GW${nextGWTarget} stats for transfers...`);
+      fetchPromises.push(
+        axios.get(urls.nextGWStats, {
+          timeout: 15000,
+          headers: { 'User-Agent': 'FPLanner/1.0' }
         })
-    );
+          .then(res => {
+            nextGWStatus = {
+              gw: nextGWTarget,
+              available: true,
+              reason: null,
+              lastChecked: Date.now()
+            };
+            return { type: 'nextGW', data: res.data };
+          })
+          .catch(err => {
+            const notFound = err.response?.status === 404;
+            nextGWStatus = {
+              gw: nextGWTarget,
+              available: false,
+              reason: notFound ? 'not_found' : 'error',
+              lastChecked: Date.now(),
+              message: err.message
+            };
+            const label = notFound ? 'not published yet' : err.message;
+            logger.warn(`⚠️ GW${nextGWTarget} stats not available (${label})`);
+            return null;
+          })
+      );
+    }
 
     const results = await Promise.all(fetchPromises);
 
@@ -120,7 +165,8 @@ export async function fetchGithubCSV() {
       isFinished: isFinished,
       seasonStats: parsedData.season || [],
       currentGWStats: parsedData.currentGW || [],
-      nextGWStats: parsedData.nextGW || []
+      nextGWStats: parsedData.nextGW || [],
+      nextGWStatus
     };
 
     // Update cache with additional metadata
@@ -128,6 +174,7 @@ export async function fetchGithubCSV() {
     cache.github.timestamp = Date.now();
     cache.github.era = getCurrentEra();
     cache.github.currentGW = currentGW;
+    cache.github.nextGWStatus = nextGWStatus;
     recordFetch();
 
     logger.log(`✅ GitHub data loaded:`);
