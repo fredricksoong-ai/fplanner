@@ -37,7 +37,6 @@ import { getLeagueComparisonMetrics } from './planner/leagueComparison.js';
 import { getWishlistPlayers } from './wishlist/store.js';
 
 let plannerWishlistListenerAttached = false;
-import { getWishlistPlayers } from './wishlist/store.js';
 
 // ============================================================================
 // MAIN RENDER FUNCTION
