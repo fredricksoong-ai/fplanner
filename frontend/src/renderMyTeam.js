@@ -448,6 +448,7 @@ export function renderMyTeam(teamData, subTab = 'overview') {
     // Cache team data and update state
     myTeamState.teamData = teamData;
     myTeamState.currentTab = subTab;
+    sharedState.updateTeamData(teamData);
 
     // Setup auto-refresh for live GW
     setupTeamAutoRefresh();

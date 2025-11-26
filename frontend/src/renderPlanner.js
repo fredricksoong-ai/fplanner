@@ -80,6 +80,7 @@ export async function renderPlanner() {
 
     try {
         const teamData = await loadMyTeam(teamId);
+        sharedState.updateTeamData(teamData);
         const numericTeamId = parseInt(teamId, 10);
         if (!Number.isNaN(numericTeamId)) {
             sharedState.teamId = numericTeamId;

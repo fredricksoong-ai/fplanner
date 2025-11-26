@@ -47,5 +47,37 @@ export const sharedState = {
             rivalTeamCache: this.rivalTeamCache,
             captainCache: this.captainCache
         };
+    },
+
+    /**
+     * Persist freshly loaded team data so other pages (Planner, Stats, etc.)
+     * can reuse it without reloading from the API.
+     * @param {Object} teamData
+     */
+    updateTeamData(teamData) {
+        if (!teamData || !teamData.team) {
+            return;
+        }
+
+        this.myTeamData = teamData;
+
+        const rawId = teamData.team.id ?? teamData.team.entry ?? teamData.team.entry_id;
+        if (!rawId) {
+            return;
+        }
+
+        const numericId = parseInt(rawId, 10);
+        this.teamId = Number.isNaN(numericId) ? rawId : numericId;
+
+        if (typeof window === 'undefined' || !window.localStorage) {
+            return;
+        }
+
+        try {
+            window.localStorage.setItem('fplanner_team_id', String(rawId));
+            window.localStorage.setItem(`fplanner_team_${rawId}`, JSON.stringify(teamData));
+        } catch (err) {
+            console.warn('Failed to cache team data for reuse', err);
+        }
     }
 };
