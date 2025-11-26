@@ -5,7 +5,12 @@
 
 import { getAllPlayers } from '../data.js';
 import { getPositionShort, calculatePPM, escapeHtml } from '../utils.js';
-import { createChartCard, setupChartExport, filterPlayersByPosition } from './chartHelpers.js';
+import {
+    createChartCard,
+    setupChartExport,
+    filterPlayersByPosition,
+    limitPlayers
+} from './chartHelpers.js';
 
 /**
  * Render ICT Index vs Points scatter plot
@@ -17,11 +22,18 @@ import { createChartCard, setupChartExport, filterPlayersByPosition } from './ch
 export async function renderIctVsPointsChart(contentContainer, echarts, positionFilter) {
     if (!contentContainer) return null;
 
+    const isMobile = window.innerWidth <= 768;
+    const chartHeight = isMobile ? 340 : 560;
+    const chartMinHeight = isMobile ? 260 : 380;
+
     contentContainer.innerHTML = createChartCard({
         title: 'ICT Index vs Points',
         icon: '📈',
         description: 'Compare ICT Index with actual FPL points. Bubble size = ownership %',
-        chartId: 'ict-points-chart'
+        chartId: 'ict-points-chart',
+        exportId: 'ict-points-export',
+        height: chartHeight,
+        minHeight: chartMinHeight
     });
 
     await new Promise(resolve => setTimeout(resolve, 0));
@@ -34,6 +46,7 @@ export async function renderIctVsPointsChart(contentContainer, echarts, position
 
     let players = getAllPlayers().filter(p => (p.total_points || 0) >= 10);
     players = filterPlayersByPosition(players, positionFilter);
+    players = limitPlayers(players);
 
     const positions = {
         'GKP': { data: [], color: '#fbbf24', name: 'Goalkeepers' },
@@ -71,7 +84,7 @@ export async function renderIctVsPointsChart(contentContainer, echarts, position
         return null;
     }
 
-    setupChartExport(chartInstance);
+    setupChartExport(chartInstance, 'ict-points-export');
     const resizeHandler = () => chartInstance?.resize();
     window.removeEventListener('resize', resizeHandler);
     window.addEventListener('resize', resizeHandler);

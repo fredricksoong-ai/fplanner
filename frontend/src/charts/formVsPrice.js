@@ -5,7 +5,12 @@
 
 import { getAllPlayers } from '../data.js';
 import { getPositionShort, calculatePPM, escapeHtml } from '../utils.js';
-import { createChartCard, setupChartExport, filterPlayersByPosition } from './chartHelpers.js';
+import {
+    createChartCard,
+    setupChartExport,
+    filterPlayersByPosition,
+    limitPlayers
+} from './chartHelpers.js';
 
 /**
  * Render Form vs Price scatter plot
@@ -17,6 +22,10 @@ import { createChartCard, setupChartExport, filterPlayersByPosition } from './ch
 export async function renderFormVsPriceChart(contentContainer, echarts, positionFilter) {
     if (!contentContainer) return null;
 
+    const isMobile = window.innerWidth <= 768;
+    const chartHeight = isMobile ? 340 : 560;
+    const chartMinHeight = isMobile ? 260 : 380;
+
     contentContainer.innerHTML = createChartCard({
         title: 'Form vs Price',
         icon: '🔥',
@@ -26,7 +35,10 @@ export async function renderFormVsPriceChart(contentContainer, echarts, position
             { color: '#3b82f6', label: 'Premium Form (high price, high form)' },
             { color: '#ef4444', label: 'Cold Trap (high price, low form - avoid!)' }
         ],
-        chartId: 'form-price-chart'
+        chartId: 'form-price-chart',
+        exportId: 'form-price-export',
+        height: chartHeight,
+        minHeight: chartMinHeight
     });
 
     await new Promise(resolve => setTimeout(resolve, 0));
@@ -39,6 +51,7 @@ export async function renderFormVsPriceChart(contentContainer, echarts, position
 
     let players = getAllPlayers().filter(p => (p.total_points || 0) >= 10);
     players = filterPlayersByPosition(players, positionFilter);
+    players = limitPlayers(players, 50, (p) => parseFloat(p.form) || 0);
 
     const myTeamPlayerIds = getUserTeamPlayerIds();
 
@@ -85,7 +98,7 @@ export async function renderFormVsPriceChart(contentContainer, echarts, position
         return null;
     }
 
-    setupChartExport(chartInstance);
+    setupChartExport(chartInstance, 'form-price-export');
     const resizeHandler = () => chartInstance?.resize();
     window.removeEventListener('resize', resizeHandler);
     window.addEventListener('resize', resizeHandler);

@@ -5,7 +5,12 @@
 
 import { getAllPlayers } from '../data.js';
 import { getPositionShort, escapeHtml } from '../utils.js';
-import { createChartCard, setupChartExport, filterPlayersByPosition } from './chartHelpers.js';
+import {
+    createChartCard,
+    setupChartExport,
+    filterPlayersByPosition,
+    limitPlayers
+} from './chartHelpers.js';
 
 /**
  * Render Ownership vs Form scatter plot
@@ -17,6 +22,10 @@ import { createChartCard, setupChartExport, filterPlayersByPosition } from './ch
 export async function renderOwnershipVsFormChart(contentContainer, echarts, positionFilter) {
     if (!contentContainer) return null;
 
+    const isMobile = window.innerWidth <= 768;
+    const chartHeight = isMobile ? 340 : 560;
+    const chartMinHeight = isMobile ? 260 : 380;
+
     contentContainer.innerHTML = createChartCard({
         title: 'Ownership % vs Form',
         icon: '📊',
@@ -26,7 +35,10 @@ export async function renderOwnershipVsFormChart(contentContainer, echarts, posi
             { color: '#3b82f6', label: 'Template Picks (high ownership, high form)' },
             { color: '#ef4444', label: 'Avoid (high ownership, low form)' }
         ],
-        chartId: 'ownership-form-chart'
+        chartId: 'ownership-form-chart',
+        exportId: 'ownership-form-export',
+        height: chartHeight,
+        minHeight: chartMinHeight
     });
 
     await new Promise(resolve => setTimeout(resolve, 0));
@@ -41,6 +53,8 @@ export async function renderOwnershipVsFormChart(contentContainer, echarts, posi
     if (positionFilter !== 'all') {
         players = players.filter(p => getPositionShort(p) === positionFilter);
     }
+
+    players = limitPlayers(players);
 
     const chartData = players
         .filter(p => p.minutes > 90) // At least 90 minutes played
@@ -91,7 +105,7 @@ export async function renderOwnershipVsFormChart(contentContainer, echarts, posi
         return null;
     }
 
-    setupChartExport(chartInstance);
+    setupChartExport(chartInstance, 'ownership-form-export');
     const resizeHandler = () => chartInstance?.resize();
     window.removeEventListener('resize', resizeHandler);
     window.addEventListener('resize', resizeHandler);
