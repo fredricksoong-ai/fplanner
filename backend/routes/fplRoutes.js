@@ -119,6 +119,7 @@ router.get('/api/fpl-data', async (req, res) => {
         fixtures_age: cache.fixtures.timestamp ? Date.now() - cache.fixtures.timestamp : null,
         github_age: cache.github.timestamp ? Date.now() - cache.github.timestamp : null,
         github_era: cache.github.era,
+        github_next_gw_status: cache.github.data?.nextGWStatus || cache.github.nextGWStatus || null,
         current_era: getCurrentEra(),
         timestamp: new Date().toISOString()
       }

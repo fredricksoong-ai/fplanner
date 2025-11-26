@@ -166,6 +166,10 @@ ALLOWED_ORIGIN=https://yourdomain.com  # CORS allowed origin
 GEMINI_API_KEY=your_api_key_here   # Gemini AI API key for insights feature
 ```
 
+### Render deployment
+
+Render assigns a dynamic port via the `$PORT` environment variable and expects the service to bind to it. The backend already reads `process.env.PORT`, so use a start command such as `cd backend && npm start` and do **not** hardcode a port during deployment. If you set `PORT` yourself for local testing, remember to switch back to `$PORT` when deploying to Render; otherwise Render will report “service running on port XXXX” and mark the deploy unhealthy.
+
 **Setting up Gemini AI Insights:**
 1. Get your API key from: https://makersuite.google.com/app/apikey
 2. Create a `.env` file in the `backend/` directory

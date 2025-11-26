@@ -18,9 +18,12 @@ import { SERVER, ALLOWED_ORIGINS, RATE_LIMIT } from './config.js';
 
 // Cache Manager
 import {
+  cache,
   loadCacheFromDisk,
   initializeCachePersistence
 } from './services/cacheManager.js';
+import { fetchBootstrap, fetchFixtures } from './services/fplService.js';
+import { fetchGithubCSV } from './services/githubService.js';
 
 // Route Modules
 import fplRoutes from './routes/fplRoutes.js';
@@ -159,6 +162,61 @@ app.get('*', (req, res, next) => {
 });
 
 // ============================================================================
+// CACHE WARMUP
+// ============================================================================
+
+async function warmCachesOnStartup() {
+  if (process.env.SKIP_CACHE_WARMUP === 'true') {
+    logger.log('⏭️ Cache warmup skipped via SKIP_CACHE_WARMUP');
+    return;
+  }
+
+  logger.log('🔥 Warming caches in background...');
+
+  const tasks = [
+    {
+      name: 'bootstrap',
+      shouldRun: () => !cache.bootstrap.data,
+      action: () => fetchBootstrap()
+    },
+    {
+      name: 'fixtures',
+      shouldRun: () => !cache.fixtures.data,
+      action: () => fetchFixtures()
+    },
+    {
+      name: 'github',
+      shouldRun: () => !cache.github.data,
+      action: () => fetchGithubCSV()
+    }
+  ];
+
+  for (const task of tasks) {
+    if (!task.shouldRun()) {
+      logger.log(`✅ ${task.name} cache already hydrated, skipping warmup fetch`);
+      continue;
+    }
+
+    try {
+      const start = Date.now();
+      await task.action();
+      logger.log(`🔥 ${task.name} cache warmed in ${Date.now() - start}ms`);
+    } catch (err) {
+      logger.warn(`⚠️ Failed to warm ${task.name} cache: ${err.message}`);
+    }
+  }
+
+  logger.log('🔥 Cache warmup complete');
+}
+
+function enforceRenderPortBinding() {
+  if (process.env.RENDER && !process.env.PORT) {
+    logger.error('❌ Render environment detected but PORT is not set. The service must listen on $PORT.');
+    process.exit(1);
+  }
+}
+
+// ============================================================================
 // SERVER STARTUP
 // ============================================================================
 
@@ -167,6 +225,12 @@ loadCacheFromDisk();
 
 // Initialize cache persistence (auto-save and graceful shutdown)
 initializeCachePersistence();
+
+// Kick off cache warmup asynchronously
+warmCachesOnStartup();
+
+// Ensure platform-provided port binding is respected (Render)
+enforceRenderPortBinding();
 
 app.listen(SERVER.PORT, SERVER.HOST, () => {
   logger.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');

@@ -45,38 +45,52 @@ axiosRetry(axios, {
 // BOOTSTRAP DATA
 // ============================================================================
 
+let bootstrapFetchPromise = null;
+
 /**
  * Fetch FPL Bootstrap (static game data)
+ * Ensures only one outbound request is in-flight at a time.
  * @returns {Promise<Object>} Bootstrap data
  */
-export async function fetchBootstrap() {
-  logger.log('📡 Fetching FPL Bootstrap...');
-
-  try {
-    const response = await axios.get(`${FPL_BASE_URL}/bootstrap-static/`, {
-      timeout: 10000,
-      headers: {
-        'User-Agent': 'FPLanner/1.0'
-      }
-    });
-
-    logger.log(`✅ Bootstrap fetched (${Math.round(JSON.stringify(response.data).length / 1024)}KB)`);
-
-    updateBootstrapCache(response.data);
-    recordFetch();
-
-    return response.data;
-  } catch (err) {
-    logger.error('❌ Failed to fetch bootstrap:', err.message);
-
-    // Return cached data if available, even if stale
-    if (cache.bootstrap.data) {
-      logger.log('⚠️ Using stale bootstrap cache as fallback');
-      return cache.bootstrap.data;
-    }
-
-    throw new Error('Bootstrap data unavailable');
+export function fetchBootstrap() {
+  if (bootstrapFetchPromise) {
+    logger.log('⏳ Bootstrap fetch already in progress, awaiting result...');
+    return bootstrapFetchPromise;
   }
+
+  bootstrapFetchPromise = (async () => {
+    logger.log('📡 Fetching FPL Bootstrap...');
+
+    try {
+      const response = await axios.get(`${FPL_BASE_URL}/bootstrap-static/`, {
+        timeout: 10000,
+        headers: {
+          'User-Agent': 'FPLanner/1.0'
+        }
+      });
+
+      logger.log(`✅ Bootstrap fetched (${Math.round(JSON.stringify(response.data).length / 1024)}KB)`);
+
+      updateBootstrapCache(response.data);
+      recordFetch();
+
+      return response.data;
+    } catch (err) {
+      logger.error('❌ Failed to fetch bootstrap:', err.message);
+
+      // Return cached data if available, even if stale
+      if (cache.bootstrap.data) {
+        logger.log('⚠️ Using stale bootstrap cache as fallback');
+        return cache.bootstrap.data;
+      }
+
+      throw new Error('Bootstrap data unavailable');
+    } finally {
+      bootstrapFetchPromise = null;
+    }
+  })();
+
+  return bootstrapFetchPromise;
 }
 
 // ============================================================================

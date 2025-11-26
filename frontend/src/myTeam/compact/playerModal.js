@@ -227,19 +227,51 @@ function getComparisonPlayers(player, myTeamState) {
     return samePosition.slice(0, 5);
 }
 
+const PLAYER_SUMMARY_TTL = 5 * 60 * 1000; // 5 minutes
+const playerSummaryCache = new Map();
+
+function getCachedPlayerSummary(playerId) {
+    const cached = playerSummaryCache.get(playerId);
+    if (!cached) return null;
+
+    if (Date.now() - cached.timestamp > PLAYER_SUMMARY_TTL) {
+        playerSummaryCache.delete(playerId);
+        return null;
+    }
+
+    return cached.data;
+}
+
+function setPlayerSummaryCache(playerId, data) {
+    playerSummaryCache.set(playerId, {
+        data,
+        timestamp: Date.now()
+    });
+}
+
 /**
- * Fetch player history from API
+ * Fetch player history from API with memoization
  * @param {number} playerId - Player ID
  * @returns {Promise<Object>} Player history data
  */
 async function fetchPlayerHistory(playerId) {
+    const cached = getCachedPlayerSummary(playerId);
+    if (cached) {
+        return cached;
+    }
+
     try {
         const response = await fetch(`/api/player/${playerId}/summary`);
         if (!response.ok) throw new Error('Failed to fetch player summary');
-        return await response.json();
+        const data = await response.json();
+        setPlayerSummaryCache(playerId, data);
+        return data;
     } catch (err) {
         console.error('Failed to fetch player history:', err);
-        return { history: [], fixtures: [] };
+
+        // Return stale cache if available, otherwise empty defaults
+        const fallback = playerSummaryCache.get(playerId)?.data;
+        return fallback || { history: [], fixtures: [] };
     }
 }
 
