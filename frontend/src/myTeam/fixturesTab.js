@@ -205,11 +205,24 @@ function renderFixturePlayerStats(fixture, gameweek, isLive, isFinished, isDeskt
     const renderSection = (title, content) => {
         if (!content) return '';
         return `
-            <div style="background: var(--bg-secondary); border-radius: 0.375rem; padding: 0.5rem;">
-                <div style="font-size: 0.6rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 0.375rem; text-transform: uppercase;">
+            <div style="
+                background: var(--bg-secondary);
+                border-radius: 6px;
+                padding: 0.625rem;
+                box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+                border: 1px solid var(--border-color);
+            ">
+                <div style="
+                    font-size: 0.625rem;
+                    font-weight: 700;
+                    color: var(--text-secondary);
+                    margin-bottom: 0.5rem;
+                    text-transform: uppercase;
+                    letter-spacing: 0.025em;
+                ">
                     ${title}
                 </div>
-                <div style="font-size: 0.65rem;">
+                <div style="font-size: 0.7rem;">
                     ${content}
                 </div>
             </div>
@@ -218,9 +231,25 @@ function renderFixturePlayerStats(fixture, gameweek, isLive, isFinished, isDeskt
 
     // Helper to render player item
     const renderPlayerItem = (name, value, color = 'var(--text-primary)') => {
-        return `<div style="display: flex; justify-content: space-between; padding: 0.125rem 0;">
-            <span style="color: var(--text-primary);">${escapeHtml(name)}</span>
-            <span style="font-weight: 700; color: ${color};">${value}</span>
+        return `<div style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.25rem 0;
+            gap: 0.5rem;
+        ">
+            <span style="
+                color: var(--text-primary);
+                flex: 1;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            ">${escapeHtml(name)}</span>
+            <span style="
+                font-weight: 700;
+                color: ${color};
+                flex-shrink: 0;
+            ">${value}</span>
         </div>`;
     };
 
@@ -301,9 +330,17 @@ function renderFixturePlayerStats(fixture, gameweek, isLive, isFinished, isDeskt
             display: none;
             background: var(--bg-primary);
             border-top: 1px solid var(--border-color);
-            padding: 0.75rem;
+            padding: 0.875rem 0.75rem;
+            opacity: 0;
+            max-height: 0;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         ">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+            <div style="
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 0.625rem;
+            ">
                 ${renderSection('Goals', goalsHtml)}
                 ${renderSection('Assists', assistsHtml)}
                 ${renderSection('Bonus Points', bonusHtml)}
@@ -418,15 +455,18 @@ export function renderFixturesTab() {
                     : '';
 
                 return `
-                    <tr 
-                        class="fixture-row" 
+                    <tr
+                        class="fixture-row"
                         data-fixture-id="${fixture.id}"
                         data-can-expand="${canShowStats}"
                         style="
-                            border-bottom: 1px solid var(--border-color); 
-                            ${isLive ? 'background: rgba(239, 68, 68, 0.05);' : ''}
+                            border-bottom: 1px solid var(--border-color);
+                            ${isLive ? 'background: rgba(239, 68, 68, 0.08);' : ''}
                             ${canShowStats ? 'cursor: pointer;' : ''}
+                            transition: all 0.2s ease;
                         "
+                        onmouseover="if(this.dataset.canExpand === 'true') this.style.background = '${isLive ? 'rgba(239, 68, 68, 0.12)' : 'rgba(0, 255, 136, 0.05)'}'"
+                        onmouseout="this.style.background = '${isLive ? 'rgba(239, 68, 68, 0.08)' : 'transparent'}'"
                     >
                         <td style="padding: 1rem 0.75rem; color: var(--text-secondary); font-size: 0.875rem; white-space: nowrap;">
                             ${timeStr}
@@ -451,9 +491,25 @@ export function renderFixturesTab() {
             }).join('');
 
             return `
-                <div style="background: var(--bg-secondary); padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem;">
-                    <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
-                        <i class="fas fa-calendar-alt"></i> Gameweek ${gw}
+                <div style="
+                    background: var(--bg-secondary);
+                    padding: 1.5rem;
+                    border-radius: 12px;
+                    margin-bottom: 2rem;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                    border: 1px solid var(--border-color);
+                ">
+                    <h3 style="
+                        font-size: 1.25rem;
+                        font-weight: 700;
+                        color: var(--text-primary);
+                        margin-bottom: 1rem;
+                        display: flex;
+                        align-items: center;
+                        gap: 0.5rem;
+                    ">
+                        <i class="fas fa-calendar-alt" style="color: var(--primary-color);"></i>
+                        <span>Gameweek ${gw}</span>
                     </h3>
                     <div style="overflow-x: auto;">
                         <table style="width: 100%; font-size: 0.875rem; border-collapse: collapse;">
@@ -483,7 +539,7 @@ export function renderFixturesTab() {
 }
 
 /**
- * Toggle fixture stats visibility
+ * Toggle fixture stats visibility with smooth animation
  */
 function toggleFixtureStats(fixtureId) {
     const statsDiv = document.getElementById('fixture-stats-' + fixtureId);
@@ -491,7 +547,7 @@ function toggleFixtureStats(fixtureId) {
         console.warn(`Fixture stats div not found for fixture ${fixtureId}`);
         return;
     }
-    
+
     const row = document.querySelector(`[data-fixture-id="${fixtureId}"]`);
     if (!row) {
         console.warn(`Fixture row not found for fixture ${fixtureId}`);
@@ -499,9 +555,24 @@ function toggleFixtureStats(fixtureId) {
     }
 
     const icon = row.querySelector('.fa-chevron-down');
-    const isVisible = statsDiv.style.display !== 'none';
-    
-    statsDiv.style.display = isVisible ? 'none' : 'block';
+    const isVisible = statsDiv.style.display === 'block';
+
+    if (isVisible) {
+        // Collapse
+        statsDiv.style.opacity = '0';
+        statsDiv.style.maxHeight = '0';
+        setTimeout(() => {
+            statsDiv.style.display = 'none';
+        }, 300); // Match transition duration
+    } else {
+        // Expand
+        statsDiv.style.display = 'block';
+        // Force reflow
+        statsDiv.offsetHeight;
+        statsDiv.style.opacity = '1';
+        statsDiv.style.maxHeight = '2000px'; // Large enough for content
+    }
+
     if (icon) {
         icon.style.transform = isVisible ? 'rotate(0deg)' : 'rotate(180deg)';
     }
@@ -637,26 +708,61 @@ export function renderMobileFixturesTab() {
 
                 return `
                     <div>
-                        <div 
-                            class="mobile-table-row mobile-table-fixtures fixture-row-mobile" 
+                        <div
+                            class="mobile-table-row mobile-table-fixtures fixture-row-mobile"
                             data-fixture-id="${fixture.id}"
                             data-can-expand="${canShowStats}"
                             style="
-                                background: ${isLive ? 'rgba(239, 68, 68, 0.05)' : 'transparent'};
+                                background: ${isLive ? 'rgba(239, 68, 68, 0.08)' : 'transparent'};
                                 ${canShowStats ? 'cursor: pointer;' : ''}
+                                padding: 0.55rem 0.75rem;
+                                transition: all 0.2s ease;
+                                border-bottom: 1px solid ${isLive ? 'rgba(239, 68, 68, 0.2)' : 'var(--border-color)'};
                             "
+                            onmouseover="if(this.dataset.canExpand === 'true') this.style.background = '${isLive ? 'rgba(239, 68, 68, 0.12)' : 'rgba(0, 255, 136, 0.05)'}'"
+                            onmouseout="this.style.background = '${isLive ? 'rgba(239, 68, 68, 0.08)' : 'transparent'}'"
                         >
-                            <div style="color: var(--text-secondary); font-size: 0.6rem; white-space: nowrap;">${timeStr.split(',')[1] || timeStr}</div>
-                            <div style="text-align: right; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                            <div style="
+                                color: var(--text-secondary);
+                                font-size: 0.625rem;
+                                white-space: nowrap;
+                                font-weight: 500;
+                            ">${timeStr.split(',')[1] || timeStr}</div>
+                            <div style="
+                                text-align: right;
+                                font-weight: 600;
+                                white-space: nowrap;
+                                overflow: hidden;
+                                text-overflow: ellipsis;
+                                font-size: 0.75rem;
+                            ">
                                 ${homeTeam?.short_name || 'TBD'}
                             </div>
-                            <div style="text-align: center; font-weight: 700; color: ${isFinished ? 'var(--text-primary)' : 'var(--text-secondary)'};">
+                            <div style="
+                                text-align: center;
+                                font-weight: 700;
+                                font-size: 0.875rem;
+                                color: ${isFinished ? 'var(--text-primary)' : 'var(--text-secondary)'};
+                            ">
                                 ${homeScore}-${awayScore}
                             </div>
-                            <div style="text-align: left; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                            <div style="
+                                text-align: left;
+                                font-weight: 600;
+                                white-space: nowrap;
+                                overflow: hidden;
+                                text-overflow: ellipsis;
+                                font-size: 0.75rem;
+                            ">
                                 ${awayTeam?.short_name || 'TBD'}
                             </div>
-                            <div style="text-align: center;">
+                            <div style="
+                                text-align: center;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                gap: 0.25rem;
+                            ">
                                 ${statusBadge}${expandIcon}
                             </div>
                         </div>
@@ -665,9 +771,14 @@ export function renderMobileFixturesTab() {
                 `;
             }).join('');
 
-            // Mobile header row
+            // Mobile header row - using standard gray header for consistency
             const headerRow = `
-                <div class="mobile-table-header mobile-table-header-sticky mobile-table-header-purple mobile-table-fixtures" style="top: calc(3.5rem + env(safe-area-inset-top));">
+                <div class="mobile-table-header mobile-table-header-sticky mobile-table-fixtures" style="
+                    top: calc(3.5rem + env(safe-area-inset-top));
+                    background: var(--bg-secondary);
+                    color: var(--text-primary);
+                    border-bottom: 1px solid var(--border-color);
+                ">
                     <div>Time</div>
                     <div style="text-align: right;">Home</div>
                     <div style="text-align: center;">Score</div>
@@ -677,10 +788,24 @@ export function renderMobileFixturesTab() {
             `;
 
             return `
-                <div style="margin-bottom: 1rem;">
-                    <div style="padding: 0.5rem 0.75rem; background: var(--bg-secondary); margin-bottom: 0.25rem;">
-                        <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--text-primary);">
-                            <i class="fas fa-calendar-alt"></i> Gameweek ${gw}
+                <div style="margin-bottom: 1.25rem;">
+                    <div style="
+                        padding: 0.75rem 1rem;
+                        background: var(--bg-secondary);
+                        margin-bottom: 0.5rem;
+                        border-radius: 8px;
+                        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+                    ">
+                        <h4 style="
+                            font-size: 0.95rem;
+                            font-weight: 700;
+                            color: var(--text-primary);
+                            display: flex;
+                            align-items: center;
+                            gap: 0.5rem;
+                        ">
+                            <i class="fas fa-calendar-alt" style="color: var(--primary-color);"></i>
+                            <span>Gameweek ${gw}</span>
                         </h4>
                     </div>
                     ${headerRow}
