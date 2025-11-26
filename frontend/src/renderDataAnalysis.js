@@ -693,6 +693,7 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
     }
 
     const currentGW = getActiveGW(); // Use active GW for status/opponent display
+    const myPlayerIds = getMyPlayerIdSet();
 
     // Limit to top 20 for mobile initially (can be expanded with load more)
     // Check if there's a temporary limit set (from load more button)
@@ -847,6 +848,7 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
     mobilePlayers.forEach((player, idx) => {
         const gwOpp = getGWOpponent(player.team, currentGW);
         const matchStatus = getMatchStatus(player.team, currentGW, player);
+        const isMyPlayer = Boolean(player.__isMine || myPlayerIds.has(player.id));
 
         // Risk analysis
         const risks = analyzePlayerRisks(player);
@@ -900,13 +902,19 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
             contextCellContent = contextValue;
         }
 
-        // Row background
-        const rowBg = idx % 2 === 0 ? 'var(--bg-primary)' : 'var(--bg-secondary)';
+        const baseRowBg = idx % 2 === 0 ? 'var(--bg-primary)' : 'var(--bg-secondary)';
+        const rowBg = isMyPlayer ? 'rgba(56, 189, 248, 0.12)' : baseRowBg;
+        const rowBorder = borderColor
+            ? `border-left: 4px solid ${borderColor};`
+            : isMyPlayer ? 'border-left: 3px solid var(--primary-color);' : '';
+        const myBadge = isMyPlayer
+            ? '<span style="font-size: 0.55rem; color: #0284c7; background: rgba(14, 165, 233, 0.15); padding: 0.05rem 0.4rem; border-radius: 999px; font-weight: 600;">My Player</span>'
+            : '';
 
         html += `
             <tr
                 class="player-row"
-                style="background: ${rowBg}; ${borderColor ? `border-left: 4px solid ${borderColor};` : ''}; cursor: pointer;"
+                style="background: ${rowBg}; ${rowBorder} cursor: pointer;"
                 data-player-id="${player.id}"
             >
                 <td style="
@@ -918,9 +926,10 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
                     border-right: 1px solid var(--border-color);
                     min-height: 3rem;
                 ">
-                    <div style="display: flex; align-items: center; gap: 0.3rem;">
+                    <div style="display: flex; align-items: center; gap: 0.3rem; flex-wrap: wrap;">
                         <span style="font-size: 0.6rem; color: var(--text-secondary);">${getPositionShort(player)}</span>
                         <strong style="font-size: 0.7rem;">${escapeHtml(player.web_name)}</strong>
+                        ${myBadge}
                     </div>
                     ${risks.length > 0 ? `<div style="font-size: 0.55rem; color: ${borderColor}; margin-top: 0.1rem; line-height: 1.2;">${risks[0]?.message || 'Issue'}</div>` : `<div style="height: 0.8rem;"></div>`}
                 </td>
@@ -988,23 +997,7 @@ function renderPositionSpecificTable(players, position = 'all') {
     }
 
     const currentGW = getActiveGW(); // Use active GW for upcoming fixtures
-
-    // Get my team's player IDs from cache
-    let myPlayerIds = new Set();
-    const cachedTeamId = localStorage.getItem('fplanner_team_id');
-    if (cachedTeamId) {
-        const cachedTeamData = localStorage.getItem(`fplanner_team_${cachedTeamId}`);
-        if (cachedTeamData) {
-            try {
-                const teamData = JSON.parse(cachedTeamData);
-                if (teamData && teamData.picks && teamData.picks.picks) {
-                    myPlayerIds = new Set(teamData.picks.picks.map(p => p.element));
-                }
-            } catch (e) {
-                console.log('Could not parse cached team data for highlighting');
-            }
-        }
-    }
+    const myPlayerIds = getMyPlayerIdSet();
 
     // Get next 5 fixtures headers
     const fixtureHeaders = getFixtureHeaders(5, 1);
@@ -1106,10 +1099,13 @@ function renderPositionSpecificTable(players, position = 'all') {
     // Render rows
     players.forEach((player, index) => {
         // Check if player is in my team
-        const isMyPlayer = myPlayerIds.has(player.id);
+        const isMyPlayer = Boolean(player.__isMine || myPlayerIds.has(player.id));
 
-        // Highlight my players with soft purple background (more visible now)
-        const rowBg = isMyPlayer ? 'rgba(139, 92, 246, 0.15)' : (index % 2 === 0 ? 'var(--bg-secondary)' : 'var(--bg-primary)');
+        const rowBg = isMyPlayer ? 'rgba(56, 189, 248, 0.12)' : (index % 2 === 0 ? 'var(--bg-secondary)' : 'var(--bg-primary)');
+        const rowBorder = isMyPlayer ? 'border-left: 3px solid var(--primary-color);' : '';
+        const myBadge = isMyPlayer
+            ? '<span style="margin-left: 0.25rem; font-size: 0.65rem; color: #0284c7; background: rgba(14, 165, 233, 0.2); padding: 0.05rem 0.4rem; border-radius: 999px; font-weight: 600;">My Player</span>'
+            : '';
 
         // Calculate common metrics
         const ppm = calculatePPM(player);
@@ -1139,7 +1135,7 @@ function renderPositionSpecificTable(players, position = 'all') {
         // Get fixtures
         const next5 = getFixtures(player.team, 10, false).filter(f => f.event > currentGW).slice(0, 5);
 
-        html += `<tr style="background: ${rowBg}; border-bottom: 1px solid var(--border-color);">`;
+        html += `<tr style="background: ${rowBg}; border-bottom: 1px solid var(--border-color); ${rowBorder}">`;
 
         // Position-specific columns
         if (position === 'GKP') {
@@ -1149,7 +1145,10 @@ function renderPositionSpecificTable(players, position = 'all') {
             const cs = player.clean_sheets || 0;
 
             html += `
-                <td style="padding: 0.75rem 0.5rem;"><strong>${escapeHtml(player.web_name)}</strong>${isMyPlayer ? ' <span style="color: #8b5cf6; font-size: 0.75rem;">⭐</span>' : ''}</td>
+                <td style="padding: 0.75rem 0.5rem; display: flex; align-items: center; gap: 0.3rem;">
+                    <strong>${escapeHtml(player.web_name)}</strong>
+                    ${myBadge}
+                </td>
                 <td style="padding: 0.75rem 0.5rem;">${getTeamShortName(player.team)}</td>
                 <td style="padding: 0.75rem 0.5rem; text-align: center;">${formatCurrency(player.now_cost)}</td>
                 <td style="padding: 0.75rem 0.5rem; text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 600;">${player.total_points}</td>
@@ -1171,7 +1170,10 @@ function renderPositionSpecificTable(players, position = 'all') {
             const ga = (player.goals_scored || 0) + (player.assists || 0);
 
             html += `
-                <td style="padding: 0.75rem 0.5rem;"><strong>${escapeHtml(player.web_name)}</strong>${isMyPlayer ? ' <span style="color: #8b5cf6; font-size: 0.75rem;">⭐</span>' : ''}</td>
+                <td style="padding: 0.75rem 0.5rem; display: flex; align-items: center; gap: 0.3rem;">
+                    <strong>${escapeHtml(player.web_name)}</strong>
+                    ${myBadge}
+                </td>
                 <td style="padding: 0.75rem 0.5rem;">${getTeamShortName(player.team)}</td>
                 <td style="padding: 0.75rem 0.5rem; text-align: center;">${formatCurrency(player.now_cost)}</td>
                 <td style="padding: 0.75rem 0.5rem; text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 600;">${player.total_points}</td>
@@ -1194,7 +1196,10 @@ function renderPositionSpecificTable(players, position = 'all') {
             const pk = player.penalties_order === 1 ? '⚽' : '—';
 
             html += `
-                <td style="padding: 0.75rem 0.5rem;"><strong>${escapeHtml(player.web_name)}</strong>${isMyPlayer ? ' <span style="color: #8b5cf6; font-size: 0.75rem;">⭐</span>' : ''}</td>
+                <td style="padding: 0.75rem 0.5rem; display: flex; align-items: center; gap: 0.3rem;">
+                    <strong>${escapeHtml(player.web_name)}</strong>
+                    ${myBadge}
+                </td>
                 <td style="padding: 0.75rem 0.5rem;">${getTeamShortName(player.team)}</td>
                 <td style="padding: 0.75rem 0.5rem; text-align: center;">${formatCurrency(player.now_cost)}</td>
                 <td style="padding: 0.75rem 0.5rem; text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 600;">${player.total_points}</td>
@@ -1214,7 +1219,10 @@ function renderPositionSpecificTable(players, position = 'all') {
             // ALL positions - simplified view
             html += `
                 <td style="padding: 0.75rem 0.5rem; font-weight: 600;">${getPositionShort(player)}</td>
-                <td style="padding: 0.75rem 0.5rem;"><strong>${escapeHtml(player.web_name)}</strong>${isMyPlayer ? ' <span style="color: #8b5cf6; font-size: 0.75rem;">⭐</span>' : ''}</td>
+                <td style="padding: 0.75rem 0.5rem; display: flex; align-items: center; gap: 0.3rem;">
+                    <strong>${escapeHtml(player.web_name)}</strong>
+                    ${myBadge}
+                </td>
                 <td style="padding: 0.75rem 0.5rem;">${getTeamShortName(player.team)}</td>
                 <td style="padding: 0.75rem 0.5rem; text-align: center;">${formatCurrency(player.now_cost)}</td>
                 <td style="padding: 0.75rem 0.5rem; text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 600;">${player.total_points}</td>
@@ -1252,6 +1260,38 @@ function renderPositionSpecificTable(players, position = 'all') {
     `;
 
     return html;
+}
+
+function getMyPlayerIdSet() {
+    const ids = new Set();
+
+    const sharedPicks = sharedState?.myTeamData?.picks?.picks;
+    if (sharedPicks && sharedPicks.length) {
+        sharedPicks.forEach(pick => ids.add(pick.element));
+        return ids;
+    }
+
+    const cachedTeamId = localStorage.getItem('fplanner_team_id');
+    if (!cachedTeamId) {
+        return ids;
+    }
+
+    const cachedTeamData = localStorage.getItem(`fplanner_team_${cachedTeamId}`);
+    if (!cachedTeamData) {
+        return ids;
+    }
+
+    try {
+        const parsed = JSON.parse(cachedTeamData);
+        const picks = parsed?.picks?.picks;
+        if (Array.isArray(picks)) {
+            picks.forEach(pick => ids.add(pick.element));
+        }
+    } catch (err) {
+        console.warn('Unable to parse cached team data for my-player highlighting', err);
+    }
+
+    return ids;
 }
 
 /**

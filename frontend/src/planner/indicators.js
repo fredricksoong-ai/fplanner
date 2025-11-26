@@ -174,14 +174,8 @@ function formatValue(value, type) {
     if (value === null || value === undefined || Number.isNaN(value)) {
         return '—';
     }
-    if (type === 'points') {
-        return formatDecimal(value);
-    }
     if (type === 'ownership') {
         return `${formatDecimal(value)}%`;
-    }
-    if (type === 'xgi') {
-        return formatDecimal(value);
     }
     return formatDecimal(value);
 }
@@ -196,16 +190,10 @@ function formatDelta(delta, type) {
     if (delta === null || delta === undefined || Number.isNaN(delta)) {
         return '0.0';
     }
-    if (type === 'points') {
-        const sign = delta >= 0 ? '+' : '';
-        return `${sign}${formatDecimal(delta)}`;
-    }
-    if (type === 'ownership') {
-        const sign = delta >= 0 ? '+' : '';
-        return `${sign}${formatDecimal(delta)}%`;
-    }
     const sign = delta >= 0 ? '+' : '';
-    return `${sign}${formatDecimal(delta)}`;
+    return type === 'ownership'
+        ? `${sign}${formatDecimal(delta)}%`
+        : `${sign}${formatDecimal(delta)}`;
 }
 
 /**
@@ -242,23 +230,24 @@ function renderLeagueComparisonLine(leagueComparison, type) {
         return '';
     }
 
-    const parts = [];
-    if (avg !== null && avg !== undefined) {
-        parts.push(`Avg ${formatValue(avg, type)}`);
-    }
-    if (percentile !== null && percentile !== undefined) {
-        parts.push(`${percentile}th pct`);
-    }
+    const avgText = (avg !== null && avg !== undefined) ? formatValue(avg, type) : null;
+    const percentileText = (percentile !== null && percentile !== undefined)
+        ? `${percentile}<sup>th</sup> pct`
+        : null;
 
-    if (parts.length === 0) return '';
+    if (!avgText && !percentileText) {
+        return '';
+    }
 
     return `
         <div style="
             font-size: 0.6rem;
             color: var(--text-tertiary);
             margin-top: 0.25rem;
+            line-height: 1.2;
         ">
-            ${parts.join(' • ')}
+            ${avgText ? `Avg ${avgText}<br>` : ''}
+            ${percentileText ? `${percentileText}` : ''}
         </div>
     `;
 }

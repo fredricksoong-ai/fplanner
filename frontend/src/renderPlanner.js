@@ -190,7 +190,7 @@ function renderPlannerHeader(gwNumber, highCount, mediumCount, lowCount) {
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
                     <h1 style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary); margin: 0;">
-                        <i class="fas fa-calendar-check" style="margin-right: 0.5rem; color: var(--primary-color);"></i>
+                        <i class="fas fa-calendar-check" style="margin-right: 0.5rem; color: var(--accent-color);"></i>
                         Planner
                     </h1>
                     <p style="font-size: 0.7rem; color: var(--text-secondary); margin: 0.2rem 0 0 0;">

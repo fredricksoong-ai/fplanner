@@ -7,6 +7,7 @@ import { getAllPlayers } from '../data.js';
 import { getCurrentGW, calculateMinutesPercentage, sortPlayers } from '../utils.js';
 import { calculateFixtureDifficulty } from '../fixtures.js';
 import { isMobileDevice } from '../renderMyTeamMobile.js';
+import { sharedState } from '../sharedState.js';
 
 /**
  * Render Analysis Overview tab
@@ -23,6 +24,8 @@ export function renderAnalysisOverview(
     renderPositionSpecificTable
 ) {
     let players = getAllPlayers();
+    const myTeamPicks = sharedState?.myTeamData?.picks?.picks || [];
+    const myPlayerIds = new Set(myTeamPicks.map(pick => pick.element));
     const isMobile = isMobileDevice();
 
     // Filter by position if selected
@@ -35,6 +38,11 @@ export function renderAnalysisOverview(
     const bestValue = players.filter(p => calculateMinutesPercentage(p, getCurrentGW()) > 30);
     const top15Value = sortPlayers(bestValue, 'ppm', false).slice(0, 15);
     const top15Form = sortPlayers(bestValue, 'form', false).slice(0, 15);
+
+    const annotate = list => list.map(player => ({
+        ...player,
+        __isMine: myPlayerIds.has(player.id)
+    }));
 
     // Penalty takers (exclude GKP)
     const penaltyTakers = players.filter(p =>
@@ -53,7 +61,7 @@ export function renderAnalysisOverview(
             defensiveSection = `
                 <div style="margin-top: 3rem;">
                     ${renderSectionHeader('🛡️', 'Defensive Standouts', `Top ${position === 'all' ? 'outfield players' : position} by defensive contribution per 90`)}
-                    ${isMobile ? renderPositionSpecificTableMobile(topDefensive, 'def90') : renderPositionSpecificTable(topDefensive, position)}
+                    ${isMobile ? renderPositionSpecificTableMobile(annotate(topDefensive), 'def90') : renderPositionSpecificTable(annotate(topDefensive), position)}
                 </div>
             `;
         }
@@ -64,26 +72,26 @@ export function renderAnalysisOverview(
             <!-- Section 1: Top Performers -->
             <div style="margin-bottom: 3rem;">
                 ${renderSectionHeader('🏆', 'Top Performers', `Top ${position === 'all' ? '20 players' : '20 ' + position} by total points`)}
-                ${isMobile ? renderPositionSpecificTableMobile(top20, 'total') : renderPositionSpecificTable(top20, position)}
+                ${isMobile ? renderPositionSpecificTableMobile(annotate(top20), 'total') : renderPositionSpecificTable(annotate(top20), position)}
             </div>
 
             <!-- Section 2: Best Value -->
             <div style="margin-bottom: 3rem;">
                 ${renderSectionHeader('💰', 'Best Value', 'Top 15 by points per million (min 30% minutes played)')}
-                ${isMobile ? renderPositionSpecificTableMobile(top15Value, 'ppm') : renderPositionSpecificTable(top15Value, position)}
+                ${isMobile ? renderPositionSpecificTableMobile(annotate(top15Value), 'ppm') : renderPositionSpecificTable(annotate(top15Value), position)}
             </div>
 
             <!-- Section 3: Form Stars -->
             <div style="margin-bottom: 3rem;">
                 ${renderSectionHeader('🔥', 'Form Stars', 'Top 15 by recent form (min 30% minutes played)')}
-                ${isMobile ? renderPositionSpecificTableMobile(top15Form, 'ppm') : renderPositionSpecificTable(top15Form, position)}
+                ${isMobile ? renderPositionSpecificTableMobile(annotate(top15Form), 'ppm') : renderPositionSpecificTable(annotate(top15Form), position)}
             </div>
 
             <!-- Section 4: Penalty Takers -->
             ${penaltyTakers.length > 0 ? `
                 <div style="margin-top: 3rem;">
                     ${renderSectionHeader('⚽', 'Penalty Takers', 'First-choice penalty takers sorted by upcoming fixture difficulty')}
-                    ${isMobile ? renderPositionSpecificTableMobile(penaltyTakers.slice(0, 15), 'penalty') : renderPositionSpecificTable(penaltyTakers.slice(0, 15), position)}
+                    ${isMobile ? renderPositionSpecificTableMobile(annotate(penaltyTakers.slice(0, 15)), 'penalty') : renderPositionSpecificTable(annotate(penaltyTakers.slice(0, 15)), position)}
                 </div>
             ` : ''}
 
