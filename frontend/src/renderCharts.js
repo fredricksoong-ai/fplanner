@@ -42,66 +42,170 @@ export async function renderCharts(chartType = 'points-price') {
     const container = document.getElementById('app-container');
     currentChartType = chartType;
 
+    // Detect mobile
+    const isMobile = window.innerWidth <= 768;
+
     // Chart type configurations
     const chartTypes = {
-        'points-price': { icon: '💰', label: 'Points vs Price' },
-        'form-price': { icon: '🔥', label: 'Form vs Price' },
-        'ownership-form': { icon: '📊', label: 'Ownership vs Form' },
-        'fdr-form': { icon: '🗓️', label: 'Fixtures vs Form' },
-        'xgi-actual': { icon: '🎯', label: 'xGI vs Actual' },
-        'xgc-actual': { icon: '🛡️', label: 'xGC vs Actual' },
-        'ict-points': { icon: '📈', label: 'ICT vs Points' },
-        'minutes-efficiency': { icon: '⚡', label: 'Minutes Efficiency' }
+        'points-price': { icon: '💰', label: 'Points vs Price', shortLabel: 'Points/Price' },
+        'form-price': { icon: '🔥', label: 'Form vs Price', shortLabel: 'Form/Price' },
+        'ownership-form': { icon: '📊', label: 'Ownership vs Form', shortLabel: 'Own/Form' },
+        'fdr-form': { icon: '🗓️', label: 'Fixtures vs Form', shortLabel: 'Fix/Form' },
+        'xgi-actual': { icon: '🎯', label: 'xGI vs Actual', shortLabel: 'xGI' },
+        'xgc-actual': { icon: '🛡️', label: 'xGC vs Actual', shortLabel: 'xGC' },
+        'ict-points': { icon: '📈', label: 'ICT vs Points', shortLabel: 'ICT' },
+        'minutes-efficiency': { icon: '⚡', label: 'Minutes Efficiency', shortLabel: 'Minutes' }
     };
 
     container.innerHTML = `
-        <div style="padding: 2rem;">
-            <h1 style="font-size: 2rem; font-weight: 700; color: var(--primary-color); margin-bottom: 1rem;">
-                <i class="fas fa-chart-line"></i> Data Visualizations
+        <div style="padding: ${isMobile ? '1rem 0.75rem' : '2rem'};">
+            <h1 style="
+                font-size: ${isMobile ? '1.5rem' : '2rem'};
+                font-weight: 700;
+                color: var(--primary-color);
+                margin-bottom: ${isMobile ? '0.5rem' : '1rem'};
+                padding: 0 ${isMobile ? '0.25rem' : '0'};
+            ">
+                <i class="fas fa-chart-line"></i> ${isMobile ? 'Charts' : 'Data Visualizations'}
             </h1>
-            <p style="color: var(--text-secondary); margin-bottom: 2rem;">
-                Interactive charts to help you find value picks and differentials
+            <p style="
+                color: var(--text-secondary);
+                margin-bottom: ${isMobile ? '1rem' : '2rem'};
+                font-size: ${isMobile ? '0.8rem' : '1rem'};
+                padding: 0 ${isMobile ? '0.25rem' : '0'};
+            ">
+                ${isMobile ? 'Find value picks & differentials' : 'Interactive charts to help you find value picks and differentials'}
             </p>
 
             <!-- Chart Type Tabs -->
-            <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; overflow-x: auto; padding-bottom: 0.5rem;">
+            <div style="
+                display: flex;
+                gap: ${isMobile ? '0.4rem' : '0.5rem'};
+                margin-bottom: 1rem;
+                overflow-x: auto;
+                padding: 0 ${isMobile ? '0.25rem' : '0'} 0.75rem;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: thin;
+            ">
                 ${Object.entries(chartTypes).map(([type, config]) => `
                     <button
-                        class="chart-type-tab"
+                        class="chart-type-tab touch-target"
                         data-chart-type="${type}"
                         style="
-                            padding: 0.75rem 1.25rem;
+                            padding: ${isMobile ? '0.6rem 0.9rem' : '0.75rem 1.25rem'};
                             background: ${chartType === type ? 'var(--primary-color)' : 'var(--bg-secondary)'};
                             color: ${chartType === type ? 'white' : 'var(--text-primary)'};
                             border: ${chartType === type ? 'none' : '1px solid var(--border-color)'};
-                            border-radius: 0.5rem;
+                            border-radius: ${isMobile ? '6px' : '0.5rem'};
                             cursor: pointer;
                             font-weight: ${chartType === type ? '700' : '500'};
-                            font-size: 0.875rem;
+                            font-size: ${isMobile ? '0.75rem' : '0.875rem'};
                             white-space: nowrap;
                             transition: all 0.2s;
+                            min-height: ${isMobile ? '44px' : 'auto'};
+                            display: flex;
+                            align-items: center;
+                            gap: 0.3rem;
+                            box-shadow: ${chartType === type ? '0 2px 4px rgba(0, 0, 0, 0.1)' : 'none'};
                         "
                     >
-                        ${config.icon} ${config.label}
+                        <span>${config.icon}</span>
+                        <span>${isMobile ? config.shortLabel : config.label}</span>
                     </button>
                 `).join('')}
             </div>
 
             <!-- Position Filter -->
-            <div style="display: flex; gap: 0.5rem; margin-bottom: 2rem; flex-wrap: wrap;">
-                <button class="chart-position-filter" data-position="all" style="padding: 0.5rem 1rem; background: ${currentPositionFilter === 'all' ? 'var(--primary-color)' : 'var(--bg-secondary)'}; color: ${currentPositionFilter === 'all' ? 'white' : 'var(--text-primary)'}; border: ${currentPositionFilter === 'all' ? 'none' : '1px solid var(--border-color)'}; border-radius: 0.5rem; cursor: pointer; font-weight: ${currentPositionFilter === 'all' ? '600' : '500'}; transition: all 0.2s;">
-                    All Positions
+            <div style="
+                display: grid;
+                grid-template-columns: ${isMobile ? 'repeat(5, 1fr)' : 'repeat(5, auto)'};
+                gap: ${isMobile ? '0.4rem' : '0.5rem'};
+                margin-bottom: ${isMobile ? '1rem' : '2rem'};
+                padding: 0 ${isMobile ? '0.25rem' : '0'};
+            ">
+                <button class="chart-position-filter touch-target" data-position="all" style="
+                    padding: ${isMobile ? '0.6rem 0.5rem' : '0.5rem 1rem'};
+                    background: ${currentPositionFilter === 'all' ? 'var(--primary-color)' : 'var(--bg-secondary)'};
+                    color: ${currentPositionFilter === 'all' ? 'white' : 'var(--text-primary)'};
+                    border: ${currentPositionFilter === 'all' ? 'none' : '1px solid var(--border-color)'};
+                    border-radius: ${isMobile ? '6px' : '0.5rem'};
+                    cursor: pointer;
+                    font-weight: ${currentPositionFilter === 'all' ? '600' : '500'};
+                    font-size: ${isMobile ? '0.7rem' : '0.875rem'};
+                    transition: all 0.2s;
+                    min-height: ${isMobile ? '44px' : 'auto'};
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                ">
+                    ${isMobile ? 'All' : 'All Positions'}
                 </button>
-                <button class="chart-position-filter" data-position="GKP" style="padding: 0.5rem 1rem; background: ${currentPositionFilter === 'GKP' ? 'var(--primary-color)' : 'var(--bg-secondary)'}; color: ${currentPositionFilter === 'GKP' ? 'white' : 'var(--text-primary)'}; border: ${currentPositionFilter === 'GKP' ? 'none' : '1px solid var(--border-color)'}; border-radius: 0.5rem; cursor: pointer; font-weight: ${currentPositionFilter === 'GKP' ? '600' : '500'}; transition: all 0.2s;">
+                <button class="chart-position-filter touch-target" data-position="GKP" style="
+                    padding: ${isMobile ? '0.6rem 0.5rem' : '0.5rem 1rem'};
+                    background: ${currentPositionFilter === 'GKP' ? 'var(--primary-color)' : 'var(--bg-secondary)'};
+                    color: ${currentPositionFilter === 'GKP' ? 'white' : 'var(--text-primary)'};
+                    border: ${currentPositionFilter === 'GKP' ? 'none' : '1px solid var(--border-color)'};
+                    border-radius: ${isMobile ? '6px' : '0.5rem'};
+                    cursor: pointer;
+                    font-weight: ${currentPositionFilter === 'GKP' ? '600' : '500'};
+                    font-size: ${isMobile ? '0.7rem' : '0.875rem'};
+                    transition: all 0.2s;
+                    min-height: ${isMobile ? '44px' : 'auto'};
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                ">
                     GKP
                 </button>
-                <button class="chart-position-filter" data-position="DEF" style="padding: 0.5rem 1rem; background: ${currentPositionFilter === 'DEF' ? 'var(--primary-color)' : 'var(--bg-secondary)'}; color: ${currentPositionFilter === 'DEF' ? 'white' : 'var(--text-primary)'}; border: ${currentPositionFilter === 'DEF' ? 'none' : '1px solid var(--border-color)'}; border-radius: 0.5rem; cursor: pointer; font-weight: ${currentPositionFilter === 'DEF' ? '600' : '500'}; transition: all 0.2s;">
+                <button class="chart-position-filter touch-target" data-position="DEF" style="
+                    padding: ${isMobile ? '0.6rem 0.5rem' : '0.5rem 1rem'};
+                    background: ${currentPositionFilter === 'DEF' ? 'var(--primary-color)' : 'var(--bg-secondary)'};
+                    color: ${currentPositionFilter === 'DEF' ? 'white' : 'var(--text-primary)'};
+                    border: ${currentPositionFilter === 'DEF' ? 'none' : '1px solid var(--border-color)'};
+                    border-radius: ${isMobile ? '6px' : '0.5rem'};
+                    cursor: pointer;
+                    font-weight: ${currentPositionFilter === 'DEF' ? '600' : '500'};
+                    font-size: ${isMobile ? '0.7rem' : '0.875rem'};
+                    transition: all 0.2s;
+                    min-height: ${isMobile ? '44px' : 'auto'};
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                ">
                     DEF
                 </button>
-                <button class="chart-position-filter" data-position="MID" style="padding: 0.5rem 1rem; background: ${currentPositionFilter === 'MID' ? 'var(--primary-color)' : 'var(--bg-secondary)'}; color: ${currentPositionFilter === 'MID' ? 'white' : 'var(--text-primary)'}; border: ${currentPositionFilter === 'MID' ? 'none' : '1px solid var(--border-color)'}; border-radius: 0.5rem; cursor: pointer; font-weight: ${currentPositionFilter === 'MID' ? '600' : '500'}; transition: all 0.2s;">
+                <button class="chart-position-filter touch-target" data-position="MID" style="
+                    padding: ${isMobile ? '0.6rem 0.5rem' : '0.5rem 1rem'};
+                    background: ${currentPositionFilter === 'MID' ? 'var(--primary-color)' : 'var(--bg-secondary)'};
+                    color: ${currentPositionFilter === 'MID' ? 'white' : 'var(--text-primary)'};
+                    border: ${currentPositionFilter === 'MID' ? 'none' : '1px solid var(--border-color)'};
+                    border-radius: ${isMobile ? '6px' : '0.5rem'};
+                    cursor: pointer;
+                    font-weight: ${currentPositionFilter === 'MID' ? '600' : '500'};
+                    font-size: ${isMobile ? '0.7rem' : '0.875rem'};
+                    transition: all 0.2s;
+                    min-height: ${isMobile ? '44px' : 'auto'};
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                ">
                     MID
                 </button>
-                <button class="chart-position-filter" data-position="FWD" style="padding: 0.5rem 1rem; background: ${currentPositionFilter === 'FWD' ? 'var(--primary-color)' : 'var(--bg-secondary)'}; color: ${currentPositionFilter === 'FWD' ? 'white' : 'var(--text-primary)'}; border: ${currentPositionFilter === 'FWD' ? 'none' : '1px solid var(--border-color)'}; border-radius: 0.5rem; cursor: pointer; font-weight: ${currentPositionFilter === 'FWD' ? '600' : '500'}; transition: all 0.2s;">
+                <button class="chart-position-filter touch-target" data-position="FWD" style="
+                    padding: ${isMobile ? '0.6rem 0.5rem' : '0.5rem 1rem'};
+                    background: ${currentPositionFilter === 'FWD' ? 'var(--primary-color)' : 'var(--bg-secondary)'};
+                    color: ${currentPositionFilter === 'FWD' ? 'white' : 'var(--text-primary)'};
+                    border: ${currentPositionFilter === 'FWD' ? 'none' : '1px solid var(--border-color)'};
+                    border-radius: ${isMobile ? '6px' : '0.5rem'};
+                    cursor: pointer;
+                    font-weight: ${currentPositionFilter === 'FWD' ? '600' : '500'};
+                    font-size: ${isMobile ? '0.7rem' : '0.875rem'};
+                    transition: all 0.2s;
+                    min-height: ${isMobile ? '44px' : 'auto'};
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                ">
                     FWD
                 </button>
             </div>
@@ -110,26 +214,36 @@ export async function renderCharts(chartType = 'points-price') {
             <div id="chart-content-container"></div>
 
             <!-- Legend -->
-            <div class="card-secondary" style="border-radius: 8px; margin-top: 1rem;">
-                <div style="display: flex; gap: 2rem; flex-wrap: wrap; justify-content: center; font-size: 0.875rem;">
-                    <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <div style="width: 16px; height: 16px; background: #fbbf24; border-radius: 50%;"></div>
+            <div class="card-secondary" style="
+                border-radius: 8px;
+                margin-top: 1rem;
+                padding: ${isMobile ? '0.75rem' : '1rem'};
+            ">
+                <div style="
+                    display: grid;
+                    grid-template-columns: ${isMobile ? 'repeat(2, 1fr)' : 'repeat(5, auto)'};
+                    gap: ${isMobile ? '0.75rem' : '2rem'};
+                    justify-content: ${isMobile ? 'stretch' : 'center'};
+                    font-size: ${isMobile ? '0.75rem' : '0.875rem'};
+                ">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; justify-content: ${isMobile ? 'flex-start' : 'center'};">
+                        <div style="width: ${isMobile ? '14px' : '16px'}; height: ${isMobile ? '14px' : '16px'}; background: #fbbf24; border-radius: 50%; flex-shrink: 0;"></div>
                         <span>GKP</span>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <div style="width: 16px; height: 16px; background: #3b82f6; border-radius: 50%;"></div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; justify-content: ${isMobile ? 'flex-start' : 'center'};">
+                        <div style="width: ${isMobile ? '14px' : '16px'}; height: ${isMobile ? '14px' : '16px'}; background: #3b82f6; border-radius: 50%; flex-shrink: 0;"></div>
                         <span>DEF</span>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <div style="width: 16px; height: 16px; background: #10b981; border-radius: 50%;"></div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; justify-content: ${isMobile ? 'flex-start' : 'center'};">
+                        <div style="width: ${isMobile ? '14px' : '16px'}; height: ${isMobile ? '14px' : '16px'}; background: #10b981; border-radius: 50%; flex-shrink: 0;"></div>
                         <span>MID</span>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <div style="width: 16px; height: 16px; background: #ef4444; border-radius: 50%;"></div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; justify-content: ${isMobile ? 'flex-start' : 'center'};">
+                        <div style="width: ${isMobile ? '14px' : '16px'}; height: ${isMobile ? '14px' : '16px'}; background: #ef4444; border-radius: 50%; flex-shrink: 0;"></div>
                         <span>FWD</span>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <span style="font-size: 1.25rem;">⭐</span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; justify-content: ${isMobile ? 'flex-start' : 'center'}; ${isMobile ? 'grid-column: span 2;' : ''}">
+                        <span style="font-size: ${isMobile ? '1.1rem' : '1.25rem'};">⭐</span>
                         <span>Your Team</span>
                     </div>
                 </div>
