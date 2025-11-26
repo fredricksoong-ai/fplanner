@@ -32,7 +32,6 @@ import { calculateTeamMetrics, calculateProjectedTeamMetrics } from './planner/m
 import { renderMetricIndicators } from './planner/indicators.js';
 import { renderCostSummary, getCurrentCostSummary } from './planner/costCalculator.js';
 import { attachPlannerListeners } from './planner/eventHandlers.js';
-import { loadPlannerAIInsights } from './planner/aiInsights.js';
 
 // ============================================================================
 // MAIN RENDER FUNCTION
@@ -132,7 +131,6 @@ export async function renderPlanner() {
         const html = `
             <div style="padding: 0.5rem;">
                 ${renderPlannerHeader(gwNumber, highCount, mediumCount, lowCount)}
-                <div id="planner-ai-insights"></div>
                 ${renderMetricIndicators(originalMetrics, projectedMetrics)}
                 ${renderCostSummary(costSummary)}
                 ${renderUnifiedFixtureTable(currentPlayers, riskPlayerMap, teamData.picks, gwNumber)}
@@ -146,11 +144,6 @@ export async function renderPlanner() {
         
         // Attach old expandable replacement listeners (for backward compatibility)
         attachOldPlannerListeners(currentPlayers, riskPlayerMap, teamData.picks, gwNumber);
-        
-        // Load AI insights (async, won't block render)
-        loadPlannerAIInsights().catch(err => {
-            console.error('Failed to load AI insights:', err);
-        });
 
     } catch (err) {
         console.error('Failed to load planner:', err);
