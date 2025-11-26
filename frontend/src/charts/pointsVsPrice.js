@@ -5,7 +5,13 @@
 
 import { getAllPlayers } from '../data.js';
 import { getPositionShort, calculatePPM, escapeHtml } from '../utils.js';
-import { createChartCard, setupChartExport, filterPlayersByPosition, getPositionColor } from './chartHelpers.js';
+import {
+    createChartCard,
+    setupChartExport,
+    filterPlayersByPosition,
+    getPositionColor,
+    limitPlayers
+} from './chartHelpers.js';
 
 /**
  * Render Points vs Price scatter plot
@@ -21,6 +27,10 @@ export async function renderPointsPriceChart(contentContainer, echarts, position
     }
 
     // Create chart card HTML
+    const isMobile = window.innerWidth <= 768;
+    const chartHeight = isMobile ? 360 : 600;
+    const chartMinHeight = isMobile ? 280 : 400;
+
     contentContainer.innerHTML = createChartCard({
         title: 'Points vs Price',
         icon: '💰',
@@ -30,7 +40,10 @@ export async function renderPointsPriceChart(contentContainer, echarts, position
             { color: '#3b82f6', label: 'Premium Zone (high price, high points)' },
             { color: '#ef4444', label: 'Trap Zone (high price, low points - avoid!)' }
         ],
-        chartId: 'points-price-chart'
+        chartId: 'points-price-chart',
+        exportId: 'points-price-export',
+        height: chartHeight,
+        minHeight: chartMinHeight
     });
 
     // Wait for DOM to update
@@ -53,6 +66,7 @@ export async function renderPointsPriceChart(contentContainer, echarts, position
 
     // Filter out very low-point players (less than 10 points)
     players = players.filter(p => (p.total_points || 0) >= 10);
+    players = limitPlayers(players);
 
     // Get user's team player IDs
     const myTeamPlayerIds = getUserTeamPlayerIds();
@@ -127,7 +141,7 @@ export async function renderPointsPriceChart(contentContainer, echarts, position
     }
 
     // Setup export functionality
-    setupChartExport(chartInstance);
+    setupChartExport(chartInstance, 'points-price-export');
 
     // Handle window resize
     const resizeHandler = () => chartInstance?.resize();

@@ -14,7 +14,16 @@
  * @returns {string} HTML string for chart card
  */
 export function createChartCard(config) {
-    const { title, icon, description, zones, chartId } = config;
+    const {
+        title,
+        icon,
+        description,
+        zones,
+        chartId,
+        exportId = `${chartId}-export`,
+        height = 600,
+        minHeight = 400
+    } = config;
 
     const zonesHTML = zones ? `
         <div style="display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.75rem; color: var(--text-secondary);">
@@ -35,19 +44,19 @@ export function createChartCard(config) {
                     ${zonesHTML}
                 </div>
                 <button
-                    id="export-chart-btn"
+                    id="${exportId}"
                     style="
-                        padding: 0.5rem 1rem;
+                        padding: 0.45rem 0.85rem;
                         background: var(--accent-color);
                         color: white;
                         border: none;
                         border-radius: 6px;
                         cursor: pointer;
-                        font-size: 0.875rem;
+                        font-size: 0.8rem;
                         font-weight: 600;
                         display: flex;
                         align-items: center;
-                        gap: 0.5rem;
+                        gap: 0.4rem;
                         transition: opacity 0.2s;
                     "
                 >
@@ -57,7 +66,7 @@ export function createChartCard(config) {
             </div>
 
             <!-- Chart Container -->
-            <div id="${chartId}" style="width: 100%; height: 600px; min-height: 400px; margin-top: 1rem;"></div>
+            <div id="${chartId}" style="width: 100%; height: ${height}px; min-height: ${minHeight}px; margin-top: 1rem;"></div>
         </div>
     `;
 }
@@ -66,8 +75,8 @@ export function createChartCard(config) {
  * Setup chart export button functionality
  * @param {Object} chartInstance - ECharts instance
  */
-export function setupChartExport(chartInstance) {
-    const exportBtn = document.getElementById('export-chart-btn');
+export function setupChartExport(chartInstance, exportBtnId = 'export-chart-btn') {
+    const exportBtn = document.getElementById(exportBtnId);
     if (exportBtn && chartInstance) {
         exportBtn.onclick = () => {
             const url = chartInstance.getDataURL({
@@ -89,8 +98,9 @@ export function setupChartExport(chartInstance) {
 export async function loadECharts() {
     if (!window.echarts) {
         const echartsModule = await import('echarts');
-        window.echarts = echartsModule;
-        return echartsModule;
+        const instance = echartsModule.default || echartsModule;
+        window.echarts = instance;
+        return instance;
     }
     return window.echarts;
 }
@@ -155,3 +165,23 @@ export const commonChartOptions = {
         padding: 10
     }
 };
+
+/**
+ * Limit chart dataset size for performance (default: top 50 by total points)
+ * @param {Array} players
+ * @param {number} limit
+ * @param {Function|string} selector - function or property name
+ */
+export function limitPlayers(players, limit = 50, selector = (p) => p.total_points || 0) {
+    if (!Array.isArray(players)) return [];
+    const getValue = typeof selector === 'function'
+        ? selector
+        : (p) => {
+            const value = selector && typeof selector === 'string' ? p[selector] : (p.total_points || 0);
+            return typeof value === 'number' ? value : (parseFloat(value) || 0);
+        };
+
+    return [...players]
+        .sort((a, b) => getValue(b) - getValue(a))
+        .slice(0, limit);
+}

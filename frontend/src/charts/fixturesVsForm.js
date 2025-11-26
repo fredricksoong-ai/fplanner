@@ -6,7 +6,7 @@
 import { getAllPlayers } from '../data.js';
 import { getPositionShort, escapeHtml } from '../utils.js';
 import { calculateFixtureDifficulty } from '../fixtures.js';
-import { createChartCard, setupChartExport } from './chartHelpers.js';
+import { createChartCard, setupChartExport, limitPlayers } from './chartHelpers.js';
 
 /**
  * Render Fixture Difficulty vs Form scatter plot
@@ -18,6 +18,10 @@ import { createChartCard, setupChartExport } from './chartHelpers.js';
 export async function renderFixturesVsFormChart(contentContainer, echarts, positionFilter) {
     if (!contentContainer) return null;
 
+    const isMobile = window.innerWidth <= 768;
+    const chartHeight = isMobile ? 340 : 560;
+    const chartMinHeight = isMobile ? 260 : 380;
+
     contentContainer.innerHTML = createChartCard({
         title: 'Fixture Difficulty vs Form',
         icon: '🗓️',
@@ -27,7 +31,10 @@ export async function renderFixturesVsFormChart(contentContainer, echarts, posit
             { color: '#fbbf24', label: 'Fixture Swing (tough fixtures, high form)' },
             { color: '#ef4444', label: 'Avoid (tough fixtures, low form)' }
         ],
-        chartId: 'fdr-form-chart'
+        chartId: 'fdr-form-chart',
+        exportId: 'fdr-form-export',
+        height: chartHeight,
+        minHeight: chartMinHeight
     });
 
     await new Promise(resolve => setTimeout(resolve, 0));
@@ -42,6 +49,8 @@ export async function renderFixturesVsFormChart(contentContainer, echarts, posit
     if (positionFilter !== 'all') {
         players = players.filter(p => getPositionShort(p) === positionFilter);
     }
+
+    players = limitPlayers(players, 50, (p) => parseFloat(p.form) || 0);
 
     const chartData = players
         .filter(p => p.minutes > 90)
@@ -92,7 +101,7 @@ export async function renderFixturesVsFormChart(contentContainer, echarts, posit
         return null;
     }
 
-    setupChartExport(chartInstance);
+    setupChartExport(chartInstance, 'fdr-form-export');
     const resizeHandler = () => chartInstance?.resize();
     window.removeEventListener('resize', resizeHandler);
     window.addEventListener('resize', resizeHandler);

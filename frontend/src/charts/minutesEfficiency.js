@@ -5,7 +5,12 @@
 
 import { getAllPlayers } from '../data.js';
 import { getPositionShort, escapeHtml } from '../utils.js';
-import { createChartCard, setupChartExport, filterPlayersByPosition } from './chartHelpers.js';
+import {
+    createChartCard,
+    setupChartExport,
+    filterPlayersByPosition,
+    limitPlayers
+} from './chartHelpers.js';
 
 /**
  * Render Minutes Efficiency scatter plot
@@ -17,6 +22,10 @@ import { createChartCard, setupChartExport, filterPlayersByPosition } from './ch
 export async function renderMinutesEfficiencyChart(contentContainer, echarts, positionFilter) {
     if (!contentContainer) return null;
 
+    const isMobile = window.innerWidth <= 768;
+    const chartHeight = isMobile ? 340 : 560;
+    const chartMinHeight = isMobile ? 260 : 380;
+
     contentContainer.innerHTML = createChartCard({
         title: 'Minutes Efficiency (PP90)',
         icon: '⚡',
@@ -26,7 +35,10 @@ export async function renderMinutesEfficiencyChart(contentContainer, echarts, po
             { color: '#fbbf24', label: 'Efficient Rotation Risk (high PP90, low minutes)' },
             { color: '#ef4444', label: 'Inefficient (low PP90)' }
         ],
-        chartId: 'minutes-efficiency-chart'
+        chartId: 'minutes-efficiency-chart',
+        exportId: 'minutes-efficiency-export',
+        height: chartHeight,
+        minHeight: chartMinHeight
     });
 
     await new Promise(resolve => setTimeout(resolve, 0));
@@ -39,6 +51,7 @@ export async function renderMinutesEfficiencyChart(contentContainer, echarts, po
 
     let players = getAllPlayers().filter(p => p.minutes >= 90);
     players = filterPlayersByPosition(players, positionFilter);
+    players = limitPlayers(players, 50, (p) => ((p.total_points || 0) / Math.max(p.minutes || 1, 1)));
 
     const myTeamPlayerIds = getUserTeamPlayerIds();
 
@@ -101,7 +114,7 @@ export async function renderMinutesEfficiencyChart(contentContainer, echarts, po
         return null;
     }
 
-    setupChartExport(chartInstance);
+    setupChartExport(chartInstance, 'minutes-efficiency-export');
     const resizeHandler = () => chartInstance?.resize();
     window.removeEventListener('resize', resizeHandler);
     window.addEventListener('resize', resizeHandler);

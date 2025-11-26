@@ -5,7 +5,7 @@
 
 import { getAllPlayers } from '../data.js';
 import { getPositionShort, escapeHtml } from '../utils.js';
-import { createChartCard, setupChartExport } from './chartHelpers.js';
+import { createChartCard, setupChartExport, limitPlayers } from './chartHelpers.js';
 
 /**
  * Render xGI vs Actual scatter plot
@@ -17,6 +17,10 @@ import { createChartCard, setupChartExport } from './chartHelpers.js';
 export async function renderXgiVsActualChart(contentContainer, echarts, positionFilter) {
     if (!contentContainer) return null;
 
+    const isMobile = window.innerWidth <= 768;
+    const chartHeight = isMobile ? 340 : 560;
+    const chartMinHeight = isMobile ? 260 : 380;
+
     contentContainer.innerHTML = createChartCard({
         title: 'xGI vs Actual Goals + Assists',
         icon: '🎯',
@@ -25,7 +29,10 @@ export async function renderXgiVsActualChart(contentContainer, echarts, position
             { color: '#10b981', label: 'Overperforming (actual > xGI)' },
             { color: '#ef4444', label: 'Underperforming (actual < xGI)' }
         ],
-        chartId: 'xgi-actual-chart'
+        chartId: 'xgi-actual-chart',
+        exportId: 'xgi-actual-export',
+        height: chartHeight,
+        minHeight: chartMinHeight
     });
 
     await new Promise(resolve => setTimeout(resolve, 0));
@@ -45,6 +52,8 @@ export async function renderXgiVsActualChart(contentContainer, echarts, position
     if (positionFilter !== 'all' && (positionFilter === 'MID' || positionFilter === 'FWD')) {
         players = players.filter(p => getPositionShort(p) === positionFilter);
     }
+
+    players = limitPlayers(players, 50, (p) => (parseFloat(p.expected_goals || 0) + parseFloat(p.expected_assists || 0)));
 
     const chartData = players
         .map(p => {
@@ -91,7 +100,7 @@ export async function renderXgiVsActualChart(contentContainer, echarts, position
         return null;
     }
 
-    setupChartExport(chartInstance);
+    setupChartExport(chartInstance, 'xgi-actual-export');
     const resizeHandler = () => chartInstance?.resize();
     window.removeEventListener('resize', resizeHandler);
     window.addEventListener('resize', resizeHandler);

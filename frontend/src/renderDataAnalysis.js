@@ -63,6 +63,7 @@ import { renderAnalysisOverview as renderAnalysisOverviewModule } from './dataAn
 import { renderHiddenGems as renderHiddenGemsModule } from './dataAnalysis/hiddenGems.js';
 import { renderTransferTargets as renderTransferTargetsModule } from './dataAnalysis/transferTargets.js';
 import { renderTeamAnalysis as renderTeamAnalysisModule } from './dataAnalysis/teamAnalysis.js';
+import { renderChartsSkeleton, initializeChartsTab } from './dataAnalysis/chartsTab.js';
 import { getMyPlayerIdSet } from './utils/myPlayers.js';
 import { isWishlisted } from './wishlist/store.js';
 
@@ -197,6 +198,25 @@ export function renderDataAnalysis(subTab = 'overview', position = 'all') {
                 >
                     Team Analysis
                 </button>
+                <button
+                    class="analysis-tab-btn"
+                    data-tab="charts"
+                    data-position="${position}"
+                    style="
+                        padding: ${tabPadding};
+                        background: ${subTab === 'charts' ? 'var(--primary-color)' : 'transparent'};
+                        color: ${subTab === 'charts' ? 'white' : 'var(--text-primary)'};
+                        border: none;
+                        border-bottom: 3px solid ${subTab === 'charts' ? 'var(--primary-color)' : 'transparent'};
+                        cursor: pointer;
+                        font-weight: 600;
+                        font-size: ${tabFontSize};
+                        transition: all 0.2s;
+                        white-space: nowrap;
+                    "
+                >
+                    Charts
+                </button>
             </div>
 
             ${!isMobile ? `<!-- Position Filter -->
@@ -234,6 +254,8 @@ export function renderDataAnalysis(subTab = 'overview', position = 'all') {
         contentHTML = renderTransferTargets(position);
     } else if (subTab === 'team-analysis') {
         contentHTML = renderTeamAnalysis(position);
+    } else if (subTab === 'charts') {
+        contentHTML = renderChartsSkeleton(position);
     } else {
         contentHTML = renderAnalysisOverview(position);
     }
@@ -363,6 +385,10 @@ export function renderDataAnalysis(subTab = 'overview', position = 'all') {
             }
         });
         wishlistListenerAttached = true;
+    }
+
+    if (subTab === 'charts') {
+        initializeChartsTab(position);
     }
 }
 

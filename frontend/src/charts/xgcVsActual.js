@@ -5,7 +5,7 @@
 
 import { getAllPlayers } from '../data.js';
 import { getPositionShort, escapeHtml } from '../utils.js';
-import { createChartCard, setupChartExport } from './chartHelpers.js';
+import { createChartCard, setupChartExport, limitPlayers } from './chartHelpers.js';
 
 /**
  * Render xGC vs Actual scatter plot
@@ -17,6 +17,10 @@ import { createChartCard, setupChartExport } from './chartHelpers.js';
 export async function renderXgcVsActualChart(contentContainer, echarts, positionFilter) {
     if (!contentContainer) return null;
 
+    const isMobile = window.innerWidth <= 768;
+    const chartHeight = isMobile ? 340 : 560;
+    const chartMinHeight = isMobile ? 260 : 380;
+
     contentContainer.innerHTML = createChartCard({
         title: 'xGC vs Actual Goals Conceded',
         icon: '🛡️',
@@ -25,7 +29,10 @@ export async function renderXgcVsActualChart(contentContainer, echarts, position
             { color: '#10b981', label: 'Strong Defense (actual < xGC)' },
             { color: '#ef4444', label: 'Weak Defense (actual > xGC)' }
         ],
-        chartId: 'xgc-actual-chart'
+        chartId: 'xgc-actual-chart',
+        exportId: 'xgc-actual-export',
+        height: chartHeight,
+        minHeight: chartMinHeight
     });
 
     await new Promise(resolve => setTimeout(resolve, 0));
@@ -45,6 +52,8 @@ export async function renderXgcVsActualChart(contentContainer, echarts, position
     if (positionFilter !== 'all' && (positionFilter === 'GKP' || positionFilter === 'DEF')) {
         players = players.filter(p => getPositionShort(p) === positionFilter);
     }
+
+    players = limitPlayers(players, 50, (p) => (parseFloat(p.expected_goals_conceded || 0) + (p.goals_conceded || 0)));
 
     const chartData = players
         .map(p => {
@@ -91,7 +100,7 @@ export async function renderXgcVsActualChart(contentContainer, echarts, position
         return null;
     }
 
-    setupChartExport(chartInstance);
+    setupChartExport(chartInstance, 'xgc-actual-export');
     const resizeHandler = () => chartInstance?.resize();
     window.removeEventListener('resize', resizeHandler);
     window.addEventListener('resize', resizeHandler);
