@@ -980,55 +980,44 @@ function buildModalHTML(data) {
                     </button>
                 </div>
 
-                <!-- Content: 4-quadrant layout -->
-                <div style="padding: 0.75rem;">
-                    <!-- Injury/News Banner -->
-                    ${injuryBannerHTML}
-
-                    <!-- Top row: GW Stats | Ownership + League Owners -->
-                    <div style="display: flex; gap: 0.75rem; margin-bottom: 0.75rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border-color);">
-                        ${gwStatsHTML}
-                        ${ownershipAndLeagueHTML}
-                    </div>
-
-                    <!-- Bottom row: History + Fixtures | Alternatives -->
-                    <div style="display: flex; gap: 0.75rem;">
-                        <div style="flex: 1; min-width: 140px;">
-                            ${historyHTML}
-                            ${fixturesHTML}
+                <div style="padding: 0.75rem; display: flex; flex-direction: column; gap: 0.75rem;">
+                    <div>
+                        ${injuryBannerHTML}
+                        <div style="display: flex; gap: 0.75rem; margin-bottom: 0.75rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border-color);">
+                            ${gwStatsHTML}
+                            ${ownershipAndLeagueHTML}
                         </div>
-                        ${comparisonHTML}
+                        <div style="display: flex; gap: 0.75rem;">
+                            <div style="flex: 1; min-width: 140px;">
+                                ${historyHTML}
+                                ${fixturesHTML}
+                            </div>
+                            ${comparisonHTML}
+                        </div>
                     </div>
+                    ${actionConfig ? `
+                        <div style="display: flex; justify-content: flex-end;">
+                            <button
+                                id="player-modal-primary-btn"
+                                style="
+                                    background: ${actionConfig.color || 'var(--primary-color)'};
+                                    color: white;
+                                    border: none;
+                                    border-radius: 999px;
+                                    padding: 0.5rem 0.9rem;
+                                    font-weight: 600;
+                                    font-size: 0.8rem;
+                                    cursor: pointer;
+                                    min-width: 5rem;
+                                    box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+                                "
+                            >
+                                ${escapeHtml(actionConfig.label || 'Action')}
+                            </button>
+                        </div>
+                    ` : ''}
                 </div>
             </div>
-            ${actionConfig ? `
-                <div style="
-                    position: sticky;
-                    bottom: 0;
-                    padding: 0.75rem 1rem;
-                    border-top: 1px solid var(--border-color);
-                    background: var(--bg-primary);
-                    display: flex;
-                    justify-content: flex-end;
-                ">
-                    <button
-                        id="player-modal-primary-btn"
-                        style="
-                            background: ${actionConfig.color || 'var(--primary-color)'};
-                            color: white;
-                            border: none;
-                            border-radius: 999px;
-                            padding: 0.6rem 1.2rem;
-                            font-weight: 600;
-                            font-size: 0.85rem;
-                            cursor: pointer;
-                            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-                        "
-                    >
-                        ${escapeHtml(actionConfig.label || 'Action')}
-                    </button>
-                </div>
-            ` : ''}
         </div>
     `;
 }
