@@ -26,10 +26,10 @@ export async function renderPointsPriceChart(contentContainer, echarts, position
         return null;
     }
 
-    // Create chart card HTML
+    // Create chart card HTML with mobile-optimized sizing
     const isMobile = window.innerWidth <= 768;
-    const chartHeight = isMobile ? 360 : 600;
-    const chartMinHeight = isMobile ? 280 : 400;
+    const chartHeight = isMobile ? 400 : 600;
+    const chartMinHeight = isMobile ? 320 : 400;
 
     contentContainer.innerHTML = createChartCard({
         title: 'Points vs Price',

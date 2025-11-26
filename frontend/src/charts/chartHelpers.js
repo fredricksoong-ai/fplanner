@@ -25,48 +25,97 @@ export function createChartCard(config) {
         minHeight = 400
     } = config;
 
+    const isMobile = typeof window !== 'undefined' ? window.innerWidth <= 768 : false;
+
     const zonesHTML = zones ? `
-        <div style="display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.75rem; color: var(--text-secondary);">
+        <div style="
+            display: flex;
+            gap: ${isMobile ? '0.5rem' : '1rem'};
+            flex-wrap: wrap;
+            font-size: ${isMobile ? '0.7rem' : '0.75rem'};
+            color: var(--text-secondary);
+            margin-top: ${isMobile ? '0.5rem' : '0'};
+        ">
             ${zones.map(z => `<span><span style="color: ${z.color}; font-weight: bold;">■</span> ${z.label}</span>`).join('')}
         </div>
     ` : '';
 
     return `
-        <div style="background: var(--bg-primary); border-radius: 12px; box-shadow: 0 2px 8px var(--shadow); padding: 1.5rem; margin-bottom: 2rem;">
-            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
-                <div>
-                    <h2 style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem;">
-                        ${icon} ${title}
+        <div style="
+            background: var(--bg-primary);
+            border-radius: ${isMobile ? '8px' : '12px'};
+            box-shadow: 0 2px 8px var(--shadow);
+            padding: ${isMobile ? '1rem' : '1.5rem'};
+            margin-bottom: ${isMobile ? '1rem' : '2rem'};
+            margin-left: ${isMobile ? '0.25rem' : '0'};
+            margin-right: ${isMobile ? '0.25rem' : '0'};
+        ">
+            <div style="
+                display: flex;
+                flex-direction: ${isMobile ? 'column' : 'row'};
+                justify-content: space-between;
+                align-items: ${isMobile ? 'stretch' : 'start'};
+                gap: ${isMobile ? '0.75rem' : '0'};
+                margin-bottom: ${isMobile ? '0.75rem' : '0.5rem'};
+            ">
+                <div style="flex: 1;">
+                    <h2 style="
+                        font-size: ${isMobile ? '1.1rem' : '1.25rem'};
+                        font-weight: 700;
+                        color: var(--text-primary);
+                        margin-bottom: ${isMobile ? '0.4rem' : '0.5rem'};
+                        display: flex;
+                        align-items: center;
+                        gap: 0.4rem;
+                    ">
+                        <span>${icon}</span>
+                        <span>${title}</span>
                     </h2>
-                    <p style="color: var(--text-secondary); margin-bottom: 0.5rem; font-size: 0.875rem;">
+                    <p style="
+                        color: var(--text-secondary);
+                        margin-bottom: 0.5rem;
+                        font-size: ${isMobile ? '0.8rem' : '0.875rem'};
+                        line-height: 1.4;
+                    ">
                         ${description}
                     </p>
                     ${zonesHTML}
                 </div>
                 <button
                     id="${exportId}"
+                    class="${isMobile ? 'touch-target' : ''}"
                     style="
-                        padding: 0.45rem 0.85rem;
+                        padding: ${isMobile ? '0.6rem 1rem' : '0.45rem 0.85rem'};
                         background: var(--accent-color);
                         color: white;
                         border: none;
                         border-radius: 6px;
                         cursor: pointer;
-                        font-size: 0.8rem;
+                        font-size: ${isMobile ? '0.75rem' : '0.8rem'};
                         font-weight: 600;
                         display: flex;
                         align-items: center;
+                        justify-content: center;
                         gap: 0.4rem;
-                        transition: opacity 0.2s;
+                        transition: all 0.2s;
+                        white-space: nowrap;
+                        ${isMobile ? 'min-height: 44px; width: 100%;' : 'flex-shrink: 0;'}
                     "
+                    onmouseover="this.style.opacity='0.9'"
+                    onmouseout="this.style.opacity='1'"
                 >
                     <i class="fas fa-download"></i>
-                    Export PNG
+                    <span>${isMobile ? 'Export Chart as PNG' : 'Export PNG'}</span>
                 </button>
             </div>
 
             <!-- Chart Container -->
-            <div id="${chartId}" style="width: 100%; height: ${height}px; min-height: ${minHeight}px; margin-top: 1rem;"></div>
+            <div id="${chartId}" style="
+                width: 100%;
+                height: ${height}px;
+                min-height: ${minHeight}px;
+                margin-top: ${isMobile ? '0.75rem' : '1rem'};
+            "></div>
         </div>
     `;
 }
