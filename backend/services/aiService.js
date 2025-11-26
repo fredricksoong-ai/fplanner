@@ -203,7 +203,9 @@ export function parseGeminiResponse(geminiData, gameweek, page) {
       gameweek: gameweek,
       categories: fallbackCategories,
       timestamp: Date.now(),
-      parseError: true
+      parseError: true,
+      error: true,
+      message: 'Failed to generate AI insights. Please try refreshing or check back later.'
     };
   }
 }
