@@ -192,8 +192,8 @@ function renderCategoryInsights(insights, isMobile = false) {
 export function renderInsightBanner(insights, contextId, isMobile = false, options = {}) {
     const { hideTabs = false, customTitle, customSubtitle, preferredCategory } = options;
 
-    // Handle error state
-    if (insights.error || !insights.categories || Object.keys(insights.categories).length === 0) {
+    // Handle error state (including parse errors from backend)
+    if (insights.error || insights.parseError || !insights.categories || Object.keys(insights.categories).length === 0) {
         const message = insights.message || 'Unable to load AI insights';
         return renderInsightBannerError(message, contextId);
     }
@@ -414,11 +414,22 @@ export async function loadAndRenderInsights(context, containerId, isMobile = fal
         // Fetch insights (uses era-based caching automatically)
         const insights = await aiInsights.getInsights(context, { forceRefresh: options.forceRefresh });
 
+        // Check if there's a parse error or other error
+        const hasError = insights.error || insights.parseError || !insights.categories || Object.keys(insights.categories).length === 0;
+
         // Render banner
         container.innerHTML = renderInsightBanner(insights, contextId, isMobile, options);
 
-        // Attach tab switching listeners
-        attachInsightBannerListeners(contextId);
+        // Attach listeners
+        if (hasError) {
+            // Attach retry listener with force refresh for error states
+            attachInsightBannerListeners(contextId, () => {
+                loadAndRenderInsights(context, containerId, isMobile, { ...options, forceRefresh: true });
+            });
+        } else {
+            // Attach tab switching listeners for success state
+            attachInsightBannerListeners(contextId);
+        }
 
     } catch (error) {
         console.error('Failed to load AI insights:', error);
@@ -427,9 +438,9 @@ export async function loadAndRenderInsights(context, containerId, isMobile = fal
             contextId
         );
 
-        // Attach retry listener for error state only
+        // Attach retry listener for error state with force refresh
         attachInsightBannerListeners(contextId, () => {
-            loadAndRenderInsights(context, containerId, isMobile, options);
+            loadAndRenderInsights(context, containerId, isMobile, { ...options, forceRefresh: true });
         });
     }
 }
