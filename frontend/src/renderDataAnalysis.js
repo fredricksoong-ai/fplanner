@@ -63,6 +63,8 @@ import { renderAnalysisOverview as renderAnalysisOverviewModule } from './dataAn
 import { renderHiddenGems as renderHiddenGemsModule } from './dataAnalysis/hiddenGems.js';
 import { renderTransferTargets as renderTransferTargetsModule } from './dataAnalysis/transferTargets.js';
 import { renderTeamAnalysis as renderTeamAnalysisModule } from './dataAnalysis/teamAnalysis.js';
+import { getMyPlayerIdSet } from './utils/myPlayers.js';
+import { isWishlisted } from './wishlist/store.js';
 
 // ============================================================================
 // DATA ANALYSIS PAGE
@@ -76,6 +78,9 @@ let analysisState = {
     momentumFilter: false,
     priceRange: 'all' // 'all', 'budget' (<6.0m), 'mid' (6.0-9.0m), 'premium' (>9.0m)
 };
+
+let activeAnalysisTab = 'overview';
+let wishlistListenerAttached = false;
 
 // Export functions to update state
 export function updateOwnershipThreshold(value) {
@@ -97,6 +102,7 @@ export function setPriceRange(range) {
 export function renderDataAnalysis(subTab = 'overview', position = 'all') {
     const container = document.getElementById('app-container');
     analysisState.position = position;
+    activeAnalysisTab = subTab;
     const isMobile = isMobileDevice();
 
     // Mobile-specific sizing
@@ -349,6 +355,15 @@ export function renderDataAnalysis(subTab = 'overview', position = 'all') {
             renderDataAnalysis(tab, position);
         }
     });
+
+    if (typeof window !== 'undefined' && !wishlistListenerAttached) {
+        window.addEventListener('wishlist-updated', () => {
+            if (window.location.hash.startsWith('#data-analysis')) {
+                renderDataAnalysis(activeAnalysisTab, analysisState.position);
+            }
+        });
+        wishlistListenerAttached = true;
+    }
 }
 
 function renderAnalysisOverview(position = 'all') {
@@ -902,13 +917,10 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
             contextCellContent = contextValue;
         }
 
-        const baseRowBg = idx % 2 === 0 ? 'var(--bg-primary)' : 'var(--bg-secondary)';
-        const rowBg = isMyPlayer ? 'rgba(56, 189, 248, 0.12)' : baseRowBg;
+        const isWishlistedPlayer = isWishlisted(player.id);
+        const rowBg = getRowHighlightColor(idx, isMyPlayer, isWishlistedPlayer);
         const rowBorder = borderColor
             ? `border-left: 4px solid ${borderColor};`
-            : isMyPlayer ? 'border-left: 3px solid var(--primary-color);' : '';
-        const myBadge = isMyPlayer
-            ? '<span style="font-size: 0.55rem; color: #0284c7; background: rgba(14, 165, 233, 0.15); padding: 0.05rem 0.4rem; border-radius: 999px; font-weight: 600;">My Player</span>'
             : '';
 
         html += `
@@ -929,7 +941,6 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
                     <div style="display: flex; align-items: center; gap: 0.3rem; flex-wrap: wrap;">
                         <span style="font-size: 0.6rem; color: var(--text-secondary);">${getPositionShort(player)}</span>
                         <strong style="font-size: 0.7rem;">${escapeHtml(player.web_name)}</strong>
-                        ${myBadge}
                     </div>
                     ${risks.length > 0 ? `<div style="font-size: 0.55rem; color: ${borderColor}; margin-top: 0.1rem; line-height: 1.2;">${risks[0]?.message || 'Issue'}</div>` : `<div style="height: 0.8rem;"></div>`}
                 </td>
@@ -1100,12 +1111,10 @@ function renderPositionSpecificTable(players, position = 'all') {
     players.forEach((player, index) => {
         // Check if player is in my team
         const isMyPlayer = Boolean(player.__isMine || myPlayerIds.has(player.id));
+        const isWishlistedPlayer = isWishlisted(player.id);
 
-        const rowBg = isMyPlayer ? 'rgba(56, 189, 248, 0.12)' : (index % 2 === 0 ? 'var(--bg-secondary)' : 'var(--bg-primary)');
-        const rowBorder = isMyPlayer ? 'border-left: 3px solid var(--primary-color);' : '';
-        const myBadge = isMyPlayer
-            ? '<span style="margin-left: 0.25rem; font-size: 0.65rem; color: #0284c7; background: rgba(14, 165, 233, 0.2); padding: 0.05rem 0.4rem; border-radius: 999px; font-weight: 600;">My Player</span>'
-            : '';
+        const rowBg = getRowHighlightColor(index, isMyPlayer, isWishlistedPlayer);
+        const rowBorder = '';
 
         // Calculate common metrics
         const ppm = calculatePPM(player);
@@ -1147,7 +1156,6 @@ function renderPositionSpecificTable(players, position = 'all') {
             html += `
                 <td style="padding: 0.75rem 0.5rem; display: flex; align-items: center; gap: 0.3rem;">
                     <strong>${escapeHtml(player.web_name)}</strong>
-                    ${myBadge}
                 </td>
                 <td style="padding: 0.75rem 0.5rem;">${getTeamShortName(player.team)}</td>
                 <td style="padding: 0.75rem 0.5rem; text-align: center;">${formatCurrency(player.now_cost)}</td>
@@ -1172,7 +1180,6 @@ function renderPositionSpecificTable(players, position = 'all') {
             html += `
                 <td style="padding: 0.75rem 0.5rem; display: flex; align-items: center; gap: 0.3rem;">
                     <strong>${escapeHtml(player.web_name)}</strong>
-                    ${myBadge}
                 </td>
                 <td style="padding: 0.75rem 0.5rem;">${getTeamShortName(player.team)}</td>
                 <td style="padding: 0.75rem 0.5rem; text-align: center;">${formatCurrency(player.now_cost)}</td>
@@ -1198,7 +1205,6 @@ function renderPositionSpecificTable(players, position = 'all') {
             html += `
                 <td style="padding: 0.75rem 0.5rem; display: flex; align-items: center; gap: 0.3rem;">
                     <strong>${escapeHtml(player.web_name)}</strong>
-                    ${myBadge}
                 </td>
                 <td style="padding: 0.75rem 0.5rem;">${getTeamShortName(player.team)}</td>
                 <td style="padding: 0.75rem 0.5rem; text-align: center;">${formatCurrency(player.now_cost)}</td>
@@ -1221,7 +1227,6 @@ function renderPositionSpecificTable(players, position = 'all') {
                 <td style="padding: 0.75rem 0.5rem; font-weight: 600;">${getPositionShort(player)}</td>
                 <td style="padding: 0.75rem 0.5rem; display: flex; align-items: center; gap: 0.3rem;">
                     <strong>${escapeHtml(player.web_name)}</strong>
-                    ${myBadge}
                 </td>
                 <td style="padding: 0.75rem 0.5rem;">${getTeamShortName(player.team)}</td>
                 <td style="padding: 0.75rem 0.5rem; text-align: center;">${formatCurrency(player.now_cost)}</td>
@@ -1262,36 +1267,22 @@ function renderPositionSpecificTable(players, position = 'all') {
     return html;
 }
 
-function getMyPlayerIdSet() {
-    const ids = new Set();
+const MY_PLAYER_TINT = 'rgba(56, 189, 248, 0.16)';
+const WISHLIST_TINT = 'rgba(250, 204, 21, 0.18)';
+const COMBINED_TINT = 'linear-gradient(90deg, rgba(56, 189, 248, 0.16), rgba(250, 204, 21, 0.2))';
 
-    const sharedPicks = sharedState?.myTeamData?.picks?.picks;
-    if (sharedPicks && sharedPicks.length) {
-        sharedPicks.forEach(pick => ids.add(pick.element));
-        return ids;
+function getRowHighlightColor(index, isMyPlayer, isWishlisted) {
+    const base = index % 2 === 0 ? 'var(--bg-secondary)' : 'var(--bg-primary)';
+    if (isMyPlayer && isWishlisted) {
+        return COMBINED_TINT;
     }
-
-    const cachedTeamId = localStorage.getItem('fplanner_team_id');
-    if (!cachedTeamId) {
-        return ids;
+    if (isMyPlayer) {
+        return MY_PLAYER_TINT;
     }
-
-    const cachedTeamData = localStorage.getItem(`fplanner_team_${cachedTeamId}`);
-    if (!cachedTeamData) {
-        return ids;
+    if (isWishlisted) {
+        return WISHLIST_TINT;
     }
-
-    try {
-        const parsed = JSON.parse(cachedTeamData);
-        const picks = parsed?.picks?.picks;
-        if (Array.isArray(picks)) {
-            picks.forEach(pick => ids.add(pick.element));
-        }
-    } catch (err) {
-        console.warn('Unable to parse cached team data for my-player highlighting', err);
-    }
-
-    return ids;
+    return base;
 }
 
 /**

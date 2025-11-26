@@ -14,6 +14,8 @@ import {
 import { getMatchStatus } from '../../fixtures.js';
 import { analyzePlayerRisks } from '../../risk.js';
 import { renderOpponentBadge } from './compactStyleHelpers.js';
+import { isWishlisted, toggleWishlist } from '../../wishlist/store.js';
+import { getMyPlayerIdSet } from '../../utils/myPlayers.js';
 
 // Team primary colors for styling
 const TEAM_COLORS = {
@@ -498,6 +500,10 @@ export async function showPlayerModal(playerId, myTeamState = null, options = {}
 
     // Get comparison players (same position, not in my team, sorted by form)
     const comparisonPlayers = getComparisonPlayers(player, myTeamState);
+    const myPlayerIds = getMyPlayerIdSet();
+    const isMyPlayer = myPlayerIds.has(playerId);
+    const canWishlist = !isMyPlayer;
+    const wishlistActive = canWishlist && isWishlisted(playerId);
 
     // Build modal HTML
     const modalHTML = buildModalHTML({
@@ -519,14 +525,19 @@ export async function showPlayerModal(playerId, myTeamState = null, options = {}
         isLive,
         risks,
         comparisonPlayers,
-        actionConfig: options.primaryAction || null
+        actionConfig: options.primaryAction || null,
+        canWishlist,
+        wishlistActive
     });
 
     // Update modal content
     const modal = document.getElementById('player-modal');
     if (modal) {
         modal.innerHTML = modalHTML;
-        attachModalListeners(options.primaryAction || null);
+        attachModalListeners({
+            actionConfig: options.primaryAction || null,
+            wishlistConfig: canWishlist ? { playerId, isActive: wishlistActive } : null
+        });
     }
 }
 
@@ -615,7 +626,9 @@ function buildModalHTML(data) {
         pointsBreakdown,
         ownership, leagueOwnership, past3GW, upcomingFixtures, isLive,
         risks, comparisonPlayers,
-        actionConfig
+        actionConfig,
+        canWishlist = false,
+        wishlistActive = false
     } = data;
 
     // LIVE indicator styles
@@ -636,6 +649,27 @@ function buildModalHTML(data) {
             <span style="width: 6px; height: 6px; background: #ef4444; border-radius: 50%; animation: pulse 1s infinite;"></span>
             LIVE
         </span>
+    ` : '';
+
+    const wishlistButtonHTML = canWishlist ? `
+        <button
+            id="player-modal-wishlist-btn"
+            data-active="${wishlistActive ? 'true' : 'false'}"
+            style="
+                background: transparent;
+                border: none;
+                cursor: pointer;
+                color: ${wishlistActive ? '#facc15' : 'var(--text-secondary)'};
+                font-size: 1.1rem;
+                padding: 0.15rem;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            "
+            title="${wishlistActive ? 'Remove from wishlist' : 'Add to wishlist'}"
+        >
+            <i class="${wishlistActive ? 'fas' : 'far'} fa-star"></i>
+        </button>
     ` : '';
 
     // GW Stats section (top-left) - Points Breakdown
@@ -946,6 +980,7 @@ function buildModalHTML(data) {
                     display: flex;
                     justify-content: space-between;
                     align-items: flex-start;
+                    gap: 0.65rem;
                 ">
                     <div>
                         <div style="font-size: 0.9rem; font-weight: 600; color: var(--text-primary);">
@@ -960,24 +995,27 @@ function buildModalHTML(data) {
                         </div>
                         ${riskHTML}
                     </div>
-                    <button
-                        id="close-player-modal"
-                        style="
-                            background: transparent;
-                            border: none;
-                            font-size: 1.5rem;
-                            color: var(--text-secondary);
-                            cursor: pointer;
-                            padding: 0;
-                            width: 2rem;
-                            height: 2rem;
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                        "
-                    >
-                        ×
-                    </button>
+                    <div style="display: flex; align-items: center; gap: 0.35rem;">
+                        ${wishlistButtonHTML}
+                        <button
+                            id="close-player-modal"
+                            style="
+                                background: transparent;
+                                border: none;
+                                font-size: 1.5rem;
+                                color: var(--text-secondary);
+                                cursor: pointer;
+                                padding: 0;
+                                width: 2rem;
+                                height: 2rem;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                            "
+                        >
+                            ×
+                        </button>
+                    </div>
                 </div>
 
                 <div style="padding: 0.75rem; display: flex; flex-direction: column; gap: 0.75rem;">
@@ -1025,10 +1063,12 @@ function buildModalHTML(data) {
 /**
  * Attach modal event listeners
  */
-function attachModalListeners(actionConfig = null) {
+function attachModalListeners(config = {}) {
+    const { actionConfig = null, wishlistConfig = null } = config;
     const closeBtn = document.getElementById('close-player-modal');
     const modal = document.getElementById('player-modal');
     const primaryBtn = document.getElementById('player-modal-primary-btn');
+    const wishlistBtn = document.getElementById('player-modal-wishlist-btn');
 
     if (closeBtn) {
         closeBtn.addEventListener('click', closePlayerModal);
@@ -1042,12 +1082,28 @@ function attachModalListeners(actionConfig = null) {
         });
     }
 
+    if (wishlistBtn && wishlistConfig) {
+        wishlistBtn.addEventListener('click', () => {
+            const nextState = toggleWishlist(wishlistConfig.playerId);
+            updateWishlistButtonState(wishlistBtn, !!nextState);
+        });
+    }
+
     if (modal) {
         modal.addEventListener('click', (e) => {
             if (e.target.id === 'player-modal') {
                 closePlayerModal();
             }
         });
+    }
+}
+
+function updateWishlistButtonState(button, active) {
+    button.dataset.active = active ? 'true' : 'false';
+    button.style.color = active ? '#facc15' : 'var(--text-secondary)';
+    const icon = button.querySelector('i');
+    if (icon) {
+        icon.className = `${active ? 'fas' : 'far'} fa-star`;
     }
 }
 

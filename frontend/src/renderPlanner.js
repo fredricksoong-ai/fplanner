@@ -34,6 +34,10 @@ import { renderMetricIndicators } from './planner/indicators.js';
 import { renderCostSummary, getCurrentCostSummary } from './planner/costCalculator.js';
 import { attachPlannerListeners } from './planner/eventHandlers.js';
 import { getLeagueComparisonMetrics } from './planner/leagueComparison.js';
+import { getWishlistPlayers } from './wishlist/store.js';
+
+let plannerWishlistListenerAttached = false;
+import { getWishlistPlayers } from './wishlist/store.js';
 
 // ============================================================================
 // MAIN RENDER FUNCTION
@@ -133,6 +137,7 @@ export async function renderPlanner() {
         const projectedMetrics = calculateProjectedTeamMetrics(picks, changes, gwNumber);
         
         const costSummary = getCurrentCostSummary();
+        const wishlistEntries = getWishlistPlayers();
 
         // Build page HTML
         let leagueComparison = null;
@@ -147,6 +152,7 @@ export async function renderPlanner() {
                 ${renderPlannerHeader(gwNumber, highCount, mediumCount, lowCount)}
                 ${renderMetricIndicators(originalMetrics, projectedMetrics, leagueComparison)}
                 ${renderCostSummary(costSummary)}
+                ${renderWishlistSection(wishlistEntries)}
                 ${renderUnifiedFixtureTable(currentPlayers, riskPlayerMap, teamData.picks, gwNumber)}
             </div>
         `;
@@ -155,9 +161,6 @@ export async function renderPlanner() {
         
         // Attach event listeners (new modular handlers)
         attachPlannerListeners();
-        
-        // Attach old expandable replacement listeners (for backward compatibility)
-
     } catch (err) {
         console.error('Failed to load planner:', err);
         container.innerHTML = `
@@ -168,6 +171,121 @@ export async function renderPlanner() {
             </div>
         `;
     }
+}
+
+if (typeof window !== 'undefined' && !plannerWishlistListenerAttached) {
+    window.addEventListener('wishlist-updated', () => {
+        if (window.location.hash.startsWith('#planner')) {
+            renderPlanner();
+        }
+    });
+    plannerWishlistListenerAttached = true;
+}
+
+// ============================================================================
+// WISHLIST SECTION
+// ============================================================================
+
+function renderWishlistSection(entries = []) {
+    if (!entries || entries.length === 0) {
+        return `
+            <div style="
+                background: var(--bg-secondary);
+                border-radius: 8px;
+                padding: 0.75rem 1rem;
+                margin-bottom: 0.75rem;
+                border-left: 3px solid var(--accent-color);
+            ">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                    <h2 style="font-size: 0.85rem; font-weight: 700; margin: 0; color: var(--text-primary);">Wishlist</h2>
+                    <span style="font-size: 0.75rem; color: var(--text-tertiary);">0 players</span>
+                </div>
+                <p style="font-size: 0.7rem; color: var(--text-secondary); margin: 0;">
+                    Tap the star in any player modal to save transfer targets for later.
+                </p>
+            </div>
+        `;
+    }
+
+    const rows = entries.map(({ player, addedAt }) => {
+        const position = getPositionShort(player);
+        const nextFixtures = getFixtures(player.team, 5, false);
+        const nextFixture = nextFixtures[0];
+        const nextOpponent = nextFixture
+            ? `${nextFixture.opponent} (${nextFixture.isHome ? 'H' : 'A'})`
+            : '—';
+        const nextDifficulty = nextFixture ? getDifficultyClass(nextFixture.difficulty) : '';
+        const avgFDR = calculateFixtureDifficulty(player.team, 5).toFixed(1);
+        const addedDate = addedAt ? new Date(addedAt) : null;
+        const addedText = addedDate
+            ? addedDate.toLocaleDateString('en-SG', { month: 'short', day: 'numeric' })
+            : 'Recently added';
+
+        return `
+            <tr
+                class="planner-wishlist-row"
+                data-player-id="${player.id}"
+                style="cursor: pointer; border-bottom: 1px solid var(--border-color);"
+            >
+                <td style="padding: 0.5rem;">
+                    <div style="display: flex; flex-direction: column;">
+                        <div style="display: flex; align-items: center; gap: 0.3rem;">
+                            <span style="font-size: 0.65rem; color: var(--text-secondary);">${position}</span>
+                            <strong style="font-size: 0.8rem;">${escapeHtml(player.web_name)}</strong>
+                        </div>
+                        <span style="font-size: 0.65rem; color: var(--text-tertiary);">
+                            ${getTeamShortName(player.team)} • £${formatCurrency(player.now_cost)}
+                        </span>
+                        <span style="font-size: 0.6rem; color: var(--text-secondary);">
+                            Added ${addedText}
+                        </span>
+                    </div>
+                </td>
+                <td style="text-align: center; padding: 0.5rem; font-weight: 600;">
+                    ${formatDecimal(player.form)}
+                </td>
+                <td style="text-align: center; padding: 0.5rem; color: ${avgFDR <= 2.5 ? '#22c55e' : avgFDR <= 3.5 ? '#eab308' : '#ef4444'}; font-weight: 700;">
+                    ${avgFDR}
+                </td>
+                <td style="text-align: center; padding: 0.5rem;">
+                    ${nextFixture ? `
+                        <span class="${nextDifficulty}" style="display: inline-block; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem;">
+                            ${nextOpponent}
+                        </span>
+                    ` : '—'}
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    return `
+        <div style="
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            margin-bottom: 0.75rem;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        ">
+            <div style="padding: 0.75rem 1rem; display: flex; justify-content: space-between; align-items: center;">
+                <h2 style="font-size: 0.85rem; font-weight: 700; margin: 0; color: var(--text-primary);">Wishlist</h2>
+                <span style="font-size: 0.7rem; color: var(--text-secondary);">${entries.length} ${entries.length === 1 ? 'player' : 'players'}</span>
+            </div>
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; font-size: 0.75rem; border-collapse: collapse;">
+                    <thead style="background: var(--bg-tertiary); text-align: left;">
+                        <tr>
+                            <th style="padding: 0.5rem;">Player</th>
+                            <th style="padding: 0.5rem; text-align: center;">Form</th>
+                            <th style="padding: 0.5rem; text-align: center;">FDR(5)</th>
+                            <th style="padding: 0.5rem; text-align: center;">Next</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
 }
 
 // ============================================================================
