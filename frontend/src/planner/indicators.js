@@ -5,13 +5,22 @@
 
 import { formatDecimal } from '../utils.js';
 
+const METRIC_KEY_BY_TYPE = {
+    ppm: 'avgPPM',
+    fdr: 'avgFDR',
+    form: 'avgForm',
+    points: 'expectedPoints',
+    ownership: 'avgOwnership',
+    xgi: 'avgXGI'
+};
+
 /**
  * Render metric indicators row
  * @param {Object} originalMetrics - Original team metrics
  * @param {Object} currentMetrics - Current team metrics (after changes)
  * @returns {string} HTML string
  */
-export function renderMetricIndicators(originalMetrics, currentMetrics) {
+export function renderMetricIndicators(originalMetrics, currentMetrics, leagueComparison = null) {
     if (!originalMetrics || !currentMetrics) {
         return '';
     }
@@ -38,12 +47,12 @@ export function renderMetricIndicators(originalMetrics, currentMetrics) {
                 grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
                 gap: 0.5rem;
             ">
-                ${renderIndicatorCard('Avg PPM', deltas.avgPPM, 'ppm')}
-                ${renderIndicatorCard('Avg FDR', deltas.avgFDR, 'fdr')}
-                ${renderIndicatorCard('Avg Form', deltas.avgForm, 'form')}
-                ${renderIndicatorCard('Exp Pts', deltas.expectedPoints, 'points')}
-                ${renderIndicatorCard('Avg Own%', deltas.avgOwnership, 'ownership')}
-                ${renderIndicatorCard('Avg xGI', deltas.avgXGI, 'xgi')}
+                ${renderIndicatorCard('Avg PPM', deltas.avgPPM, 'ppm', leagueComparison)}
+                ${renderIndicatorCard('Avg FDR', deltas.avgFDR, 'fdr', leagueComparison)}
+                ${renderIndicatorCard('Avg Form', deltas.avgForm, 'form', leagueComparison)}
+                ${renderIndicatorCard('Exp Pts', deltas.expectedPoints, 'points', leagueComparison)}
+                ${renderIndicatorCard('Avg Own%', deltas.avgOwnership, 'ownership', leagueComparison)}
+                ${renderIndicatorCard('Avg xGI', deltas.avgXGI, 'xgi', leagueComparison)}
             </div>
         </div>
     `;
@@ -56,7 +65,7 @@ export function renderMetricIndicators(originalMetrics, currentMetrics) {
  * @param {string} type - Metric type for special formatting
  * @returns {string} HTML string
  */
-function renderIndicatorCard(label, delta, type) {
+function renderIndicatorCard(label, delta, type, leagueComparison) {
     if (!delta) return '';
 
     const { value, delta: deltaValue, direction } = delta;
@@ -108,6 +117,7 @@ function renderIndicatorCard(label, delta, type) {
                     —
                 </div>
             `}
+            ${renderLeagueComparisonLine(leagueComparison, type)}
         </div>
     `;
 }
@@ -130,6 +140,17 @@ function calculateDeltas(original, current) {
 }
 
 function buildDelta(currentValue, originalValue, higherIsBetter) {
+    const hasCurrent = typeof currentValue === 'number' && Number.isFinite(currentValue);
+    const hasOriginal = typeof originalValue === 'number' && Number.isFinite(originalValue);
+
+    if (!hasCurrent || !hasOriginal) {
+        return {
+            value: hasCurrent ? currentValue : null,
+            delta: 0,
+            direction: 'neutral'
+        };
+    }
+
     const delta = currentValue - originalValue;
     let direction = 'neutral';
     if (delta !== 0) {
@@ -150,6 +171,9 @@ function buildDelta(currentValue, originalValue, higherIsBetter) {
  * @returns {string} Formatted value
  */
 function formatValue(value, type) {
+    if (value === null || value === undefined || Number.isNaN(value)) {
+        return '—';
+    }
     if (type === 'points') {
         return formatDecimal(value);
     }
@@ -169,6 +193,9 @@ function formatValue(value, type) {
  * @returns {string} Formatted delta
  */
 function formatDelta(delta, type) {
+    if (delta === null || delta === undefined || Number.isNaN(delta)) {
+        return '0.0';
+    }
     if (type === 'points') {
         const sign = delta >= 0 ? '+' : '';
         return `${sign}${formatDecimal(delta)}`;
@@ -201,5 +228,38 @@ function getDeltaIcon(direction) {
     if (direction === 'up') return '↑';
     if (direction === 'down') return '↓';
     return '—';
+}
+
+function renderLeagueComparisonLine(leagueComparison, type) {
+    if (!leagueComparison) return '';
+    const metricKey = METRIC_KEY_BY_TYPE[type];
+    if (!metricKey) return '';
+
+    const avg = leagueComparison.averages?.[metricKey];
+    const percentile = leagueComparison.percentiles?.[metricKey];
+
+    if ((avg === null || avg === undefined) && (percentile === null || percentile === undefined)) {
+        return '';
+    }
+
+    const parts = [];
+    if (avg !== null && avg !== undefined) {
+        parts.push(`Avg ${formatValue(avg, type)}`);
+    }
+    if (percentile !== null && percentile !== undefined) {
+        parts.push(`${percentile}th pct`);
+    }
+
+    if (parts.length === 0) return '';
+
+    return `
+        <div style="
+            font-size: 0.6rem;
+            color: var(--text-tertiary);
+            margin-top: 0.25rem;
+        ">
+            ${parts.join(' • ')}
+        </div>
+    `;
 }
 

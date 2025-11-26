@@ -26,6 +26,10 @@ import { calculateTeamMetrics, calculateProjectedTeamMetrics, calculateMetricsDe
  * @returns {string} HTML string
  */
 export function renderPlayerReplacementPage(playerId) {
+    if (typeof window !== 'undefined' && window.scrollTo) {
+        window.scrollTo({ top: 0, behavior: 'auto' });
+    }
+
     const player = getPlayerById(playerId);
     if (!player) {
         return '<div>Player not found</div>';

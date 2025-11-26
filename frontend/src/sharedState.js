@@ -14,6 +14,7 @@ export const sharedState = {
     // League data
     activeLeagueTab: null,
     leagueStandingsCache: new Map(), // leagueId -> standings data
+    leagueMetricsCache: new Map(), // key(leagueId+gw) -> aggregated metrics
     rivalTeamCache: new Map(), // entryId -> team data
     captainCache: new Map(), // entryId -> captain name
 
@@ -27,6 +28,7 @@ export const sharedState = {
         this.teamId = null;
         this.activeLeagueTab = null;
         this.leagueStandingsCache.clear();
+        this.leagueMetricsCache.clear();
         this.rivalTeamCache.clear();
         this.captainCache.clear();
         this.myTeamData = null;
@@ -41,6 +43,7 @@ export const sharedState = {
             teamId: this.teamId,
             activeLeagueTab: this.activeLeagueTab,
             leagueStandingsCache: this.leagueStandingsCache,
+            leagueMetricsCache: this.leagueMetricsCache,
             rivalTeamCache: this.rivalTeamCache,
             captainCache: this.captainCache
         };

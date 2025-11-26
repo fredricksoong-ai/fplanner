@@ -27,12 +27,13 @@ import {
 } from './utils.js';
 
 // Planner modules
+import { sharedState } from './sharedState.js';
 import { plannerState } from './planner/state.js';
 import { calculateTeamMetrics, calculateProjectedTeamMetrics } from './planner/metrics.js';
 import { renderMetricIndicators } from './planner/indicators.js';
 import { renderCostSummary, getCurrentCostSummary } from './planner/costCalculator.js';
 import { attachPlannerListeners } from './planner/eventHandlers.js';
-import { loadPlannerAIInsights } from './planner/aiInsights.js';
+import { getLeagueComparisonMetrics } from './planner/leagueComparison.js';
 
 // ============================================================================
 // MAIN RENDER FUNCTION
@@ -79,6 +80,10 @@ export async function renderPlanner() {
 
     try {
         const teamData = await loadMyTeam(teamId);
+        const numericTeamId = parseInt(teamId, 10);
+        if (!Number.isNaN(numericTeamId)) {
+            sharedState.teamId = numericTeamId;
+        }
         const gwNumber = currentGW; // Use currentGW (last finished) to match getFixtures()
 
         // Get player data
@@ -129,11 +134,17 @@ export async function renderPlanner() {
         const costSummary = getCurrentCostSummary();
 
         // Build page HTML
+        let leagueComparison = null;
+        try {
+            leagueComparison = await getLeagueComparisonMetrics(numericTeamId, projectedMetrics, gwNumber);
+        } catch (err) {
+            console.warn('Planner league comparison unavailable:', err.message || err);
+        }
+
         const html = `
             <div style="padding: 0.5rem;">
                 ${renderPlannerHeader(gwNumber, highCount, mediumCount, lowCount)}
-                <div id="planner-ai-insights"></div>
-                ${renderMetricIndicators(originalMetrics, projectedMetrics)}
+                ${renderMetricIndicators(originalMetrics, projectedMetrics, leagueComparison)}
                 ${renderCostSummary(costSummary)}
                 ${renderUnifiedFixtureTable(currentPlayers, riskPlayerMap, teamData.picks, gwNumber)}
             </div>
@@ -146,11 +157,6 @@ export async function renderPlanner() {
         
         // Attach old expandable replacement listeners (for backward compatibility)
         attachOldPlannerListeners(currentPlayers, riskPlayerMap, teamData.picks, gwNumber);
-        
-        // Load AI insights (async, won't block render)
-        loadPlannerAIInsights().catch(err => {
-            console.error('Failed to load AI insights:', err);
-        });
 
     } catch (err) {
         console.error('Failed to load planner:', err);
