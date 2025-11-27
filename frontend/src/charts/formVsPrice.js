@@ -89,7 +89,13 @@ export async function renderFormVsPriceChart(contentContainer, echarts, position
     const maxForm = Math.max(...allForms, 5);
     const yAxisMax = Math.ceil((maxForm + 1) / 2) * 2; // Round up to nearest 2
 
-    const option = createFormVsPriceChartOptions(positions, yAxisMax, isDark, textColor, gridColor);
+    // Calculate dynamic x-axis (price) boundaries
+    const allPrices = players.map(p => p.now_cost / 10);
+    const minPrice = Math.max(3, Math.floor(Math.min(...allPrices) - 0.5));
+    const maxPrice = Math.ceil(Math.max(...allPrices) + 0.5);
+    const midPrice = Math.round((minPrice + maxPrice) / 2);
+
+    const option = createFormVsPriceChartOptions(positions, yAxisMax, minPrice, maxPrice, midPrice, isDark, textColor, gridColor);
 
     if (!echarts) return null;
 
@@ -135,7 +141,7 @@ function getUserTeamPlayerIds() {
     return myTeamPlayerIds;
 }
 
-function createFormVsPriceChartOptions(positions, yAxisMax, isDark, textColor, gridColor) {
+function createFormVsPriceChartOptions(positions, yAxisMax, minPrice, maxPrice, midPrice, isDark, textColor, gridColor) {
     // Calculate threshold for zone boundaries based on dynamic max
     const highFormThreshold = Math.max(5, Math.round(yAxisMax * 0.5));
 
@@ -180,7 +186,7 @@ function createFormVsPriceChartOptions(positions, yAxisMax, isDark, textColor, g
                 [
                     {
                         name: 'Hot Form Value',
-                        xAxis: 3,
+                        xAxis: minPrice,
                         yAxis: highFormThreshold,
                         itemStyle: { color: '#10b981' },
                         label: {
@@ -194,12 +200,12 @@ function createFormVsPriceChartOptions(positions, yAxisMax, isDark, textColor, g
                             borderRadius: 4
                         }
                     },
-                    { xAxis: 8.5, yAxis: yAxisMax }
+                    { xAxis: midPrice, yAxis: yAxisMax }
                 ],
                 [
                     {
                         name: 'Premium Form',
-                        xAxis: 8.5,
+                        xAxis: midPrice,
                         yAxis: highFormThreshold,
                         itemStyle: { color: '#3b82f6' },
                         label: {
@@ -213,12 +219,12 @@ function createFormVsPriceChartOptions(positions, yAxisMax, isDark, textColor, g
                             borderRadius: 4
                         }
                     },
-                    { xAxis: 15, yAxis: yAxisMax }
+                    { xAxis: maxPrice, yAxis: yAxisMax }
                 ],
                 [
                     {
                         name: 'Cold Trap',
-                        xAxis: 8.5,
+                        xAxis: midPrice,
                         yAxis: 0,
                         itemStyle: { color: '#ef4444' },
                         label: {
@@ -232,7 +238,7 @@ function createFormVsPriceChartOptions(positions, yAxisMax, isDark, textColor, g
                             borderRadius: 4
                         }
                     },
-                    { xAxis: 15, yAxis: highFormThreshold }
+                    { xAxis: maxPrice, yAxis: highFormThreshold }
                 ]
             ]
         }
@@ -274,8 +280,8 @@ function createFormVsPriceChartOptions(positions, yAxisMax, isDark, textColor, g
             axisLine: { lineStyle: { color: gridColor } },
             axisLabel: { color: textColor, formatter: (value) => `£${value.toFixed(1)}` },
             splitLine: { lineStyle: { color: gridColor, type: 'dashed', opacity: 0.3 } },
-            min: 3,
-            max: 15
+            min: minPrice,
+            max: maxPrice
         },
         yAxis: {
             type: 'value',

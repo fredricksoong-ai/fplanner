@@ -71,6 +71,12 @@ export async function renderFixturesVsFormChart(contentContainer, echarts, posit
         })
         .filter(d => d.avgFDR > 0 || d.form > 0);
 
+    // Calculate dynamic y-axis max based on form data
+    const allForms = chartData.map(d => d.form);
+    const maxForm = Math.max(...allForms, 5);
+    const yAxisMax = Math.ceil((maxForm + 1) / 2) * 2; // Round up to nearest 2
+    const highFormThreshold = Math.max(5, Math.round(yAxisMax * 0.5));
+
     const positionColors = {
         'GKP': '#fbbf24',
         'DEF': '#10b981',
@@ -87,7 +93,7 @@ export async function renderFixturesVsFormChart(contentContainer, echarts, posit
         seriesByPosition[position].push(player);
     });
 
-    const option = createFixturesVsFormChartOptions(seriesByPosition, positionColors, isDark, textColor, gridColor);
+    const option = createFixturesVsFormChartOptions(seriesByPosition, positionColors, yAxisMax, highFormThreshold, isDark, textColor, gridColor);
 
     if (!echarts) return null;
     const chartInstance = echarts.init(chartContainer);
@@ -109,7 +115,7 @@ export async function renderFixturesVsFormChart(contentContainer, echarts, posit
     return chartInstance;
 }
 
-function createFixturesVsFormChartOptions(seriesByPosition, positionColors, isDark, textColor, gridColor) {
+function createFixturesVsFormChartOptions(seriesByPosition, positionColors, yAxisMax, highFormThreshold, isDark, textColor, gridColor) {
     const series = Object.entries(seriesByPosition).map(([position, data]) => ({
         name: position,
         type: 'scatter',
@@ -149,7 +155,7 @@ function createFixturesVsFormChartOptions(seriesByPosition, positionColors, isDa
                     {
                         name: 'Prime Targets',
                         xAxis: 1,
-                        yAxis: 5,
+                        yAxis: highFormThreshold,
                         itemStyle: { color: '#10b981' },
                         label: {
                             show: true,
@@ -162,13 +168,13 @@ function createFixturesVsFormChartOptions(seriesByPosition, positionColors, isDa
                             borderRadius: 4
                         }
                     },
-                    { xAxis: 3, yAxis: 'max' }
+                    { xAxis: 3, yAxis: yAxisMax }
                 ],
                 [
                     {
                         name: 'Fixture Swing',
                         xAxis: 3.5,
-                        yAxis: 5,
+                        yAxis: highFormThreshold,
                         itemStyle: { color: '#fbbf24' },
                         label: {
                             show: true,
@@ -181,7 +187,7 @@ function createFixturesVsFormChartOptions(seriesByPosition, positionColors, isDa
                             borderRadius: 4
                         }
                     },
-                    { xAxis: 5, yAxis: 12 }
+                    { xAxis: 5, yAxis: yAxisMax }
                 ],
                 [
                     {
@@ -200,7 +206,7 @@ function createFixturesVsFormChartOptions(seriesByPosition, positionColors, isDa
                             borderRadius: 4
                         }
                     },
-                    { xAxis: 5, yAxis: 5 }
+                    { xAxis: 5, yAxis: highFormThreshold }
                 ]
             ]
         }
@@ -269,7 +275,8 @@ function createFixturesVsFormChartOptions(seriesByPosition, positionColors, isDa
             axisLine: { lineStyle: { color: gridColor } },
             axisLabel: { color: textColor },
             splitLine: { lineStyle: { color: gridColor, opacity: 0.3 } },
-            min: 0
+            min: 0,
+            max: yAxisMax
         },
         series: series
     };
