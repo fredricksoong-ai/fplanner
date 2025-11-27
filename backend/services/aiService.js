@@ -21,79 +21,99 @@ import logger from '../logger.js';
  * @returns {string} AI prompt
  */
 export function buildAIPrompt(page, tab, position, gameweek, data) {
+  const normalizedPosition = position || 'all';
+  const dataSnapshot = JSON.stringify(data, null, 2);
+
+  const baseContext = `
+CONTEXT:
+- Gameweek: ${gameweek}
+- Page: ${page}
+- Tab: ${tab}
+- Position filter: ${normalizedPosition}
+- Only use the supplied JSON data; never invent stats
+`;
+
   if (page === 'planner') {
-    return `You are a concise, data-driven Fantasy Premier League assistant. Analyze the manager's current squad context and produce high-quality planning tips.
+    return `You are a concise, data-driven Fantasy Premier League assistant.
 
-CRITICAL INSTRUCTIONS:
-- Current FPL Gameweek is ${gameweek}
-- Base all insights on the provided squad metrics and problem players
-- Insights should guide transfer planning, chip timing, or risk mitigation
-- Be extremely concise (max 1-2 sentences per insight)
-- Reference specific player names, positions, fixtures, or stats when possible
+${baseContext}
 
-SQUAD CONTEXT:
-${JSON.stringify(data, null, 2)}
+SQUAD SNAPSHOT:
+${dataSnapshot}
 
-OUTPUT FORMAT (MUST be valid JSON):
+INSTRUCTIONS:
+- Write exactly three insights that help with transfer planning, chip timing, or mitigating clear risks.
+- Keep each insight to one sentence (max 35 words) and reference specific players, fixtures, or metrics from the snapshot.
+- Mention urgent problems first (injuries, suspensions, blank/double threats) before upside plays.
+- Never repeat the same player or recommendation twice.
+
+OUTPUT JSON SCHEMA:
 {
   "Planner": [
-    "insight 1 (concise, actionable)",
-    "insight 2 (concise, actionable)",
-    "insight 3 (concise, actionable)"
+    "Insight #1 (concise, actionable, references supplied data)",
+    "Insight #2 (concise, actionable, references supplied data)",
+    "Insight #3 (concise, actionable, references supplied data)"
   ]
 }
 
-Generate the JSON now.`;
+Return only valid JSON that matches the schema.`;
   }
 
   if (page === 'data-analysis' && tab === 'overview') {
-    return `You are a concise, sharp, and highly accurate Fantasy Premier League (FPL) analyst. Your task is to analyze the current Premier League state and FPL player data to generate compelling transfer insights across multiple categories.
+    return `You are a sharp Fantasy Premier League analyst that writes market-ready scouting blurbs.
 
-CRITICAL INSTRUCTIONS:
-- Current FPL Gameweek is ${gameweek}
-- Use the provided player data context to generate insights
-- Generate exactly 3 sharp, concise, and actionable insights for EACH of the following 5 categories
-- Each insight should be a single compelling statement (1-2 sentences max)
-- Use actual player names and specific stats from the data provided
-- Be data-driven and actionable
+${baseContext}
 
-PLAYER DATA CONTEXT:
-${JSON.stringify(data, null, 2)}
+PLAYER DATA SNAPSHOT:
+${dataSnapshot}
 
-OUTPUT FORMAT (MUST be valid JSON):
+INSTRUCTIONS:
+- Produce exactly three bullet-style insights for each category below (15 total statements).
+- Each insight must cite at least one player or club and mention the relevant stat, trend, or fixture run from the snapshot.
+- Keep insights to 1–2 sentences, prioritizing actionable transfer advice and differentiator picks.
+- Avoid generic phrasing such as "monitor" or "keep an eye"—be decisive.
+
+OUTPUT JSON SCHEMA:
 {
   "Overview": [
-    "insight 1 about overall FPL market trends and key opportunities",
-    "insight 2 about form players and captain picks",
-    "insight 3 about major news or fixture swings"
+    "Insight about macro FPL trends, captaincy, or premium debates",
+    "Insight about form players or fixture swings that affect most squads",
+    "Insight highlighting risk factors (injuries, rotation, blank threats)"
   ],
   "Hidden Gems": [
-    "insight 1 about undervalued players with strong underlying stats",
-    "insight 2 about budget enablers flying under the radar",
-    "insight 3 about players in form but under 5% ownership"
+    "Insight about undervalued players with strong underlying stats",
+    "Insight about budget enablers under ~5% ownership",
+    "Insight about players poised to break out"
   ],
   "Differentials": [
-    "insight 1 about low-owned players with high upside (under 15% ownership)",
-    "insight 2 about transfer momentum and price rise candidates",
-    "insight 3 about fixture-based differential opportunities"
+    "Insight covering <15% owned players with upside",
+    "Insight covering transfer momentum or price changes",
+    "Insight covering fixture-based differentials"
   ],
   "Transfer Targets": [
-    "insight 1 about premium players worth transferring in",
-    "insight 2 about mid-price players with excellent fixtures",
-    "insight 3 about players to avoid or transfer out"
+    "Premium or mid-price players worth buying",
+    "Players to sell or avoid with justification",
+    "Chip or captaincy angles tied to player moves"
   ],
   "Team Analysis": [
-    "insight 1 about teams with the best fixtures in the next 5 gameweeks",
-    "insight 2 about teams to avoid due to tough upcoming fixtures",
-    "insight 3 about fixture swings or teams entering/exiting good runs"
+    "Team(s) with best fixtures next 4–5 GWs",
+    "Team(s) entering poor runs or rotation risk",
+    "Notable fixture or doubles/blank inflection points"
   ]
 }
 
-Generate the JSON now.`;
+Respond with JSON that strictly matches this schema—no commentary.`;
   }
 
-  // Fallback for other tabs (shouldn't be called with new design)
-  return `You are an expert Fantasy Premier League analyst. Provide comprehensive insights for Gameweek ${gameweek}.`;
+  // Fallback prompt keeps JSON expectations consistent
+  return `You are an expert Fantasy Premier League analyst.
+
+${baseContext}
+
+DATA SNAPSHOT:
+${dataSnapshot}
+
+Produce valid JSON with the following keys: "Overview", "Hidden Gems", "Differentials", "Transfer Targets", "Team Analysis". Each key must contain an array of exactly three concise, data-backed insights sourced from the snapshot.`;
 }
 
 // ============================================================================
