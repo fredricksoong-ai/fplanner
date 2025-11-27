@@ -34,7 +34,7 @@ export function renderTransferTargets(
     // Rising stars (positive momentum + good fixtures + good form)
     const risingStars = players.filter(p => {
         const minPercentage = calculateMinutesPercentage(p, getCurrentGW());
-        if (minPercentage < 30) return false;
+        if (minPercentage < 20) return false;
 
         const form = parseFloat(p.form) || 0;
         const fdr5 = calculateFixtureDifficulty(p.team, 5);
@@ -45,7 +45,7 @@ export function renderTransferTargets(
             hasPositiveMomentum = net > 0;
         }
 
-        return form > 4 && fdr5 <= 3.0 && hasPositiveMomentum;
+        return form > 3.5 && fdr5 <= 3.5 && hasPositiveMomentum;
     }).sort((a, b) => {
         const aNet = a.github_transfers ? (a.github_transfers.transfers_in - a.github_transfers.transfers_out) : 0;
         const bNet = b.github_transfers ? (b.github_transfers.transfers_in - b.github_transfers.transfers_out) : 0;
@@ -74,20 +74,20 @@ export function renderTransferTargets(
         return aNet - bNet;
     }).slice(0, 20);
 
-    // Fixture turnarounds (bad fixtures now, good fixtures soon)
+    // Fixture turnarounds (players with good upcoming fixtures)
     const fixtureTurnarounds = players.filter(p => {
         const minPercentage = calculateMinutesPercentage(p, getCurrentGW());
-        if (minPercentage < 30) return false;
+        if (minPercentage < 20) return false;
 
         const next3FDR = calculateFixtureDifficulty(p.team, 3);
-        // Would need to calculate next 3 after that for swing
-        // For now, just use players with improving fixtures
-        return next3FDR <= 2.5;
+        const form = parseFloat(p.form) || 0;
+        // Players with good fixtures and decent form
+        return next3FDR <= 3.0 && form > 2;
     }).sort((a, b) => {
         const aFDR = calculateFixtureDifficulty(a.team, 5);
         const bFDR = calculateFixtureDifficulty(b.team, 5);
         return aFDR - bFDR;
-    }).slice(0, 15);
+    }).slice(0, 20);
 
     return `
         <div>

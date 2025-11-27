@@ -95,7 +95,7 @@ export function renderHiddenGems(
 
             <!-- Section 4: Differentials -->
             <div style="margin-bottom: 3rem;">
-                ${renderSectionHeader('💎', 'Differentials (<10% Owned)', 'Low ownership players in good form - differential picks to gain rank')}
+                ${renderSectionHeader('💎', 'Differentials (<10% Owned)', 'Low ownership players in good form - sorted by total points')}
                 ${differentials.length > 0 ? (isMobile ? renderPositionSpecificTableMobile(differentials, 'ownership') : renderPositionSpecificTable(differentials, position)) : '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">No differentials found</div>'}
             </div>
         </div>

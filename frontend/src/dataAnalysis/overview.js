@@ -4,7 +4,7 @@
 // ============================================================================
 
 import { getAllPlayers } from '../data.js';
-import { getCurrentGW, calculateMinutesPercentage, sortPlayers } from '../utils.js';
+import { getCurrentGW, calculateMinutesPercentage, sortPlayers, calculatePPM } from '../utils.js';
 import { calculateFixtureDifficulty } from '../fixtures.js';
 import { isMobileDevice } from '../renderMyTeamMobile.js';
 import { sharedState } from '../sharedState.js';
@@ -36,7 +36,7 @@ export function renderAnalysisOverview(
 
     const top20 = sortPlayers(players, 'total_points', false).slice(0, 20);
     const bestValue = players.filter(p => calculateMinutesPercentage(p, getCurrentGW()) > 30);
-    const top15Value = sortPlayers(bestValue, 'ppm', false).slice(0, 15);
+    const top15Value = [...bestValue].sort((a, b) => calculatePPM(b) - calculatePPM(a)).slice(0, 15);
     const top15Form = sortPlayers(bestValue, 'form', false).slice(0, 15);
 
     const annotate = list => list.map(player => ({
