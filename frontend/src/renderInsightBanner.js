@@ -257,26 +257,26 @@ export function renderInsightBanner(insights, contextId, isMobile = false, optio
                         <button
                             class="ai-insights-regenerate-btn"
                             data-context="${contextId}"
+                            aria-label="Regenerate AI insights"
                             style="
-                                padding: ${isMobile ? '0.4rem 0.75rem' : '0.5rem 1rem'};
+                                padding: ${isMobile ? '0.3rem' : '0.4rem'};
                                 background: transparent;
-                                border: 1px solid var(--accent-color);
-                                border-radius: 6px;
+                                border: none;
+                                border-radius: 999px;
                                 color: var(--accent-color);
-                                font-size: ${isMobile ? '0.7rem' : '0.8rem'};
-                                font-weight: 600;
+                                font-size: ${isMobile ? '0.9rem' : '1rem'};
                                 cursor: pointer;
-                                transition: opacity 0.2s, background 0.2s, color 0.2s;
+                                transition: opacity 0.2s, transform 0.2s;
+                                min-width: ${isMobile ? '28px' : '32px'};
+                                min-height: ${isMobile ? '28px' : '32px'};
                                 display: inline-flex;
                                 align-items: center;
-                                gap: 0.35rem;
-                                white-space: nowrap;
+                                justify-content: center;
                             "
-                            onmouseover="this.style.opacity='0.85'"
-                            onmouseout="this.style.opacity='1'"
+                            onmouseover="this.style.opacity='0.8'; this.style.transform='scale(1.05)'"
+                            onmouseout="this.style.opacity='1'; this.style.transform='scale(1)'"
                         >
                             <i class="fas fa-redo"></i>
-                            Regenerate
                         </button>
                     `}
                 </div>

@@ -31,6 +31,7 @@ import teamRoutes from './routes/teamRoutes.js';
 import leagueRoutes from './routes/leagueRoutes.js';
 import aiRoutes from './routes/aiRoutes.js';
 import plannerRoutes from './routes/plannerRoutes.js';
+import { startCohortScheduler } from './services/cohortScheduler.js';
 
 // Logger
 import logger from './logger.js';
@@ -231,7 +232,13 @@ loadCacheFromDisk();
 initializeCachePersistence();
 
 // Kick off cache warmup asynchronously
-warmCachesOnStartup();
+warmCachesOnStartup()
+  .catch(err => {
+    logger.warn(`⚠️ Cache warmup encountered an error: ${err.message}`);
+  })
+  .finally(() => {
+    startCohortScheduler();
+  });
 
 // Ensure platform-provided port binding is respected (Render)
 enforceRenderPortBinding();
