@@ -190,7 +190,7 @@ function renderCategoryInsights(insights, isMobile = false) {
  * @returns {string} HTML string
  */
 export function renderInsightBanner(insights, contextId, isMobile = false, options = {}) {
-    const { hideTabs = false, customTitle, customSubtitle, preferredCategory } = options;
+    const { hideTabs = false, customTitle, customSubtitle, preferredCategory, hideRegenerateButton = false } = options;
 
     // Handle error state (including parse errors from backend)
     if (insights.error || insights.parseError || !insights.categories || Object.keys(insights.categories).length === 0) {
@@ -227,23 +227,59 @@ export function renderInsightBanner(insights, contextId, isMobile = false, optio
         ">
             <!-- Header -->
             <div style="margin-bottom: ${isMobile ? '0.75rem' : '1rem'};">
-                <h3 style="
-                    color: var(--accent-color);
-                    font-weight: 700;
-                    font-size: ${headerFontSize};
-                    margin: 0 0 ${isMobile ? '0.75rem' : '1rem'} 0;
+                <div style="
+                    display: flex;
+                    justify-content: space-between;
+                    gap: 0.75rem;
+                    flex-wrap: wrap;
+                    align-items: flex-start;
                 ">
-                    ${customTitle || '🤖 AI Insights'}
-                </h3>
-                ${customSubtitle ? `
-                    <p style="
-                        color: var(--text-secondary);
-                        margin: 0 0 ${isMobile ? '0.75rem' : '1rem'} 0;
-                        font-size: ${isMobile ? '0.7rem' : '0.8rem'};
-                    ">
-                        ${customSubtitle}
-                    </p>
-                ` : ''}
+                    <div style="flex: 1 1 auto; min-width: 150px;">
+                        <h3 style="
+                            color: var(--accent-color);
+                            font-weight: 700;
+                            font-size: ${headerFontSize};
+                            margin: 0 0 ${isMobile ? '0.5rem' : '0.75rem'} 0;
+                        ">
+                            ${customTitle || '🤖 AI Insights'}
+                        </h3>
+                        ${customSubtitle ? `
+                            <p style="
+                                color: var(--text-secondary);
+                                margin: 0;
+                                font-size: ${isMobile ? '0.7rem' : '0.8rem'};
+                            ">
+                                ${customSubtitle}
+                            </p>
+                        ` : ''}
+                    </div>
+                    ${hideRegenerateButton ? '' : `
+                        <button
+                            class="ai-insights-regenerate-btn"
+                            data-context="${contextId}"
+                            style="
+                                padding: ${isMobile ? '0.4rem 0.75rem' : '0.5rem 1rem'};
+                                background: transparent;
+                                border: 1px solid var(--accent-color);
+                                border-radius: 6px;
+                                color: var(--accent-color);
+                                font-size: ${isMobile ? '0.7rem' : '0.8rem'};
+                                font-weight: 600;
+                                cursor: pointer;
+                                transition: opacity 0.2s, background 0.2s, color 0.2s;
+                                display: inline-flex;
+                                align-items: center;
+                                gap: 0.35rem;
+                                white-space: nowrap;
+                            "
+                            onmouseover="this.style.opacity='0.85'"
+                            onmouseout="this.style.opacity='1'"
+                        >
+                            <i class="fas fa-redo"></i>
+                            Regenerate
+                        </button>
+                    `}
+                </div>
 
                 ${showTabs ? `
                     <!-- Tab Navigation -->
@@ -290,6 +326,7 @@ export function renderInsightBanner(insights, contextId, isMobile = false, optio
                     <div
                         class="ai-insight-tab-content"
                         data-category="${category}"
+                        data-context="${contextId}"
                         style="display: ${(!showTabs && category === activeCategory) || (showTabs && index === 0) ? 'block' : 'none'};"
                     >
                         ${renderCategoryInsights(insights.categories[category], isMobile)}
@@ -318,7 +355,7 @@ export function renderInsightBanner(insights, contextId, isMobile = false, optio
  * @param {string} contextId - Context identifier
  * @param {Function} onRetry - Callback function when retry is clicked (error state only)
  */
-export function attachInsightBannerListeners(contextId, onRetry) {
+export function attachInsightBannerListeners(contextId, { onRetry, onRegenerate } = {}) {
     // Attach retry button listener (for error state only)
     const retryBtn = document.querySelector(`.ai-insights-retry-btn[data-context="${contextId}"]`);
     if (retryBtn && onRetry) {
@@ -335,6 +372,25 @@ export function attachInsightBannerListeners(contextId, onRetry) {
                 // Restore button state
                 retryBtn.disabled = false;
                 retryBtn.innerHTML = originalHTML;
+            }
+        });
+    }
+
+    // Attach regenerate button listener (success state)
+    const regenerateBtn = document.querySelector(`.ai-insights-regenerate-btn[data-context="${contextId}"]`);
+    if (regenerateBtn && onRegenerate) {
+        regenerateBtn.addEventListener('click', async () => {
+            const originalHTML = regenerateBtn.innerHTML;
+            regenerateBtn.disabled = true;
+            regenerateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Regenerating...';
+
+            try {
+                await onRegenerate();
+            } finally {
+                if (document.contains(regenerateBtn)) {
+                    regenerateBtn.disabled = false;
+                    regenerateBtn.innerHTML = originalHTML;
+                }
             }
         });
     }
@@ -366,7 +422,7 @@ export function attachInsightBannerListeners(contextId, onRetry) {
                 });
 
                 // Show/hide content
-                const contents = document.querySelectorAll('.ai-insight-tab-content');
+                const contents = document.querySelectorAll(`.ai-insight-tab-content[data-context="${contextId}"]`);
                 contents.forEach(content => {
                     if (content.dataset.category === targetCategory) {
                         content.style.display = 'block';
@@ -423,12 +479,15 @@ export async function loadAndRenderInsights(context, containerId, isMobile = fal
         // Attach listeners
         if (hasError) {
             // Attach retry listener with force refresh for error states
-            attachInsightBannerListeners(contextId, () => {
-                loadAndRenderInsights(context, containerId, isMobile, { ...options, forceRefresh: true });
+            attachInsightBannerListeners(contextId, {
+                onRetry: () => loadAndRenderInsights(context, containerId, isMobile, { ...options, forceRefresh: true }),
+                onRegenerate: () => loadAndRenderInsights(context, containerId, isMobile, { ...options, forceRefresh: true })
             });
         } else {
             // Attach tab switching listeners for success state
-            attachInsightBannerListeners(contextId);
+            attachInsightBannerListeners(contextId, {
+                onRegenerate: () => loadAndRenderInsights(context, containerId, isMobile, { ...options, forceRefresh: true })
+            });
         }
 
     } catch (error) {
@@ -439,8 +498,9 @@ export async function loadAndRenderInsights(context, containerId, isMobile = fal
         );
 
         // Attach retry listener for error state with force refresh
-        attachInsightBannerListeners(contextId, () => {
-            loadAndRenderInsights(context, containerId, isMobile, { ...options, forceRefresh: true });
+        attachInsightBannerListeners(contextId, {
+            onRetry: () => loadAndRenderInsights(context, containerId, isMobile, { ...options, forceRefresh: true }),
+            onRegenerate: () => loadAndRenderInsights(context, containerId, isMobile, { ...options, forceRefresh: true })
         });
     }
 }
