@@ -23,7 +23,8 @@ export function renderAnalysisOverview(
     renderPositionSpecificTableMobile,
     renderPositionSpecificTable
 ) {
-    let players = getAllPlayers();
+    const allPlayers = getAllPlayers();
+    let players = allPlayers;
     const myTeamPicks = sharedState?.myTeamData?.picks?.picks || [];
     const myPlayerIds = new Set(myTeamPicks.map(pick => pick.element));
     const isMobile = isMobileDevice();
@@ -44,27 +45,27 @@ export function renderAnalysisOverview(
         __isMine: myPlayerIds.has(player.id)
     }));
 
-    // Penalty takers (exclude GKP)
-    const penaltyTakers = players.filter(p =>
-        p.penalties_order === 1 && p.element_type !== 1
-    ).sort((a, b) => calculateFixtureDifficulty(a.team, 5) - calculateFixtureDifficulty(b.team, 5));
-
-    // Defensive standouts (for outfield players only)
+    // Defensive standouts (always available – use all outfield players)
     let defensiveSection = '';
-    if (position === 'DEF' || position === 'MID' || position === 'FWD') {
-        const withDefCon = players.filter(p => p.github_season && p.github_season.defensive_contribution_per_90);
-        const topDefensive = withDefCon.sort((a, b) =>
-            b.github_season.defensive_contribution_per_90 - a.github_season.defensive_contribution_per_90
-        ).slice(0, 10);
+    const defensiveSource = position === 'GKP' ? allPlayers : players;
+    const withDefCon = defensiveSource.filter(p =>
+        p.element_type !== 1 &&
+        p.github_season &&
+        p.github_season.defensive_contribution_per_90
+    );
+    const topDefensive = withDefCon.sort((a, b) =>
+        b.github_season.defensive_contribution_per_90 - a.github_season.defensive_contribution_per_90
+    ).slice(0, 10);
 
-        if (topDefensive.length > 0) {
-            defensiveSection = `
-                <div style="margin-top: 3rem;">
-                    ${renderSectionHeader('🛡️', 'Defensive Standouts', `Top ${position === 'all' ? 'outfield players' : position} by defensive contribution per 90`)}
-                    ${isMobile ? renderPositionSpecificTableMobile(annotate(topDefensive), 'def90') : renderPositionSpecificTable(annotate(topDefensive), position)}
-                </div>
-            `;
-        }
+    if (topDefensive.length > 0) {
+        const tablePosition = (position === 'DEF' || position === 'MID' || position === 'FWD') ? position : 'all';
+        const sectionLabel = (position === 'all' || position === 'GKP') ? 'outfield players' : position;
+        defensiveSection = `
+            <div style="margin-top: 3rem;">
+                ${renderSectionHeader('🛡️', 'Defensive Standouts', `Top ${sectionLabel} by defensive contribution per 90`)}
+                ${isMobile ? renderPositionSpecificTableMobile(annotate(topDefensive), 'def90') : renderPositionSpecificTable(annotate(topDefensive), tablePosition)}
+            </div>
+        `;
     }
 
     return `
@@ -72,7 +73,7 @@ export function renderAnalysisOverview(
             <!-- Section 1: Top Performers -->
             <div style="margin-bottom: 3rem;">
                 ${renderSectionHeader('🏆', 'Top Performers', `Top ${position === 'all' ? '20 players' : '20 ' + position} by total points`)}
-                ${isMobile ? renderPositionSpecificTableMobile(annotate(top20), 'ppm') : renderPositionSpecificTable(annotate(top20), position)}
+                ${isMobile ? renderPositionSpecificTableMobile(annotate(top20), 'total') : renderPositionSpecificTable(annotate(top20), position)}
             </div>
 
             <!-- Section 2: Best Value -->
@@ -84,18 +85,9 @@ export function renderAnalysisOverview(
             <!-- Section 3: Form Stars -->
             <div style="margin-bottom: 3rem;">
                 ${renderSectionHeader('🔥', 'Form Stars', 'Top 15 by recent form (min 30% minutes played)')}
-                ${isMobile ? renderPositionSpecificTableMobile(annotate(top15Form), 'ppm') : renderPositionSpecificTable(annotate(top15Form), position)}
+                ${isMobile ? renderPositionSpecificTableMobile(annotate(top15Form), 'form') : renderPositionSpecificTable(annotate(top15Form), position)}
             </div>
-
-            <!-- Section 4: Penalty Takers -->
-            ${penaltyTakers.length > 0 ? `
-                <div style="margin-top: 3rem;">
-                    ${renderSectionHeader('⚽', 'Penalty Takers', 'First-choice penalty takers sorted by upcoming fixture difficulty')}
-                    ${isMobile ? renderPositionSpecificTableMobile(annotate(penaltyTakers.slice(0, 15)), 'penalty') : renderPositionSpecificTable(annotate(penaltyTakers.slice(0, 15)), position)}
-                </div>
-            ` : ''}
-
-            <!-- Section 5: Defensive Standouts (if applicable) -->
+            <!-- Section 4: Defensive Standouts (if applicable) -->
             ${defensiveSection}
         </div>
     `;
