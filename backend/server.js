@@ -30,6 +30,7 @@ import fplRoutes from './routes/fplRoutes.js';
 import teamRoutes from './routes/teamRoutes.js';
 import leagueRoutes from './routes/leagueRoutes.js';
 import aiRoutes from './routes/aiRoutes.js';
+import plannerRoutes from './routes/plannerRoutes.js';
 
 // Logger
 import logger from './logger.js';
@@ -141,6 +142,9 @@ app.use('/', leagueRoutes);
 
 // AI Routes (/api/ai-insights)
 app.use('/', aiRoutes);
+
+// Planner Routes (/api/planner/*)
+app.use('/', plannerRoutes);
 
 // ============================================================================
 // SERVE FRONTEND IN PRODUCTION

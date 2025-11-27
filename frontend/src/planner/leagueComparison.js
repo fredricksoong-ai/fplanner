@@ -3,12 +3,13 @@
  */
 
 import { sharedState } from '../sharedState.js';
-import { loadLeagueStandings, loadMyTeam } from '../data.js';
+import { loadLeagueStandings, loadMyTeam, loadPlannerCohorts } from '../data.js';
 import { calculateTeamMetrics } from './metrics.js';
 
 const MAX_LEAGUE_ENTRIES = 50;
 const CACHE_TTL = 4 * 60 * 60 * 1000; // 4 hours
 const METRIC_KEYS = ['avgPPM', 'avgFDR', 'avgForm', 'expectedPoints', 'avgOwnership', 'avgXGI'];
+const COHORT_UI_CACHE_TTL = 60 * 60 * 1000; // 1 hour
 
 function getPreferredLeagueId(teamId) {
     if (sharedState.activeLeagueTab) {
@@ -164,5 +165,43 @@ export async function getLeagueComparisonMetrics(teamId, userMetrics, gameweek) 
         averages: cached.averages,
         percentiles
     };
+}
+
+function getCachedCohortEntry(gameweek) {
+    const cached = sharedState.cohortMetricsCache.get(gameweek);
+    if (!cached) return null;
+    if (!cached.timestamp || (Date.now() - cached.timestamp) > COHORT_UI_CACHE_TTL) {
+        sharedState.cohortMetricsCache.delete(gameweek);
+        return null;
+    }
+    return cached;
+}
+
+export async function getCohortComparisonMetrics(userMetrics, gameweek) {
+    if (!gameweek || !userMetrics) {
+        return null;
+    }
+
+    let cached = getCachedCohortEntry(gameweek);
+    if (!cached) {
+        const data = await loadPlannerCohorts(gameweek);
+        cached = { ...data };
+        if (!cached.timestamp) {
+            cached.timestamp = Date.now();
+        }
+        sharedState.cohortMetricsCache.set(gameweek, cached);
+    }
+
+    if (!cached?.buckets) {
+        return null;
+    }
+
+    return Object.values(cached.buckets).map(bucket => ({
+        key: bucket.key,
+        label: bucket.label,
+        sampleSize: bucket.sampleSize,
+        averages: bucket.averages,
+        percentiles: computePercentiles(userMetrics, bucket.distributions)
+    })).filter(bucket => bucket.sampleSize > 0);
 }
 

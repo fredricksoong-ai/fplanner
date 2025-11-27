@@ -40,6 +40,10 @@ export let cache = {
     cacheHits: 0,
     cacheMisses: 0,
     lastFetch: null
+  },
+  cohorts: {
+    // Map of `${gameweek}` -> { data, timestamp }
+    entries: new Map()
   }
 };
 
@@ -326,6 +330,44 @@ export function clearTeamCaches() {
 }
 
 // ============================================================================
+// COHORT CACHE
+// ============================================================================
+
+/**
+ * Get cached cohort metrics for a specific gameweek
+ * @param {number|string} gameweek - Gameweek number
+ * @returns {Object|null} Cached cohort data
+ */
+export function getCachedCohortMetrics(gameweek) {
+  if (!gameweek && gameweek !== 0) return null;
+  const key = String(gameweek);
+  const cached = cache.cohorts.entries.get(key);
+  return cached ? cached.data : null;
+}
+
+/**
+ * Update cohort cache for a gameweek
+ * @param {number|string} gameweek - Gameweek number
+ * @param {Object} data - Cohort metrics payload
+ */
+export function updateCohortCache(gameweek, data) {
+  if (!gameweek && gameweek !== 0) return;
+  const key = String(gameweek);
+  cache.cohorts.entries.set(key, {
+    data,
+    timestamp: Date.now()
+  });
+}
+
+/**
+ * Clear all cached cohort data (e.g., when forcing recompute)
+ */
+export function clearCohortCache() {
+  cache.cohorts.entries.clear();
+  logger.log('🗑️ Cohort cache cleared');
+}
+
+// ============================================================================
 // LIVE DATA CACHE
 // ============================================================================
 
@@ -453,6 +495,10 @@ export function loadCacheFromDisk() {
           cache.teams.picks = new Map(backup.teams.picks || []);
         }
 
+        if (backup.cohorts) {
+          cache.cohorts.entries = new Map(backup.cohorts.entries || []);
+        }
+
         // Restore live cache from arrays back to Map
         if (backup.live) {
           cache.live.entries = new Map(backup.live.entries || []);
@@ -487,6 +533,9 @@ export function saveCacheToDisk() {
       github: cache.github,
       live: {
         entries: Array.from(cache.live.entries.entries())
+      },
+      cohorts: {
+        entries: Array.from(cache.cohorts.entries.entries())
       },
       teams: {
         entries: Array.from(cache.teams.entries.entries()),

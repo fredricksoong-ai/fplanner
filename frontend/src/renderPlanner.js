@@ -33,8 +33,17 @@ import { calculateTeamMetrics, calculateProjectedTeamMetrics } from './planner/m
 import { renderMetricIndicators } from './planner/indicators.js';
 import { renderCostSummary, getCurrentCostSummary } from './planner/costCalculator.js';
 import { attachPlannerListeners } from './planner/eventHandlers.js';
-import { getLeagueComparisonMetrics } from './planner/leagueComparison.js';
+import { getLeagueComparisonMetrics, getCohortComparisonMetrics } from './planner/leagueComparison.js';
 import { getWishlistPlayers } from './wishlist/store.js';
+
+const COHORT_METRICS = [
+    { key: 'avgPPM', label: 'Avg PPM', suffix: '' },
+    { key: 'avgFDR', label: 'Avg FDR', suffix: '' },
+    { key: 'avgForm', label: 'Avg Form', suffix: '' },
+    { key: 'expectedPoints', label: 'Exp Pts', suffix: '' },
+    { key: 'avgOwnership', label: 'Avg Own%', suffix: '%' },
+    { key: 'avgXGI', label: 'Avg xGI', suffix: '' }
+];
 
 let plannerWishlistListenerAttached = false;
 
@@ -140,18 +149,25 @@ export async function renderPlanner() {
 
         // Build page HTML
         let leagueComparison = null;
+        let cohortComparison = null;
         try {
             leagueComparison = await getLeagueComparisonMetrics(numericTeamId, projectedMetrics, gwNumber);
         } catch (err) {
             console.warn('Planner league comparison unavailable:', err.message || err);
+        }
+        try {
+            cohortComparison = await getCohortComparisonMetrics(projectedMetrics, gwNumber);
+        } catch (err) {
+            console.warn('Planner cohort comparison unavailable:', err.message || err);
         }
 
         const html = `
             <div style="padding: 0.5rem;">
                 ${renderPlannerHeader(gwNumber, highCount, mediumCount, lowCount)}
                 ${renderMetricIndicators(originalMetrics, projectedMetrics, leagueComparison)}
+                ${renderCohortComparisonSection(cohortComparison, projectedMetrics)}
                 ${renderCostSummary(costSummary)}
-                ${renderWishlistSection(wishlistEntries)}
+                ${renderWishlistSection(wishlistEntries, gwNumber)}
                 ${renderUnifiedFixtureTable(currentPlayers, riskPlayerMap, teamData.picks, gwNumber)}
             </div>
         `;
@@ -185,7 +201,7 @@ if (typeof window !== 'undefined' && !plannerWishlistListenerAttached) {
 // WISHLIST SECTION
 // ============================================================================
 
-function renderWishlistSection(entries = []) {
+function renderWishlistSection(entries = [], gwNumber = currentGW) {
     if (!entries || entries.length === 0) {
         return `
             <div style="
@@ -206,19 +222,26 @@ function renderWishlistSection(entries = []) {
         `;
     }
 
+    const next5GWs = [
+        gwNumber + 1,
+        gwNumber + 2,
+        gwNumber + 3,
+        gwNumber + 4,
+        gwNumber + 5
+    ];
+
     const rows = entries.map(({ player, addedAt }) => {
         const position = getPositionShort(player);
         const nextFixtures = getFixtures(player.team, 5, false);
-        const nextFixture = nextFixtures[0];
-        const nextOpponent = nextFixture
-            ? `${nextFixture.opponent} (${nextFixture.isHome ? 'H' : 'A'})`
-            : '—';
-        const nextDifficulty = nextFixture ? getDifficultyClass(nextFixture.difficulty) : '';
         const avgFDR = calculateFixtureDifficulty(player.team, 5).toFixed(1);
+        const avgFDRValue = parseFloat(avgFDR);
         const addedDate = addedAt ? new Date(addedAt) : null;
         const addedText = addedDate
             ? addedDate.toLocaleDateString('en-SG', { month: 'short', day: 'numeric' })
             : 'Recently added';
+        const formHeatmap = getFormHeatmap(player.form);
+        const formStyle = getHeatmapStyle(formHeatmap);
+        const fdrColor = avgFDRValue <= 2.5 ? '#22c55e' : avgFDRValue <= 3.5 ? '#eab308' : '#ef4444';
 
         return `
             <tr
@@ -233,26 +256,32 @@ function renderWishlistSection(entries = []) {
                             <strong style="font-size: 0.8rem;">${escapeHtml(player.web_name)}</strong>
                         </div>
                         <span style="font-size: 0.65rem; color: var(--text-tertiary);">
-                            ${getTeamShortName(player.team)} • £${formatCurrency(player.now_cost)}
+                            ${getTeamShortName(player.team)} • ${formatCurrency(player.now_cost)}
                         </span>
                         <span style="font-size: 0.6rem; color: var(--text-secondary);">
                             Added ${addedText}
                         </span>
                     </div>
                 </td>
-                <td style="text-align: center; padding: 0.5rem; font-weight: 600;">
-                    ${formatDecimal(player.form)}
-                </td>
-                <td style="text-align: center; padding: 0.5rem; color: ${avgFDR <= 2.5 ? '#22c55e' : avgFDR <= 3.5 ? '#eab308' : '#ef4444'}; font-weight: 700;">
+                <td style="text-align: center; padding: 0.5rem; color: ${fdrColor}; font-weight: 700;">
                     ${avgFDR}
                 </td>
-                <td style="text-align: center; padding: 0.5rem;">
-                    ${nextFixture ? `
-                        <span class="${nextDifficulty}" style="display: inline-block; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem;">
-                            ${nextOpponent}
-                        </span>
-                    ` : '—'}
+                <td style="text-align: center; padding: 0.5rem; font-weight: 600;">
+                    <span style="display: inline-block; min-width: 44px; padding: 0.2rem 0.4rem; border-radius: 3px; background: ${formStyle.background}; color: ${formStyle.color};">
+                        ${formatDecimal(player.form)}
+                    </span>
                 </td>
+                ${nextFixtures.map(fix => {
+                    const fdrClass = getDifficultyClass(fix.difficulty);
+                    return `
+                        <td style="text-align: center; padding: 0.5rem;">
+                            <span class="${fdrClass}" style="display: inline-block; width: 52px; padding: 0.2rem 0.3rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem; text-align: center;">
+                                ${fix.opponent}
+                            </span>
+                        </td>
+                    `;
+                }).join('')}
+                ${nextFixtures.length < 5 ? Array(5 - nextFixtures.length).fill('<td style="text-align: center; padding: 0.5rem;">—</td>').join('') : ''}
             </tr>
         `;
     }).join('');
@@ -273,9 +302,9 @@ function renderWishlistSection(entries = []) {
                     <thead style="background: var(--bg-tertiary); text-align: left;">
                         <tr>
                             <th style="padding: 0.5rem;">Player</th>
+                            <th style="padding: 0.5rem; text-align: center;">FDR</th>
                             <th style="padding: 0.5rem; text-align: center;">Form</th>
-                            <th style="padding: 0.5rem; text-align: center;">FDR(5)</th>
-                            <th style="padding: 0.5rem; text-align: center;">Next</th>
+                            ${next5GWs.map(gw => `<th style="padding: 0.5rem; text-align: center;">GW${gw}</th>`).join('')}
                         </tr>
                     </thead>
                     <tbody>
@@ -285,6 +314,90 @@ function renderWishlistSection(entries = []) {
             </div>
         </div>
     `;
+}
+
+function renderCohortComparisonSection(cohortData, userMetrics) {
+    if (!Array.isArray(cohortData) || cohortData.length === 0) {
+        return '';
+    }
+
+    const bucketCards = cohortData.map(bucket => {
+        const metricRows = COHORT_METRICS.map(metric => {
+            const userValue = formatMetricValue(userMetrics?.[metric.key], metric.suffix);
+            const cohortValue = formatMetricValue(bucket.averages?.[metric.key], metric.suffix);
+            const percentile = bucket.percentiles?.[metric.key];
+            const percentileText = typeof percentile === 'number'
+                ? `${percentile}<sup>th</sup>`
+                : '—';
+
+            return `
+                <div style="
+                    display: grid;
+                    grid-template-columns: 1fr 1fr 1fr;
+                    gap: 0.25rem;
+                    font-size: 0.65rem;
+                    color: var(--text-secondary);
+                    margin-bottom: 0.25rem;
+                ">
+                    <span style="font-weight: 600; color: var(--text-primary);">${metric.label}</span>
+                    <span>You: ${userValue}</span>
+                    <span>Avg: ${cohortValue} · ${percentileText} pct</span>
+                </div>
+            `;
+        }).join('');
+
+        return `
+            <div style="
+                background: var(--bg-primary);
+                border-radius: 6px;
+                padding: 0.75rem;
+                border: 1px solid var(--border-color);
+            ">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                    <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-primary);">
+                        ${bucket.label}
+                    </div>
+                    <div style="font-size: 0.65rem; color: var(--text-tertiary);">
+                        Sample: ${bucket.sampleSize}
+                    </div>
+                </div>
+                ${metricRows}
+            </div>
+        `;
+    }).join('');
+
+    return `
+        <div style="
+            margin-bottom: 1rem;
+            padding: 0.75rem;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+        ">
+            <div style="
+                font-size: 0.75rem;
+                font-weight: 600;
+                color: var(--text-secondary);
+                margin-bottom: 0.75rem;
+            ">
+                Top Manager Benchmarks
+            </div>
+            <div style="
+                display: grid;
+                grid-template-columns: 1fr;
+                gap: 0.5rem;
+            ">
+                ${bucketCards}
+            </div>
+        </div>
+    `;
+}
+
+function formatMetricValue(value, suffix = '') {
+    if (value === null || value === undefined || Number.isNaN(value)) {
+        return '—';
+    }
+    const formatted = formatDecimal(value);
+    return suffix ? `${formatted}${suffix}` : formatted;
 }
 
 // ============================================================================
