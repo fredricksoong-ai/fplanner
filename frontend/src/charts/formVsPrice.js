@@ -92,6 +92,13 @@ export async function renderFormVsPriceChart(contentContainer, echarts, position
     const option = createFormVsPriceChartOptions(positions, yAxisMax, isDark, textColor, gridColor);
 
     if (!echarts) return null;
+
+    // Dispose existing chart instance if it exists to prevent caching issues
+    const existingInstance = echarts.getInstanceByDom(chartContainer);
+    if (existingInstance) {
+        existingInstance.dispose();
+    }
+
     const chartInstance = echarts.init(chartContainer);
     if (!chartInstance) return null;
 

@@ -32,43 +32,57 @@ export function renderTransferTargets(
     }
 
     // Rising stars (positive momentum + good fixtures + good form)
+    // Make filters more lenient to ensure we show results
     const risingStars = players.filter(p => {
         const minPercentage = calculateMinutesPercentage(p, getCurrentGW());
-        if (minPercentage < 20) return false;
+        if (minPercentage < 15) return false;
 
         const form = parseFloat(p.form) || 0;
         const fdr5 = calculateFixtureDifficulty(p.team, 5);
 
-        let hasPositiveMomentum = false;
+        // Allow players without transfer data
+        let hasPositiveMomentum = true; // Default to true
         if (p.github_transfers) {
             const net = p.github_transfers.transfers_in - p.github_transfers.transfers_out;
             hasPositiveMomentum = net > 0;
         }
 
-        return form > 3.5 && fdr5 <= 3.5 && hasPositiveMomentum;
+        return form > 3.0 && fdr5 <= 3.8;
     }).sort((a, b) => {
+        // Sort by form first, then by transfer momentum
+        const formDiff = (parseFloat(b.form) || 0) - (parseFloat(a.form) || 0);
+        if (Math.abs(formDiff) > 0.5) return formDiff;
+
         const aNet = a.github_transfers ? (a.github_transfers.transfers_in - a.github_transfers.transfers_out) : 0;
         const bNet = b.github_transfers ? (b.github_transfers.transfers_in - b.github_transfers.transfers_out) : 0;
         return bNet - aNet;
     }).slice(0, 20);
 
-    // Sell candidates (negative momentum + bad fixtures + poor form)
+    // Sell candidates (negative momentum OR bad form/fixtures)
     const sellCandidates = players.filter(p => {
         const minPercentage = calculateMinutesPercentage(p, getCurrentGW());
         const ownership = parseFloat(p.selected_by_percent) || 0;
-        if (minPercentage < 20 || ownership < 2) return false;
+        if (minPercentage < 15 || ownership < 1) return false;
 
         const form = parseFloat(p.form) || 0;
         const fdr5 = calculateFixtureDifficulty(p.team, 5);
 
+        // Consider sell candidates if they have bad form OR bad fixtures
+        const hasBadForm = form < 3;
+        const hasBadFixtures = fdr5 >= 3.8;
+
         let hasNegativeMomentum = false;
         if (p.github_transfers) {
             const net = p.github_transfers.transfers_in - p.github_transfers.transfers_out;
-            hasNegativeMomentum = net < -10000; // Significant negative transfers
+            hasNegativeMomentum = net < -5000; // Less strict threshold
         }
 
-        return (form < 3 || fdr5 >= 4.0) && hasNegativeMomentum;
+        return (hasBadForm || hasBadFixtures) && (hasNegativeMomentum || hasBadForm);
     }).sort((a, b) => {
+        // Sort by form ascending (worst first)
+        const formDiff = (parseFloat(a.form) || 0) - (parseFloat(b.form) || 0);
+        if (Math.abs(formDiff) > 0.5) return formDiff;
+
         const aNet = a.github_transfers ? (a.github_transfers.transfers_in - a.github_transfers.transfers_out) : 0;
         const bNet = b.github_transfers ? (b.github_transfers.transfers_in - b.github_transfers.transfers_out) : 0;
         return aNet - bNet;
