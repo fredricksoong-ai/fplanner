@@ -73,6 +73,11 @@ export async function renderMinutesEfficiencyChart(contentContainer, echarts, po
         })
         .filter(d => d.minutes > 0);
 
+    // Calculate dynamic y-axis max based on data
+    const allPP90 = chartData.map(d => d.pp90);
+    const maxPP90 = Math.max(...allPP90, 5);
+    const yAxisMax = Math.ceil((maxPP90 + 1) / 2) * 2; // Round up to nearest 2
+
     const positionColors = {
         'GKP': '#fbbf24',
         'DEF': '#10b981',
@@ -97,6 +102,7 @@ export async function renderMinutesEfficiencyChart(contentContainer, echarts, po
         seriesByPosition,
         positionColors,
         topPlayerIds,
+        yAxisMax,
         isDark,
         textColor,
         gridColor
@@ -139,7 +145,10 @@ function getUserTeamPlayerIds() {
     return myTeamPlayerIds;
 }
 
-function createMinutesEfficiencyChartOptions(seriesByPosition, positionColors, topPlayerIds, isDark, textColor, gridColor) {
+function createMinutesEfficiencyChartOptions(seriesByPosition, positionColors, topPlayerIds, yAxisMax, isDark, textColor, gridColor) {
+    // Calculate threshold for zone boundaries based on dynamic max
+    const highPP90Threshold = Math.max(5, Math.round(yAxisMax * 0.5));
+
     const series = Object.entries(seriesByPosition).map(([position, data]) => ({
         name: position,
         type: 'scatter',
@@ -192,7 +201,7 @@ function createMinutesEfficiencyChartOptions(seriesByPosition, positionColors, t
                     {
                         name: 'Efficient & Nailed',
                         xAxis: 1800,
-                        yAxis: 5,
+                        yAxis: highPP90Threshold,
                         itemStyle: { color: '#10b981' },
                         label: {
                             show: true,
@@ -205,13 +214,13 @@ function createMinutesEfficiencyChartOptions(seriesByPosition, positionColors, t
                             borderRadius: 4
                         }
                     },
-                    { xAxis: 3420, yAxis: 10 }
+                    { xAxis: 3420, yAxis: yAxisMax }
                 ],
                 [
                     {
                         name: 'Efficient Rotation Risk',
                         xAxis: 90,
-                        yAxis: 5,
+                        yAxis: highPP90Threshold,
                         itemStyle: { color: '#fbbf24' },
                         label: {
                             show: true,
@@ -224,7 +233,7 @@ function createMinutesEfficiencyChartOptions(seriesByPosition, positionColors, t
                             borderRadius: 4
                         }
                     },
-                    { xAxis: 1800, yAxis: 10 }
+                    { xAxis: 1800, yAxis: yAxisMax }
                 ],
                 [
                     {
@@ -243,7 +252,7 @@ function createMinutesEfficiencyChartOptions(seriesByPosition, positionColors, t
                             borderRadius: 4
                         }
                     },
-                    { xAxis: 3420, yAxis: 5 }
+                    { xAxis: 3420, yAxis: highPP90Threshold }
                 ]
             ]
         }
@@ -314,7 +323,7 @@ function createMinutesEfficiencyChartOptions(seriesByPosition, positionColors, t
             axisLabel: { color: textColor },
             splitLine: { lineStyle: { color: gridColor, opacity: 0.3 } },
             min: 0,
-            max: 10
+            max: yAxisMax
         },
         series: series
     };

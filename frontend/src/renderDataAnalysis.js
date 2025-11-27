@@ -874,7 +874,7 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
                 <table style="width: 100%; font-size: 0.7rem; border-collapse: collapse;">
                     <thead style="background: var(--bg-tertiary);">
                         <tr>
-                            <th style="position: sticky; left: 0; background: var(--bg-tertiary); z-index: 10; text-align: left; padding: 0.5rem; min-width: 140px;">Player</th>
+                            <th style="position: sticky; left: 0; background: var(--bg-tertiary); z-index: 11; text-align: left; padding: 0.5rem; min-width: 140px; border-right: 2px solid var(--border-color); box-shadow: 2px 0 4px rgba(0,0,0,0.1);">Player</th>
                             <th style="text-align: center; padding: 0.5rem; min-width: 60px;">Opp</th>
                             <th style="text-align: center; padding: 0.5rem; min-width: 60px;">Status</th>
                             <th style="text-align: center; padding: 0.5rem; min-width: 60px;">Pts</th>
@@ -959,10 +959,11 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
                     position: sticky;
                     left: 0;
                     background: ${rowBg};
-                    z-index: 5;
+                    z-index: 9;
                     padding: 0.5rem;
-                    border-right: 1px solid var(--border-color);
+                    border-right: 2px solid var(--border-color);
                     min-height: 3rem;
+                    box-shadow: 2px 0 4px rgba(0,0,0,0.1);
                 ">
                     <div style="display: flex; align-items: center; gap: 0.3rem; flex-wrap: wrap;">
                         <span style="font-size: 0.6rem; color: var(--text-secondary);">${getPositionShort(player)}</span>
