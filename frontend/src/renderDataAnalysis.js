@@ -66,6 +66,7 @@ import { renderTeamAnalysis as renderTeamAnalysisModule } from './dataAnalysis/t
 import { renderChartsSkeleton, initializeChartsTab } from './dataAnalysis/chartsTab.js';
 import { getMyPlayerIdSet } from './utils/myPlayers.js';
 import { isWishlisted } from './wishlist/store.js';
+import { buildManagerSnapshot } from './aiManagerSnapshot.js';
 
 function getNetTransfersValue(player) {
     if (player?.github_transfers) {
@@ -1449,6 +1450,16 @@ async function loadAIInsightsForTab(tab, position) {
             currentGW
         }
     };
+
+    const managerSnapshot = buildManagerSnapshot();
+    if (managerSnapshot) {
+        contextData.managerSnapshot = managerSnapshot;
+        console.log('🤖 AI Insights: manager snapshot attached', {
+            ownedPlayers: managerSnapshot.squad.length,
+            bankMillions: managerSnapshot.budget?.bankMillions,
+            activeChip: managerSnapshot.chips?.active
+        });
+    }
 
     // Build context for AI
     const context = {
