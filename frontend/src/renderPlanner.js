@@ -45,6 +45,15 @@ const COHORT_METRICS = [
     { key: 'avgXGI', label: 'Avg xGI', suffix: '' }
 ];
 
+const COHORT_METRIC_DIRECTIONS = {
+    avgPPM: 'higher',
+    avgFDR: 'lower',
+    avgForm: 'higher',
+    expectedPoints: 'higher',
+    avgOwnership: null,
+    avgXGI: 'higher'
+};
+
 let plannerWishlistListenerAttached = false;
 
 // ============================================================================
@@ -176,6 +185,7 @@ export async function renderPlanner() {
         
         // Attach event listeners (new modular handlers)
         attachPlannerListeners();
+        attachCohortToggle();
     } catch (err) {
         console.error('Failed to load planner:', err);
         container.innerHTML = `
@@ -249,7 +259,7 @@ function renderWishlistSection(entries = [], gwNumber = currentGW) {
                 data-player-id="${player.id}"
                 style="cursor: pointer; border-bottom: 1px solid var(--border-color);"
             >
-                <td style="padding: 0.5rem;">
+                <td style="padding: 0.5rem; min-width: 120px;">
                     <div style="display: flex; flex-direction: column;">
                         <div style="display: flex; align-items: center; gap: 0.3rem;">
                             <span style="font-size: 0.65rem; color: var(--text-secondary);">${position}</span>
@@ -301,7 +311,7 @@ function renderWishlistSection(entries = [], gwNumber = currentGW) {
                 <table style="width: 100%; font-size: 0.75rem; border-collapse: collapse;">
                     <thead style="background: var(--bg-tertiary); text-align: left;">
                         <tr>
-                            <th style="padding: 0.5rem;">Player</th>
+                            <th style="padding: 0.5rem; min-width: 120px;">Player</th>
                             <th style="padding: 0.5rem; text-align: center;">FDR</th>
                             <th style="padding: 0.5rem; text-align: center;">Form</th>
                             ${next5GWs.map(gw => `<th style="padding: 0.5rem; text-align: center;">GW${gw}</th>`).join('')}
@@ -329,6 +339,7 @@ function renderCohortComparisonSection(cohortData, userMetrics) {
             const percentileText = typeof percentile === 'number'
                 ? `${percentile}<sup>th</sup>`
                 : '—';
+            const badge = getMetricComparisonBadge(metric.key, userMetrics?.[metric.key], bucket.averages?.[metric.key]);
 
             return `
                 <div style="
@@ -341,7 +352,11 @@ function renderCohortComparisonSection(cohortData, userMetrics) {
                 ">
                     <span style="font-weight: 600; color: var(--text-primary);">${metric.label}</span>
                     <span>You: ${userValue}</span>
-                    <span>Avg: ${cohortValue} · ${percentileText} pct</span>
+                    <span>
+                        Avg: ${cohortValue}<br>
+                        <span style="color: var(--text-tertiary);">${percentileText} pct</span>
+                        ${badge}
+                    </span>
                 </div>
             `;
         }).join('');
@@ -358,7 +373,7 @@ function renderCohortComparisonSection(cohortData, userMetrics) {
                         ${bucket.label}
                     </div>
                     <div style="font-size: 0.65rem; color: var(--text-tertiary);">
-                        Sample: ${bucket.sampleSize}
+                        Sample: ${bucket.sampleSize} squads (≤ ${bucket.maxRank?.toLocaleString?.() || bucket.maxRank})
                     </div>
                 </div>
                 ${metricRows}
@@ -373,20 +388,40 @@ function renderCohortComparisonSection(cohortData, userMetrics) {
             background: var(--bg-secondary);
             border-radius: 8px;
         ">
-            <div style="
-                font-size: 0.75rem;
-                font-weight: 600;
-                color: var(--text-secondary);
-                margin-bottom: 0.75rem;
-            ">
-                Top Manager Benchmarks
-            </div>
-            <div style="
-                display: grid;
-                grid-template-columns: 1fr;
-                gap: 0.5rem;
-            ">
-                ${bucketCards}
+            <button
+                type="button"
+                data-cohort-toggle
+                aria-expanded="false"
+                style="
+                    width: 100%;
+                    background: transparent;
+                    border: none;
+                    padding: 0;
+                    margin: 0;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    font-size: 0.75rem;
+                    font-weight: 600;
+                    color: var(--text-secondary);
+                    cursor: pointer;
+                "
+            >
+                <span>Top Manager Benchmarks</span>
+                <span data-cohort-chevron style="color: var(--accent-color); transition: transform 0.2s ease;">
+                    <i class="fas fa-chevron-down"></i>
+                </span>
+            </button>
+            <div
+                id="planner-cohort-content"
+                style="
+                    display: none;
+                    margin-top: 0.75rem;
+                "
+            >
+                <div style="display: grid; grid-template-columns: 1fr; gap: 0.5rem;">
+                    ${bucketCards}
+                </div>
             </div>
         </div>
     `;
@@ -398,6 +433,87 @@ function formatMetricValue(value, suffix = '') {
     }
     const formatted = formatDecimal(value);
     return suffix ? `${formatted}${suffix}` : formatted;
+}
+
+function getMetricComparisonBadge(metricKey, userValue, cohortValue) {
+    if (userValue === null || userValue === undefined || Number.isNaN(userValue)) {
+        return '';
+    }
+    if (cohortValue === null || cohortValue === undefined || Number.isNaN(cohortValue)) {
+        return '';
+    }
+    const direction = COHORT_METRIC_DIRECTIONS[metricKey];
+    if (!direction) {
+        return '';
+    }
+
+    const base = cohortValue === 0 ? 0 : ((userValue - cohortValue) / Math.abs(cohortValue)) * 100;
+    const adjusted = direction === 'lower' ? -base : base;
+
+    let status = 'within';
+    if (adjusted >= 20) {
+        status = 'exceptional';
+    } else if (adjusted >= 5) {
+        status = 'above';
+    } else if (adjusted <= -5) {
+        status = 'below';
+    }
+
+    const colorMap = {
+        below: '#ef4444',
+        within: '#facc15',
+        above: '#22c55e',
+        exceptional: '#a855f7'
+    };
+
+    const labelMap = {
+        below: 'Below avg',
+        within: 'On par',
+        above: 'Above avg',
+        exceptional: 'Exceptional'
+    };
+
+    return `
+        <span style="
+            display: inline-flex;
+            align-items: center;
+            gap: 0.2rem;
+            font-weight: 600;
+            font-size: 0.6rem;
+            color: ${colorMap[status]};
+            text-transform: uppercase;
+            margin-left: 0.1rem;
+        ">
+            ${labelMap[status]}
+        </span>
+    `;
+}
+
+function attachCohortToggle() {
+    const toggle = document.querySelector('[data-cohort-toggle]');
+    const content = document.getElementById('planner-cohort-content');
+    const chevron = toggle?.querySelector('[data-cohort-chevron] i');
+
+    if (!toggle || !content) {
+        return;
+    }
+
+    let isExpanded = false;
+
+    const updateState = () => {
+        toggle.setAttribute('aria-expanded', String(isExpanded));
+        content.style.display = isExpanded ? 'block' : 'none';
+        if (chevron) {
+            chevron.style.transform = isExpanded ? 'rotate(180deg)' : 'rotate(0deg)';
+        }
+    };
+
+    toggle.addEventListener('click', () => {
+        isExpanded = !isExpanded;
+        updateState();
+    });
+
+    updateState();
 }
 
 // ============================================================================
