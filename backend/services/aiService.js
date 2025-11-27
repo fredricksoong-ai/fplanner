@@ -12,6 +12,32 @@ import logger from '../logger.js';
 // PROMPT BUILDING
 // ============================================================================
 
+function splitPromptData(data) {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    return {
+      sanitizedData: data ?? {},
+      managerSnapshot: null
+    };
+  }
+
+  const { managerSnapshot, ...rest } = data;
+  return {
+    sanitizedData: rest,
+    managerSnapshot: managerSnapshot || null
+  };
+}
+
+function formatManagerSnapshotBlock(managerSnapshot) {
+  if (!managerSnapshot) {
+    return '';
+  }
+
+  return `
+MANAGER SNAPSHOT (personalize insights to this exact squad):
+${JSON.stringify(managerSnapshot, null, 2)}
+`;
+}
+
 /**
  * Build AI prompt based on page context
  * @param {string} page - Page name (e.g., 'data-analysis')
@@ -23,7 +49,10 @@ import logger from '../logger.js';
  */
 export function buildAIPrompt(page, tab, position, gameweek, data) {
   const normalizedPosition = position || 'all';
-  const dataSnapshot = JSON.stringify(data, null, 2);
+  const { sanitizedData, managerSnapshot } = splitPromptData(data);
+  const payload = sanitizedData ?? {};
+  const dataSnapshot = JSON.stringify(payload, null, 2);
+  const managerSnapshotBlock = formatManagerSnapshotBlock(managerSnapshot);
 
   const baseContext = `
 CONTEXT:
@@ -39,6 +68,8 @@ CONTEXT:
 
 ${baseContext}
 
+${managerSnapshotBlock}
+
 SQUAD SNAPSHOT:
 ${dataSnapshot}
 
@@ -47,6 +78,7 @@ INSTRUCTIONS:
 - Keep each insight to one sentence (max 35 words) and reference specific players, fixtures, or metrics from the snapshot.
 - Mention urgent problems first (injuries, suspensions, blank/double threats) before upside plays.
 - Never repeat the same player or recommendation twice.
+- If a manager snapshot is provided, tie each insight directly to that squad's gaps, budget, and chips. Do not recommend buying players already owned unless you are discussing captaincy or bench usage.
 
 OUTPUT JSON SCHEMA:
 {
@@ -65,6 +97,8 @@ Return only valid JSON that matches the schema.`;
 
 ${baseContext}
 
+${managerSnapshotBlock}
+
 PLAYER DATA SNAPSHOT:
 ${dataSnapshot}
 
@@ -73,6 +107,7 @@ INSTRUCTIONS:
 - Each insight must cite at least one player or club and mention the relevant stat, trend, or fixture run from the snapshot.
 - Keep insights to 1–2 sentences, prioritizing actionable transfer advice and differentiator picks.
 - Avoid generic phrasing such as "monitor" or "keep an eye"—be decisive.
+- When a manager snapshot is available, highlight where that squad lacks coverage, carries redundant assets, or needs chip planning before offering broad market commentary.
 
 OUTPUT JSON SCHEMA:
 {
@@ -111,10 +146,12 @@ Respond with JSON that strictly matches this schema—no commentary.`;
 
 ${baseContext}
 
+${managerSnapshotBlock}
+
 DATA SNAPSHOT:
 ${dataSnapshot}
 
-Produce valid JSON with the following keys: "Overview", "Hidden Gems", "Differentials", "Transfer Targets", "Team Analysis". Each key must contain an array of exactly three concise, data-backed insights sourced from the snapshot.`;
+Produce valid JSON with the following keys: "Overview", "Hidden Gems", "Differentials", "Transfer Targets", "Team Analysis". Each key must contain an array of exactly three concise, data-backed insights sourced from the snapshot. If a manager snapshot is present, personalize every recommendation to that squad's needs and avoid duplicating players they already own unless the advice is about captaincy or benching.`;
 }
 
 // ============================================================================
@@ -267,6 +304,13 @@ export async function generateAIInsights(page, tab, position, gameweek, data) {
   }
 
   logger.log(`🤖 Generating AI insights for ${page}/${tab}/${position}...`);
+  if (data?.managerSnapshot) {
+    const ownedPlayers = Array.isArray(data.managerSnapshot.squad)
+      ? data.managerSnapshot.squad.length
+      : 0;
+    const bank = data.managerSnapshot.budget?.bankMillions ?? 0;
+    logger.log(`🧠 Personalization enabled (owned players: ${ownedPlayers}, bank: £${bank}m)`);
+  }
 
   // Build prompt
   const prompt = buildAIPrompt(page, tab, position, gameweek, data);
