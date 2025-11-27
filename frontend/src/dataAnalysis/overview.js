@@ -50,37 +50,6 @@ export function renderAnalysisOverview(
             : false
     }));
 
-    // Defensive standouts (always available – use all outfield players)
-    let defensiveSection = '';
-    const defensiveSource = allPlayers;
-    const withDefCon = defensiveSource
-        .filter(p => p.element_type !== 1 && p.github_season?.defensive_contribution_per_90 !== undefined)
-        .map(p => ({
-            player: p,
-            defCon: parseFloat(p.github_season?.defensive_contribution_per_90) || 0
-        }));
-
-    const topDefensive = withDefCon
-        .sort((a, b) => b.defCon - a.defCon)
-        .slice(0, 10)
-        .map(entry => entry.player);
-
-    const defensiveBadges = new Map();
-    topDefensive.forEach(player => {
-        defensiveBadges.set(player.id, 'my-player');
-    });
-
-    if (topDefensive.length > 0) {
-        const tablePosition = 'DEF';
-        const sectionLabel = 'outfield players';
-        defensiveSection = `
-            <div style="margin-top: 3rem;">
-                ${renderSectionHeader('🛡️', 'Defensive Standouts', `Top ${sectionLabel} by defensive contribution per 90`)}
-                ${isMobile ? renderPositionSpecificTableMobile(annotate(topDefensive, defensiveBadges), 'def90') : renderPositionSpecificTable(annotate(topDefensive, defensiveBadges), tablePosition)}
-            </div>
-        `;
-    }
-
     return `
         <div>
             <!-- Section 1: Top Performers -->
@@ -100,8 +69,6 @@ export function renderAnalysisOverview(
                 ${renderSectionHeader('🔥', 'Form Stars', 'Top 15 by recent form (min 30% minutes played)')}
                 ${isMobile ? renderPositionSpecificTableMobile(annotate(top15Form), 'form') : renderPositionSpecificTable(annotate(top15Form), position)}
             </div>
-            <!-- Section 4: Defensive Standouts (if applicable) -->
-            ${defensiveSection}
         </div>
     `;
 }

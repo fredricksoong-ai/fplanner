@@ -234,11 +234,9 @@ function renderLeagueComparisonLine(leagueComparison, type) {
     }
 
     const avgText = (avg !== null && avg !== undefined) ? formatValue(avg, type) : null;
-    const percentileText = (percentile !== null && percentile !== undefined)
-        ? `${percentile}<sup>th</sup> pct`
-        : null;
+    const percentileBlock = renderPercentile(percentile);
 
-    if (!avgText && !percentileText) {
+    if (!avgText && !percentileBlock) {
         return '';
     }
 
@@ -250,8 +248,23 @@ function renderLeagueComparisonLine(leagueComparison, type) {
             line-height: 1.2;
         ">
             ${avgText ? `Avg ${avgText}<br>` : ''}
-            ${percentileText ? `${percentileText}` : ''}
+            ${percentileBlock || ''}
         </div>
     `;
+}
+
+function renderPercentile(percentile) {
+    if (percentile === null || percentile === undefined || Number.isNaN(percentile)) {
+        return '';
+    }
+    const color = getPercentileColor(percentile);
+    return `<span style="color: ${color}; font-weight: 600;">${percentile}<sup>th</sup> pct</span>`;
+}
+
+function getPercentileColor(percentile) {
+    if (percentile >= 90) return '#a855f7'; // exceptional
+    if (percentile >= 70) return '#22c55e'; // above average
+    if (percentile >= 40) return '#facc15'; // on par
+    return '#ef4444'; // below average
 }
 
