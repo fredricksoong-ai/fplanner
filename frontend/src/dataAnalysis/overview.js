@@ -72,7 +72,7 @@ export function renderAnalysisOverview(
             <!-- Section 1: Top Performers -->
             <div style="margin-bottom: 3rem;">
                 ${renderSectionHeader('🏆', 'Top Performers', `Top ${position === 'all' ? '20 players' : '20 ' + position} by total points`)}
-                ${isMobile ? renderPositionSpecificTableMobile(annotate(top20), 'total') : renderPositionSpecificTable(annotate(top20), position)}
+                ${isMobile ? renderPositionSpecificTableMobile(annotate(top20), 'ppm') : renderPositionSpecificTable(annotate(top20), position)}
             </div>
 
             <!-- Section 2: Best Value -->

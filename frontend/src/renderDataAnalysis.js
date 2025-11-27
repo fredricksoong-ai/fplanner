@@ -910,6 +910,11 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
         const ptsHeatmap = getPtsHeatmap(gwPoints, 'gw_pts');
         const ptsStyle = getHeatmapStyle(ptsHeatmap);
 
+        // Total points
+        const totalPoints = player.total_points || 0;
+        const totalPtsHeatmap = getPtsHeatmap(totalPoints, 'pts');
+        const totalPtsStyle = getHeatmapStyle(totalPtsHeatmap);
+
         // Form
         const formHeatmap = getFormHeatmap(parseFloat(player.form) || 0);
         const formStyle = getHeatmapStyle(formHeatmap);
@@ -946,10 +951,8 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
 
         const isWishlistedPlayer = isWishlisted(player.id);
         const rowBg = getRowHighlightColor(idx, isMyPlayer, isWishlistedPlayer);
-        // For sticky column, use a solid background to prevent overlap issues with gradients
-        const stickyColumnBg = rowBg.startsWith('linear-gradient')
-            ? (isMyPlayer ? 'rgba(56, 189, 248, 0.16)' : (isWishlistedPlayer ? 'rgba(250, 204, 21, 0.18)' : 'var(--bg-secondary)'))
-            : rowBg;
+        // Use the same background for sticky column to prevent overlap issues
+        const stickyColumnBg = rowBg;
         const rowBorder = borderColor
             ? `border-left: 4px solid ${borderColor};`
             : '';
@@ -987,8 +990,8 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
                 <td style="text-align: center; padding: 0.5rem; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 700; border-radius: 0.25rem;">
                     ${gwPoints}
                 </td>
-                <td style="text-align: center; padding: 0.5rem; font-weight: 600;">
-                    ${player.total_points}
+                <td style="text-align: center; padding: 0.5rem; background: ${totalPtsStyle.background}; color: ${totalPtsStyle.color}; font-weight: 700; border-radius: 0.25rem;">
+                    ${totalPoints}
                 </td>
                 <td style="text-align: center; padding: 0.5rem; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 600;">
                     ${formatDecimal(player.form)}

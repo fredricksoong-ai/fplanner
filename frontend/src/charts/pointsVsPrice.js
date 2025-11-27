@@ -110,11 +110,20 @@ export async function renderPointsPriceChart(contentContainer, echarts, position
     const yAxisMax = Math.ceil((maxPoints + 25) / 10) * 10;
     const highPointsThreshold = Math.round(maxPoints * 0.6);
 
+    // Calculate dynamic x-axis (price) boundaries
+    const allPrices = players.map(p => p.now_cost / 10);
+    const minPrice = Math.max(3, Math.floor(Math.min(...allPrices) - 0.5));
+    const maxPrice = Math.ceil(Math.max(...allPrices) + 0.5);
+    const midPrice = Math.round((minPrice + maxPrice) / 2);
+
     // Create chart options
     const option = createPointsPriceChartOptions(
         positions,
         yAxisMax,
         highPointsThreshold,
+        minPrice,
+        maxPrice,
+        midPrice,
         isDark,
         textColor,
         gridColor
@@ -187,12 +196,15 @@ function getUserTeamPlayerIds() {
  * @param {Object} positions - Position data
  * @param {number} yAxisMax - Y-axis maximum value
  * @param {number} highPointsThreshold - Threshold for high points
+ * @param {number} minPrice - Minimum price for x-axis
+ * @param {number} maxPrice - Maximum price for x-axis
+ * @param {number} midPrice - Midpoint price for zone boundaries
  * @param {boolean} isDark - Dark theme flag
  * @param {string} textColor - Text color
  * @param {string} gridColor - Grid color
  * @returns {Object} ECharts option object
  */
-function createPointsPriceChartOptions(positions, yAxisMax, highPointsThreshold, isDark, textColor, gridColor) {
+function createPointsPriceChartOptions(positions, yAxisMax, highPointsThreshold, minPrice, maxPrice, midPrice, isDark, textColor, gridColor) {
     // Create series
     const series = Object.keys(positions).map(pos => ({
         name: positions[pos].name,
@@ -246,32 +258,32 @@ function createPointsPriceChartOptions(positions, yAxisMax, highPointsThreshold,
                 [
                     {
                         name: 'Value Zone',
-                        xAxis: 3,
+                        xAxis: minPrice,
                         yAxis: highPointsThreshold,
                         itemStyle: { color: '#10b981' },
                         label: createZoneLabel(textColor, isDark, 'insideTopLeft')
                     },
-                    { xAxis: 8.5, yAxis: yAxisMax }
+                    { xAxis: midPrice, yAxis: yAxisMax }
                 ],
                 [
                     {
                         name: 'Premium Zone',
-                        xAxis: 8.5,
+                        xAxis: midPrice,
                         yAxis: highPointsThreshold,
                         itemStyle: { color: '#3b82f6' },
                         label: createZoneLabel(textColor, isDark, 'insideTopRight')
                     },
-                    { xAxis: 15, yAxis: yAxisMax }
+                    { xAxis: maxPrice, yAxis: yAxisMax }
                 ],
                 [
                     {
                         name: 'Trap Zone',
-                        xAxis: 8.5,
+                        xAxis: midPrice,
                         yAxis: 10,
                         itemStyle: { color: '#ef4444' },
                         label: createZoneLabel(textColor, isDark, 'insideBottomRight')
                     },
-                    { xAxis: 15, yAxis: highPointsThreshold }
+                    { xAxis: maxPrice, yAxis: highPointsThreshold }
                 ]
             ]
         }
@@ -309,8 +321,8 @@ function createPointsPriceChartOptions(positions, yAxisMax, highPointsThreshold,
             axisLine: { lineStyle: { color: gridColor } },
             axisLabel: { color: textColor, formatter: (value) => `£${value.toFixed(1)}` },
             splitLine: { lineStyle: { color: gridColor, type: 'dashed', opacity: 0.3 } },
-            min: 3,
-            max: 15
+            min: minPrice,
+            max: maxPrice
         },
         yAxis: {
             type: 'value',

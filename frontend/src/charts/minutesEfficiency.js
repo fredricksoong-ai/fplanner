@@ -78,6 +78,12 @@ export async function renderMinutesEfficiencyChart(contentContainer, echarts, po
     const maxPP90 = Math.max(...allPP90, 5);
     const yAxisMax = Math.ceil((maxPP90 + 1) / 2) * 2; // Round up to nearest 2
 
+    // Calculate dynamic x-axis (minutes) boundaries
+    const allMinutes = chartData.map(d => d.minutes);
+    const maxMinutes = Math.max(...allMinutes, 3420);
+    const xAxisMax = Math.min(3420, Math.ceil(maxMinutes / 100) * 100); // Round up to nearest 100, cap at 3420
+    const midMinutes = Math.round(xAxisMax / 2);
+
     const positionColors = {
         'GKP': '#fbbf24',
         'DEF': '#10b981',
@@ -103,6 +109,8 @@ export async function renderMinutesEfficiencyChart(contentContainer, echarts, po
         positionColors,
         topPlayerIds,
         yAxisMax,
+        xAxisMax,
+        midMinutes,
         isDark,
         textColor,
         gridColor
@@ -152,7 +160,7 @@ function getUserTeamPlayerIds() {
     return myTeamPlayerIds;
 }
 
-function createMinutesEfficiencyChartOptions(seriesByPosition, positionColors, topPlayerIds, yAxisMax, isDark, textColor, gridColor) {
+function createMinutesEfficiencyChartOptions(seriesByPosition, positionColors, topPlayerIds, yAxisMax, xAxisMax, midMinutes, isDark, textColor, gridColor) {
     // Calculate threshold for zone boundaries based on dynamic max
     const highPP90Threshold = Math.max(5, Math.round(yAxisMax * 0.5));
 
@@ -207,7 +215,7 @@ function createMinutesEfficiencyChartOptions(seriesByPosition, positionColors, t
                 [
                     {
                         name: 'Efficient & Nailed',
-                        xAxis: 1800,
+                        xAxis: midMinutes,
                         yAxis: highPP90Threshold,
                         itemStyle: { color: '#10b981' },
                         label: {
@@ -221,7 +229,7 @@ function createMinutesEfficiencyChartOptions(seriesByPosition, positionColors, t
                             borderRadius: 4
                         }
                     },
-                    { xAxis: 3420, yAxis: yAxisMax }
+                    { xAxis: xAxisMax, yAxis: yAxisMax }
                 ],
                 [
                     {
@@ -240,7 +248,7 @@ function createMinutesEfficiencyChartOptions(seriesByPosition, positionColors, t
                             borderRadius: 4
                         }
                     },
-                    { xAxis: 1800, yAxis: yAxisMax }
+                    { xAxis: midMinutes, yAxis: yAxisMax }
                 ],
                 [
                     {
@@ -259,7 +267,7 @@ function createMinutesEfficiencyChartOptions(seriesByPosition, positionColors, t
                             borderRadius: 4
                         }
                     },
-                    { xAxis: 3420, yAxis: highPP90Threshold }
+                    { xAxis: xAxisMax, yAxis: highPP90Threshold }
                 ]
             ]
         }
@@ -318,7 +326,7 @@ function createMinutesEfficiencyChartOptions(seriesByPosition, positionColors, t
             axisLabel: { color: textColor },
             splitLine: { lineStyle: { color: gridColor, opacity: 0.3 } },
             min: 0,
-            max: 3420
+            max: xAxisMax
         },
         yAxis: {
             type: 'value',
