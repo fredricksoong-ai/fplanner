@@ -17,6 +17,7 @@ export const sharedState = {
     leagueMetricsCache: new Map(), // key(leagueId+gw) -> aggregated metrics
     rivalTeamCache: new Map(), // entryId -> team data
     captainCache: new Map(), // entryId -> captain name
+    cohortMetricsCache: new Map(), // gameweek -> cohort aggregates
 
     // My team data
     myTeamData: null,
@@ -31,6 +32,7 @@ export const sharedState = {
         this.leagueMetricsCache.clear();
         this.rivalTeamCache.clear();
         this.captainCache.clear();
+        this.cohortMetricsCache.clear();
         this.myTeamData = null;
     },
 

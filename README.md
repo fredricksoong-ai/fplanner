@@ -143,6 +143,11 @@ fplanner/
 - Defensive contribution metrics
 - Differential finder with filters
 
+### Planner Mobile
+- Live comparison against preferred mini-league
+- **Top cohort benchmarks** (10k / 50k / 100k) with per-GW caching
+- Backend endpoint: `GET /api/planner/cohorts?gw=<number>` reuses cached aggregates to avoid repeated heavy computations
+
 ## 🔐 Security
 
 ### Implemented Protections
