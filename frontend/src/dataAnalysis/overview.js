@@ -48,14 +48,17 @@ export function renderAnalysisOverview(
     // Defensive standouts (always available – use all outfield players)
     let defensiveSection = '';
     const defensiveSource = position === 'GKP' ? allPlayers : players;
-    const withDefCon = defensiveSource.filter(p =>
-        p.element_type !== 1 &&
-        p.github_season &&
-        p.github_season.defensive_contribution_per_90
-    );
-    const topDefensive = withDefCon.sort((a, b) =>
-        b.github_season.defensive_contribution_per_90 - a.github_season.defensive_contribution_per_90
-    ).slice(0, 10);
+    const withDefCon = defensiveSource
+        .filter(p => p.element_type !== 1 && p.github_season?.defensive_contribution_per_90 !== undefined)
+        .map(p => ({
+            player: p,
+            defCon: parseFloat(p.github_season?.defensive_contribution_per_90) || 0
+        }));
+
+    const topDefensive = withDefCon
+        .sort((a, b) => b.defCon - a.defCon)
+        .slice(0, 10)
+        .map(entry => entry.player);
 
     if (topDefensive.length > 0) {
         const tablePosition = (position === 'DEF' || position === 'MID' || position === 'FWD') ? position : 'all';
