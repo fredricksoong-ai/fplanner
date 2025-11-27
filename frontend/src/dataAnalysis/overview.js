@@ -47,7 +47,7 @@ export function renderAnalysisOverview(
 
     // Defensive standouts (always available – use all outfield players)
     let defensiveSection = '';
-    const defensiveSource = position === 'GKP' ? allPlayers : players;
+    const defensiveSource = allPlayers;
     const withDefCon = defensiveSource
         .filter(p => p.element_type !== 1 && p.github_season?.defensive_contribution_per_90 !== undefined)
         .map(p => ({
@@ -61,8 +61,8 @@ export function renderAnalysisOverview(
         .map(entry => entry.player);
 
     if (topDefensive.length > 0) {
-        const tablePosition = (position === 'DEF' || position === 'MID' || position === 'FWD') ? position : 'DEF';
-        const sectionLabel = (position === 'DEF' || position === 'MID' || position === 'FWD') ? position : 'outfield players';
+        const tablePosition = 'DEF';
+        const sectionLabel = 'outfield players';
         defensiveSection = `
             <div style="margin-top: 3rem;">
                 ${renderSectionHeader('🛡️', 'Defensive Standouts', `Top ${sectionLabel} by defensive contribution per 90`)}
