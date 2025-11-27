@@ -126,6 +126,12 @@ export async function renderPointsPriceChart(contentContainer, echarts, position
         return null;
     }
 
+    // Dispose existing chart instance if it exists to prevent caching issues
+    const existingInstance = echarts.getInstanceByDom(chartContainer);
+    if (existingInstance) {
+        existingInstance.dispose();
+    }
+
     const chartInstance = echarts.init(chartContainer);
     if (!chartInstance) {
         console.error('Failed to initialize chart');

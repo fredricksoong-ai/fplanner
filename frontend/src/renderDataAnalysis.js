@@ -877,7 +877,8 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
                             <th style="position: sticky; left: 0; background: var(--bg-tertiary); z-index: 11; text-align: left; padding: 0.5rem; min-width: 140px; border-right: 2px solid var(--border-color); box-shadow: 2px 0 4px rgba(0,0,0,0.1);">Player</th>
                             <th style="text-align: center; padding: 0.5rem; min-width: 60px;">Opp</th>
                             <th style="text-align: center; padding: 0.5rem; min-width: 60px;">Status</th>
-                            <th style="text-align: center; padding: 0.5rem; min-width: 60px;">Pts</th>
+                            <th style="text-align: center; padding: 0.5rem; min-width: 60px;">GW Pts</th>
+                            <th style="text-align: center; padding: 0.5rem; min-width: 60px;">Total</th>
                             <th style="text-align: center; padding: 0.5rem; min-width: 60px;">Form</th>
                             <th style="text-align: center; padding: 0.5rem; min-width: 60px;">${config.header}</th>
                         </tr>
@@ -945,6 +946,10 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
 
         const isWishlistedPlayer = isWishlisted(player.id);
         const rowBg = getRowHighlightColor(idx, isMyPlayer, isWishlistedPlayer);
+        // For sticky column, use a solid background to prevent overlap issues with gradients
+        const stickyColumnBg = rowBg.startsWith('linear-gradient')
+            ? (isMyPlayer ? 'rgba(56, 189, 248, 0.16)' : (isWishlistedPlayer ? 'rgba(250, 204, 21, 0.18)' : 'var(--bg-secondary)'))
+            : rowBg;
         const rowBorder = borderColor
             ? `border-left: 4px solid ${borderColor};`
             : '';
@@ -958,7 +963,7 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
                 <td style="
                     position: sticky;
                     left: 0;
-                    background: ${rowBg};
+                    background: ${stickyColumnBg};
                     z-index: 9;
                     padding: 0.5rem;
                     border-right: 2px solid var(--border-color);
@@ -981,6 +986,9 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
                 </td>
                 <td style="text-align: center; padding: 0.5rem; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 700; border-radius: 0.25rem;">
                     ${gwPoints}
+                </td>
+                <td style="text-align: center; padding: 0.5rem; font-weight: 600;">
+                    ${player.total_points}
                 </td>
                 <td style="text-align: center; padding: 0.5rem; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 600;">
                     ${formatDecimal(player.form)}
