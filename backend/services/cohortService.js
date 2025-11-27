@@ -16,7 +16,7 @@ import {
   getCachedCohortMetrics,
   updateCohortCache
 } from './cacheManager.js';
-import { getLatestFinishedGameweek } from './gameweekUtils.js';
+import { getLatestFinishedGameweek, isGameweekCompleted } from './gameweekUtils.js';
 import { calculateTeamMetricsFromPicks, metricKeys } from './teamMetrics.js';
 import logger from '../logger.js';
 
@@ -25,7 +25,8 @@ const ENTRIES_PER_PAGE = 50;
 const SAMPLE_PAGES_PER_BUCKET = 8;
 const MAX_TEAMS_PER_BUCKET = 500;
 const MAX_CONCURRENT_FETCHES = 5;
-const COHORT_CACHE_TTL = 6 * 60 * 60 * 1000; // 6 hours
+const COHORT_CACHE_TTL_DEFAULT = 6 * 60 * 60 * 1000; // 6 hours (live/uncertain)
+const COHORT_CACHE_TTL_FINISHED = 3 * 60 * 60 * 1000; // 3 hours post-finish
 
 const COHORT_BUCKETS = [
   { key: 'top10k', label: 'Top 10k', maxRank: 10000 },
@@ -44,13 +45,14 @@ export const executors = {
 };
 
 export async function getCohortMetrics(gameweek = getLatestFinishedGameweek(), options = {}) {
-  const cached = getCachedCohortMetrics(gameweek);
-  if (!options.force && isCohortDataFresh(cached)) {
+  const targetGameweek = normalizeTargetGameweek(gameweek);
+  const cached = getCachedCohortMetrics(targetGameweek);
+  if (!options.force && isCohortDataFresh(cached, targetGameweek)) {
     return cached;
   }
 
-  const computed = await executors.computeCohorts(gameweek);
-  updateCohortCache(gameweek, computed);
+  const computed = await executors.computeCohorts(targetGameweek);
+  updateCohortCache(targetGameweek, computed);
   return computed;
 }
 
@@ -80,9 +82,10 @@ export async function computeCohortMetrics(gameweek) {
   };
 }
 
-function isCohortDataFresh(data) {
+function isCohortDataFresh(data, gameweek) {
   if (!data || !data.timestamp) return false;
-  return (Date.now() - data.timestamp) < COHORT_CACHE_TTL;
+  const ttl = getCohortCacheTTL(gameweek);
+  return (Date.now() - data.timestamp) < ttl;
 }
 
 async function ensureBaseData() {
@@ -196,6 +199,34 @@ function buildBucketSummary(bucket, metrics, attempted) {
     averages,
     distributions
   };
+}
+
+function normalizeTargetGameweek(requestedGameweek) {
+  if (requestedGameweek === undefined || requestedGameweek === null) {
+    return getLatestFinishedGameweek();
+  }
+
+  if (!cache.bootstrap?.data) {
+    return requestedGameweek;
+  }
+
+  if (isGameweekCompleted(requestedGameweek)) {
+    return requestedGameweek;
+  }
+
+  const latestFinished = getLatestFinishedGameweek();
+  if (requestedGameweek !== latestFinished) {
+    logger.log(`ℹ️ Cohort GW ${requestedGameweek} not finished, falling back to latest finished GW ${latestFinished}`);
+  }
+
+  return latestFinished;
+}
+
+function getCohortCacheTTL(gameweek) {
+  if (gameweek && isGameweekCompleted(gameweek)) {
+    return COHORT_CACHE_TTL_FINISHED;
+  }
+  return COHORT_CACHE_TTL_DEFAULT;
 }
 
 export const __internal = {

@@ -45,15 +45,6 @@ const COHORT_METRICS = [
     { key: 'avgXGI', label: 'Avg xGI', suffix: '' }
 ];
 
-const COHORT_METRIC_DIRECTIONS = {
-    avgPPM: 'higher',
-    avgFDR: 'lower',
-    avgForm: 'higher',
-    expectedPoints: 'higher',
-    avgOwnership: null,
-    avgXGI: 'higher'
-};
-
 let plannerWishlistListenerAttached = false;
 
 // ============================================================================
@@ -326,20 +317,18 @@ function renderWishlistSection(entries = [], gwNumber = currentGW) {
     `;
 }
 
-function renderCohortComparisonSection(cohortData, userMetrics) {
-    if (!Array.isArray(cohortData) || cohortData.length === 0) {
+function renderCohortComparisonSection(cohortPayload, userMetrics) {
+    if (!cohortPayload || !Array.isArray(cohortPayload.buckets) || cohortPayload.buckets.length === 0) {
         return '';
     }
 
-    const bucketCards = cohortData.map(bucket => {
+    const updatedLabel = formatUpdatedLabel(cohortPayload.updatedAt);
+    const bucketCards = cohortPayload.buckets.map(bucket => {
         const metricRows = COHORT_METRICS.map(metric => {
             const userValue = formatMetricValue(userMetrics?.[metric.key], metric.suffix);
             const cohortValue = formatMetricValue(bucket.averages?.[metric.key], metric.suffix);
             const percentile = bucket.percentiles?.[metric.key];
-            const percentileText = typeof percentile === 'number'
-                ? `${percentile}<sup>th</sup>`
-                : '—';
-            const badge = getMetricComparisonBadge(metric.key, userMetrics?.[metric.key], bucket.averages?.[metric.key]);
+            const percentileText = formatPercentileBadge(percentile);
 
             return `
                 <div style="
@@ -354,8 +343,7 @@ function renderCohortComparisonSection(cohortData, userMetrics) {
                     <span>You: ${userValue}</span>
                     <span>
                         Avg: ${cohortValue}<br>
-                        <span style="color: var(--text-tertiary);">${percentileText} pct</span>
-                        ${badge}
+                        ${percentileText}
                     </span>
                 </div>
             `;
@@ -373,7 +361,7 @@ function renderCohortComparisonSection(cohortData, userMetrics) {
                         ${bucket.label}
                     </div>
                     <div style="font-size: 0.65rem; color: var(--text-tertiary);">
-                        Sample: ${bucket.sampleSize} squads (≤ ${bucket.maxRank?.toLocaleString?.() || bucket.maxRank})
+                        Sample: ${bucket.sampleSize} squads ${bucket.maxRank ? `(≤ ${Number(bucket.maxRank).toLocaleString()})` : ''}
                     </div>
                 </div>
                 ${metricRows}
@@ -407,7 +395,10 @@ function renderCohortComparisonSection(cohortData, userMetrics) {
                     cursor: pointer;
                 "
             >
-                <span>Top Manager Benchmarks</span>
+                <span style="display: flex; flex-direction: column; align-items: flex-start;">
+                    <span>Top Manager Benchmarks</span>
+                    ${updatedLabel ? `<span style="font-size: 0.6rem; font-weight: 400; color: var(--text-tertiary);">Updated ${updatedLabel}</span>` : ''}
+                </span>
                 <span data-cohort-chevron style="color: var(--accent-color); transition: transform 0.2s ease;">
                     <i class="fas fa-chevron-down"></i>
                 </span>
@@ -435,60 +426,6 @@ function formatMetricValue(value, suffix = '') {
     return suffix ? `${formatted}${suffix}` : formatted;
 }
 
-function getMetricComparisonBadge(metricKey, userValue, cohortValue) {
-    if (userValue === null || userValue === undefined || Number.isNaN(userValue)) {
-        return '';
-    }
-    if (cohortValue === null || cohortValue === undefined || Number.isNaN(cohortValue)) {
-        return '';
-    }
-    const direction = COHORT_METRIC_DIRECTIONS[metricKey];
-    if (!direction) {
-        return '';
-    }
-
-    const base = cohortValue === 0 ? 0 : ((userValue - cohortValue) / Math.abs(cohortValue)) * 100;
-    const adjusted = direction === 'lower' ? -base : base;
-
-    let status = 'within';
-    if (adjusted >= 20) {
-        status = 'exceptional';
-    } else if (adjusted >= 5) {
-        status = 'above';
-    } else if (adjusted <= -5) {
-        status = 'below';
-    }
-
-    const colorMap = {
-        below: '#ef4444',
-        within: '#facc15',
-        above: '#22c55e',
-        exceptional: '#a855f7'
-    };
-
-    const labelMap = {
-        below: 'Below avg',
-        within: 'On par',
-        above: 'Above avg',
-        exceptional: 'Exceptional'
-    };
-
-    return `
-        <span style="
-            display: inline-flex;
-            align-items: center;
-            gap: 0.2rem;
-            font-weight: 600;
-            font-size: 0.6rem;
-            color: ${colorMap[status]};
-            text-transform: uppercase;
-            margin-left: 0.1rem;
-        ">
-            ${labelMap[status]}
-        </span>
-    `;
-}
-
 function attachCohortToggle() {
     const toggle = document.querySelector('[data-cohort-toggle]');
     const content = document.getElementById('planner-cohort-content');
@@ -514,6 +451,44 @@ function attachCohortToggle() {
     });
 
     updateState();
+}
+
+function formatUpdatedLabel(timestamp) {
+    if (!timestamp) {
+        return '';
+    }
+    const ageMs = Date.now() - timestamp;
+    if (ageMs < 0) {
+        return '';
+    }
+    const minutes = Math.floor(ageMs / (1000 * 60));
+    if (minutes < 1) {
+        return 'just now';
+    }
+    if (minutes < 60) {
+        return `${minutes}m ago`;
+    }
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) {
+        return `${hours}h ago`;
+    }
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+}
+
+function formatPercentileBadge(percentile) {
+    if (percentile === null || percentile === undefined || Number.isNaN(percentile)) {
+        return '';
+    }
+    const color = getPercentileColor(percentile);
+    return `<span style="color: ${color}; font-weight: 600;">${percentile}<sup>th</sup> pct</span>`;
+}
+
+function getPercentileColor(percentile) {
+    if (percentile >= 90) return '#a855f7';
+    if (percentile >= 70) return '#22c55e';
+    if (percentile >= 40) return '#facc15';
+    return '#ef4444';
 }
 
 // ============================================================================

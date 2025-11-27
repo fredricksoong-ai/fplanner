@@ -196,12 +196,23 @@ export async function getCohortComparisonMetrics(userMetrics, gameweek) {
         return null;
     }
 
-    return Object.values(cached.buckets).map(bucket => ({
+    const buckets = Object.values(cached.buckets).map(bucket => ({
         key: bucket.key,
         label: bucket.label,
         sampleSize: bucket.sampleSize,
+        maxRank: bucket.maxRank,
         averages: bucket.averages,
         percentiles: computePercentiles(userMetrics, bucket.distributions)
     })).filter(bucket => bucket.sampleSize > 0);
+
+    if (buckets.length === 0) {
+        return null;
+    }
+
+    return {
+        gameweek: cached.gameweek,
+        updatedAt: cached.timestamp,
+        buckets
+    };
 }
 
