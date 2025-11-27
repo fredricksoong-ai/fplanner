@@ -83,7 +83,7 @@ export function renderTransferTargets(
     }).sort((a, b) => {
         const aNet = getTransferMomentum(a) ?? 0;
         const bNet = getTransferMomentum(b) ?? 0;
-        if (bNet !== aNet) return bNet - aNet;
+        if (aNet !== bNet) return aNet - bNet; // Most negative first
         const formDiff = (parseFloat(a.form) || 0) - (parseFloat(b.form) || 0);
         return formDiff;
     }).slice(0, 20);

@@ -61,8 +61,8 @@ export function renderAnalysisOverview(
         .map(entry => entry.player);
 
     if (topDefensive.length > 0) {
-        const tablePosition = (position === 'DEF' || position === 'MID' || position === 'FWD') ? position : 'all';
-        const sectionLabel = (position === 'all' || position === 'GKP') ? 'outfield players' : position;
+        const tablePosition = (position === 'DEF' || position === 'MID' || position === 'FWD') ? position : 'DEF';
+        const sectionLabel = (position === 'DEF' || position === 'MID' || position === 'FWD') ? position : 'outfield players';
         defensiveSection = `
             <div style="margin-top: 3rem;">
                 ${renderSectionHeader('🛡️', 'Defensive Standouts', `Top ${sectionLabel} by defensive contribution per 90`)}
