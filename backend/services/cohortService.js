@@ -23,7 +23,7 @@ import logger from '../logger.js';
 const OVERALL_LEAGUE_ID = 314;
 const ENTRIES_PER_PAGE = 50;
 const SAMPLE_PAGES_PER_BUCKET = 8;
-const MAX_TEAMS_PER_BUCKET = 120;
+const MAX_TEAMS_PER_BUCKET = 500;
 const MAX_CONCURRENT_FETCHES = 5;
 const COHORT_CACHE_TTL = 6 * 60 * 60 * 1000; // 6 hours
 

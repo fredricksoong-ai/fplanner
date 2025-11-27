@@ -3,7 +3,7 @@
  * Sleek indicator cards showing team metrics with deltas
  */
 
-import { formatDecimal } from '../utils.js';
+import { formatDecimal, escapeHtml } from '../utils.js';
 
 const METRIC_KEY_BY_TYPE = {
     ppm: 'avgPPM',
@@ -26,6 +26,9 @@ export function renderMetricIndicators(originalMetrics, currentMetrics, leagueCo
     }
 
     const deltas = calculateDeltas(originalMetrics, currentMetrics);
+    const subtitle = leagueComparison?.leagueName
+        ? `Team Metrics (against ${escapeHtml(leagueComparison.leagueName)})`
+        : 'Team Metrics';
 
     return `
         <div style="
@@ -40,7 +43,7 @@ export function renderMetricIndicators(originalMetrics, currentMetrics, leagueCo
                 color: var(--text-secondary);
                 margin-bottom: 0.75rem;
             ">
-                Team Metrics
+                ${subtitle}
             </div>
             <div style="
                 display: grid;
