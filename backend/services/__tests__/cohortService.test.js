@@ -3,9 +3,15 @@ import { cache } from '../cacheManager.js';
 import * as cohortService from '../cohortService.js';
 
 describe('cohortService caching', () => {
-  beforeEach(() => {
-    cache.cohorts.entries.clear();
-  });
+beforeEach(() => {
+  cache.cohorts.entries.clear();
+  cache.bootstrap.data = {
+    events: [
+      { id: 5, finished: true },
+      { id: 6, finished: false }
+    ]
+  };
+});
 
   afterEach(() => {
     vi.restoreAllMocks();

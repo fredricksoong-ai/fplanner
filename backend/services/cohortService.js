@@ -84,6 +84,12 @@ export async function computeCohortMetrics(gameweek) {
 
 function isCohortDataFresh(data, gameweek) {
   if (!data || !data.timestamp) return false;
+
+  // Once a gameweek is completed we treat the snapshot as immutable until the next season.
+  if (gameweek && isGameweekCompleted(gameweek)) {
+    return true;
+  }
+
   const ttl = getCohortCacheTTL(gameweek);
   return (Date.now() - data.timestamp) < ttl;
 }
