@@ -8,6 +8,16 @@ import { getCurrentGW, calculateMinutesPercentage } from '../utils.js';
 import { calculateFixtureDifficulty } from '../fixtures.js';
 import { isMobileDevice } from '../renderMyTeamMobile.js';
 
+function getTransferMomentum(player) {
+    if (player?.github_transfers) {
+        return player.github_transfers.transfers_in - player.github_transfers.transfers_out;
+    }
+    if (typeof player?.transfers_in_event === 'number' && typeof player?.transfers_out_event === 'number') {
+        return player.transfers_in_event - player.transfers_out_event;
+    }
+    return null;
+}
+
 /**
  * Render Transfer Targets tab
  * @param {string} position - Position filter ('all', 'GKP', 'DEF', 'MID', 'FWD')
@@ -41,20 +51,16 @@ export function renderTransferTargets(
         const fdr5 = calculateFixtureDifficulty(p.team, 5);
 
         // Allow players without transfer data
-        let hasPositiveMomentum = true; // Default to true
-        if (p.github_transfers) {
-            const net = p.github_transfers.transfers_in - p.github_transfers.transfers_out;
-            hasPositiveMomentum = net > 0;
-        }
+        const netMomentum = getTransferMomentum(p);
+        const hasPositiveMomentum = netMomentum === null ? true : netMomentum > 0;
 
         return form > 3.0 && fdr5 <= 3.8;
     }).sort((a, b) => {
         // Sort by form first, then by transfer momentum
         const formDiff = (parseFloat(b.form) || 0) - (parseFloat(a.form) || 0);
         if (Math.abs(formDiff) > 0.5) return formDiff;
-
-        const aNet = a.github_transfers ? (a.github_transfers.transfers_in - a.github_transfers.transfers_out) : 0;
-        const bNet = b.github_transfers ? (b.github_transfers.transfers_in - b.github_transfers.transfers_out) : 0;
+        const aNet = getTransferMomentum(a) ?? 0;
+        const bNet = getTransferMomentum(b) ?? 0;
         return bNet - aNet;
     }).slice(0, 20);
 
@@ -71,20 +77,16 @@ export function renderTransferTargets(
         const hasBadForm = form < 3;
         const hasBadFixtures = fdr5 >= 3.8;
 
-        let hasNegativeMomentum = false;
-        if (p.github_transfers) {
-            const net = p.github_transfers.transfers_in - p.github_transfers.transfers_out;
-            hasNegativeMomentum = net < -5000; // Less strict threshold
-        }
+        const netMomentum = getTransferMomentum(p);
+        const hasNegativeMomentum = netMomentum !== null ? netMomentum < -5000 : false; // Less strict threshold
 
         return (hasBadForm || hasBadFixtures) && (hasNegativeMomentum || hasBadForm);
     }).sort((a, b) => {
         // Sort by form ascending (worst first)
         const formDiff = (parseFloat(a.form) || 0) - (parseFloat(b.form) || 0);
         if (Math.abs(formDiff) > 0.5) return formDiff;
-
-        const aNet = a.github_transfers ? (a.github_transfers.transfers_in - a.github_transfers.transfers_out) : 0;
-        const bNet = b.github_transfers ? (b.github_transfers.transfers_in - b.github_transfers.transfers_out) : 0;
+        const aNet = getTransferMomentum(a) ?? 0;
+        const bNet = getTransferMomentum(b) ?? 0;
         return aNet - bNet;
     }).slice(0, 20);
 

@@ -67,6 +67,16 @@ import { renderChartsSkeleton, initializeChartsTab } from './dataAnalysis/charts
 import { getMyPlayerIdSet } from './utils/myPlayers.js';
 import { isWishlisted } from './wishlist/store.js';
 
+function getNetTransfersValue(player) {
+    if (player?.github_transfers) {
+        return player.github_transfers.transfers_in - player.github_transfers.transfers_out;
+    }
+    if (typeof player?.transfers_in_event === 'number' && typeof player?.transfers_out_event === 'number') {
+        return player.transfers_in_event - player.transfers_out_event;
+    }
+    return null;
+}
+
 // ============================================================================
 // DATA ANALYSIS PAGE
 // ============================================================================
@@ -726,7 +736,7 @@ function renderSectionHeader(icon, title, description) {
  * Render mobile-optimized table with context column
  * Base columns: Player | Opp | Status | Pts | Form | [Context]
  * @param {Array} players - Array of player objects
- * @param {string} contextColumn - Type of context column: 'total', 'ppm', 'ownership', 'transfers', 'xg-variance', 'xg', 'bonus', 'def90', 'fdr5', 'penalty'
+ * @param {string} contextColumn - Type of context column: 'total', 'ppm', 'ownership', 'transfers', 'xg-variance', 'xg', 'bonus', 'form', 'def90', 'fdr5', 'penalty'
  */
 function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
     if (!players || players.length === 0) {
@@ -786,14 +796,14 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
         'transfers': {
             header: 'ΔT',
             getValue: (p) => {
-                if (!p.github_transfers) return '—';
-                const net = p.github_transfers.transfers_in - p.github_transfers.transfers_out;
+                const net = getNetTransfersValue(p);
+                if (net === null) return '—';
                 const prefix = net > 0 ? '+' : '';
                 return `${prefix}${(net / 1000).toFixed(0)}k`;
             },
             getColor: (p) => {
-                if (!p.github_transfers) return 'inherit';
-                const net = p.github_transfers.transfers_in - p.github_transfers.transfers_out;
+                const net = getNetTransfersValue(p);
+                if (net === null) return 'inherit';
                 return net > 0 ? '#22c55e' : net < 0 ? '#ef4444' : 'inherit';
             }
         },
@@ -837,6 +847,14 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
                 if (bonus >= 2) return 'heat-yellow';
                 if (bonus >= 1) return 'heat-red';
                 return 'heat-gray';
+            }
+        },
+        'form': {
+            header: 'Form',
+            getValue: (p) => formatDecimal(parseFloat(p.form) || 0),
+            getHeatmap: (p) => {
+                const value = parseFloat(p.form) || 0;
+                return getFormHeatmap(value);
             }
         },
         'def90': {
@@ -942,17 +960,18 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
         } else if (config.getColor) {
             // Use custom color with pill (for transfers)
             const contextColor = config.getColor(player);
-            const net = player.github_transfers ? (player.github_transfers.transfers_in - player.github_transfers.transfers_out) : 0;
-            contextCellContent = `<span style="display: inline-block; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem; background: ${net > 0 ? 'rgba(34, 197, 94, 0.2)' : net < 0 ? 'rgba(239, 68, 68, 0.2)' : 'transparent'}; color: ${contextColor};">${contextValue}</span>`;
+            const net = getNetTransfersValue(player);
+            const background = net > 0 ? 'rgba(34, 197, 94, 0.2)' : net < 0 ? 'rgba(239, 68, 68, 0.2)' : 'transparent';
+            contextCellContent = `<span style="display: inline-block; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem; background: ${background}; color: ${contextColor};">${contextValue}</span>`;
         } else {
             // Default styling
             contextCellContent = contextValue;
         }
 
         const isWishlistedPlayer = isWishlisted(player.id);
-        const rowBg = getRowHighlightColor(idx, isMyPlayer, isWishlistedPlayer);
-        // Use the same background for sticky column to prevent overlap issues
+        const rowBg = getRowHighlightColor(idx);
         const stickyColumnBg = rowBg;
+        const playerBadges = getPlayerBadgesMarkup(isMyPlayer, isWishlistedPlayer, '0.7rem');
         const rowBorder = borderColor
             ? `border-left: 4px solid ${borderColor};`
             : '';
@@ -975,7 +994,7 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
                 ">
                     <div style="display: flex; align-items: center; gap: 0.3rem; flex-wrap: wrap;">
                         <span style="font-size: 0.6rem; color: var(--text-secondary);">${getPositionShort(player)}</span>
-                        <strong style="font-size: 0.7rem;">${escapeHtml(player.web_name)}</strong>
+                        <strong style="font-size: 0.7rem;">${escapeHtml(player.web_name)}</strong>${playerBadges}
                     </div>
                     ${risks.length > 0 ? `<div style="font-size: 0.55rem; color: ${borderColor}; margin-top: 0.1rem; line-height: 1.2;">${risks[0]?.message || 'Issue'}</div>` : `<div style="height: 0.8rem;"></div>`}
                 </td>
@@ -1151,7 +1170,8 @@ function renderPositionSpecificTable(players, position = 'all') {
         const isMyPlayer = Boolean(player.__isMine || myPlayerIds.has(player.id));
         const isWishlistedPlayer = isWishlisted(player.id);
 
-        const rowBg = getRowHighlightColor(index, isMyPlayer, isWishlistedPlayer);
+        const rowBg = getRowHighlightColor(index);
+        const playerBadges = getPlayerBadgesMarkup(isMyPlayer, isWishlistedPlayer);
         const rowBorder = '';
 
         // Calculate common metrics
@@ -1193,7 +1213,7 @@ function renderPositionSpecificTable(players, position = 'all') {
 
             html += `
                 <td style="padding: 0.75rem 0.5rem; display: flex; align-items: center; gap: 0.3rem;">
-                    <strong>${escapeHtml(player.web_name)}</strong>
+                    <strong>${escapeHtml(player.web_name)}</strong>${playerBadges}
                 </td>
                 <td style="padding: 0.75rem 0.5rem;">${getTeamShortName(player.team)}</td>
                 <td style="padding: 0.75rem 0.5rem; text-align: center;">${formatCurrency(player.now_cost)}</td>
@@ -1217,7 +1237,7 @@ function renderPositionSpecificTable(players, position = 'all') {
 
             html += `
                 <td style="padding: 0.75rem 0.5rem; display: flex; align-items: center; gap: 0.3rem;">
-                    <strong>${escapeHtml(player.web_name)}</strong>
+                    <strong>${escapeHtml(player.web_name)}</strong>${playerBadges}
                 </td>
                 <td style="padding: 0.75rem 0.5rem;">${getTeamShortName(player.team)}</td>
                 <td style="padding: 0.75rem 0.5rem; text-align: center;">${formatCurrency(player.now_cost)}</td>
@@ -1242,7 +1262,7 @@ function renderPositionSpecificTable(players, position = 'all') {
 
             html += `
                 <td style="padding: 0.75rem 0.5rem; display: flex; align-items: center; gap: 0.3rem;">
-                    <strong>${escapeHtml(player.web_name)}</strong>
+                        <strong>${escapeHtml(player.web_name)}</strong>${playerBadges}
                 </td>
                 <td style="padding: 0.75rem 0.5rem;">${getTeamShortName(player.team)}</td>
                 <td style="padding: 0.75rem 0.5rem; text-align: center;">${formatCurrency(player.now_cost)}</td>
@@ -1264,7 +1284,7 @@ function renderPositionSpecificTable(players, position = 'all') {
             html += `
                 <td style="padding: 0.75rem 0.5rem; font-weight: 600;">${getPositionShort(player)}</td>
                 <td style="padding: 0.75rem 0.5rem; display: flex; align-items: center; gap: 0.3rem;">
-                    <strong>${escapeHtml(player.web_name)}</strong>
+                    <strong>${escapeHtml(player.web_name)}</strong>${playerBadges}
                 </td>
                 <td style="padding: 0.75rem 0.5rem;">${getTeamShortName(player.team)}</td>
                 <td style="padding: 0.75rem 0.5rem; text-align: center;">${formatCurrency(player.now_cost)}</td>
@@ -1305,22 +1325,21 @@ function renderPositionSpecificTable(players, position = 'all') {
     return html;
 }
 
-const MY_PLAYER_TINT = 'rgba(56, 189, 248, 0.16)';
-const WISHLIST_TINT = 'rgba(250, 204, 21, 0.18)';
-const COMBINED_TINT = 'linear-gradient(90deg, rgba(56, 189, 248, 0.16), rgba(250, 204, 21, 0.2))';
+const MY_PLAYER_TINT = 'var(--bg-secondary)';
+const WISHLIST_TINT = 'var(--bg-primary)';
+const COMBINED_TINT = 'var(--bg-secondary)';
 
-function getRowHighlightColor(index, isMyPlayer, isWishlisted) {
+function getRowHighlightColor(index) {
     const base = index % 2 === 0 ? 'var(--bg-secondary)' : 'var(--bg-primary)';
-    if (isMyPlayer && isWishlisted) {
-        return COMBINED_TINT;
-    }
-    if (isMyPlayer) {
-        return MY_PLAYER_TINT;
-    }
-    if (isWishlisted) {
-        return WISHLIST_TINT;
-    }
     return base;
+}
+
+function getPlayerBadgesMarkup(isMyPlayer, isWishlisted, fontSize = '0.75rem') {
+    const badges = [];
+    if (isMyPlayer) badges.push('🚀');
+    if (isWishlisted) badges.push('⭐️');
+    if (!badges.length) return '';
+    return ` <span style="font-size: ${fontSize};">${badges.join(' ')}</span>`;
 }
 
 /**
