@@ -4,6 +4,7 @@
 // ============================================================================
 
 import axios from 'axios';
+import { jsonrepair } from 'jsonrepair';
 import { GEMINI } from '../config.js';
 import logger from '../logger.js';
 
@@ -126,42 +127,58 @@ Produce valid JSON with the following keys: "Overview", "Hidden Gems", "Differen
  * @param {number} gameweek - Current gameweek number
  * @returns {Object} Parsed insights with categories
  */
+function parseCategoriesFromParts(parts) {
+  const jsonPart = parts.find(part => part.jsonValue);
+  if (jsonPart && typeof jsonPart.jsonValue === 'object') {
+    return jsonPart.jsonValue;
+  }
+
+  const text = parts.find(part => part.text)?.text || '';
+  if (!text) {
+    throw new Error('No text content in Gemini response');
+  }
+
+  // Try to extract JSON from response (handles markdown code blocks)
+  let jsonText = text;
+
+  const jsonMatch = text.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
+  if (jsonMatch) {
+    jsonText = jsonMatch[1];
+  } else {
+    const objectMatch = text.match(/\{[\s\S]*\}/);
+    if (objectMatch) {
+      jsonText = objectMatch[0];
+    } else {
+      const firstBrace = text.indexOf('{');
+      const lastBrace = text.lastIndexOf('}');
+      if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+        jsonText = text.slice(firstBrace, lastBrace + 1);
+      }
+    }
+  }
+
+  return safeParseJson(jsonText);
+}
+
+function safeParseJson(text) {
+  try {
+    return JSON.parse(text);
+  } catch (primaryError) {
+    try {
+      const repaired = jsonrepair(text);
+      return JSON.parse(repaired);
+    } catch (repairError) {
+      primaryError.message += ` | repair attempt failed: ${repairError.message}`;
+      throw primaryError;
+    }
+  }
+}
+
 export function parseGeminiResponse(geminiData, gameweek, page) {
   try {
     const parts = geminiData.candidates?.[0]?.content?.parts || [];
 
-    let categories;
-    const jsonPart = parts.find(part => part.jsonValue);
-    if (jsonPart && typeof jsonPart.jsonValue === 'object') {
-      categories = jsonPart.jsonValue;
-    } else {
-      const text = parts.find(part => part.text)?.text || '';
-
-      if (!text) {
-        throw new Error('No text content in Gemini response');
-      }
-
-      // Try to extract JSON from response (handles markdown code blocks)
-      let jsonText = text;
-
-      const jsonMatch = text.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
-      if (jsonMatch) {
-        jsonText = jsonMatch[1];
-      } else {
-        const objectMatch = text.match(/\{[\s\S]*\}/);
-        if (objectMatch) {
-          jsonText = objectMatch[0];
-        } else {
-          const firstBrace = text.indexOf('{');
-          const lastBrace = text.lastIndexOf('}');
-          if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-            jsonText = text.slice(firstBrace, lastBrace + 1);
-          }
-        }
-      }
-
-      categories = JSON.parse(jsonText);
-    }
+    const categories = parseCategoriesFromParts(parts);
 
     // Validate structure - should be an object with category keys
     if (typeof categories !== 'object' || Array.isArray(categories)) {
