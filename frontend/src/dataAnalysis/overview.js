@@ -40,9 +40,14 @@ export function renderAnalysisOverview(
     const top15Value = [...bestValue].sort((a, b) => calculatePPM(b) - calculatePPM(a)).slice(0, 15);
     const top15Form = sortPlayers(bestValue, 'form', false).slice(0, 15);
 
-    const annotate = list => list.map(player => ({
+    const annotate = (list, badgeOverrides = new Map()) => list.map(player => ({
         ...player,
-        __isMine: myPlayerIds.has(player.id)
+        __isMine: badgeOverrides.has(player.id)
+            ? badgeOverrides.get(player.id) === 'my-player' || badgeOverrides.get(player.id) === 'both'
+            : myPlayerIds.has(player.id),
+        __isWishlist: badgeOverrides.has(player.id)
+            ? badgeOverrides.get(player.id) === 'wishlist' || badgeOverrides.get(player.id) === 'both'
+            : false
     }));
 
     // Defensive standouts (always available – use all outfield players)
@@ -60,13 +65,18 @@ export function renderAnalysisOverview(
         .slice(0, 10)
         .map(entry => entry.player);
 
+    const defensiveBadges = new Map();
+    topDefensive.forEach(player => {
+        defensiveBadges.set(player.id, 'my-player');
+    });
+
     if (topDefensive.length > 0) {
         const tablePosition = 'DEF';
         const sectionLabel = 'outfield players';
         defensiveSection = `
             <div style="margin-top: 3rem;">
                 ${renderSectionHeader('🛡️', 'Defensive Standouts', `Top ${sectionLabel} by defensive contribution per 90`)}
-                ${isMobile ? renderPositionSpecificTableMobile(annotate(topDefensive), 'def90') : renderPositionSpecificTable(annotate(topDefensive), tablePosition)}
+                ${isMobile ? renderPositionSpecificTableMobile(annotate(topDefensive, defensiveBadges), 'def90') : renderPositionSpecificTable(annotate(topDefensive, defensiveBadges), tablePosition)}
             </div>
         `;
     }
