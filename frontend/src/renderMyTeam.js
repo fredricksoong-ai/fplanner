@@ -214,20 +214,39 @@ export function renderMyTeamForm() {
     const targetSubTab = subTab || 'overview';
 
     // Special case: fixtures tab doesn't require team data
-    if (targetSubTab === 'fixtures' && !cachedTeamId) {
-        // Render fixtures tab without requiring team
+    if (targetSubTab === 'fixtures') {
         const useMobile = shouldUseMobileLayout();
-        if (useMobile) {
-            container.innerHTML = renderMobileFixturesTab();
-            requestAnimationFrame(() => {
-                attachMobileFixtureRowListeners();
-            });
-        } else {
-            container.innerHTML = renderFixturesTab();
-            requestAnimationFrame(() => {
-                attachFixtureRowListeners();
-            });
+        const renderFixturesOnly = () => {
+            if (useMobile) {
+                container.innerHTML = renderMobileFixturesTab();
+                requestAnimationFrame(() => {
+                    attachMobileFixtureRowListeners();
+                });
+            } else {
+                container.innerHTML = renderFixturesTab();
+                requestAnimationFrame(() => {
+                    attachFixtureRowListeners();
+                });
+            }
+        };
+
+        renderFixturesOnly();
+
+        if (cachedTeamId) {
+            setTimeout(() => {
+                loadMyTeam(cachedTeamId)
+                    .then(teamData => {
+                        window.currentTeamId = cachedTeamId;
+                        renderMyTeam(teamData, targetSubTab);
+                    })
+                    .catch(err => {
+                        console.error('Failed to auto-load team:', err);
+                        localStorage.removeItem('fplanner_team_id');
+                        renderMyTeamFormContent();
+                    });
+            }, 100);
         }
+
         return;
     }
 

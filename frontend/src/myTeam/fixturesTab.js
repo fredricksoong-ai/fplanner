@@ -660,132 +660,153 @@ export function renderMobileFixturesTab() {
         .map(gw => {
             const fixtures = fixturesByGW[gw];
 
-            const fixturesHTML = fixtures.map(fixture => {
-                const homeTeam = fplBootstrap.teams.find(t => t.id === fixture.team_h);
-                const awayTeam = fplBootstrap.teams.find(t => t.id === fixture.team_a);
-
-                const homeScore = fixture.team_h_score !== null ? fixture.team_h_score : '-';
-                const awayScore = fixture.team_a_score !== null ? fixture.team_a_score : '-';
-                const isFinished = fixture.finished;
-                const isStarted = fixture.started;
-                const isLive = isStarted && !isFinished;
-                const canShowStats = isFinished || isLive; // Only show stats for finished or live fixtures
-
+            const fixturesByDate = fixtures.reduce((acc, fixture) => {
                 const kickoffDate = new Date(fixture.kickoff_time);
-                const timeStr = kickoffDate.toLocaleString('en-GB', {
-                    month: 'short',
+                const dateLabel = kickoffDate.toLocaleDateString('en-GB', {
+                    weekday: 'short',
                     day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: false
+                    month: 'short'
                 });
+                const dateKey = new Date(
+                    kickoffDate.getFullYear(),
+                    kickoffDate.getMonth(),
+                    kickoffDate.getDate()
+                ).getTime();
 
-                // Status badge - use getMatchStatus for consistency
-                const sampleHomePlayer = getAllPlayers().find(p => p.team === fixture.team_h);
-                let statusBadge = '';
-                
-                if (isFinished) {
-                    // Try to get minutes from a player who played
-                    let minutes = null;
-                    if (sampleHomePlayer) {
-                        const matchStatus = getMatchStatus(fixture.team_h, fixture.event, sampleHomePlayer);
-                        const minutesMatch = matchStatus.match(/\((\d+)\)/);
-                        if (minutesMatch) {
-                            minutes = parseInt(minutesMatch[1]);
-                        }
-                    }
-                    statusBadge = minutes !== null 
-                        ? `<span style="color: #22c55e; font-weight: 600; font-size: 0.65rem;">FT (${minutes})</span>`
-                        : '<span style="color: #22c55e; font-weight: 600; font-size: 0.65rem;">FT</span>';
-                } else if (isStarted && !isFinished) {
-                    statusBadge = '<span style="color: #ef4444; font-weight: 600; font-size: 0.65rem;">LIVE</span>';
+                if (!acc[dateKey]) {
+                    acc[dateKey] = {
+                        label: dateLabel,
+                        dateValue: dateKey,
+                        fixtures: []
+                    };
                 }
 
-                // Expand/collapse icon if stats available
-                const expandIcon = canShowStats 
-                    ? '<i class="fas fa-chevron-down" style="font-size: 0.6rem; margin-left: 0.25rem; transition: transform 0.2s;"></i>'
-                    : '';
+                acc[dateKey].fixtures.push({
+                    fixture,
+                    kickoffDate
+                });
 
-                return `
-                    <div>
-                        <div
-                            class="mobile-table-row mobile-table-fixtures fixture-row-mobile"
-                            data-fixture-id="${fixture.id}"
-                            data-can-expand="${canShowStats}"
-                            style="
-                                background: ${isLive ? 'rgba(239, 68, 68, 0.08)' : 'transparent'};
-                                ${canShowStats ? 'cursor: pointer;' : ''}
-                                padding: 0.55rem 0.75rem;
-                                transition: all 0.2s ease;
-                                border-bottom: 1px solid ${isLive ? 'rgba(239, 68, 68, 0.2)' : 'var(--border-color)'};
-                            "
-                            onmouseover="if(this.dataset.canExpand === 'true') this.style.background = '${isLive ? 'rgba(239, 68, 68, 0.12)' : 'rgba(0, 255, 136, 0.05)'}'"
-                            onmouseout="this.style.background = '${isLive ? 'rgba(239, 68, 68, 0.08)' : 'transparent'}'"
-                        >
-                            <div style="
-                                color: var(--text-secondary);
-                                font-size: 0.625rem;
-                                white-space: nowrap;
-                                font-weight: 500;
-                            ">${timeStr.split(',')[1] || timeStr}</div>
-                            <div style="
-                                text-align: right;
-                                font-weight: 600;
-                                white-space: nowrap;
-                                overflow: hidden;
-                                text-overflow: ellipsis;
-                                font-size: 0.75rem;
-                            ">
-                                ${homeTeam?.short_name || 'TBD'}
+                return acc;
+            }, {});
+
+            const dateSections = Object.values(fixturesByDate)
+                .sort((a, b) => a.dateValue - b.dateValue)
+                .map(section => {
+                    section.fixtures.sort((a, b) => a.kickoffDate - b.kickoffDate);
+
+                    const rows = section.fixtures.map(({ fixture, kickoffDate }) => {
+                        const homeTeam = fplBootstrap.teams.find(t => t.id === fixture.team_h);
+                        const awayTeam = fplBootstrap.teams.find(t => t.id === fixture.team_a);
+
+                        const homeScore = fixture.team_h_score !== null ? fixture.team_h_score : '-';
+                        const awayScore = fixture.team_a_score !== null ? fixture.team_a_score : '-';
+                        const isFinished = fixture.finished;
+                        const isStarted = fixture.started;
+                        const isLive = isStarted && !isFinished;
+                        const canShowStats = isFinished || isLive;
+
+                        const timeStr = kickoffDate.toLocaleTimeString('en-GB', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: false
+                        });
+
+                        let statusBadge = '';
+                        if (isFinished) {
+                            const fixtureMinutes = typeof fixture.minutes === 'number' && fixture.minutes > 0
+                                ? fixture.minutes
+                                : null;
+                            statusBadge = `<span style="color: #22c55e; font-weight: 600; font-size: 0.65rem;">FT${fixtureMinutes ? ` (${fixtureMinutes})` : ''}</span>`;
+                        } else if (isStarted && !isFinished) {
+                            statusBadge = '<span style="color: #ef4444; font-weight: 600; font-size: 0.65rem;">LIVE</span>';
+                        }
+
+                        const expandIcon = canShowStats
+                            ? '<i class="fas fa-chevron-down" style="font-size: 0.6rem; margin-left: 0.25rem; transition: transform 0.2s;"></i>'
+                            : '';
+
+                        return `
+                            <div>
+                                <div
+                                    class="mobile-table-row mobile-table-fixtures fixture-row-mobile"
+                                    data-fixture-id="${fixture.id}"
+                                    data-can-expand="${canShowStats}"
+                                    style="
+                                        background: ${isLive ? 'rgba(239, 68, 68, 0.08)' : 'transparent'};
+                                        ${canShowStats ? 'cursor: pointer;' : ''}
+                                        padding: 0.55rem 0.75rem;
+                                        transition: all 0.2s ease;
+                                        border-bottom: 1px solid ${isLive ? 'rgba(239, 68, 68, 0.2)' : 'var(--border-color)'};
+                                    "
+                                    onmouseover="if(this.dataset.canExpand === 'true') this.style.background = '${isLive ? 'rgba(239, 68, 68, 0.12)' : 'rgba(0, 255, 136, 0.05)'}'"
+                                    onmouseout="this.style.background = '${isLive ? 'rgba(239, 68, 68, 0.08)' : 'transparent'}'"
+                                >
+                                    <div style="
+                                        color: var(--text-secondary);
+                                        font-size: 0.625rem;
+                                        white-space: nowrap;
+                                        font-weight: 500;
+                                    ">${timeStr}</div>
+                                    <div style="
+                                        text-align: right;
+                                        font-weight: 600;
+                                        white-space: nowrap;
+                                        overflow: hidden;
+                                        text-overflow: ellipsis;
+                                        font-size: 0.75rem;
+                                    ">
+                                        ${homeTeam?.short_name || 'TBD'}
+                                    </div>
+                                    <div style="
+                                        text-align: center;
+                                        font-weight: 700;
+                                        font-size: 0.875rem;
+                                        color: ${isFinished ? 'var(--text-primary)' : 'var(--text-secondary)'};
+                                    ">
+                                        ${homeScore}-${awayScore}
+                                    </div>
+                                    <div style="
+                                        text-align: left;
+                                        font-weight: 600;
+                                        white-space: nowrap;
+                                        overflow: hidden;
+                                        text-overflow: ellipsis;
+                                        font-size: 0.75rem;
+                                    ">
+                                        ${awayTeam?.short_name || 'TBD'}
+                                    </div>
+                                    <div style="
+                                        text-align: center;
+                                        display: flex;
+                                        align-items: center;
+                                        justify-content: center;
+                                        gap: 0.25rem;
+                                    ">
+                                        ${statusBadge}${expandIcon}
+                                    </div>
+                                </div>
+                                ${canShowStats ? renderFixturePlayerStats(fixture, fixture.event, isLive, isFinished, false, fplBootstrap) : ''}
                             </div>
+                        `;
+                    }).join('');
+
+                    return `
+                        <div style="margin-bottom: 0.75rem;">
                             <div style="
-                                text-align: center;
+                                font-size: 0.7rem;
                                 font-weight: 700;
-                                font-size: 0.875rem;
-                                color: ${isFinished ? 'var(--text-primary)' : 'var(--text-secondary)'};
+                                color: var(--text-secondary);
+                                text-transform: uppercase;
+                                letter-spacing: 0.05em;
+                                padding: 0.35rem 0.75rem;
+                                background: var(--bg-secondary);
                             ">
-                                ${homeScore}-${awayScore}
+                                ${section.label}
                             </div>
-                            <div style="
-                                text-align: left;
-                                font-weight: 600;
-                                white-space: nowrap;
-                                overflow: hidden;
-                                text-overflow: ellipsis;
-                                font-size: 0.75rem;
-                            ">
-                                ${awayTeam?.short_name || 'TBD'}
-                            </div>
-                            <div style="
-                                text-align: center;
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                                gap: 0.25rem;
-                            ">
-                                ${statusBadge}${expandIcon}
-                            </div>
+                            ${rows}
                         </div>
-                        ${canShowStats ? renderFixturePlayerStats(fixture, fixture.event, isLive, isFinished, false, fplBootstrap) : ''}
-                    </div>
-                `;
-            }).join('');
-
-            // Mobile header row - using standard gray header for consistency
-            const headerRow = `
-                <div class="mobile-table-header mobile-table-header-sticky mobile-table-fixtures" style="
-                    top: calc(3.5rem + env(safe-area-inset-top));
-                    background: var(--bg-secondary);
-                    color: var(--text-primary);
-                    border-bottom: 1px solid var(--border-color);
-                ">
-                    <div>Time</div>
-                    <div style="text-align: right;">Home</div>
-                    <div style="text-align: center;">Score</div>
-                    <div style="text-align: left;">Away</div>
-                    <div style="text-align: center;">Status</div>
-                </div>
-            `;
+                    `;
+                }).join('');
 
             return `
                 <div style="margin-bottom: 1.25rem;">
@@ -808,8 +829,7 @@ export function renderMobileFixturesTab() {
                             <span>Gameweek ${gw}</span>
                         </h4>
                     </div>
-                    ${headerRow}
-                    ${fixturesHTML}
+                    ${dateSections}
                 </div>
             `;
         }).join('');

@@ -56,12 +56,11 @@ export function renderTransferTargets(
 
         return form > 3.0 && fdr5 <= 3.8;
     }).sort((a, b) => {
-        // Sort by form first, then by transfer momentum
-        const formDiff = (parseFloat(b.form) || 0) - (parseFloat(a.form) || 0);
-        if (Math.abs(formDiff) > 0.5) return formDiff;
         const aNet = getTransferMomentum(a) ?? 0;
         const bNet = getTransferMomentum(b) ?? 0;
-        return bNet - aNet;
+        if (bNet !== aNet) return bNet - aNet;
+        const formDiff = (parseFloat(b.form) || 0) - (parseFloat(a.form) || 0);
+        return formDiff;
     }).slice(0, 20);
 
     // Sell candidates (negative momentum OR bad form/fixtures)
@@ -82,12 +81,11 @@ export function renderTransferTargets(
 
         return (hasBadForm || hasBadFixtures) && (hasNegativeMomentum || hasBadForm);
     }).sort((a, b) => {
-        // Sort by form ascending (worst first)
-        const formDiff = (parseFloat(a.form) || 0) - (parseFloat(b.form) || 0);
-        if (Math.abs(formDiff) > 0.5) return formDiff;
         const aNet = getTransferMomentum(a) ?? 0;
         const bNet = getTransferMomentum(b) ?? 0;
-        return aNet - bNet;
+        if (bNet !== aNet) return bNet - aNet;
+        const formDiff = (parseFloat(a.form) || 0) - (parseFloat(b.form) || 0);
+        return formDiff;
     }).slice(0, 20);
 
     // Fixture turnarounds (players with good upcoming fixtures)
