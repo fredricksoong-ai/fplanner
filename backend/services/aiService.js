@@ -215,6 +215,13 @@ export function parseGeminiResponse(geminiData, gameweek, page) {
   try {
     const parts = geminiData.candidates?.[0]?.content?.parts || [];
 
+    // Log raw response sample for debugging
+    const rawText = parts.find(part => part.text)?.text || '';
+    if (rawText) {
+      const sample = rawText.substring(0, 500);
+      logger.log(`📄 Raw JSON sample (first 500 chars): ${sample}...`);
+    }
+
     const categories = parseCategoriesFromParts(parts);
 
     // Validate structure - should be an object with category keys
@@ -230,16 +237,38 @@ export function parseGeminiResponse(geminiData, gameweek, page) {
       expectedCategories = ['Overview', 'Hidden Gems', 'Differentials', 'Transfer Targets', 'Team Analysis'];
     }
 
+    // Log diagnostic info about what categories were received
+    const receivedCategories = Object.keys(categories);
+    const missingCategories = expectedCategories.filter(cat => !categories[cat] || !Array.isArray(categories[cat]));
+    const presentCategories = expectedCategories.filter(cat => categories[cat] && Array.isArray(categories[cat]));
+
+    logger.log(`📊 Category diagnostics:`);
+    logger.log(`   Expected: ${expectedCategories.join(', ')}`);
+    logger.log(`   Received keys: ${receivedCategories.join(', ')}`);
+    logger.log(`   ✅ Present (${presentCategories.length}): ${presentCategories.join(', ')}`);
+    if (missingCategories.length > 0) {
+      logger.warn(`   ❌ Missing (${missingCategories.length}): ${missingCategories.join(', ')}`);
+      missingCategories.forEach(cat => {
+        const value = categories[cat];
+        logger.warn(`      - "${cat}": ${value ? `found but invalid (type: ${typeof value}, isArray: ${Array.isArray(value)})` : 'not found'}`);
+      });
+    }
+
     // Validate and sanitize each category
     const validatedCategories = {};
     for (const category of expectedCategories) {
       if (categories[category] && Array.isArray(categories[category])) {
+        const insightCount = categories[category].length;
+        if (insightCount < 3) {
+          logger.warn(`   ⚠️ "${category}": Only ${insightCount} insights (expected 3)`);
+        }
         // Ensure each insight is a string and trim to reasonable length
         validatedCategories[category] = categories[category]
           .slice(0, 3)  // Take first 3 insights
           .map(insight => String(insight || '').substring(0, 300));
       } else {
         // Fallback if category missing
+        logger.warn(`   ⚠️ "${category}": Using fallback messages (category missing or invalid)`);
         validatedCategories[category] = [
           'Analysis pending for this category',
           'Please refresh for updated insights',
@@ -257,6 +286,18 @@ export function parseGeminiResponse(geminiData, gameweek, page) {
   } catch (error) {
     logger.error('❌ Failed to parse Gemini response:', error.message);
     logger.error('❌ Full error:', error.stack);
+
+    // Try to log what we received before the error
+    try {
+      const parts = geminiData?.candidates?.[0]?.content?.parts || [];
+      const rawText = parts.find(part => part.text)?.text || '';
+      if (rawText) {
+        logger.error(`❌ Raw response length: ${rawText.length} chars`);
+        logger.error(`❌ Raw response sample: ${rawText.substring(0, 1000)}`);
+      }
+    } catch (logError) {
+      logger.error('❌ Could not extract raw response for logging:', logError.message);
+    }
 
     // Return fallback insights in case of parsing error
     // Provide generic fallback for both planner and stats pages
@@ -333,7 +374,7 @@ export async function generateAIInsights(page, tab, position, gameweek, data) {
       // }],
       generationConfig: {
         temperature: 0.7,
-        maxOutputTokens: 2048,
+        maxOutputTokens: 8192,
         topP: 0.8,
         topK: 40,
         responseMimeType: 'application/json'
@@ -351,7 +392,20 @@ export async function generateAIInsights(page, tab, position, gameweek, data) {
   const insights = parseGeminiResponse(geminiResponse.data, gameweek, page);
 
   const categoryCount = Object.keys(insights.categories || {}).length;
+  const validCategories = Object.entries(insights.categories || {})
+    .filter(([_, insights]) => Array.isArray(insights) && insights.length > 0 && !insights[0].includes('pending'))
+    .map(([name]) => name);
+  const fallbackCategories = Object.entries(insights.categories || {})
+    .filter(([_, insights]) => insights && insights[0] && insights[0].includes('pending'))
+    .map(([name]) => name);
+
   logger.log(`✅ AI Insights generated (${categoryCount} categories)`);
+  if (validCategories.length > 0) {
+    logger.log(`   ✅ Valid: ${validCategories.join(', ')}`);
+  }
+  if (fallbackCategories.length > 0) {
+    logger.warn(`   ⚠️ Fallbacks: ${fallbackCategories.join(', ')}`);
+  }
 
   return insights;
 }
