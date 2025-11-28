@@ -49,7 +49,6 @@ export function renderCompactTeamList(players, gwNumber, isLive) {
                             <th style="text-align: center; padding: 0.5rem; min-width: 60px;">Opp</th>
                             <th style="text-align: center; padding: 0.5rem; min-width: 60px;">Status</th>
                             <th style="text-align: center; padding: 0.5rem; min-width: 60px;">Pts</th>
-                            <th style="text-align: center; padding: 0.5rem; min-width: 60px;">Form</th>
                             <th style="text-align: center; padding: 0.5rem; min-width: 60px;">Δ</th>
                             <th style="text-align: center; padding: 0.5rem; min-width: 60px;">Price</th>
                             <th style="text-align: center; padding: 0.5rem; min-width: 60px;">Defcon</th>
@@ -174,9 +173,6 @@ function renderTeamSection(players, gwNumber, isLive, next5GWs, activeGW, sectio
                 </td>
                 <td style="text-align: center; padding: 0.5rem; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 700; border-radius: 0.25rem;">
                     ${displayPoints}
-                </td>
-                <td style="text-align: center; padding: 0.5rem; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 600;">
-                    ${formatDecimal(player.form)}
                 </td>
                 <td style="text-align: center; padding: 0.5rem;">
                     <span style="display: inline-block; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem; background: ${transferDelta > 0 ? 'rgba(34, 197, 94, 0.2)' : transferDelta < 0 ? 'rgba(239, 68, 68, 0.2)' : 'transparent'}; color: ${transferColor};">

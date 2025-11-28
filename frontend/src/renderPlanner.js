@@ -307,11 +307,6 @@ function renderWishlistSection(entries = [], gwNumber = currentGW) {
                 <td style="text-align: center; padding: 0.5rem; color: ${fdrColor}; font-weight: 700;">
                     ${avgFDR}
                 </td>
-                <td style="text-align: center; padding: 0.5rem; font-weight: 600;">
-                    <span style="display: inline-block; min-width: 44px; padding: 0.2rem 0.4rem; border-radius: 3px; background: ${formStyle.background}; color: ${formStyle.color};">
-                        ${formatDecimal(player.form)}
-                    </span>
-                </td>
                 ${nextFixtures.map(fix => {
                     const fdrClass = getDifficultyClass(fix.difficulty);
                     return `
@@ -344,7 +339,6 @@ function renderWishlistSection(entries = [], gwNumber = currentGW) {
                         <tr>
                             <th style="padding: 0.4rem; min-width: 120px;">Player</th>
                             <th style="padding: 0.4rem; text-align: center;">FDR</th>
-                            <th style="padding: 0.4rem; text-align: center;">Form</th>
                             ${next5GWs.map(gw => `<th style="padding: 0.4rem; text-align: center;">GW${gw}</th>`).join('')}
                         </tr>
                     </thead>

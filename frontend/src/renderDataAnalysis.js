@@ -856,7 +856,6 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
                             <th style="text-align: center; padding: 0.4rem; min-width: 60px;">Status</th>
                             <th style="text-align: center; padding: 0.4rem; min-width: 60px;">GW Pts</th>
                             <th style="text-align: center; padding: 0.4rem; min-width: 60px;">Total</th>
-                            <th style="text-align: center; padding: 0.4rem; min-width: 60px;">Form</th>
                             <th style="text-align: center; padding: 0.4rem; min-width: 60px;">${config.header}</th>
                         </tr>
                     </thead>
@@ -978,9 +977,6 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
                 </td>
                 <td style="text-align: center; padding: 0.5rem; background: ${totalPtsStyle.background}; color: ${totalPtsStyle.color}; font-weight: 700; border-radius: 0.25rem;">
                     ${totalPoints}
-                </td>
-                <td style="text-align: center; padding: 0.5rem; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 600;">
-                    ${formatDecimal(player.form)}
                 </td>
                 <td style="${contextCellStyle}">${contextCellContent}</td>
             </tr>

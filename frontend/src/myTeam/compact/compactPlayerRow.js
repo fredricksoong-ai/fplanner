@@ -136,7 +136,6 @@ export function renderCompactPlayerRow(pick, player, gwNumber) {
             </div>
             <div style="text-align: center; font-size: 0.6rem; font-weight: ${statusColors.statusWeight}; color: ${statusColors.statusColor}; background: ${statusColors.statusBgColor}; padding: 0.08rem 0.25rem; border-radius: 0.25rem; white-space: nowrap;">${matchStatus}</div>
             <div style="text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 700; padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-size: 0.6rem;">${displayPoints}</div>
-            <div style="text-align: center; background: ${formStyle.background}; color: ${formStyle.color}; font-weight: 700; padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-size: 0.6rem;">${formatDecimal(player.form)}</div>
         </div>
     `;
 }
