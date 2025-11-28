@@ -19,6 +19,7 @@ import {
 import { getFixtures, getGWOpponent, getMatchStatus } from '../../fixtures.js';
 import { analyzePlayerRisks } from '../../risk.js';
 import { calculateStatusColor } from './compactStyleHelpers.js';
+import { isWishlisted } from '../../wishlist/store.js';
 
 /**
  * Render comprehensive team table with horizontal scroll
@@ -50,11 +51,9 @@ export function renderCompactTeamList(players, gwNumber, isLive) {
                             <th style="text-align: center; padding: 0.5rem; min-width: 60px;">Status</th>
                             <th style="text-align: center; padding: 0.5rem; min-width: 60px;">Pts</th>
                             <th style="text-align: center; padding: 0.5rem; min-width: 60px;">Δ</th>
-                            <th style="text-align: center; padding: 0.5rem; min-width: 60px;">Price</th>
                             <th style="text-align: center; padding: 0.5rem; min-width: 60px;">Defcon</th>
                             <th style="text-align: center; padding: 0.5rem; min-width: 60px;">xGI/xGC</th>
                             <th style="text-align: center; padding: 0.5rem; min-width: 60px;">PPM</th>
-                            <th style="text-align: center; padding: 0.5rem; min-width: 60px;">Own%</th>
                             ${next5GWs.map(gw => `<th style="text-align: center; padding: 0.5rem; min-width: 60px;">GW${gw}</th>`).join('')}
                         </tr>
                     </thead>
@@ -139,6 +138,18 @@ function renderTeamSection(players, gwNumber, isLive, next5GWs, activeGW, sectio
         const rowBg = idx % 2 === 0 ? 'var(--bg-primary)' : 'var(--bg-secondary)';
         const isCaptain = pick.is_captain;
         const isViceCaptain = pick.is_vice_captain;
+        const isWishlistedPlayer = isWishlisted(player.id);
+
+        // Captain badge
+        let captainBadge = '';
+        if (isCaptain) captainBadge = ' <span style="color: var(--text-primary); font-weight: 700; font-size: 0.6rem;">(C)</span>';
+        if (isViceCaptain) captainBadge = ' <span style="color: var(--text-primary); font-weight: 700; font-size: 0.6rem;">(VC)</span>';
+
+        // Player badges (👤 for my player, ⭐ for wishlisted)
+        const badges = [];
+        badges.push('👤'); // Always my player on My Team page
+        if (isWishlistedPlayer) badges.push('⭐️');
+        const badgeMarkup = badges.length > 0 ? ` <span style="font-size: 0.65rem;">${badges.join(' ')}</span>` : '';
 
         html += `
             <tr
@@ -155,13 +166,19 @@ function renderTeamSection(players, gwNumber, isLive, next5GWs, activeGW, sectio
                     border-right: 1px solid var(--border-color);
                     min-height: 3rem;
                 ">
-                    <div style="display: flex; align-items: center; gap: 0.3rem;">
-                        <span style="font-size: 0.6rem; color: var(--text-secondary);">${getPositionShort(player)}</span>
-                        <strong style="font-size: 0.7rem;">${escapeHtml(player.web_name)}</strong>
-                        ${isCaptain ? '<span style="font-size: 0.6rem; margin-left: 0.2rem;">(C)</span>' : ''}
-                        ${isViceCaptain ? '<span style="font-size: 0.6rem; margin-left: 0.2rem;">(V)</span>' : ''}
+                    <div style="display: flex; flex-direction: column; gap: 0.1rem;">
+                        <!-- Line 1: Position + Name + Captain + Badges -->
+                        <div style="display: flex; align-items: center; gap: 0.3rem;">
+                            <span style="font-size: 0.6rem; color: var(--text-secondary);">${getPositionShort(player)}</span>
+                            <strong style="font-size: 0.7rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(player.web_name)}</strong>${captainBadge}${badgeMarkup}
+                        </div>
+                        <!-- Line 2: Team • Price • Own% • Form -->
+                        <div style="font-size: 0.6rem; color: var(--text-secondary); white-space: nowrap;">
+                            ${getTeamShortName(player.team)} • ${formatCurrency(player.now_cost)} • ${ownership.toFixed(1)}% • <span style="background: ${formStyle.background}; color: ${formStyle.color}; padding: 0.1rem 0.25rem; border-radius: 0.25rem; font-weight: 600;">${formatDecimal(player.form)}</span>
+                        </div>
+                        <!-- Line 3: Risk context (if any) -->
+                        ${risks.length > 0 ? `<div style="font-size: 0.6rem; color: ${borderColor}; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(risks[0]?.message || 'Issue')}</div>` : `<div style="height: 0.8rem;"></div>`}
                     </div>
-                    ${risks.length > 0 ? `<div style="font-size: 0.55rem; color: ${borderColor}; margin-top: 0.1rem; line-height: 1.2;">${risks[0]?.message || 'Issue'}</div>` : `<div style="height: 0.8rem;"></div>`}
                 </td>
                 <td style="text-align: center; padding: 0.5rem;">
                     <span class="${getDifficultyClass(opponent.difficulty)}" style="display: inline-block; width: 52px; padding: 0.2rem 0.3rem; border-radius: 3px; font-weight: 600; font-size: 0.6rem; text-align: center;">
@@ -179,9 +196,6 @@ function renderTeamSection(players, gwNumber, isLive, next5GWs, activeGW, sectio
                         ${transferDelta > 0 ? '+' : ''}${(transferDelta / 1000).toFixed(0)}k
                     </span>
                 </td>
-                <td style="text-align: center; padding: 0.5rem;">
-                    ${formatCurrency(player.now_cost)}
-                </td>
                 <td style="text-align: center; padding: 0.5rem; font-weight: 600;">
                     ${formatDecimal(defCon)}
                 </td>
@@ -190,9 +204,6 @@ function renderTeamSection(players, gwNumber, isLive, next5GWs, activeGW, sectio
                 </td>
                 <td style="text-align: center; padding: 0.5rem; font-weight: 600;">
                     ${formatDecimal(ppm)}
-                </td>
-                <td style="text-align: center; padding: 0.5rem; font-size: 0.65rem;">
-                    ${ownership.toFixed(1)}%
                 </td>
                 ${next5Fixtures.map(fix => {
                     const fdrClass = getDifficultyClass(fix.difficulty);
