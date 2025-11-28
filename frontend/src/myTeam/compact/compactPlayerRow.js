@@ -8,7 +8,10 @@ import {
     getPtsHeatmap,
     getFormHeatmap,
     getHeatmapStyle,
-    escapeHtml
+    escapeHtml,
+    getTeamShortName,
+    formatCurrency,
+    getPositionShort
 } from '../../utils.js';
 import { getGWOpponent, getMatchStatus } from '../../fixtures.js';
 import { analyzePlayerRisks, renderRiskTooltip } from '../../risk.js';
@@ -17,6 +20,7 @@ import {
     calculateStatusColor,
     calculatePlayerBgColor
 } from './compactStyleHelpers.js';
+import { isWishlisted } from '../../wishlist/store.js';
 
 /**
  * Render compact player row with ownership and transfer momentum
@@ -29,10 +33,18 @@ export function renderCompactPlayerRow(pick, player, gwNumber) {
     const isCaptain = pick.is_captain;
     const isVice = pick.is_vice_captain;
     const isBench = pick.position > 11;
+    const isMyPlayer = true; // Always true for My Team page
+    const isWishlistedPlayer = isWishlisted(player.id);
 
     let captainBadge = '';
     if (isCaptain) captainBadge = ' <span style="color: var(--text-primary); font-weight: 700; font-size: 0.7rem;">(C)</span>';
     if (isVice) captainBadge = ' <span style="color: var(--text-primary); font-weight: 700; font-size: 0.7rem;">(VC)</span>';
+
+    // Player badges (👤 for my player, ⭐ for wishlisted)
+    const badges = [];
+    if (isMyPlayer) badges.push('👤');
+    if (isWishlistedPlayer) badges.push('⭐️');
+    const badgeMarkup = badges.length > 0 ? ` <span style="font-size: 0.65rem;">${badges.join(' ')}</span>` : '';
 
     const gwOpp = getGWOpponent(player.team, gwNumber);
     const risks = analyzePlayerRisks(player);
@@ -68,18 +80,29 @@ export function renderCompactPlayerRow(pick, player, gwNumber) {
 
     // Colored left border for players with news/injury
     let leftBorderStyle = 'none';
+    let riskContextMessage = '';
+    let riskContextColor = '';
+
     if (player.news && player.news.trim() !== '') {
         const chanceOfPlaying = player.chance_of_playing_next_round;
         if (chanceOfPlaying !== null && chanceOfPlaying !== undefined) {
             if (chanceOfPlaying <= 25) {
                 leftBorderStyle = '3px solid #ef4444'; // Red
+                riskContextColor = '#ef4444';
+                riskContextMessage = `${chanceOfPlaying}% chance: ${player.news}`;
             } else if (chanceOfPlaying <= 50) {
                 leftBorderStyle = '3px solid #f97316'; // Orange
+                riskContextColor = '#f97316';
+                riskContextMessage = `${chanceOfPlaying}% chance: ${player.news}`;
             } else {
                 leftBorderStyle = '3px solid #fbbf24'; // Yellow
+                riskContextColor = '#fbbf24';
+                riskContextMessage = `${chanceOfPlaying}% chance: ${player.news}`;
             }
         } else {
             leftBorderStyle = '3px solid #fbbf24'; // Yellow default for news
+            riskContextColor = '#fbbf24';
+            riskContextMessage = player.news;
         }
     }
 
@@ -95,9 +118,18 @@ export function renderCompactPlayerRow(pick, player, gwNumber) {
             padding-bottom: 3px !important;
             padding-top: 3px !important;
         ">
-            <div style="font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                ${escapeHtml(player.web_name)}${captainBadge}
-                ${riskTooltip ? `${riskTooltip}` : ''}
+            <div style="display: flex; flex-direction: column; gap: 0.1rem;">
+                <!-- Line 1: Position + Name + Captain + Badges -->
+                <div style="display: flex; align-items: center; gap: 0.3rem; font-weight: 600; color: var(--text-primary);">
+                    <span style="font-size: 0.6rem; color: var(--text-secondary);">${getPositionShort(player)}</span>
+                    <span style="font-size: 0.75rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(player.web_name)}${captainBadge}${badgeMarkup}</span>
+                </div>
+                <!-- Line 2: Team • Price • Own% • Form -->
+                <div style="font-size: 0.6rem; color: var(--text-secondary); white-space: nowrap;">
+                    ${getTeamShortName(player.team)} • ${formatCurrency(player.now_cost)} • ${(parseFloat(player.selected_by_percent) || 0).toFixed(1)}% • <span style="background: ${formStyle.background}; color: ${formStyle.color}; padding: 0.1rem 0.25rem; border-radius: 0.25rem; font-weight: 600;">${formatDecimal(player.form)}</span>
+                </div>
+                <!-- Line 3: Risk context (if any) -->
+                ${riskContextMessage ? `<div style="font-size: 0.6rem; color: ${riskContextColor}; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(riskContextMessage)}</div>` : '<div style="height: 0.8rem;"></div>'}
             </div>
             <div style="text-align: center;">
                 ${renderOpponentBadge(gwOpp, 'small')}

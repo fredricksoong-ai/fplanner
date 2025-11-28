@@ -951,11 +951,19 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
                     min-height: 3rem;
                     box-shadow: 2px 0 4px rgba(0,0,0,0.1);
                 ">
-                    <div style="display: flex; align-items: center; gap: 0.3rem; flex-wrap: wrap;">
-                        <span style="font-size: 0.6rem; color: var(--text-secondary);">${getPositionShort(player)}</span>
-                        <strong style="font-size: 0.7rem;">${escapeHtml(player.web_name)}</strong>${playerBadges}
+                    <div style="display: flex; flex-direction: column; gap: 0.1rem;">
+                        <!-- Line 1: Position + Name + Badges -->
+                        <div style="display: flex; align-items: center; gap: 0.3rem;">
+                            <span style="font-size: 0.6rem; color: var(--text-secondary);">${getPositionShort(player)}</span>
+                            <strong style="font-size: 0.7rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(player.web_name)}</strong>${playerBadges}
+                        </div>
+                        <!-- Line 2: Team • Price • Own% • Form -->
+                        <div style="font-size: 0.6rem; color: var(--text-secondary); white-space: nowrap;">
+                            ${getTeamShortName(player.team)} • ${formatCurrency(player.now_cost)} • ${(parseFloat(player.selected_by_percent) || 0).toFixed(1)}% • <span style="background: ${formStyle.background}; color: ${formStyle.color}; padding: 0.1rem 0.25rem; border-radius: 0.25rem; font-weight: 600;">${formatDecimal(player.form)}</span>
+                        </div>
+                        <!-- Line 3: Risk context (if any) -->
+                        ${risks.length > 0 ? `<div style="font-size: 0.6rem; color: ${borderColor}; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(risks[0]?.message || 'Issue')}</div>` : `<div style="height: 0.8rem;"></div>`}
                     </div>
-                    ${risks.length > 0 ? `<div style="font-size: 0.55rem; color: ${borderColor}; margin-top: 0.1rem; line-height: 1.2;">${risks[0]?.message || 'Issue'}</div>` : `<div style="height: 0.8rem;"></div>`}
                 </td>
                 <td style="text-align: center; padding: 0.5rem;">
                     <span class="${getDifficultyClass(gwOpp.difficulty)}" style="display: inline-block; width: 52px; padding: 0.2rem 0.3rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.6rem; text-align: center;">
@@ -1295,7 +1303,7 @@ function getRowHighlightColor(index) {
 
 function getPlayerBadgesMarkup(isMyPlayer, isWishlisted, fontSize = '0.75rem') {
     const badges = [];
-    if (isMyPlayer) badges.push('🚀');
+    if (isMyPlayer) badges.push('👤');
     if (isWishlisted) badges.push('⭐️');
     if (!badges.length) return '';
     return ` <span style="font-size: ${fontSize};">${badges.join(' ')}</span>`;
