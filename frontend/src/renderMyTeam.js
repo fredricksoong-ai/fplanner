@@ -512,7 +512,7 @@ export function renderMyTeam(teamData, subTab = 'overview') {
         // Desktop: Show header and tabs
         const tabHTML = `
             <div style="margin-bottom: 2rem;">
-                <h1 style="font-size: 2rem; font-weight: 700; color: var(--primary-color); margin-bottom: 1rem;">
+                <h1 style="font-size: 2rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
                     <i class="fas fa-users"></i> My Team
                 </h1>
 
@@ -522,13 +522,14 @@ export function renderMyTeam(teamData, subTab = 'overview') {
                         class="my-team-tab-btn"
                         data-tab="overview"
                         style="
-                            padding: 0.75rem 1.5rem;
+                            padding: 0.5rem 0.75rem;
                             background: ${subTab === 'overview' ? 'var(--primary-color)' : 'transparent'};
                             color: ${subTab === 'overview' ? 'white' : 'var(--text-primary)'};
                             border: none;
                             border-bottom: 3px solid ${subTab === 'overview' ? 'var(--primary-color)' : 'transparent'};
                             cursor: pointer;
                             font-weight: 600;
+                            font-size: 0.75rem;
                             transition: all 0.2s;
                         "
                     >
@@ -572,12 +573,12 @@ export function renderMyTeam(teamData, subTab = 'overview') {
                     <button
                         id="change-team-btn"
                         style="
-                            padding: 8px 16px;
-                            border-radius: 20px;
+                            padding: 0.5rem 1rem;
+                            border-radius: 0.5rem;
                             background: var(--bg-secondary);
                             color: var(--text-secondary);
                             border: 1px solid var(--border-color);
-                            font-size: 14px;
+                            font-size: 0.75rem;
                             font-weight: 500;
                             cursor: pointer;
                             transition: all 0.2s ease;
@@ -590,18 +591,18 @@ export function renderMyTeam(teamData, subTab = 'overview') {
                         id="refresh-team-btn"
                         class="hide-desktop touch-target"
                         style="
-                            padding: 8px 16px;
-                            border-radius: 20px;
+                            padding: 0.5rem 1rem;
+                            border-radius: 0.5rem;
                             background: var(--secondary-color);
                             color: var(--primary-color);
                             border: none;
-                            font-size: 14px;
+                            font-size: 0.75rem;
                             font-weight: 600;
                             cursor: pointer;
                             transition: all 0.2s ease;
                             display: flex;
                             align-items: center;
-                            gap: 6px;
+                            gap: 0.5rem;
                         "
                     >
                         <i class="fas fa-sync-alt"></i>Refresh

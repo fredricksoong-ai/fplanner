@@ -108,7 +108,7 @@ export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = fa
                             style="
                                 background: transparent;
                                 border: 1px solid var(--border-color);
-                                border-radius: 0.3rem;
+                                border-radius: 0.5rem;
                                 padding: 0.2rem 0.35rem;
                                 color: var(--text-secondary);
                                 cursor: pointer;
@@ -121,7 +121,7 @@ export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = fa
                         >
                             <i class="fas fa-exchange-alt" style="font-size: 0.7rem;"></i>
                         </button>
-                        <div style="font-size: 0.95rem; font-weight: 700; color: var(--text-primary); line-height: 1.2; flex: 1;">
+                        <div style="font-size: 1rem; font-weight: 700; color: var(--text-primary); line-height: 1.2; flex: 1;">
                             ${escapeHtml(team.name)}
                         </div>
                     </div>
@@ -160,7 +160,7 @@ export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = fa
                     <div style="
                         background: var(--bg-primary);
                         border: 1px solid var(--border-color);
-                        border-radius: 6px;
+                        border-radius: 0.5rem;
                         padding: 0.3rem 0.6rem;
                         text-align: center;
                         min-width: 175px;

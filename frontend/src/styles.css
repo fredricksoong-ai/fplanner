@@ -213,6 +213,126 @@ body {
     border-radius: 0.5rem;
     border-left: 4px solid var(--primary-color);
   }
+
+  /* Mobile Typography Utilities */
+  @media (max-width: 767px) {
+    .mobile-h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      line-height: 1.2;
+    }
+
+    .mobile-h2 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      line-height: 1.2;
+    }
+
+    .mobile-h3 {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      line-height: 1.2;
+    }
+
+    .mobile-body {
+      font-size: 0.75rem;
+      font-weight: 400;
+      color: var(--text-primary);
+      line-height: 1.4;
+    }
+
+    .mobile-text-secondary {
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+    }
+
+    .mobile-text-tertiary {
+      font-size: 0.65rem;
+      color: var(--text-tertiary);
+    }
+
+    .mobile-text-small {
+      font-size: 0.6rem;
+      color: var(--text-secondary);
+    }
+  }
+
+  /* Mobile Spacing Utilities */
+  @media (max-width: 767px) {
+    .mobile-p-xs { padding: 0.25rem; }
+    .mobile-p-sm { padding: 0.5rem; }
+    .mobile-p-md { padding: 0.75rem; }
+    .mobile-p-lg { padding: 1rem; }
+    .mobile-p-xl { padding: 1.5rem; }
+    .mobile-p-2xl { padding: 2rem; }
+
+    .mobile-mb-xs { margin-bottom: 0.25rem; }
+    .mobile-mb-sm { margin-bottom: 0.5rem; }
+    .mobile-mb-md { margin-bottom: 0.75rem; }
+    .mobile-mb-lg { margin-bottom: 1rem; }
+    .mobile-mb-xl { margin-bottom: 1.5rem; }
+    .mobile-mb-2xl { margin-bottom: 2rem; }
+
+    .mobile-gap-xs { gap: 0.25rem; }
+    .mobile-gap-sm { gap: 0.5rem; }
+    .mobile-gap-md { gap: 0.75rem; }
+    .mobile-gap-lg { gap: 1rem; }
+  }
+
+  /* Mobile Border Radius Utilities */
+  @media (max-width: 767px) {
+    .mobile-rounded-sm { border-radius: 0.25rem; }
+    .mobile-rounded-md { border-radius: 0.5rem; }
+    .mobile-rounded-lg { border-radius: 0.75rem; }
+  }
+
+  /* Mobile Button Utilities */
+  @media (max-width: 767px) {
+    .mobile-btn-primary {
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .mobile-btn-secondary {
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .mobile-btn-tab {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      background: transparent;
+      color: var(--text-primary);
+      border: none;
+      border-bottom: 3px solid transparent;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .mobile-btn-tab-active {
+      background: var(--primary-color);
+      color: white;
+      border-bottom: 3px solid var(--primary-color);
+    }
+  }
 }
 
 /* Mobile navigation styles */

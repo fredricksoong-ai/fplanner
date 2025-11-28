@@ -61,7 +61,7 @@ export async function renderPlanner() {
     if (!teamId) {
         container.innerHTML = `
             <div style="text-align: center; padding: 4rem 2rem; color: var(--text-secondary);">
-                <i class="fas fa-exclamation-circle" style="font-size: 3rem; margin-bottom: 1rem; color: #ef4444;"></i>
+                <i class="fas fa-exclamation-circle" style="font-size: 3rem; margin-bottom: 1rem; color: var(--danger-color);"></i>
                 <p>No team ID configured</p>
                 <button
                     onclick="window.navigateToPage('my-team')"
@@ -162,7 +162,7 @@ export async function renderPlanner() {
         }
 
         const html = `
-            <div style="padding: 0.5rem;">
+            <div style="padding: 0.75rem;">
                 ${renderPlannerHeader(gwNumber, highCount, mediumCount, lowCount)}
                 ${renderMetricIndicators(originalMetrics, projectedMetrics, leagueComparison)}
                 ${renderCohortComparisonSection(cohortComparison, projectedMetrics)}
@@ -181,7 +181,7 @@ export async function renderPlanner() {
         console.error('Failed to load planner:', err);
         container.innerHTML = `
             <div style="text-align: center; padding: 4rem 2rem; color: var(--text-secondary);">
-                <i class="fas fa-exclamation-triangle" style="font-size: 3rem; margin-bottom: 1rem; color: #ef4444;"></i>
+                <i class="fas fa-exclamation-triangle" style="font-size: 3rem; margin-bottom: 1rem; color: var(--danger-color);"></i>
                 <p>Failed to load planner data</p>
                 <p style="font-size: 0.8rem; margin-top: 0.5rem;">${err.message}</p>
             </div>
@@ -207,9 +207,9 @@ function renderWishlistSection(entries = [], gwNumber = currentGW) {
         return `
             <div style="
                 background: var(--bg-secondary);
-                border-radius: 8px;
+                border-radius: 0.75rem;
                 padding: 0.75rem 1rem;
-                margin-bottom: 0.75rem;
+                margin-bottom: 1rem;
                 border-left: 3px solid var(--accent-color);
             ">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
@@ -242,7 +242,7 @@ function renderWishlistSection(entries = [], gwNumber = currentGW) {
             : 'Recently added';
         const formHeatmap = getFormHeatmap(player.form);
         const formStyle = getHeatmapStyle(formHeatmap);
-        const fdrColor = avgFDRValue <= 2.5 ? '#22c55e' : avgFDRValue <= 3.5 ? '#eab308' : '#ef4444';
+        const fdrColor = avgFDRValue <= 2.5 ? 'var(--success-color)' : avgFDRValue <= 3.5 ? '#eab308' : 'var(--danger-color)';
 
         return `
             <tr
@@ -290,8 +290,8 @@ function renderWishlistSection(entries = [], gwNumber = currentGW) {
     return `
         <div style="
             background: var(--bg-secondary);
-            border-radius: 8px;
-            margin-bottom: 0.75rem;
+            border-radius: 0.75rem;
+            margin-bottom: 1rem;
             box-shadow: 0 2px 6px rgba(0,0,0,0.08);
         ">
             <div style="padding: 0.75rem 1rem; display: flex; justify-content: space-between; align-items: center;">
@@ -302,10 +302,10 @@ function renderWishlistSection(entries = [], gwNumber = currentGW) {
                 <table style="width: 100%; font-size: 0.75rem; border-collapse: collapse;">
                     <thead style="background: var(--bg-tertiary); text-align: left;">
                         <tr>
-                            <th style="padding: 0.5rem; min-width: 120px;">Player</th>
-                            <th style="padding: 0.5rem; text-align: center;">FDR</th>
-                            <th style="padding: 0.5rem; text-align: center;">Form</th>
-                            ${next5GWs.map(gw => `<th style="padding: 0.5rem; text-align: center;">GW${gw}</th>`).join('')}
+                            <th style="padding: 0.4rem; min-width: 120px;">Player</th>
+                            <th style="padding: 0.4rem; text-align: center;">FDR</th>
+                            <th style="padding: 0.4rem; text-align: center;">Form</th>
+                            ${next5GWs.map(gw => `<th style="padding: 0.4rem; text-align: center;">GW${gw}</th>`).join('')}
                         </tr>
                     </thead>
                     <tbody>
@@ -374,7 +374,7 @@ function renderCohortComparisonSection(cohortPayload, userMetrics) {
             margin-bottom: 1rem;
             padding: 0.75rem;
             background: var(--bg-secondary);
-            border-radius: 8px;
+            border-radius: 0.75rem;
         ">
             <button
                 type="button"
@@ -486,9 +486,9 @@ function formatPercentileBadge(percentile) {
 
 function getPercentileColor(percentile) {
     if (percentile >= 90) return '#a855f7';
-    if (percentile >= 70) return '#22c55e';
+    if (percentile >= 70) return 'var(--success-color)';
     if (percentile >= 40) return '#facc15';
-    return '#ef4444';
+    return 'var(--danger-color)';
 }
 
 // ============================================================================
@@ -510,7 +510,7 @@ function renderPlannerHeader(gwNumber, highCount, mediumCount, lowCount) {
         ">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
-                    <h1 style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary); margin: 0;">
+                    <h1 style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin: 0;">
                         <i class="fas fa-calendar-check" style="margin-right: 0.5rem; color: var(--accent-color);"></i>
                         Planner
                     </h1>
@@ -518,8 +518,8 @@ function renderPlannerHeader(gwNumber, highCount, mediumCount, lowCount) {
                         GW ${gwNumber + 1} → GW ${gwNumber + 5}
                         ${totalIssues > 0 ? `
                             <span style="margin-left: 0.5rem;">
-                                ${highCount > 0 ? `<span style="color: #ef4444;">🔴 ${highCount}</span>` : ''}
-                                ${mediumCount > 0 ? `<span style="color: #fb923c; margin-left: 0.3rem;">🟠 ${mediumCount}</span>` : ''}
+                                ${highCount > 0 ? `<span style="color: var(--danger-color);">🔴 ${highCount}</span>` : ''}
+                                ${mediumCount > 0 ? `<span style="color: var(--warning-color); margin-left: 0.3rem;">🟠 ${mediumCount}</span>` : ''}
                                 ${lowCount > 0 ? `<span style="color: #eab308; margin-left: 0.3rem;">🟡 ${lowCount}</span>` : ''}
                             </span>
                         ` : ''}
@@ -555,10 +555,10 @@ function renderUnifiedFixtureTable(myPlayers, riskPlayerMap, picks, gwNumber) {
                 <table style="width: 100%; font-size: 0.75rem; border-collapse: collapse;">
                     <thead style="background: var(--bg-tertiary);">
                         <tr>
-                            <th style="position: sticky; left: 0; background: var(--bg-tertiary); z-index: 10; text-align: left; padding: 0.5rem; min-width: 140px;">Player</th>
-                            <th style="text-align: center; padding: 0.5rem; min-width: 60px;">FDR</th>
-                            <th style="text-align: center; padding: 0.5rem; min-width: 60px;">Form</th>
-                            ${next5GWs.map(gw => `<th style="text-align: center; padding: 0.5rem; min-width: 60px;">GW${gw}</th>`).join('')}
+                            <th style="position: sticky; left: 0; background: var(--bg-tertiary); z-index: 10; text-align: left; padding: 0.4rem; min-width: 140px;">Player</th>
+                            <th style="text-align: center; padding: 0.4rem; min-width: 60px;">FDR</th>
+                            <th style="text-align: center; padding: 0.4rem; min-width: 60px;">Form</th>
+                            ${next5GWs.map(gw => `<th style="text-align: center; padding: 0.4rem; min-width: 60px;">GW${gw}</th>`).join('')}
                         </tr>
                     </thead>
                     <tbody>
@@ -570,8 +570,8 @@ function renderUnifiedFixtureTable(myPlayers, riskPlayerMap, picks, gwNumber) {
 
                             // Determine border color based on severity
                             let borderColor = '';
-                            if (severity === 'high') borderColor = '#ef4444';
-                            else if (severity === 'medium') borderColor = '#fb923c';
+                            if (severity === 'high') borderColor = 'var(--danger-color)';
+                            else if (severity === 'medium') borderColor = 'var(--warning-color)';
                             else if (severity === 'low') borderColor = '#eab308';
 
                             const next5Fixtures = getFixtures(player.team, 5, false);
@@ -609,7 +609,7 @@ function renderUnifiedFixtureTable(myPlayers, riskPlayerMap, picks, gwNumber) {
                                                         color: var(--text-primary);
                                                         padding: 0.15rem 0.3rem;
                                                         margin-left: 0.3rem;
-                                                        border-radius: 4px;
+                                                        border-radius: 0.25rem;
                                                         font-size: 0.6rem;
                                                     "
                                                     title="Reset this change"
@@ -669,10 +669,10 @@ function renderProblemPlayersSection_OLD(myPlayers, picks, gwNumber) {
                 border-radius: 8px;
                 padding: 1rem;
                 margin-bottom: 0.5rem;
-                border-left: 3px solid #22c55e;
+                border-left: 3px solid var(--success-color);
             ">
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <i class="fas fa-check-circle" style="color: #22c55e;"></i>
+                    <i class="fas fa-check-circle" style="color: var(--success-color);"></i>
                     <span style="font-size: 0.85rem; color: var(--text-primary); font-weight: 600;">No problem players</span>
                 </div>
             </div>
@@ -686,7 +686,7 @@ function renderProblemPlayersSection_OLD(myPlayers, picks, gwNumber) {
             background: var(--bg-secondary);
             border-radius: 8px;
             margin-bottom: 0.5rem;
-            border-left: 3px solid #fb923c;
+            border-left: 3px solid var(--warning-color);
         ">
             <div
                 id="planner-problems-header"
@@ -699,7 +699,7 @@ function renderProblemPlayersSection_OLD(myPlayers, picks, gwNumber) {
                 "
             >
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <i class="fas fa-exclamation-triangle" style="color: #fb923c;"></i>
+                    <i class="fas fa-exclamation-triangle" style="color: var(--warning-color);"></i>
                     <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-primary);">
                         Problem Players (${problemPlayers.length})
                     </span>
@@ -938,10 +938,10 @@ function renderTransferTargets(myPlayers, picks, gwNumber) {
                 border-radius: 8px;
                 padding: 1rem;
                 margin-bottom: 0.5rem;
-                border-left: 3px solid #3b82f6;
+                border-left: 3px solid var(--accent-color);
             ">
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <i class="fas fa-search" style="color: #3b82f6;"></i>
+                    <i class="fas fa-search" style="color: var(--accent-color);"></i>
                     <span style="font-size: 0.85rem; color: var(--text-primary);">No strong transfer targets found</span>
                 </div>
             </div>
@@ -968,7 +968,7 @@ function renderTransferTargets(myPlayers, picks, gwNumber) {
                 "
             >
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <i class="fas fa-bullseye" style="color: #3b82f6;"></i>
+                    <i class="fas fa-bullseye" style="color: var(--accent-color);"></i>
                     <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-primary);">
                         Transfer Targets (${allTargets.length})
                     </span>
