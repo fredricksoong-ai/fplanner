@@ -127,7 +127,7 @@ export function renderDataAnalysis(subTab = 'overview', position = 'all') {
 
     const tabHTML = `
         <div style="margin-bottom: ${isMobile ? '1rem' : '2rem'};">
-            ${!isMobile ? `<h1 style="font-size: ${headerSize}; font-weight: 700; color: var(--primary-color); margin-bottom: ${headerMargin};">
+            ${!isMobile ? `<h1 style="font-size: ${headerSize}; font-weight: 700; color: var(--text-primary); margin-bottom: ${headerMargin};">
                 <i class="fas fa-chart-bar"></i> Data Analysis
             </h1>` : ''}
 
@@ -145,7 +145,7 @@ export function renderDataAnalysis(subTab = 'overview', position = 'all') {
                         border-bottom: 3px solid ${subTab === 'overview' ? 'var(--primary-color)' : 'transparent'};
                         cursor: pointer;
                         font-weight: 600;
-                        font-size: ${tabFontSize};
+                        font-size: 0.75rem;
                         transition: all 0.2s;
                         white-space: nowrap;
                     "
@@ -238,14 +238,14 @@ export function renderDataAnalysis(subTab = 'overview', position = 'all') {
                         data-tab="${subTab}"
                         data-position="${pos}"
                         style="
-                            padding: ${positionPadding};
+                            padding: 0.5rem 1rem;
                             background: ${position === pos ? 'var(--accent-color)' : 'var(--bg-secondary)'};
                             color: ${position === pos ? 'white' : 'var(--text-primary)'};
                             border: 1px solid ${position === pos ? 'var(--accent-color)' : 'var(--border-color)'};
-                            border-radius: 6px;
+                            border-radius: 0.5rem;
                             cursor: pointer;
                             font-weight: 500;
-                            font-size: ${positionFontSize};
+                            font-size: 0.75rem;
                             transition: all 0.2s;
                         "
                     >
@@ -271,7 +271,7 @@ export function renderDataAnalysis(subTab = 'overview', position = 'all') {
         contentHTML = renderAnalysisOverview(position);
     }
 
-    const containerPadding = isMobile ? 'padding: 1rem;' : 'padding: 2rem;';
+    const containerPadding = isMobile ? 'padding: 0.75rem;' : 'padding: 2rem;';
 
     container.innerHTML = `
         <div style="${containerPadding}">
@@ -463,7 +463,7 @@ function renderDifferentials(position = 'all') {
     return `
         <div>
             <!-- Filters -->
-            <div style="background: var(--bg-secondary); padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem;">
+            <div style="background: var(--bg-secondary); padding: 1.5rem; border-radius: 0.75rem; margin-bottom: 2rem;">
                 <h3 style="font-size: 1.125rem; font-weight: 600; margin-bottom: 1rem;">Filters</h3>
 
                 <!-- Ownership Slider -->
@@ -493,10 +493,10 @@ function renderDifferentials(position = 'all') {
                                 background: ${analysisState.priceRange === 'all' ? 'var(--accent-color)' : 'var(--bg-primary)'};
                                 color: ${analysisState.priceRange === 'all' ? 'white' : 'var(--text-primary)'};
                                 border: 1px solid ${analysisState.priceRange === 'all' ? 'var(--accent-color)' : 'var(--border-color)'};
-                                border-radius: 6px;
+                                border-radius: 0.5rem;
                                 cursor: pointer;
                                 font-weight: 500;
-                                font-size: 0.875rem;
+                                font-size: 0.75rem;
                             "
                         >All Prices</button>
                         <button
@@ -507,7 +507,7 @@ function renderDifferentials(position = 'all') {
                                 background: ${analysisState.priceRange === 'budget' ? 'var(--accent-color)' : 'var(--bg-primary)'};
                                 color: ${analysisState.priceRange === 'budget' ? 'white' : 'var(--text-primary)'};
                                 border: 1px solid ${analysisState.priceRange === 'budget' ? 'var(--accent-color)' : 'var(--border-color)'};
-                                border-radius: 6px;
+                                border-radius: 0.5rem;
                                 cursor: pointer;
                                 font-weight: 500;
                                 font-size: 0.875rem;
@@ -521,7 +521,7 @@ function renderDifferentials(position = 'all') {
                                 background: ${analysisState.priceRange === 'mid' ? 'var(--accent-color)' : 'var(--bg-primary)'};
                                 color: ${analysisState.priceRange === 'mid' ? 'white' : 'var(--text-primary)'};
                                 border: 1px solid ${analysisState.priceRange === 'mid' ? 'var(--accent-color)' : 'var(--border-color)'};
-                                border-radius: 6px;
+                                border-radius: 0.5rem;
                                 cursor: pointer;
                                 font-weight: 500;
                                 font-size: 0.875rem;
@@ -535,7 +535,7 @@ function renderDifferentials(position = 'all') {
                                 background: ${analysisState.priceRange === 'premium' ? 'var(--accent-color)' : 'var(--bg-primary)'};
                                 color: ${analysisState.priceRange === 'premium' ? 'white' : 'var(--text-primary)'};
                                 border: 1px solid ${analysisState.priceRange === 'premium' ? 'var(--accent-color)' : 'var(--border-color)'};
-                                border-radius: 6px;
+                                border-radius: 0.5rem;
                                 cursor: pointer;
                                 font-weight: 500;
                                 font-size: 0.875rem;
@@ -650,7 +650,7 @@ function renderTeamTable(teamAnalysis) {
     const fixtureHeaders = getFixtureHeaders(5, 1);
 
     let html = `
-        <div style="overflow-x: auto; background: var(--bg-secondary); border-radius: 12px; box-shadow: 0 2px 8px var(--shadow);">
+        <div style="overflow-x: auto; background: var(--bg-secondary); border-radius: 0.75rem; box-shadow: 0 2px 8px var(--shadow);">
             <table style="width: 100%; font-size: 0.875rem; border-collapse: collapse;">
                 <thead style="background: var(--primary-color); color: white;">
                     <tr>
@@ -719,8 +719,8 @@ function renderTeamTable(teamAnalysis) {
  */
 function renderSectionHeader(icon, title, description) {
     const isMobile = isMobileDevice();
-    const titleSize = isMobile ? '1.125rem' : '1.5rem';
-    const descSize = isMobile ? '0.8rem' : '1rem';
+    const titleSize = isMobile ? '1rem' : '1.5rem';
+    const descSize = isMobile ? '0.7rem' : '1rem';
     const marginBottom = isMobile ? '1rem' : '2rem';
 
     return `
@@ -805,7 +805,7 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
             getColor: (p) => {
                 const net = getNetTransfersValue(p);
                 if (net === null) return 'inherit';
-                return net > 0 ? '#22c55e' : net < 0 ? '#ef4444' : 'inherit';
+                return net > 0 ? 'var(--success-color)' : net < 0 ? 'var(--danger-color)' : 'inherit';
             }
         },
         'xg-variance': {
@@ -885,7 +885,7 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
     let html = `
         <div style="
             background: var(--bg-secondary);
-            border-radius: 8px;
+            border-radius: 0.75rem;
             overflow: hidden;
             margin-bottom: 0.5rem;
         ">
@@ -893,13 +893,13 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
                 <table style="width: 100%; font-size: 0.7rem; border-collapse: collapse;">
                     <thead style="background: var(--bg-tertiary);">
                         <tr>
-                            <th style="position: sticky; left: 0; background: var(--bg-tertiary); z-index: 11; text-align: left; padding: 0.5rem; min-width: 140px; border-right: 2px solid var(--border-color); box-shadow: 2px 0 4px rgba(0,0,0,0.1);">Player</th>
-                            <th style="text-align: center; padding: 0.5rem; min-width: 60px;">Opp</th>
-                            <th style="text-align: center; padding: 0.5rem; min-width: 60px;">Status</th>
-                            <th style="text-align: center; padding: 0.5rem; min-width: 60px;">GW Pts</th>
-                            <th style="text-align: center; padding: 0.5rem; min-width: 60px;">Total</th>
-                            <th style="text-align: center; padding: 0.5rem; min-width: 60px;">Form</th>
-                            <th style="text-align: center; padding: 0.5rem; min-width: 60px;">${config.header}</th>
+                            <th style="position: sticky; left: 0; background: var(--bg-tertiary); z-index: 11; text-align: left; padding: 0.4rem; min-width: 140px; border-right: 2px solid var(--border-color); box-shadow: 2px 0 4px rgba(0,0,0,0.1);">Player</th>
+                            <th style="text-align: center; padding: 0.4rem; min-width: 60px;">Opp</th>
+                            <th style="text-align: center; padding: 0.4rem; min-width: 60px;">Status</th>
+                            <th style="text-align: center; padding: 0.4rem; min-width: 60px;">GW Pts</th>
+                            <th style="text-align: center; padding: 0.4rem; min-width: 60px;">Total</th>
+                            <th style="text-align: center; padding: 0.4rem; min-width: 60px;">Form</th>
+                            <th style="text-align: center; padding: 0.4rem; min-width: 60px;">${config.header}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -920,8 +920,8 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
         const hasLowRisk = risks.length > 0;
 
         let borderColor = '';
-        if (hasHighRisk) borderColor = '#ef4444';
-        else if (hasMediumRisk) borderColor = '#fb923c';
+        if (hasHighRisk) borderColor = 'var(--danger-color)';
+        else if (hasMediumRisk) borderColor = 'var(--warning-color)';
         else if (hasLowRisk) borderColor = '#eab308';
 
         // Points (GW points)
@@ -951,7 +951,7 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
         if (config.getClass) {
             // Use difficulty class (for FDR) - pill style
             const contextClass = config.getClass(player);
-            contextCellContent = `<span class="${contextClass}" style="display: inline-block; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem;">${contextValue}</span>`;
+            contextCellContent = `<span class="${contextClass}" style="display: inline-block; padding: 0.2rem 0.4rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.65rem;">${contextValue}</span>`;
         } else if (config.getHeatmap) {
             // Use heatmap - full cell background
             const heatmap = config.getHeatmap(player);
@@ -962,8 +962,8 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
             // Use custom color with pill (for transfers)
             const contextColor = config.getColor(player);
             const net = getNetTransfersValue(player);
-            const background = net > 0 ? 'rgba(34, 197, 94, 0.2)' : net < 0 ? 'rgba(239, 68, 68, 0.2)' : 'transparent';
-            contextCellContent = `<span style="display: inline-block; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem; background: ${background}; color: ${contextColor};">${contextValue}</span>`;
+            const background = net > 0 ? 'rgba(0, 255, 136, 0.2)' : net < 0 ? 'rgba(220, 38, 38, 0.2)' : 'transparent';
+            contextCellContent = `<span style="display: inline-block; padding: 0.2rem 0.4rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.65rem; background: ${background}; color: ${contextColor};">${contextValue}</span>`;
         } else {
             // Default styling
             contextCellContent = contextValue;
@@ -1000,11 +1000,11 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
                     ${risks.length > 0 ? `<div style="font-size: 0.55rem; color: ${borderColor}; margin-top: 0.1rem; line-height: 1.2;">${risks[0]?.message || 'Issue'}</div>` : `<div style="height: 0.8rem;"></div>`}
                 </td>
                 <td style="text-align: center; padding: 0.5rem;">
-                    <span class="${getDifficultyClass(gwOpp.difficulty)}" style="display: inline-block; width: 52px; padding: 0.2rem 0.3rem; border-radius: 3px; font-weight: 600; font-size: 0.6rem; text-align: center;">
+                    <span class="${getDifficultyClass(gwOpp.difficulty)}" style="display: inline-block; width: 52px; padding: 0.2rem 0.3rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.6rem; text-align: center;">
                         ${gwOpp.name} (${gwOpp.isHome ? 'H' : 'A'})
                     </span>
                 </td>
-                <td style="text-align: center; padding: 0.5rem; font-size: 0.6rem; font-weight: ${statusColors.statusWeight}; color: ${statusColors.statusColor}; background: ${statusColors.statusBgColor}; padding: 0.08rem 0.25rem; border-radius: 0.25rem; white-space: nowrap;">
+                <td style="text-align: center; padding: 0.5rem; font-size: 0.6rem; font-weight: ${statusColors.statusWeight}; color: ${statusColors.statusColor}; background: ${statusColors.statusBgColor}; border-radius: 0.25rem; white-space: nowrap;">
                     ${matchStatus}
                 </td>
                 <td style="text-align: center; padding: 0.5rem; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 700; border-radius: 0.25rem;">
@@ -1038,14 +1038,14 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
                     data-total-count="${players.length}"
                     data-current-count="${initialCount}"
                     style="
-                        padding: 0.75rem 1.5rem;
+                        padding: 0.5rem 1rem;
                         background: var(--primary-color);
                         color: white;
                         border: none;
-                        border-radius: 8px;
+                        border-radius: 0.5rem;
                         font-weight: 600;
                         cursor: pointer;
-                        font-size: 0.875rem;
+                        font-size: 0.75rem;
                     "
                 >
                     Load More (${remaining} remaining)
@@ -1073,7 +1073,7 @@ function renderPositionSpecificTable(players, position = 'all') {
 
     // Build table based on position
     let html = `
-        <div style="overflow-x: auto; background: var(--bg-secondary); border-radius: 12px; box-shadow: 0 2px 8px var(--shadow);">
+        <div style="overflow-x: auto; background: var(--bg-secondary); border-radius: 0.75rem; box-shadow: 0 2px 8px var(--shadow);">
             <table style="width: 100%; font-size: 0.875rem; border-collapse: collapse;">
                 <thead style="background: var(--primary-color); color: white;">
                     <tr>
@@ -1189,7 +1189,7 @@ function renderPositionSpecificTable(players, position = 'all') {
             const net = player.github_transfers.transfers_in - player.github_transfers.transfers_out;
             const prefix = net > 0 ? '+' : '';
             transferNet = `${prefix}${(net / 1000).toFixed(0)}k`;
-            transferColor = net > 0 ? '#22c55e' : net < 0 ? '#ef4444' : 'inherit';
+            transferColor = net > 0 ? 'var(--success-color)' : net < 0 ? 'var(--danger-color)' : 'inherit';
         }
 
         // Heatmaps
