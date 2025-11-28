@@ -171,8 +171,8 @@ export function getPtsHeatmap(points, metric = 'pts') {
         if (points >= 7) return 'heat-dark-green';
         if (points >= 5) return 'heat-light-green';
         if (points >= 3) return 'heat-yellow';
-        if (points >= 1) return 'heat-red';
-        return 'heat-gray';
+        if (points >= 0) return 'heat-red'; // Include all forms from 0 onwards as red (poor)
+        return 'heat-gray'; // Only for negative/invalid values
     }
 
     if (metric === 'value') {
