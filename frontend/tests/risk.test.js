@@ -139,24 +139,44 @@ describe('analyzePlayerRisks', () => {
       expect(suspensionRisk.message).toContain('5 yellows');
     });
 
-    test('detects red card suspension (high severity)', () => {
+    test('detects current suspension (high severity)', () => {
       const player = {
         chance_of_playing_next_round: null,
         total_points: 50,
         minutes: 500,
         now_cost: 100,
         yellow_cards: 0,
-        red_cards: 1,
+        red_cards: 0,
+        status: 's', // Currently suspended
         form: '5.0',
         cost_change_event: 0
       };
 
       const risks = analyzePlayerRisks(player);
-      const redCardRisk = risks.find(r => r.type === 'suspension' && r.icon === '🟥');
+      const suspensionRisk = risks.find(r => r.type === 'suspension' && r.icon === '🟥');
 
-      expect(redCardRisk).toBeDefined();
-      expect(redCardRisk.severity).toBe('high');
-      expect(redCardRisk.message).toContain('Red card');
+      expect(suspensionRisk).toBeDefined();
+      expect(suspensionRisk.severity).toBe('high');
+      expect(suspensionRisk.message).toContain('Suspended');
+    });
+
+    test('no suspension risk for player with historical red card but not currently suspended', () => {
+      const player = {
+        chance_of_playing_next_round: null,
+        total_points: 50,
+        minutes: 500,
+        now_cost: 100,
+        yellow_cards: 0,
+        red_cards: 1, // Historical red card
+        status: 'a', // Currently available (suspension served)
+        form: '5.0',
+        cost_change_event: 0
+      };
+
+      const risks = analyzePlayerRisks(player);
+      const suspensionRisk = risks.find(r => r.type === 'suspension' && r.icon === '🟥');
+
+      expect(suspensionRisk).toBeUndefined();
     });
 
     test('no suspension risk with few yellow cards', () => {
@@ -624,9 +644,14 @@ describe('hasSuspensionRisk', () => {
     expect(hasSuspensionRisk(player)).toBe(true);
   });
 
-  test('detects suspension risk with red card', () => {
-    const player = { yellow_cards: 0, red_cards: 1 };
+  test('detects suspension risk with current suspension status', () => {
+    const player = { yellow_cards: 0, status: 's' };
     expect(hasSuspensionRisk(player)).toBe(true);
+  });
+
+  test('no suspension risk with historical red card but not currently suspended', () => {
+    const player = { yellow_cards: 0, red_cards: 1, status: 'a' };
+    expect(hasSuspensionRisk(player)).toBe(false);
   });
 
   test('no suspension risk with few yellows', () => {
