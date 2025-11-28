@@ -4,8 +4,9 @@
 // ============================================================================
 
 import fs from 'fs';
-import { SERVER, TTL } from '../config.js';
+import { SERVER, TTL, S3 } from '../config.js';
 import logger from '../logger.js';
+import s3Storage from './s3Storage.js';
 
 // ============================================================================
 // CACHE STATE
@@ -473,58 +474,78 @@ export function getCacheStats() {
 // ============================================================================
 
 /**
- * Load cache from disk backup
+ * Load cache from disk backup or S3 (async)
  */
-export function loadCacheFromDisk() {
-  if (fs.existsSync(SERVER.CACHE_BACKUP_PATH)) {
+export async function loadCacheFromDisk() {
+  let backup = null;
+  let source = null;
+
+  // Try S3 first if enabled
+  if (S3.ENABLED && s3Storage.isEnabled()) {
+    backup = await s3Storage.loadCacheFromS3();
+    if (backup) source = 'S3';
+  }
+
+  // Fallback to local file if S3 failed or disabled
+  if (!backup && fs.existsSync(SERVER.CACHE_BACKUP_PATH)) {
     try {
-      const backup = JSON.parse(fs.readFileSync(SERVER.CACHE_BACKUP_PATH, 'utf8'));
-
-      // Only restore if backup is less than 24 hours old
-      const backupAge = Date.now() - (backup.bootstrap?.timestamp || 0);
-      if (backupAge < 24 * 60 * 60 * 1000) {
-        // Restore main cache data
-        cache.bootstrap = backup.bootstrap || { data: null, timestamp: null };
-        cache.fixtures = backup.fixtures || { data: null, timestamp: null };
-        cache.github = backup.github || { data: null, timestamp: null, era: null };
-        cache.stats = backup.stats || { totalFetches: 0, cacheHits: 0, cacheMisses: 0, lastFetch: null };
-
-        // Restore team caches from arrays back to Maps
-        if (backup.teams) {
-          cache.teams.entries = new Map(backup.teams.entries || []);
-          cache.teams.picks = new Map(backup.teams.picks || []);
-        }
-
-        if (backup.cohorts) {
-          cache.cohorts.entries = new Map(backup.cohorts.entries || []);
-        }
-
-        // Restore live cache from arrays back to Map
-        if (backup.live) {
-          cache.live.entries = new Map(backup.live.entries || []);
-        }
-
-        logger.log('✅ Cache restored from disk');
-        logger.log(`   Bootstrap: ${cache.bootstrap.data ? 'loaded' : 'empty'}`);
-        logger.log(`   Fixtures: ${cache.fixtures.data ? 'loaded' : 'empty'}`);
-        logger.log(`   GitHub: ${cache.github.data ? 'loaded' : 'empty'}`);
-        logger.log(`   Teams: ${cache.teams.entries.size} entries, ${cache.teams.picks.size} picks`);
-      } else {
-        logger.log('⚠️ Cache backup too old (>24h), starting fresh');
-      }
+      backup = JSON.parse(fs.readFileSync(SERVER.CACHE_BACKUP_PATH, 'utf8'));
+      source = 'local file';
     } catch (err) {
-      logger.error('❌ Failed to load cache from disk:', err.message);
-      logger.log('   Starting with empty cache');
+      logger.error('❌ Failed to load cache from local file:', err.message);
     }
-  } else {
+  }
+
+  // No backup found anywhere
+  if (!backup) {
     logger.log('ℹ️ No cache backup found, starting fresh');
+    return;
+  }
+
+  // Validate backup age
+  const backupAge = Date.now() - (backup.bootstrap?.timestamp || 0);
+  if (backupAge >= 24 * 60 * 60 * 1000) {
+    logger.log('⚠️ Cache backup too old (>24h), starting fresh');
+    return;
+  }
+
+  // Restore cache from backup
+  try {
+    cache.bootstrap = backup.bootstrap || { data: null, timestamp: null };
+    cache.fixtures = backup.fixtures || { data: null, timestamp: null };
+    cache.github = backup.github || { data: null, timestamp: null, era: null };
+    cache.stats = backup.stats || { totalFetches: 0, cacheHits: 0, cacheMisses: 0, lastFetch: null };
+
+    // Restore team caches from arrays back to Maps
+    if (backup.teams) {
+      cache.teams.entries = new Map(backup.teams.entries || []);
+      cache.teams.picks = new Map(backup.teams.picks || []);
+    }
+
+    if (backup.cohorts) {
+      cache.cohorts.entries = new Map(backup.cohorts.entries || []);
+    }
+
+    // Restore live cache from arrays back to Map
+    if (backup.live) {
+      cache.live.entries = new Map(backup.live.entries || []);
+    }
+
+    logger.log(`✅ Cache restored from ${source}`);
+    logger.log(`   Bootstrap: ${cache.bootstrap.data ? 'loaded' : 'empty'}`);
+    logger.log(`   Fixtures: ${cache.fixtures.data ? 'loaded' : 'empty'}`);
+    logger.log(`   GitHub: ${cache.github.data ? 'loaded' : 'empty'}`);
+    logger.log(`   Teams: ${cache.teams.entries.size} entries, ${cache.teams.picks.size} picks`);
+  } catch (err) {
+    logger.error('❌ Failed to restore cache:', err.message);
+    logger.log('   Starting with empty cache');
   }
 }
 
 /**
- * Save cache to disk
+ * Save cache to disk and S3 (async)
  */
-export function saveCacheToDisk() {
+export async function saveCacheToDisk() {
   try {
     // Convert Maps to arrays for JSON serialization
     const serializable = {
@@ -544,8 +565,18 @@ export function saveCacheToDisk() {
       stats: cache.stats
     };
 
-    fs.writeFileSync(SERVER.CACHE_BACKUP_PATH, JSON.stringify(serializable, null, 2));
-    logger.log('💾 Cache backed up to disk');
+    // Save to local file (always, for redundancy)
+    try {
+      fs.writeFileSync(SERVER.CACHE_BACKUP_PATH, JSON.stringify(serializable, null, 2));
+      logger.log('💾 Cache backed up to local disk');
+    } catch (err) {
+      logger.error('❌ Failed to backup cache to local disk:', err.message);
+    }
+
+    // Save to S3 if enabled
+    if (S3.ENABLED && s3Storage.isEnabled()) {
+      await s3Storage.saveCacheToS3(serializable);
+    }
   } catch (err) {
     logger.error('❌ Failed to backup cache:', err.message);
   }
@@ -555,19 +586,23 @@ export function saveCacheToDisk() {
  * Initialize cache persistence (auto-save and graceful shutdown)
  */
 export function initializeCachePersistence() {
-  // Save cache every 5 minutes
-  setInterval(saveCacheToDisk, 5 * 60 * 1000);
+  // Save cache every 5 minutes (async, fire-and-forget)
+  setInterval(() => {
+    saveCacheToDisk().catch(err => {
+      logger.error('❌ Auto-save failed:', err.message);
+    });
+  }, 5 * 60 * 1000);
 
-  // Save cache on graceful shutdown
-  process.on('SIGTERM', () => {
+  // Save cache on graceful shutdown (await to ensure completion)
+  process.on('SIGTERM', async () => {
     logger.log('🛑 SIGTERM received, saving cache...');
-    saveCacheToDisk();
+    await saveCacheToDisk();
     process.exit(0);
   });
 
-  process.on('SIGINT', () => {
+  process.on('SIGINT', async () => {
     logger.log('🛑 SIGINT received, saving cache...');
-    saveCacheToDisk();
+    await saveCacheToDisk();
     process.exit(0);
   });
 }

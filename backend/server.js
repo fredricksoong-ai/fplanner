@@ -225,37 +225,39 @@ function enforceRenderPortBinding() {
 // SERVER STARTUP
 // ============================================================================
 
-// Load cache from disk before starting server
-loadCacheFromDisk();
+(async () => {
+  // Load cache from S3/disk before starting server
+  await loadCacheFromDisk();
 
-// Initialize cache persistence (auto-save and graceful shutdown)
-initializeCachePersistence();
+  // Initialize cache persistence (auto-save and graceful shutdown)
+  initializeCachePersistence();
 
-// Kick off cache warmup asynchronously
-warmCachesOnStartup()
-  .catch(err => {
-    logger.warn(`⚠️ Cache warmup encountered an error: ${err.message}`);
-  })
-  .finally(() => {
-    startCohortScheduler();
+  // Kick off cache warmup asynchronously
+  warmCachesOnStartup()
+    .catch(err => {
+      logger.warn(`⚠️ Cache warmup encountered an error: ${err.message}`);
+    })
+    .finally(() => {
+      startCohortScheduler();
+    });
+
+  // Ensure platform-provided port binding is respected (Render)
+  enforceRenderPortBinding();
+
+  app.listen(SERVER.PORT, SERVER.HOST, () => {
+    logger.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    logger.log('🚀 FPLanner Backend Server');
+    logger.log(`📡 Listening on host ${SERVER.HOST} and port ${SERVER.PORT}`);
+    logger.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    logger.log('');
+    logger.log('Available endpoints:');
+    logger.log(`  GET  /api/fpl-data       - Combined FPL data`);
+    logger.log(`  GET  /api/fpl-data?refresh=true - Force refresh`);
+    logger.log(`  GET  /api/team/:teamId   - User team data`);
+    logger.log(`  POST /api/ai-insights    - AI insights (Gemini)`);
+    logger.log(`  GET  /api/leagues/:leagueId - League standings`);
+    logger.log(`  GET  /api/stats          - Cache statistics`);
+    logger.log(`  GET  /health             - Health check`);
+    logger.log('');
   });
-
-// Ensure platform-provided port binding is respected (Render)
-enforceRenderPortBinding();
-
-app.listen(SERVER.PORT, SERVER.HOST, () => {
-  logger.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  logger.log('🚀 FPLanner Backend Server');
-  logger.log(`📡 Listening on host ${SERVER.HOST} and port ${SERVER.PORT}`);
-  logger.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  logger.log('');
-  logger.log('Available endpoints:');
-  logger.log(`  GET  /api/fpl-data       - Combined FPL data`);
-  logger.log(`  GET  /api/fpl-data?refresh=true - Force refresh`);
-  logger.log(`  GET  /api/team/:teamId   - User team data`);
-  logger.log(`  POST /api/ai-insights    - AI insights (Gemini)`);
-  logger.log(`  GET  /api/leagues/:leagueId - League standings`);
-  logger.log(`  GET  /api/stats          - Cache statistics`);
-  logger.log(`  GET  /health             - Health check`);
-  logger.log('');
-});
+})();
