@@ -146,10 +146,10 @@ export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = fa
                         id="transfers-row"
                         data-team-id="${team.id}"
                         data-transfer-cost="${transferCost}"
-                        style="font-size: 0.7rem; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; gap: 0.25rem;"
+                        style="font-size: 0.7rem; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; gap: 0.25rem; user-select: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation;"
                     >
                         <span>Transfers: ${freeTransfers}${transferCost > 0 ? ` <span style="color: #ef4444;">(-${transferCost} pts)</span>` : ''}</span>
-                        <i class="fas fa-chevron-down" id="transfers-chevron" style="font-size: 0.55rem; transition: transform 0.2s;"></i>
+                        <i class="fas fa-chevron-down" id="transfers-chevron" style="font-size: 0.55rem; transition: transform 0.2s; pointer-events: none;"></i>
                     </div>
                     <div id="transfers-details" style="display: none; font-size: 0.65rem; padding-top: 0.25rem; margin-top: 0.25rem; border-top: 1px dashed var(--border-color);">
                         <div style="color: var(--text-secondary); text-align: center;">Loading transfers...</div>
@@ -229,6 +229,10 @@ function getCaptainViceInfo(picks, gwNumber) {
     return { captainInfo, viceInfo };
 }
 
+// Store the handler reference to allow removal
+let transfersRowHandler = null;
+let isProcessing = false;
+
 /**
  * Attach event listeners for expandable transfers
  */
@@ -236,13 +240,32 @@ export function attachTransferListeners() {
     const transfersRow = document.getElementById('transfers-row');
     if (!transfersRow) return;
 
-    transfersRow.addEventListener('click', async () => {
+    // Remove existing listener if it exists
+    if (transfersRowHandler) {
+        transfersRow.removeEventListener('click', transfersRowHandler);
+        transfersRow.removeEventListener('touchend', transfersRowHandler);
+    }
+
+    // Create the handler function
+    transfersRowHandler = async (e) => {
+        // Prevent double-firing
+        if (isProcessing) return;
+        isProcessing = true;
+
+        // For touch events, prevent the click from also firing
+        if (e.type === 'touchend') {
+            e.preventDefault();
+        }
+
         const detailsDiv = document.getElementById('transfers-details');
         const chevron = document.getElementById('transfers-chevron');
         const teamId = transfersRow.dataset.teamId;
         const transferCost = parseInt(transfersRow.dataset.transferCost) || 0;
 
-        if (!detailsDiv) return;
+        if (!detailsDiv) {
+            isProcessing = false;
+            return;
+        }
 
         const isVisible = detailsDiv.style.display !== 'none';
 
@@ -268,7 +291,16 @@ export function attachTransferListeners() {
                 renderTransferDetails(detailsDiv, transferHistoryCache.get(teamId), transferCost);
             }
         }
-    });
+
+        // Reset processing flag after a short delay
+        setTimeout(() => {
+            isProcessing = false;
+        }, 300);
+    };
+
+    // Attach both click and touchend for better mobile support
+    transfersRow.addEventListener('click', transfersRowHandler);
+    transfersRow.addEventListener('touchend', transfersRowHandler, { passive: false });
 }
 
 /**
