@@ -13,6 +13,7 @@ import {
 } from './data.js';
 
 import { analyzePlayerRisks, hasHighRisk, hasMediumRisk } from './risk.js';
+import { getMyPlayerIdSet } from './utils/myPlayers.js';
 import { getFixtures, calculateFixtureDifficulty } from './fixtures.js';
 import {
     getPositionShort,
@@ -231,6 +232,8 @@ function renderWishlistSection(entries = [], gwNumber = currentGW) {
         gwNumber + 5
     ];
 
+    const myPlayerIds = getMyPlayerIdSet();
+
     const rows = entries.map(({ player, addedAt }) => {
         const position = getPositionShort(player);
         const nextFixtures = getFixtures(player.team, 5, false);
@@ -244,6 +247,42 @@ function renderWishlistSection(entries = [], gwNumber = currentGW) {
         const formStyle = getHeatmapStyle(formHeatmap);
         const fdrColor = avgFDRValue <= 2.5 ? 'var(--success-color)' : avgFDRValue <= 3.5 ? '#eab308' : 'var(--danger-color)';
 
+        // Badges: ⭐ for wishlist, 👤 if in my team
+        const isMyPlayer = myPlayerIds.has(player.id);
+        const badges = [];
+        if (isMyPlayer) badges.push('👤');
+        badges.push('⭐');
+        const badgeMarkup = badges.length > 0 ? ` <span style="font-size: 0.65rem;">${badges.join(' ')}</span>` : '';
+
+        // Risk analysis for Line 3
+        const risks = analyzePlayerRisks(player);
+        let riskContextMessage = '';
+        let riskContextColor = '';
+
+        if (player.news && player.news.trim() !== '') {
+            const chanceOfPlaying = player.chance_of_playing_next_round;
+            if (chanceOfPlaying !== null && chanceOfPlaying !== undefined) {
+                if (chanceOfPlaying <= 25) {
+                    riskContextColor = '#ef4444';
+                    riskContextMessage = `${chanceOfPlaying}% chance: ${player.news}`;
+                } else if (chanceOfPlaying <= 50) {
+                    riskContextColor = '#f97316';
+                    riskContextMessage = `${chanceOfPlaying}% chance: ${player.news}`;
+                } else {
+                    riskContextColor = '#fbbf24';
+                    riskContextMessage = `${chanceOfPlaying}% chance: ${player.news}`;
+                }
+            } else {
+                riskContextColor = '#fbbf24';
+                riskContextMessage = player.news;
+            }
+        }
+
+        // Fallback to "Added" text if no risk
+        const line3Content = riskContextMessage
+            ? `<div style="font-size: 0.6rem; color: ${riskContextColor}; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(riskContextMessage)}</div>`
+            : `<div style="font-size: 0.6rem; color: var(--text-secondary);">Added ${addedText}</div>`;
+
         return `
             <tr
                 class="planner-wishlist-row"
@@ -251,26 +290,22 @@ function renderWishlistSection(entries = [], gwNumber = currentGW) {
                 style="cursor: pointer; border-bottom: 1px solid var(--border-color);"
             >
                 <td style="padding: 0.5rem; min-width: 120px;">
-                    <div style="display: flex; flex-direction: column;">
+                    <div style="display: flex; flex-direction: column; gap: 0.1rem;">
+                        <!-- Line 1: Position + Name + Badges -->
                         <div style="display: flex; align-items: center; gap: 0.3rem;">
-                            <span style="font-size: 0.65rem; color: var(--text-secondary);">${position}</span>
-                            <strong style="font-size: 0.8rem;">${escapeHtml(player.web_name)}</strong>
+                            <span style="font-size: 0.6rem; color: var(--text-secondary);">${position}</span>
+                            <strong style="font-size: 0.75rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(player.web_name)}</strong>${badgeMarkup}
                         </div>
-                        <span style="font-size: 0.65rem; color: var(--text-tertiary);">
-                            ${getTeamShortName(player.team)} • ${formatCurrency(player.now_cost)}
-                        </span>
-                        <span style="font-size: 0.6rem; color: var(--text-secondary);">
-                            Added ${addedText}
-                        </span>
+                        <!-- Line 2: Team • Price • Own% • Form -->
+                        <div style="font-size: 0.6rem; color: var(--text-secondary); white-space: nowrap;">
+                            ${getTeamShortName(player.team)} • ${formatCurrency(player.now_cost)} • ${(parseFloat(player.selected_by_percent) || 0).toFixed(1)}% • <span style="background: ${formStyle.background}; color: ${formStyle.color}; padding: 0.1rem 0.25rem; border-radius: 0.25rem; font-weight: 600;">${formatDecimal(player.form)}</span>
+                        </div>
+                        <!-- Line 3: Risk context or added date -->
+                        ${line3Content}
                     </div>
                 </td>
                 <td style="text-align: center; padding: 0.5rem; color: ${fdrColor}; font-weight: 700;">
                     ${avgFDR}
-                </td>
-                <td style="text-align: center; padding: 0.5rem; font-weight: 600;">
-                    <span style="display: inline-block; min-width: 44px; padding: 0.2rem 0.4rem; border-radius: 3px; background: ${formStyle.background}; color: ${formStyle.color};">
-                        ${formatDecimal(player.form)}
-                    </span>
                 </td>
                 ${nextFixtures.map(fix => {
                     const fdrClass = getDifficultyClass(fix.difficulty);
@@ -304,7 +339,6 @@ function renderWishlistSection(entries = [], gwNumber = currentGW) {
                         <tr>
                             <th style="padding: 0.4rem; min-width: 120px;">Player</th>
                             <th style="padding: 0.4rem; text-align: center;">FDR</th>
-                            <th style="padding: 0.4rem; text-align: center;">Form</th>
                             ${next5GWs.map(gw => `<th style="padding: 0.4rem; text-align: center;">GW${gw}</th>`).join('')}
                         </tr>
                     </thead>
