@@ -4,7 +4,7 @@
 // ============================================================================
 
 // Re-export all functions from compact modules
-export { renderCompactHeader, attachTransferListeners } from './myTeam/compact/compactHeader.js';
+export { renderCompactHeader, attachTransferListeners, attachHeaderScrollEffect } from './myTeam/compact/compactHeader.js';
 export { renderCompactPlayerRow } from './myTeam/compact/compactPlayerRow.js';
 export { renderCompactTeamList } from './myTeam/compact/compactTeamList.js';
 export { renderMatchSchedule } from './myTeam/compact/compactSchedule.js';

@@ -4,6 +4,7 @@
 // ============================================================================
 
 import { getPlayerById, fplFixtures, getActiveGW, getAllPlayers } from '../../data.js';
+import { getGlassmorphism, getShadow, getAnimationCurve, getAnimationDuration, getMobileBorderRadius } from '../../styles/mobileDesignSystem.js';
 import {
     getPositionShort,
     getTeamShortName,
@@ -16,6 +17,14 @@ import { analyzePlayerRisks } from '../../risk.js';
 import { renderOpponentBadge } from './compactStyleHelpers.js';
 import { isWishlisted, toggleWishlist } from '../../wishlist/store.js';
 import { getMyPlayerIdSet } from '../../utils/myPlayers.js';
+
+/**
+ * Check if dark mode is active
+ * @returns {boolean} True if dark mode is active
+ */
+function isDarkMode() {
+    return document.documentElement.getAttribute('data-theme') === 'dark';
+}
 
 // Team primary colors for styling
 const TEAM_COLORS = {
@@ -463,11 +472,58 @@ function calculateGWPointsBreakdown(player, liveStats, gwStats) {
 }
 
 /**
+ * Inject modal animation keyframes
+ */
+function injectModalAnimations() {
+    if (document.getElementById('player-modal-animations')) return;
+
+    const style = document.createElement('style');
+    style.id = 'player-modal-animations';
+    style.textContent = `
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+            to {
+                opacity: 0;
+                transform: translateY(20px) scale(0.95);
+            }
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+/**
  * Show player modal with details
  * @param {number} playerId - Player ID
  * @param {Object} myTeamState - Optional state object for league ownership
  */
 export async function showPlayerModal(playerId, myTeamState = null, options = {}) {
+    // Inject animations
+    injectModalAnimations();
+
     const player = getPlayerById(playerId);
     if (!player) return;
 
@@ -583,6 +639,11 @@ function showLoadingModal(player, team, position, price) {
         existingModal.remove();
     }
 
+    const shadow = getShadow('modal');
+    const radius = getMobileBorderRadius('xlarge');
+    const animationCurve = getAnimationCurve('decelerate');
+    const animationDuration = getAnimationDuration('modal');
+
     const loadingHTML = `
         <div id="player-modal" style="
             position: fixed;
@@ -590,21 +651,25 @@ function showLoadingModal(player, team, position, price) {
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0,0,0,0.7);
+            background: rgba(0,0,0,0.4);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
             z-index: 10000;
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 1rem;
+            animation: fadeIn ${animationDuration} ${animationCurve};
         ">
             <div style="
                 background: var(--bg-primary);
-                border-radius: 12px;
+                border-radius: ${radius};
                 max-width: 500px;
                 width: 100%;
                 max-height: 85vh;
                 overflow-y: auto;
-                box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+                box-shadow: ${shadow};
+                animation: slideUp ${animationDuration} ${animationCurve};
             ">
                 <!-- Header -->
                 <div style="
@@ -982,6 +1047,11 @@ function buildModalHTML(data) {
         `;
     }
 
+    const shadow = getShadow('modal');
+    const radius = getMobileBorderRadius('xlarge');
+    const animationCurve = getAnimationCurve('decelerate');
+    const animationDuration = getAnimationDuration('modal');
+
     return `
         <div style="
             position: fixed;
@@ -989,21 +1059,25 @@ function buildModalHTML(data) {
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0,0,0,0.7);
+            background: rgba(0,0,0,0.4);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
             z-index: 10000;
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 1rem;
+            animation: fadeIn ${animationDuration} ${animationCurve};
         ">
             <div style="
                 background: var(--bg-primary);
-                border-radius: 12px;
+                border-radius: ${radius};
                 max-width: 500px;
                 width: 100%;
                 max-height: 85vh;
                 overflow-y: auto;
-                box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+                box-shadow: ${shadow};
+                animation: slideUp ${animationDuration} ${animationCurve};
             ">
                 <!-- Header -->
                 <div style="
@@ -1079,8 +1153,15 @@ function buildModalHTML(data) {
                                     font-size: 0.8rem;
                                     cursor: pointer;
                                     min-width: 5rem;
-                                    box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+                                    box-shadow: ${getShadow('medium')};
+                                    transition: all ${getAnimationDuration('standard')} ${getAnimationCurve('spring')};
+                                    transform: scale(1);
                                 "
+                                onmousedown="this.style.transform='scale(0.95)'"
+                                onmouseup="this.style.transform='scale(1)'"
+                                onmouseleave="this.style.transform='scale(1)'"
+                                ontouchstart="this.style.transform='scale(0.95)'"
+                                ontouchend="this.style.transform='scale(1)'"
                             >
                                 ${escapeHtml(actionConfig.label || 'Action')}
                             </button>
@@ -1140,13 +1221,26 @@ function updateWishlistButtonState(button, active) {
 }
 
 /**
- * Close player modal
+ * Close player modal with animation
  */
 export function closePlayerModal() {
     const modal = document.getElementById('player-modal');
-    if (modal) {
-        modal.remove();
+    if (!modal) return;
+
+    const animationDuration = getAnimationDuration('modal');
+    const animationCurve = getAnimationCurve('accelerate');
+
+    // Add exit animations
+    modal.style.animation = `fadeOut ${animationDuration} ${animationCurve}`;
+    const content = modal.querySelector('div');
+    if (content) {
+        content.style.animation = `slideDown ${animationDuration} ${animationCurve}`;
     }
+
+    // Remove after animation completes
+    setTimeout(() => {
+        modal.remove();
+    }, parseInt(animationDuration));
 }
 
 /**

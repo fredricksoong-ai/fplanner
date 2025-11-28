@@ -71,7 +71,50 @@ export const MOBILE_DESIGN_SYSTEM = {
     borderRadius: {
         small: '0.25rem',   // badges/pills
         medium: '0.5rem',   // buttons/cards
-        large: '0.75rem'    // containers
+        large: '0.75rem',   // containers
+        xlarge: '1rem'      // modals/sheets
+    },
+
+    // Apple-style blur effects
+    blur: {
+        light: '10px',      // Subtle glass effect
+        medium: '20px',     // Standard glass effect
+        heavy: '40px'       // Heavy backdrop blur
+    },
+
+    // Opacity scales for glassmorphism
+    opacity: {
+        glass: 0.72,        // Standard glass background
+        glassLight: 0.85,   // Lighter glass variant
+        overlay: 0.4,       // Modal overlays
+        border: 0.18,       // Glass border highlights
+        borderDark: 0.08    // Dark mode borders
+    },
+
+    // Layered shadow system (Apple-style depth)
+    shadows: {
+        low: '0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)',
+        medium: '0 2px 8px rgba(0, 0, 0, 0.12), 0 8px 16px rgba(0, 0, 0, 0.08)',
+        high: '0 8px 16px rgba(0, 0, 0, 0.12), 0 16px 32px rgba(0, 0, 0, 0.08), 0 24px 48px rgba(0, 0, 0, 0.04)',
+        modal: '0 8px 32px rgba(0, 0, 0, 0.24), 0 16px 64px rgba(0, 0, 0, 0.16)'
+    },
+
+    // Apple-style animation curves
+    animations: {
+        // Timing curves
+        curves: {
+            standard: 'cubic-bezier(0.4, 0.0, 0.2, 1)',      // General UI transitions
+            decelerate: 'cubic-bezier(0.0, 0.0, 0.2, 1)',    // Elements entering
+            accelerate: 'cubic-bezier(0.4, 0.0, 1, 1)',      // Elements exiting
+            spring: 'cubic-bezier(0.175, 0.885, 0.32, 1.275)' // Spring bounce effect
+        },
+        // Durations (Apple standard)
+        durations: {
+            fast: '200ms',      // Micro-interactions
+            standard: '300ms',  // Most UI transitions
+            slow: '400ms',      // Complex animations
+            modal: '500ms'      // Sheet presentations
+        }
     },
 
     // Colors (using CSS variables)
@@ -183,10 +226,105 @@ export function getMobileSpacing(size = 'md') {
 
 /**
  * Get mobile border radius
- * @param {string} size - 'small' | 'medium' | 'large'
+ * @param {string} size - 'small' | 'medium' | 'large' | 'xlarge'
  * @returns {string} Border radius value
  */
 export function getMobileBorderRadius(size = 'medium') {
     return MOBILE_DESIGN_SYSTEM.borderRadius[size] || MOBILE_DESIGN_SYSTEM.borderRadius.medium;
+}
+
+/**
+ * Get Apple-style glassmorphism effect
+ * @param {boolean} isDarkMode - Whether dark mode is active
+ * @param {string} blurLevel - 'light' | 'medium' | 'heavy'
+ * @returns {Object} Style object with backdrop-filter and background
+ */
+export function getGlassmorphism(isDarkMode = false, blurLevel = 'medium') {
+    const blur = MOBILE_DESIGN_SYSTEM.blur[blurLevel] || MOBILE_DESIGN_SYSTEM.blur.medium;
+    const opacity = MOBILE_DESIGN_SYSTEM.opacity.glass;
+    const borderOpacity = isDarkMode ? MOBILE_DESIGN_SYSTEM.opacity.borderDark : MOBILE_DESIGN_SYSTEM.opacity.border;
+
+    return {
+        backdropFilter: `blur(${blur}) saturate(180%)`,
+        WebkitBackdropFilter: `blur(${blur}) saturate(180%)`, // Safari support
+        background: isDarkMode
+            ? `rgba(28, 28, 30, ${opacity})`
+            : `rgba(255, 255, 255, ${opacity})`,
+        border: `1px solid rgba(255, 255, 255, ${borderOpacity})`
+    };
+}
+
+/**
+ * Get layered shadow
+ * @param {string} level - 'low' | 'medium' | 'high' | 'modal'
+ * @returns {string} Box shadow value
+ */
+export function getShadow(level = 'medium') {
+    return MOBILE_DESIGN_SYSTEM.shadows[level] || MOBILE_DESIGN_SYSTEM.shadows.medium;
+}
+
+/**
+ * Get animation curve
+ * @param {string} type - 'standard' | 'decelerate' | 'accelerate' | 'spring'
+ * @returns {string} Cubic-bezier curve
+ */
+export function getAnimationCurve(type = 'standard') {
+    return MOBILE_DESIGN_SYSTEM.animations.curves[type] || MOBILE_DESIGN_SYSTEM.animations.curves.standard;
+}
+
+/**
+ * Get animation duration
+ * @param {string} speed - 'fast' | 'standard' | 'slow' | 'modal'
+ * @returns {string} Duration value
+ */
+export function getAnimationDuration(speed = 'standard') {
+    return MOBILE_DESIGN_SYSTEM.animations.durations[speed] || MOBILE_DESIGN_SYSTEM.animations.durations.standard;
+}
+
+/**
+ * Get iOS-style segmented control styles
+ * @param {boolean} isDarkMode - Whether dark mode is active
+ * @param {boolean} isMobile - Whether on mobile device
+ * @returns {Object} Style configuration for segmented controls
+ */
+export function getSegmentedControlStyles(isDarkMode = false, isMobile = false) {
+    const shadow = MOBILE_DESIGN_SYSTEM.shadows.low;
+    const radius = MOBILE_DESIGN_SYSTEM.borderRadius.medium;
+    const springCurve = MOBILE_DESIGN_SYSTEM.animations.curves.spring;
+    const standardDuration = MOBILE_DESIGN_SYSTEM.animations.durations.standard;
+
+    return {
+        container: {
+            background: isDarkMode ? 'rgba(58, 58, 60, 0.6)' : 'rgba(209, 209, 214, 0.6)',
+            borderRadius: radius,
+            padding: '2px',
+            display: 'inline-flex',
+            gap: '2px',
+            boxShadow: shadow,
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)'
+        },
+        button: {
+            padding: isMobile ? '0.4rem 0.75rem' : '0.5rem 1rem',
+            background: 'transparent',
+            color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+            border: 'none',
+            borderRadius: radius,
+            cursor: 'pointer',
+            fontWeight: '600',
+            fontSize: isMobile ? '0.7rem' : '0.75rem',
+            transition: `all ${standardDuration} ${springCurve}`,
+            whiteSpace: 'nowrap',
+            position: 'relative',
+            zIndex: '1'
+        },
+        activeButton: {
+            background: isDarkMode ? 'rgba(28, 28, 30, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+            color: isDarkMode ? 'rgba(255, 255, 255, 1)' : 'rgba(0, 0, 0, 0.9)',
+            boxShadow: `0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)`
+        },
+        spring: springCurve,
+        duration: standardDuration
+    };
 }
 

@@ -120,6 +120,7 @@ import {
     renderMatchSchedule,
     attachPlayerRowListeners,
     attachTransferListeners,
+    attachHeaderScrollEffect,
     showPlayerModal
 } from './renderMyTeamCompact.js';
 
@@ -504,8 +505,10 @@ export function renderMyTeam(teamData, subTab = 'overview') {
             if (subTab === 'overview') {
                 attachPlayerRowListeners(myTeamState);
                 attachTransferListeners();
+                attachHeaderScrollEffect(); // Apply frosted glass on scroll
             } else if (subTab === 'fixtures') {
                 attachMobileFixtureRowListeners();
+                attachHeaderScrollEffect(); // Apply frosted glass on scroll
             }
         });
     } else {

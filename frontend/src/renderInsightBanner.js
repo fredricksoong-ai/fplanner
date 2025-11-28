@@ -5,6 +5,15 @@
 
 import { aiInsights } from './aiInsights.js';
 import { escapeHtml } from './utils.js';
+import { getShadow, getAnimationCurve, getAnimationDuration, getMobileBorderRadius } from './styles/mobileDesignSystem.js';
+
+/**
+ * Check if dark mode is active
+ * @returns {boolean} True if dark mode is active
+ */
+function isDarkMode() {
+    return document.documentElement.getAttribute('data-theme') === 'dark';
+}
 
 /**
  * Get insight type styling configuration
@@ -12,29 +21,35 @@ import { escapeHtml } from './utils.js';
  * @returns {Object} Style configuration
  */
 function getInsightTypeConfig(type) {
+    const dark = isDarkMode();
+
     const configs = {
         opportunity: {
             icon: '✓',
             color: '#22c55e',
-            bg: 'rgba(34, 197, 94, 0.1)',
+            bg: dark ? 'linear-gradient(135deg, rgba(34, 197, 94, 0.12) 0%, rgba(34, 197, 94, 0.05) 100%)' : 'linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(34, 197, 94, 0.08) 100%)',
+            border: dark ? 'rgba(34, 197, 94, 0.3)' : 'rgba(34, 197, 94, 0.4)',
             label: 'OPPORTUNITY'
         },
         warning: {
             icon: '⚠',
             color: '#fb923c',
-            bg: 'rgba(251, 146, 60, 0.1)',
+            bg: dark ? 'linear-gradient(135deg, rgba(251, 146, 60, 0.12) 0%, rgba(251, 146, 60, 0.05) 100%)' : 'linear-gradient(135deg, rgba(251, 146, 60, 0.15) 0%, rgba(251, 146, 60, 0.08) 100%)',
+            border: dark ? 'rgba(251, 146, 60, 0.3)' : 'rgba(251, 146, 60, 0.4)',
             label: 'WARNING'
         },
         action: {
             icon: '🎯',
             color: '#6b1970',
-            bg: 'rgba(107, 25, 112, 0.1)',
+            bg: dark ? 'linear-gradient(135deg, rgba(107, 25, 112, 0.12) 0%, rgba(107, 25, 112, 0.05) 100%)' : 'linear-gradient(135deg, rgba(107, 25, 112, 0.15) 0%, rgba(107, 25, 112, 0.08) 100%)',
+            border: dark ? 'rgba(107, 25, 112, 0.3)' : 'rgba(107, 25, 112, 0.4)',
             label: 'ACTION'
         },
         insight: {
             icon: '💡',
             color: '#8b5cf6',
-            bg: 'rgba(139, 92, 246, 0.1)',
+            bg: dark ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.12) 0%, rgba(139, 92, 246, 0.05) 100%)' : 'linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(139, 92, 246, 0.08) 100%)',
+            border: dark ? 'rgba(139, 92, 246, 0.3)' : 'rgba(139, 92, 246, 0.4)',
             label: 'INSIGHT'
         }
     };
@@ -53,14 +68,20 @@ function getInsightTypeConfig(type) {
  */
 function renderInsightItem(item) {
     const config = getInsightTypeConfig(item.type);
+    const shadow = getShadow('low');
+    const radius = getMobileBorderRadius('medium');
 
     return `
         <div style="
             margin-bottom: 1rem;
             padding: 0.75rem 1rem;
             background: ${config.bg};
+            border: 1px solid ${config.border};
             border-left: 4px solid ${config.color};
-            border-radius: 6px;
+            border-radius: ${radius};
+            box-shadow: ${shadow};
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
         ">
             <div style="font-weight: 600; margin-bottom: 0.25rem; color: var(--text-primary);">
                 <span style="color: ${config.color};">${config.icon}</span>
@@ -216,14 +237,19 @@ export function renderInsightBanner(insights, contextId, isMobile = false, optio
     const contentPadding = isMobile ? '0.75rem' : '1rem';
     const footerFontSize = isMobile ? '0.65rem' : '0.75rem';
 
+    const shadow = getShadow('medium');
+    const radius = getMobileBorderRadius('xlarge');
+    const springCurve = getAnimationCurve('spring');
+    const standardDuration = getAnimationDuration('standard');
+
     return `
         <div class="ai-insights-banner" id="ai-insights-${contextId}" style="
             background: var(--bg-primary);
             border: 2px solid var(--accent-color);
-            border-radius: 12px;
+            border-radius: ${radius};
             padding: ${bannerPadding};
             margin-bottom: ${bannerMargin};
-            box-shadow: 0 4px 12px var(--shadow);
+            box-shadow: ${shadow};
         ">
             <!-- Header -->
             <div style="margin-bottom: ${isMobile ? '0.75rem' : '1rem'};">
