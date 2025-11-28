@@ -77,13 +77,14 @@ export function analyzePlayerRisks(player) {
         });
     }
     
-    if (player.red_cards > 0) {
+    // Check for current suspension (status === "s" indicates currently suspended)
+    if (player.status === 's') {
         risks.push({
             type: 'suspension',
             severity: 'high',
             icon: '🟥',
-            message: `Red card`,
-            details: `Player has received a red card`
+            message: `Suspended`,
+            details: `Player is currently suspended`
         });
     }
     
@@ -359,12 +360,12 @@ export function hasRotationRisk(player) {
 }
 
 /**
- * Check if player has suspension risk (4+ yellows or any reds)
+ * Check if player has suspension risk (4+ yellows or currently suspended)
  * @param {import('./utils.js').Player} player - Player object
  * @returns {boolean} True if player has disciplinary concerns
  */
 export function hasSuspensionRisk(player) {
-    return player.yellow_cards >= 4 || player.red_cards > 0;
+    return player.yellow_cards >= 4 || player.status === 's';
 }
 
 /**
