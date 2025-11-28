@@ -11,9 +11,56 @@ import {
     calculateRankIndicator,
     calculateGWIndicator
 } from './compactStyleHelpers.js';
+import { getGlassmorphism, getShadow, getAnimationCurve, getAnimationDuration } from '../../styles/mobileDesignSystem.js';
 
 // Cache for transfer history
 let transferHistoryCache = new Map();
+
+/**
+ * Check if dark mode is active
+ * @returns {boolean} True if dark mode is active
+ */
+function isDarkMode() {
+    return document.documentElement.getAttribute('data-theme') === 'dark';
+}
+
+/**
+ * Apply frosted glass effect to header on scroll
+ */
+export function attachHeaderScrollEffect() {
+    const header = document.getElementById('compact-header');
+    if (!header) return;
+
+    const handleScroll = () => {
+        const scrollY = window.scrollY || window.pageYOffset;
+        const threshold = 10; // Start applying effect after scrolling 10px
+
+        if (scrollY > threshold) {
+            const glass = getGlassmorphism(isDarkMode(), 'light');
+            const duration = getAnimationDuration('fast');
+            const curve = getAnimationCurve('standard');
+
+            header.style.backdropFilter = glass.backdropFilter;
+            header.style.webkitBackdropFilter = glass.WebkitBackdropFilter;
+            header.style.background = glass.background;
+            header.style.borderBottom = `1px solid ${glass.border.split(' ').pop()}`;
+            header.style.transition = `all ${duration} ${curve}`;
+            header.style.boxShadow = getShadow('low');
+        } else {
+            header.style.backdropFilter = 'none';
+            header.style.webkitBackdropFilter = 'none';
+            header.style.background = 'var(--bg-primary)';
+            header.style.borderBottom = '2px solid var(--border-color)';
+            header.style.boxShadow = 'none';
+        }
+    };
+
+    // Attach scroll listener
+    window.addEventListener('scroll', handleScroll, { passive: true });
+
+    // Initial check
+    handleScroll();
+}
 
 /**
  * Calculate color for GW points based on difference from average
@@ -157,7 +204,7 @@ export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = fa
                 </div>
 
                 <div style="display: flex; align-items: stretch;">
-                    <div style="
+                    <div id="gw-points-card" style="
                         background: var(--bg-primary);
                         border: 1px solid var(--border-color);
                         border-radius: 0.5rem;
@@ -167,7 +214,7 @@ export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = fa
                         display: flex;
                         flex-direction: column;
                         justify-content: right;
-                        box-shadow: 0 1px 3px var(--shadow);
+                        box-shadow: ${getShadow('low')};
                     ">
                         <div style="font-size: 2rem; font-weight: 800; color: ${pointsColor}; line-height: 1;">
                             ${gwPoints}

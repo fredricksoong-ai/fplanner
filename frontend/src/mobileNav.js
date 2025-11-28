@@ -3,6 +3,16 @@
  * Bottom navigation bar for mobile devices
  */
 
+import { getGlassmorphism, getShadow, getAnimationCurve, getAnimationDuration, getMobileBorderRadius } from './styles/mobileDesignSystem.js';
+
+/**
+ * Check if dark mode is active
+ * @returns {boolean} True if dark mode is active
+ */
+function isDarkMode() {
+    return document.documentElement.getAttribute('data-theme') === 'dark';
+}
+
 /**
  * Create mobile bottom navigation bar
  * @param {string} currentPage - Currently active page
@@ -18,6 +28,9 @@ export function createMobileNav(currentPage, onNavigate) {
         { id: 'stats', label: 'Stats', icon: 'fa-chart-bar', action: 'stats' }
     ];
 
+    const glassEffect = getGlassmorphism(isDarkMode(), 'light');
+    const shadow = getShadow('medium');
+
     const navHtml = `
         <nav
             id="mobile-bottom-nav"
@@ -28,8 +41,10 @@ export function createMobileNav(currentPage, onNavigate) {
                 left: 0;
                 right: 0;
                 width: 100%;
-                background: var(--bg-secondary);
-                border-top: 1px solid var(--border-color);
+                backdrop-filter: ${glassEffect.backdropFilter};
+                -webkit-backdrop-filter: ${glassEffect.WebkitBackdropFilter};
+                background: ${glassEffect.background};
+                border-top: ${glassEffect.border};
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
@@ -38,10 +53,15 @@ export function createMobileNav(currentPage, onNavigate) {
                 padding-bottom: 6px !important
                 z-index: 1000;
                 gap: 1.75rem;
-                box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
+                box-shadow: ${shadow};
             "
         >
             ${navItems.map(item => {
+                const isActive = currentPage === item.id;
+                const curve = getAnimationCurve('spring');
+                const duration = getAnimationDuration('standard');
+                const radius = getMobileBorderRadius('medium');
+
                 return `
                 <button
                     class="mobile-nav-item no-select touch-target"
@@ -54,24 +74,31 @@ export function createMobileNav(currentPage, onNavigate) {
                         align-items: center;
                         justify-content: center;
                         gap: 0.2rem;
-                        background: ${item.isGreen ? 'transparent' : (currentPage === item.id ? 'rgba(0, 255, 136, 0.1)' : 'transparent')};
+                        background: ${item.isGreen ? 'transparent' : (isActive ? 'rgba(0, 255, 136, 0.12)' : 'transparent')};
                         border: none;
-                        border-radius: ${currentPage === item.id ? '0.5rem' : '0'};
+                        border-radius: ${isActive ? radius : '0'};
                         padding: 0.35rem 0.4rem;
                         color: ${item.isGreen ? '#00ff88' : (item.disabled ? 'var(--text-tertiary)' : 'var(--text-primary)')};
                         cursor: ${item.disabled ? 'not-allowed' : 'pointer'};
-                        transition: all 0.2s;
+                        transition: all ${duration} ${curve};
+                        transform: scale(1);
                         flex: 1;
                         min-height: 52px;
                         opacity: ${item.disabled ? '0.5' : '1'};
+                        box-shadow: ${isActive ? '0 0 12px rgba(0, 255, 136, 0.15)' : 'none'};
                     "
                 >
-                    <i class="fas ${item.icon}" style="font-size: 1.3rem; color: ${item.isGreen ? '#00ff88' : 'inherit'};"></i>
+                    <i class="fas ${item.icon}" style="
+                        font-size: 1.3rem;
+                        color: ${item.isGreen ? '#00ff88' : 'inherit'};
+                        transition: transform ${duration} ${curve};
+                    "></i>
                     <span style="
                         font-size: 0.7rem;
-                        font-weight: ${currentPage === item.id || item.isGreen ? '700' : '500'};
+                        font-weight: ${isActive || item.isGreen ? '700' : '500'};
                         white-space: nowrap;
                         color: ${item.isGreen ? '#00ff88' : 'inherit'};
+                        transition: font-weight ${duration} ${curve};
                     ">${item.label}</span>
                 </button>
             `;
@@ -134,19 +161,24 @@ export function initMobileNav(navigateCallback) {
             }
         });
 
-        // Add touch feedback
+        // Add touch feedback with spring animation
         item.addEventListener('touchstart', () => {
             if (!item.disabled) {
-                const isTeam = item.dataset.page === 'my-team';
-                if (!isTeam) {
-                    item.style.opacity = '0.6';
+                item.style.transform = 'scale(0.92)';
+                const icon = item.querySelector('i');
+                if (icon) {
+                    icon.style.transform = 'scale(0.95)';
                 }
             }
         });
 
         item.addEventListener('touchend', () => {
             if (!item.disabled) {
-                item.style.opacity = '1';
+                item.style.transform = 'scale(1)';
+                const icon = item.querySelector('i');
+                if (icon) {
+                    icon.style.transform = 'scale(1)';
+                }
             }
         });
     });
@@ -162,6 +194,8 @@ export function initMobileNav(navigateCallback) {
  */
 export function updateMobileNav(activePage, subTab = 'overview') {
     const mobileNavItems = document.querySelectorAll('.mobile-nav-item');
+    const radius = getMobileBorderRadius('medium');
+
     mobileNavItems.forEach(item => {
         const page = item.dataset.page;
         const action = item.dataset.action;
@@ -184,9 +218,10 @@ export function updateMobileNav(activePage, subTab = 'overview') {
 
         const isTeam = page === 'my-team';
 
-        // Update subtle green background for active items
-        item.style.background = isTeam ? 'transparent' : (isActive ? 'rgba(0, 255, 136, 0.1)' : 'transparent');
-        item.style.borderRadius = isActive ? '0.5rem' : '0';
+        // Update subtle green background with glow for active items
+        item.style.background = isTeam ? 'transparent' : (isActive ? 'rgba(0, 255, 136, 0.12)' : 'transparent');
+        item.style.borderRadius = isActive ? radius : '0';
+        item.style.boxShadow = isActive ? '0 0 12px rgba(0, 255, 136, 0.15)' : 'none';
 
         const label = item.querySelector('span');
         if (label) {
