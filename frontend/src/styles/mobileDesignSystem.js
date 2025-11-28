@@ -281,3 +281,50 @@ export function getAnimationDuration(speed = 'standard') {
     return MOBILE_DESIGN_SYSTEM.animations.durations[speed] || MOBILE_DESIGN_SYSTEM.animations.durations.standard;
 }
 
+/**
+ * Get iOS-style segmented control styles
+ * @param {boolean} isDarkMode - Whether dark mode is active
+ * @param {boolean} isMobile - Whether on mobile device
+ * @returns {Object} Style configuration for segmented controls
+ */
+export function getSegmentedControlStyles(isDarkMode = false, isMobile = false) {
+    const shadow = MOBILE_DESIGN_SYSTEM.shadows.low;
+    const radius = MOBILE_DESIGN_SYSTEM.borderRadius.medium;
+    const springCurve = MOBILE_DESIGN_SYSTEM.animations.curves.spring;
+    const standardDuration = MOBILE_DESIGN_SYSTEM.animations.durations.standard;
+
+    return {
+        container: {
+            background: isDarkMode ? 'rgba(58, 58, 60, 0.6)' : 'rgba(209, 209, 214, 0.6)',
+            borderRadius: radius,
+            padding: '2px',
+            display: 'inline-flex',
+            gap: '2px',
+            boxShadow: shadow,
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)'
+        },
+        button: {
+            padding: isMobile ? '0.4rem 0.75rem' : '0.5rem 1rem',
+            background: 'transparent',
+            color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+            border: 'none',
+            borderRadius: radius,
+            cursor: 'pointer',
+            fontWeight: '600',
+            fontSize: isMobile ? '0.7rem' : '0.75rem',
+            transition: `all ${standardDuration} ${springCurve}`,
+            whiteSpace: 'nowrap',
+            position: 'relative',
+            zIndex: '1'
+        },
+        activeButton: {
+            background: isDarkMode ? 'rgba(28, 28, 30, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+            color: isDarkMode ? 'rgba(255, 255, 255, 1)' : 'rgba(0, 0, 0, 0.9)',
+            boxShadow: `0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)`
+        },
+        spring: springCurve,
+        duration: standardDuration
+    };
+}
+

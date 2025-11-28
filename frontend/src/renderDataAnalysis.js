@@ -67,6 +67,15 @@ import { renderChartsSkeleton, initializeChartsTab } from './dataAnalysis/charts
 import { getMyPlayerIdSet } from './utils/myPlayers.js';
 import { isWishlisted } from './wishlist/store.js';
 import { buildManagerSnapshot } from './aiManagerSnapshot.js';
+import { getSegmentedControlStyles } from './styles/mobileDesignSystem.js';
+
+/**
+ * Check if dark mode is active
+ * @returns {boolean} True if dark mode is active
+ */
+function isDarkMode() {
+    return document.documentElement.getAttribute('data-theme') === 'dark';
+}
 
 function getNetTransfersValue(player) {
     if (player?.github_transfers) {
@@ -131,103 +140,52 @@ export function renderDataAnalysis(subTab = 'overview', position = 'all') {
                 <i class="fas fa-chart-bar"></i> Data Analysis
             </h1>` : ''}
 
-            <!-- Main Tabs -->
-            <div style="display: flex; gap: 0.5rem; border-bottom: 2px solid var(--border-color); margin-bottom: 1rem; overflow-x: auto; flex-wrap: nowrap;">
-                <button
-                    class="analysis-tab-btn"
-                    data-tab="overview"
-                    data-position="${position}"
-                    style="
-                        padding: ${tabPadding};
-                        background: ${subTab === 'overview' ? 'var(--primary-color)' : 'transparent'};
-                        color: ${subTab === 'overview' ? 'white' : 'var(--text-primary)'};
-                        border: none;
-                        border-bottom: 3px solid ${subTab === 'overview' ? 'var(--primary-color)' : 'transparent'};
-                        cursor: pointer;
-                        font-weight: 600;
-                        font-size: 0.75rem;
-                        transition: all 0.2s;
-                        white-space: nowrap;
-                    "
-                >
-                    Overview
-                </button>
-                <button
-                    class="analysis-tab-btn"
-                    data-tab="hidden-gems"
-                    data-position="${position}"
-                    style="
-                        padding: ${tabPadding};
-                        background: ${subTab === 'hidden-gems' ? 'var(--primary-color)' : 'transparent'};
-                        color: ${subTab === 'hidden-gems' ? 'white' : 'var(--text-primary)'};
-                        border: none;
-                        border-bottom: 3px solid ${subTab === 'hidden-gems' ? 'var(--primary-color)' : 'transparent'};
-                        cursor: pointer;
-                        font-weight: 600;
-                        font-size: ${tabFontSize};
-                        transition: all 0.2s;
-                        white-space: nowrap;
-                    "
-                >
-                    Hidden Gems
-                </button>
-                <button
-                    class="analysis-tab-btn"
-                    data-tab="transfer-targets"
-                    data-position="${position}"
-                    style="
-                        padding: ${tabPadding};
-                        background: ${subTab === 'transfer-targets' ? 'var(--primary-color)' : 'transparent'};
-                        color: ${subTab === 'transfer-targets' ? 'white' : 'var(--text-primary)'};
-                        border: none;
-                        border-bottom: 3px solid ${subTab === 'transfer-targets' ? 'var(--primary-color)' : 'transparent'};
-                        cursor: pointer;
-                        font-weight: 600;
-                        font-size: ${tabFontSize};
-                        transition: all 0.2s;
-                        white-space: nowrap;
-                    "
-                >
-                    Transfer Targets
-                </button>
-                <button
-                    class="analysis-tab-btn"
-                    data-tab="team-analysis"
-                    data-position="${position}"
-                    style="
-                        padding: ${tabPadding};
-                        background: ${subTab === 'team-analysis' ? 'var(--primary-color)' : 'transparent'};
-                        color: ${subTab === 'team-analysis' ? 'white' : 'var(--text-primary)'};
-                        border: none;
-                        border-bottom: 3px solid ${subTab === 'team-analysis' ? 'var(--primary-color)' : 'transparent'};
-                        cursor: pointer;
-                        font-weight: 600;
-                        font-size: ${tabFontSize};
-                        transition: all 0.2s;
-                        white-space: nowrap;
-                    "
-                >
-                    Team Analysis
-                </button>
-                <button
-                    class="analysis-tab-btn"
-                    data-tab="charts"
-                    data-position="${position}"
-                    style="
-                        padding: ${tabPadding};
-                        background: ${subTab === 'charts' ? 'var(--primary-color)' : 'transparent'};
-                        color: ${subTab === 'charts' ? 'white' : 'var(--text-primary)'};
-                        border: none;
-                        border-bottom: 3px solid ${subTab === 'charts' ? 'var(--primary-color)' : 'transparent'};
-                        cursor: pointer;
-                        font-weight: 600;
-                        font-size: ${tabFontSize};
-                        transition: all 0.2s;
-                        white-space: nowrap;
-                    "
-                >
-                    Charts
-                </button>
+            <!-- Main Tabs (iOS-style Segmented Control) -->
+            <div style="margin-bottom: 1rem; overflow-x: auto; display: flex; justify-content: ${isMobile ? 'flex-start' : 'center'};">
+                ${(() => {
+                    const segStyles = getSegmentedControlStyles(isDarkMode(), isMobile);
+                    const tabs = [
+                        { id: 'overview', label: 'Overview' },
+                        { id: 'hidden-gems', label: 'Hidden Gems' },
+                        { id: 'transfer-targets', label: 'Transfers' },
+                        { id: 'team-analysis', label: 'Teams' },
+                        { id: 'charts', label: 'Charts' }
+                    ];
+
+                    const containerStyle = Object.entries(segStyles.container)
+                        .map(([k, v]) => `${k.replace(/[A-Z]/g, m => '-' + m.toLowerCase())}: ${v}`)
+                        .join('; ');
+
+                    return `
+                        <div style="${containerStyle}">
+                            ${tabs.map(tab => {
+                                const isActive = subTab === tab.id;
+                                const buttonStyle = Object.entries({
+                                    ...segStyles.button,
+                                    ...(isActive ? segStyles.activeButton : {})
+                                })
+                                .map(([k, v]) => `${k.replace(/[A-Z]/g, m => '-' + m.toLowerCase())}: ${v}`)
+                                .join('; ');
+
+                                return `
+                                    <button
+                                        class="analysis-tab-btn"
+                                        data-tab="${tab.id}"
+                                        data-position="${position}"
+                                        style="${buttonStyle}"
+                                        onmousedown="this.style.transform='scale(0.95)'"
+                                        onmouseup="this.style.transform='scale(1)'"
+                                        onmouseleave="this.style.transform='scale(1)'"
+                                        ontouchstart="this.style.transform='scale(0.95)'"
+                                        ontouchend="this.style.transform='scale(1)'"
+                                    >
+                                        ${tab.label}
+                                    </button>
+                                `;
+                            }).join('')}
+                        </div>
+                    `;
+                })()}
             </div>
 
             ${!isMobile ? `<!-- Position Filter -->
