@@ -629,7 +629,7 @@ export async function showMobileRivalTeam(rivalId, myTeamState) {
         }
 
         // Render rival team modal
-        modal.innerHTML = renderMobileRivalModal(rivalTeamData);
+        modal.innerHTML = renderMobileRivalModal(rivalTeamData, myTeamState);
 
         // Add close handler
         const closeBtn = modal.querySelector('.close-rival-modal-btn');
@@ -695,9 +695,10 @@ export async function showMobileRivalTeam(rivalId, myTeamState) {
 /**
  * Render mobile rival team modal
  * @param {Object} rivalTeamData - Rival's team data
+ * @param {Object} myTeamState - User's team state (for comparing shared players)
  * @returns {string} HTML for mobile rival modal
  */
-function renderMobileRivalModal(rivalTeamData) {
+function renderMobileRivalModal(rivalTeamData, myTeamState = null) {
     const { team, picks } = rivalTeamData;
     const teamName = team?.name || 'Rival Team';
     const managerName = team?.player_first_name && team?.player_last_name
@@ -706,6 +707,14 @@ function renderMobileRivalModal(rivalTeamData) {
 
     // Get current gameweek (use getActiveGW for display)
     const gwNumber = getActiveGW() || 1;
+
+    // Get user's player IDs for comparison
+    const myPlayerIds = new Set();
+    if (myTeamState?.teamData?.picks?.picks) {
+        myTeamState.teamData.picks.picks.forEach(pick => {
+            myPlayerIds.add(pick.element);
+        });
+    }
 
     // Get starters and bench
     const starters = picks?.picks?.filter(p => p.position <= 11) || [];
@@ -726,10 +735,16 @@ function renderMobileRivalModal(rivalTeamData) {
         const isCaptain = pick.is_captain;
         const isVice = pick.is_vice_captain;
         const isBench = pick.position > 11;
+        const isMyPlayer = myPlayerIds.has(player.id); // Check if player is in user's team
 
         let captainBadge = '';
         if (isCaptain) captainBadge = ' <span style="color: var(--text-primary); font-weight: 700; font-size: 0.7rem;">(C)</span>';
         if (isVice) captainBadge = ' <span style="color: var(--text-primary); font-weight: 700; font-size: 0.7rem;">(VC)</span>';
+
+        // Player badges (👤 for shared players, ⭐ for wishlisted)
+        const badges = [];
+        if (isMyPlayer) badges.push('👤');
+        const badgeMarkup = badges.length > 0 ? ` <span style="font-size: 0.65rem;">${badges.join(' ')}</span>` : '';
 
         // Get opponent and match status
         const gwOpp = getGWOpponent(player.team, gwNumber);
@@ -762,7 +777,7 @@ function renderMobileRivalModal(rivalTeamData) {
                 padding-top: 3px !important;
             ">
                 <div style="font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                    ${escapeHtml(player.web_name)}${captainBadge}
+                    ${escapeHtml(player.web_name)}${captainBadge}${badgeMarkup}
                 </div>
                 <div style="text-align: center;">
                     ${renderOpponentBadge(gwOpp, 'small')}

@@ -242,6 +242,9 @@ const PLAYER_HISTORY_TTL = 10 * 60 * 1000; // 10 minutes (historical data change
 const playerSummaryCache = new Map();
 const playerHistoryCache = new Map();
 
+// Request deduplication - track in-flight requests to prevent duplicates
+const inFlightRequests = new Map();
+
 function getCachedPlayerSummary(playerId) {
     const cached = playerSummaryCache.get(playerId);
     if (!cached) return null;
@@ -281,7 +284,7 @@ function setPlayerHistoryCache(playerId, data) {
 }
 
 /**
- * Fetch player history from API with memoization
+ * Fetch player history from API with memoization and request deduplication
  * @param {number} playerId - Player ID
  * @returns {Promise<Object>} Player history data
  */
@@ -291,19 +294,36 @@ async function fetchPlayerHistory(playerId) {
         return cached;
     }
 
-    try {
-        const response = await fetch(`/api/player/${playerId}/summary`);
-        if (!response.ok) throw new Error('Failed to fetch player summary');
-        const data = await response.json();
-        setPlayerSummaryCache(playerId, data);
-        return data;
-    } catch (err) {
-        console.error('Failed to fetch player history:', err);
-
-        // Return stale cache if available, otherwise empty defaults
-        const fallback = playerSummaryCache.get(playerId)?.data;
-        return fallback || { history: [], fixtures: [] };
+    // Check if request is already in flight
+    const requestKey = `summary-${playerId}`;
+    if (inFlightRequests.has(requestKey)) {
+        // Wait for existing request to complete
+        return await inFlightRequests.get(requestKey);
     }
+
+    // Create new request promise
+    const requestPromise = (async () => {
+        try {
+            const response = await fetch(`/api/player/${playerId}/summary`);
+            if (!response.ok) throw new Error('Failed to fetch player summary');
+            const data = await response.json();
+            setPlayerSummaryCache(playerId, data);
+            return data;
+        } catch (err) {
+            console.error('Failed to fetch player history:', err);
+
+            // Return stale cache if available, otherwise empty defaults
+            const fallback = playerSummaryCache.get(playerId)?.data;
+            return fallback || { history: [], fixtures: [] };
+        } finally {
+            // Remove from in-flight requests
+            inFlightRequests.delete(requestKey);
+        }
+    })();
+
+    // Store promise for deduplication
+    inFlightRequests.set(requestKey, requestPromise);
+    return await requestPromise;
 }
 
 /**
@@ -561,27 +581,44 @@ export async function showPlayerModal(playerId, myTeamState = null, options = {}
     // Fetch player history
     const playerSummary = await fetchPlayerHistory(playerId);
 
-    // Fetch historical data for charts (form and price) - with caching
+    // Fetch historical data for charts (form and price) - with caching and deduplication
     let historicalData = null;
     const cachedHistory = getCachedPlayerHistory(playerId);
     if (cachedHistory) {
         historicalData = cachedHistory;
     } else {
-        try {
-            const response = await fetch(`/api/history/player/${playerId}/ownership`);
-            if (response.ok) {
-                const data = await response.json();
-                historicalData = data.gameweeks || [];
-                // Cache the historical data
-                setPlayerHistoryCache(playerId, historicalData);
-            }
-        } catch (err) {
-            console.error('Failed to fetch historical data:', err);
-            // Try to return stale cache if available
-            const staleCache = playerHistoryCache.get(playerId)?.data;
-            if (staleCache) {
-                historicalData = staleCache;
-            }
+        // Check if request is already in flight
+        const requestKey = `history-${playerId}`;
+        if (inFlightRequests.has(requestKey)) {
+            // Wait for existing request to complete
+            historicalData = await inFlightRequests.get(requestKey);
+        } else {
+            // Create new request promise
+            const requestPromise = (async () => {
+                try {
+                    const response = await fetch(`/api/history/player/${playerId}/ownership`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        const gameweeks = data.gameweeks || [];
+                        // Cache the historical data
+                        setPlayerHistoryCache(playerId, gameweeks);
+                        return gameweeks;
+                    }
+                    return null;
+                } catch (err) {
+                    console.error('Failed to fetch historical data:', err);
+                    // Try to return stale cache if available
+                    const staleCache = playerHistoryCache.get(playerId)?.data;
+                    return staleCache || null;
+                } finally {
+                    // Remove from in-flight requests
+                    inFlightRequests.delete(requestKey);
+                }
+            })();
+
+            // Store promise for deduplication
+            inFlightRequests.set(requestKey, requestPromise);
+            historicalData = await requestPromise;
         }
     }
 

@@ -40,9 +40,8 @@ export function renderCompactPlayerRow(pick, player, gwNumber) {
     if (isCaptain) captainBadge = ' <span style="color: var(--text-primary); font-weight: 700; font-size: 0.7rem;">(C)</span>';
     if (isVice) captainBadge = ' <span style="color: var(--text-primary); font-weight: 700; font-size: 0.7rem;">(VC)</span>';
 
-    // Player badges (👤 for my player, ⭐ for wishlisted)
+    // Player badges (⭐ for wishlisted only - no 👤 needed since all are my players on Team page)
     const badges = [];
-    if (isMyPlayer) badges.push('👤');
     if (isWishlistedPlayer) badges.push('⭐️');
     const badgeMarkup = badges.length > 0 ? ` <span style="font-size: 0.65rem;">${badges.join(' ')}</span>` : '';
 
