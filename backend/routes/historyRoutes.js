@@ -4,10 +4,11 @@
 // ============================================================================
 
 import express from 'express';
-import { getCohortMetrics } from '../services/cohortService.js';
+import { getCohortMetrics, computeCohortMetrics } from '../services/cohortService.js';
 import { isValidGameweek } from '../config.js';
 import { getLatestFinishedGameweek } from '../services/gameweekUtils.js';
 import s3Storage from '../services/s3Storage.js';
+import { fetchElementSummary } from '../services/fplService.js';
 import logger from '../logger.js';
 
 const router = express.Router();
@@ -165,6 +166,48 @@ router.get('/api/history/player/:playerId/ownership', async (req, res) => {
 
   try {
     const latestFinished = getLatestFinishedGameweek();
+    
+    // Fetch player history for correct historical price and points data
+    let playerHistory = [];
+    try {
+      const playerSummary = await fetchElementSummary(playerId);
+      playerHistory = playerSummary.history || [];
+    } catch (historyErr) {
+      logger.warn(`⚠️ Failed to fetch player history for ${playerId}: ${historyErr.message}`);
+      // Continue without history data - will use S3 data only
+    }
+
+    // Create a map of history data by gameweek for quick lookup
+    const historyMap = new Map();
+    playerHistory.forEach(h => {
+      if (h.round) {
+        historyMap.set(h.round, h);
+      }
+    });
+
+    // Calculate form for each gameweek (rolling average of last 3-5 GW points)
+    // Also calculate cumulative total_points
+    const formMap = new Map();
+    const cumulativePointsMap = new Map();
+    const pointsArray = playerHistory
+      .filter(h => h.round && h.total_points !== null && h.total_points !== undefined)
+      .sort((a, b) => a.round - b.round)
+      .map(h => ({ round: h.round, points: h.total_points }));
+
+    let cumulativeTotal = 0;
+    pointsArray.forEach((item, index) => {
+      // Calculate cumulative total points
+      cumulativeTotal += item.points;
+      cumulativePointsMap.set(item.round, cumulativeTotal);
+
+      // Calculate form as average of last 3-5 gameweeks (or available data)
+      const lookback = Math.min(5, index + 1); // Use up to 5 GWs, or all available if fewer
+      const startIndex = Math.max(0, index - lookback + 1);
+      const recentPoints = pointsArray.slice(startIndex, index + 1).map(p => p.points);
+      const avgPoints = recentPoints.reduce((sum, p) => sum + p, 0) / recentPoints.length;
+      formMap.set(item.round, parseFloat(avgPoints.toFixed(1)));
+    });
+
     const ownership = [];
 
     // Fetch ownership data from all archived gameweeks
@@ -189,14 +232,35 @@ router.get('/api/history/player/:playerId/ownership', async (req, res) => {
             }
           }
 
-          // Add bootstrap data if available
+          // Use player history for price (correct historical data)
+          const historyEntry = historyMap.get(gw);
+          if (historyEntry) {
+            // Price from history (value is in tenths, keep as tenths for consistency)
+            if (historyEntry.value !== null && historyEntry.value !== undefined) {
+              gwOwnership.price = historyEntry.value;
+            }
+            // Points for this gameweek (for charts)
+            if (historyEntry.total_points !== null && historyEntry.total_points !== undefined) {
+              gwOwnership.gw_points = historyEntry.total_points;
+            }
+            // Cumulative total points (for reference/display)
+            const cumulativePoints = cumulativePointsMap.get(gw);
+            if (cumulativePoints !== undefined) {
+              gwOwnership.total_points = cumulativePoints;
+            }
+          }
+
+          // Calculate form from points history
+          const calculatedForm = formMap.get(gw);
+          if (calculatedForm !== undefined) {
+            gwOwnership.form = calculatedForm.toString();
+          }
+
+          // Use bootstrap for overall_ownership (current ownership % - this is fine as a reference)
           if (bootstrapData && bootstrapData.elements) {
             const playerData = bootstrapData.elements.find(p => p.id === playerId);
-            if (playerData) {
-              gwOwnership.price = playerData.now_cost;
+            if (playerData && playerData.selected_by_percent) {
               gwOwnership.overall_ownership = playerData.selected_by_percent;
-              gwOwnership.form = playerData.form;
-              gwOwnership.total_points = playerData.total_points;
             }
           }
 
