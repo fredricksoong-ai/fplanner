@@ -6,6 +6,7 @@
 import { loadMyTeam, currentGW } from './data.js';
 import { attachRiskTooltipListeners } from './renderHelpers.js';
 import { loadPlansFromStorage } from './teamBuilderHelpers.js';
+import { showWarningToast } from './pullToRefresh.js';
 
 // Team Builder modules - State & Logic
 import { teamBuilderState } from './teamBuilder/state.js';
@@ -124,11 +125,17 @@ export async function renderTeamBuilder() {
         renderTeamBuilderContent();
     } catch (err) {
         console.error('Failed to load team builder:', err);
+        
+        // Show warning toast for 503 errors (FPL API updating)
+        if (err.is503) {
+            showWarningToast(err.message || 'FPL API is temporarily unavailable. Please try again in a few minutes.');
+        }
+        
         container.innerHTML = `
             <div style="text-align: center; padding: 4rem 2rem;">
                 <h2 style="color: var(--text-primary); margin-bottom: 1rem;">Error Loading Team</h2>
                 <p style="color: var(--text-secondary); margin-bottom: 2rem;">
-                    Failed to load your team. Please try again.
+                    ${err.is503 ? 'FPL API is temporarily unavailable. Please try again in a few minutes.' : 'Failed to load your team. Please try again.'}
                 </p>
                 <button
                     onclick="window.location.hash = '#my-team'"

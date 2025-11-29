@@ -112,12 +112,23 @@ router.get('/api/team/:teamId', async (req, res) => {
   } catch (err) {
     logger.error(`❌ Error fetching team ${teamId}:`, err.message);
 
-    // Don't expose detailed error messages in production
+    // Check if it's a 503 (Service Unavailable) - FPL API might be updating
+    const is503 = err.message.includes('503') || err.message.includes('Service Unavailable');
     const isProduction = process.env.NODE_ENV === 'production';
-    res.status(err.message.includes('unavailable') ? 404 : 500).json({
-      error: 'Failed to fetch team data',
-      message: isProduction ? 'Team not found or unavailable' : err.message
-    });
+    
+    // For 503 errors, provide a more helpful message
+    if (is503) {
+      res.status(503).json({
+        error: 'FPL API temporarily unavailable',
+        message: 'The official FPL API is currently updating. Please try again in a few minutes.',
+        retryAfter: 60 // Suggest retrying after 60 seconds
+      });
+    } else {
+      res.status(err.message.includes('unavailable') ? 404 : 500).json({
+        error: 'Failed to fetch team data',
+        message: isProduction ? 'Team not found or unavailable' : err.message
+      });
+    }
   }
 });
 
