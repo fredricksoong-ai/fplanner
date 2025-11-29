@@ -478,6 +478,32 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
         }
     }
 
+    // Helper function to get chip abbreviation
+    function getChipAbbreviation(activeChip) {
+        if (!activeChip) return '';
+        const chipMap = {
+            'freehit': 'FH',
+            'wildcard': 'WC',
+            'benchboost': 'BB',
+            'triplecaptain': 'TC'
+        };
+        return chipMap[activeChip] || '';
+    }
+
+    // Helper function to count players played
+    function countPlayersPlayed(teamData) {
+        if (!teamData || !teamData.picks || !teamData.picks.picks) return null;
+        const starting11 = teamData.picks.picks.filter(p => p.position <= 11);
+        let played = 0;
+        starting11.forEach(pick => {
+            const minutes = pick.live_stats?.minutes ?? 0;
+            if (minutes > 0) {
+                played++;
+            }
+        });
+        return { played, total: 11 };
+    }
+
     if (useMobile) {
         // Compact grid-based layout for mobile (matching team table)
         const headerRow = `
@@ -487,6 +513,7 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
                 <div style="text-align: center;">GW Pts</div>
                 <div style="text-align: center;">Total Pts</div>
                 <div style="text-align: center;">Gap</div>
+                ${isLive ? '<div style="text-align: center;">Played</div>' : ''}
             </div>
         `;
 
@@ -498,11 +525,39 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
             const rankChangeIcon = rankChange > 0 ? '▲' : rankChange < 0 ? '▼' : '━';
             const rankChangeColor = rankChange > 0 ? '#22c55e' : rankChange < 0 ? '#ef4444' : 'var(--text-secondary)';
 
-            // Calculate gap to user (+ if user is above, - if user is below)
+            // Get GW points - use live points if available, otherwise event_total
+            let gwPoints = entry.event_total || 0;
+            let totalPoints = entry.total; // Season total
+            const cachedTeamData = myTeamState.rivalTeamCache?.get(entry.entry);
+            if (isLive && cachedTeamData && cachedTeamData.isLive) {
+                const livePoints = calculateLiveTeamPoints(cachedTeamData);
+                if (livePoints !== null) {
+                    gwPoints = livePoints;
+                }
+                // Use live_total_points if available (backend calculates this)
+                const liveTotal = cachedTeamData.picks?.entry_history?.live_total_points;
+                if (liveTotal !== null && liveTotal !== undefined) {
+                    totalPoints = liveTotal;
+                }
+            }
+            
+            // Get user's live total points for gap calculation
+            let userTotalPoints = userPoints;
+            if (isLive && userEntry) {
+                const userCachedData = myTeamState.rivalTeamCache?.get(userTeamId);
+                if (userCachedData && userCachedData.isLive) {
+                    const userLiveTotal = userCachedData.picks?.entry_history?.live_total_points;
+                    if (userLiveTotal !== null && userLiveTotal !== undefined) {
+                        userTotalPoints = userLiveTotal;
+                    }
+                }
+            }
+
+            // Calculate gap to user - use live total points if available, otherwise regular total
             let gapText = '—';
             let gapColor = 'var(--text-secondary)';
             if (!isUser && userEntry) {
-                const gap = userPoints - entry.total; // Inverted: user's points - their points
+                const gap = userTotalPoints - totalPoints;
                 if (gap > 0) {
                     gapText = `+${gap}`;
                     gapColor = '#22c55e'; // Green when user is ahead
@@ -512,15 +567,16 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
                 }
             }
 
-            // Get GW points - use live points if available, otherwise event_total
-            let gwPoints = entry.event_total || 0;
-            if (isLive) {
-                const cachedTeamData = myTeamState.rivalTeamCache?.get(entry.entry);
-                if (cachedTeamData && cachedTeamData.isLive) {
-                    const livePoints = calculateLiveTeamPoints(cachedTeamData);
-                    if (livePoints !== null) {
-                        gwPoints = livePoints;
-                    }
+            // Get chip abbreviation
+            const activeChip = cachedTeamData?.picks?.active_chip;
+            const chipAbbr = getChipAbbreviation(activeChip);
+            
+            // Count players played (only during live GW)
+            let playersPlayedText = '';
+            if (isLive && cachedTeamData) {
+                const playedCount = countPlayersPlayed(cachedTeamData);
+                if (playedCount !== null) {
+                    playersPlayedText = `${playedCount.played} / ${playedCount.total}`;
                 }
             }
             let gwBgColor = 'transparent';
@@ -552,17 +608,18 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
                             ${escapeHtml(entry.player_name)}
                         </div>
                         <div style="font-size: 0.6rem; color: var(--text-secondary); margin-top: 0.15rem;">
-                            <i class="fas fa-star" style="font-size: 0.5rem; margin-right: 0.2rem;"></i>${escapeHtml(captainName)}
+                            <i class="fas fa-star" style="font-size: 0.5rem; margin-right: 0.2rem;"></i>${escapeHtml(captainName)}${chipAbbr ? ` <span style="color: var(--primary-color); font-weight: 600;">(${chipAbbr})</span>` : ''}
                             ${!isUser ? '<i class="fas fa-eye" style="margin-left: 0.35rem; font-size: 0.55rem; opacity: 0.6;"></i>' : ''}
                         </div>
                     </div>
                     <div style="text-align: center; background: ${gwBgColor}; color: ${gwTextColor}; font-weight: 700; padding: 0.05rem; border-radius: 0.2rem;">
                         ${gwPoints}
                     </div>
-                    <div style="text-align: center; font-weight: 600;">${entry.total.toLocaleString()}</div>
+                    <div style="text-align: center; font-weight: 600;">${totalPoints.toLocaleString()}</div>
                     <div style="text-align: center; font-weight: 600; color: ${gapColor}; font-size: 0.7rem;">
                         ${gapText}
                     </div>
+                    ${isLive ? `<div style="text-align: center; font-size: 0.65rem; color: var(--text-secondary); font-weight: 600;">${playersPlayedText || '—'}</div>` : ''}
                 </div>
             `;
         }).join('');
@@ -602,8 +659,8 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
                             <th style="text-align: left; padding: 0.75rem 0.75rem;">Team</th>
                             <th style="text-align: center; padding: 0.75rem 0.5rem;">GW</th>
                             <th style="text-align: center; padding: 0.75rem 0.5rem;">Total</th>
-                            <th style="text-align: center; padding: 0.75rem 0.5rem;" title="Points behind leader">From 1st</th>
                             <th style="text-align: center; padding: 0.75rem 0.5rem;" title="Points gap to you">Gap</th>
+                            ${isLive ? '<th style="text-align: center; padding: 0.75rem 0.5rem;" title="Players played / Total">Played</th>' : ''}
                         </tr>
                     </thead>
                     <tbody>
@@ -617,28 +674,45 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
                             const fromLeader = entry.total - leaderPoints;
                             const fromLeaderText = fromLeader === 0 ? '—' : fromLeader.toLocaleString();
 
+                            // Get GW points - use live points if available, otherwise event_total
+                            let gwPoints = entry.event_total || 0;
+                            let totalPoints = entry.total; // Season total
+                            const cachedTeamData = myTeamState.rivalTeamCache?.get(entry.entry);
+                            if (isLive && cachedTeamData && cachedTeamData.isLive) {
+                                const livePoints = calculateLiveTeamPoints(cachedTeamData);
+                                if (livePoints !== null) {
+                                    gwPoints = livePoints;
+                                }
+                                // Use live_total_points if available (backend calculates this)
+                                const liveTotal = cachedTeamData.picks?.entry_history?.live_total_points;
+                                if (liveTotal !== null && liveTotal !== undefined) {
+                                    totalPoints = liveTotal;
+                                }
+                            }
+                            
+                            // Get user's live total points for gap calculation
+                            let userTotalPoints = userPoints;
+                            if (isLive && userEntry) {
+                                const userCachedData = myTeamState.rivalTeamCache?.get(userTeamId);
+                                if (userCachedData && userCachedData.isLive) {
+                                    const userLiveTotal = userCachedData.picks?.entry_history?.live_total_points;
+                                    if (userLiveTotal !== null && userLiveTotal !== undefined) {
+                                        userTotalPoints = userLiveTotal;
+                                    }
+                                }
+                            }
+
+                            // Calculate gap to user - use live total points if available, otherwise regular total
                             let gapText = '—';
                             let gapColor = 'var(--text-secondary)';
                             if (!isUser && userEntry) {
-                                const gap = entry.total - userPoints;
+                                const gap = userTotalPoints - totalPoints;
                                 if (gap > 0) {
                                     gapText = `+${gap}`;
                                     gapColor = '#ef4444';
                                 } else if (gap < 0) {
                                     gapText = gap.toString();
                                     gapColor = '#22c55e';
-                                }
-                            }
-
-                            // Get GW points - use live points if available, otherwise event_total
-                            let gwPoints = entry.event_total || 0;
-                            if (isLive) {
-                                const cachedTeamData = myTeamState.rivalTeamCache?.get(entry.entry);
-                                if (cachedTeamData && cachedTeamData.isLive) {
-                                    const livePoints = calculateLiveTeamPoints(cachedTeamData);
-                                    if (livePoints !== null) {
-                                        gwPoints = livePoints;
-                                    }
                                 }
                             }
                             let gwBgColor = 'transparent';
@@ -669,17 +743,29 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
                                         ${isUser ? ' <span style="color: var(--primary-color); font-weight: 700;">(You)</span>' : ''}
                                         ${!isUser ? ' <i class="fas fa-eye" style="margin-left: 0.5rem; color: var(--text-secondary); font-size: 0.75rem;"></i>' : ''}
                                     </td>
-                                    <td style="padding: 0.75rem 0.75rem;">${escapeHtml(entry.entry_name)}</td>
+                                    <td style="padding: 0.75rem 0.75rem;">
+                                        ${escapeHtml(entry.entry_name)}
+                                        ${(() => {
+                                            const cachedTeamData = myTeamState.rivalTeamCache?.get(entry.entry);
+                                            const activeChip = cachedTeamData?.picks?.active_chip;
+                                            const chipAbbr = getChipAbbreviation(activeChip);
+                                            return chipAbbr ? ` <span style="color: var(--primary-color); font-weight: 600;">(${chipAbbr})</span>` : '';
+                                        })()}
+                                    </td>
                                     <td style="padding: 0.75rem 0.5rem; text-align: center; font-weight: 600; background: ${gwBgColor}; color: ${gwTextColor};">
                                         ${gwPoints}
                                     </td>
-                                    <td style="padding: 0.75rem 0.5rem; text-align: center; font-weight: 600;">${entry.total.toLocaleString()}</td>
-                                    <td style="padding: 0.75rem 0.5rem; text-align: center; font-size: 0.8rem; color: var(--text-secondary);">
-                                        ${fromLeaderText}
-                                    </td>
+                                    <td style="padding: 0.75rem 0.5rem; text-align: center; font-weight: 600;">${totalPoints.toLocaleString()}</td>
                                     <td style="padding: 0.75rem 0.5rem; text-align: center; font-size: 0.8rem; font-weight: 600; color: ${gapColor};">
                                         ${gapText}
                                     </td>
+                                    ${isLive ? `<td style="padding: 0.75rem 0.5rem; text-align: center; font-size: 0.8rem; color: var(--text-secondary);">
+                                        ${(() => {
+                                            const cachedTeamData = myTeamState.rivalTeamCache?.get(entry.entry);
+                                            const playedCount = cachedTeamData ? countPlayersPlayed(cachedTeamData) : null;
+                                            return playedCount ? `${playedCount.played} / ${playedCount.total}` : '—';
+                                        })()}
+                                    </td>` : ''}
                                 </tr>
                             `;
                         }).join('')}
