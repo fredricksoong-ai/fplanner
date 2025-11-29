@@ -3,12 +3,66 @@
 // Handles league standings rendering and team comparison
 // ============================================================================
 
-import { loadLeagueStandings, loadMyTeam, getPlayerById, getActiveGW } from '../data.js';
+import { loadLeagueStandings, loadMyTeam, getPlayerById, getActiveGW, isGameweekLive, getGameweekStatus, GW_STATUS } from '../data.js';
 import { escapeHtml, formatDecimal, getPtsHeatmap, getFormHeatmap, getHeatmapStyle } from '../utils.js';
 import { renderTeamComparison } from './teamComparison.js';
 import { shouldUseMobileLayout } from '../renderMyTeamMobile.js';
 import { getGWOpponent, getMatchStatus } from '../fixtures.js';
 import { renderOpponentBadge, calculateStatusColor, calculatePlayerBgColor } from './compact/compactStyleHelpers.js';
+
+/**
+ * Calculate live team points from cached team data
+ * @param {Object} teamData - Team data with picks and live_stats
+ * @returns {number} Total calculated points
+ */
+function calculateLiveTeamPoints(teamData) {
+    if (!teamData || !teamData.picks || !teamData.picks.picks) {
+        return null;
+    }
+
+    const picks = teamData.picks.picks;
+    const automaticSubs = teamData.picks.automatic_subs || [];
+
+    // Create a map of automatic subs for quick lookup
+    const subMap = new Map();
+    automaticSubs.forEach(sub => {
+        subMap.set(sub.element_in, sub.element_out);
+    });
+
+    let totalPoints = 0;
+    const starting11 = picks.filter(p => p.position <= 11).sort((a, b) => a.position - b.position);
+
+    starting11.forEach(pick => {
+        // Check if this player was subbed out
+        const wasSubbedOut = Array.from(subMap.values()).includes(pick.element);
+        if (wasSubbedOut) {
+            // Player was subbed out, don't count their points
+            return;
+        }
+
+        // Get points from live_stats
+        const livePoints = pick.live_stats?.total_points ?? 0;
+
+        // Apply captain multiplier
+        if (pick.is_captain) {
+            totalPoints += livePoints * 2;
+        } else {
+            totalPoints += livePoints;
+        }
+    });
+
+    // Add points from players who were subbed in
+    automaticSubs.forEach(sub => {
+        const subbedInPick = picks.find(p => p.element === sub.element_in);
+        if (subbedInPick && subbedInPick.live_stats) {
+            const livePoints = subbedInPick.live_stats.total_points ?? 0;
+            // Subs don't get captain multiplier (captain must be in starting 11)
+            totalPoints += livePoints;
+        }
+    });
+
+    return totalPoints;
+}
 
 /**
  * Get captain name for a league entry
@@ -347,10 +401,18 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
     const userTeamId = parseInt(localStorage.getItem('fplanner_team_id'));
     const userEntry = results.find(r => r.entry === userTeamId);
 
-    // Calculate statistics
+    // Check if GW is live
+    const activeGW = getActiveGW();
+    const isLive = isGameweekLive(activeGW);
+
+    // Calculate statistics (use live points if available)
     const leaderPoints = results[0]?.total || 0;
     const userPoints = userEntry?.total || 0;
-    const avgGWPoints = results.reduce((sum, r) => sum + (r.event_total || 0), 0) / results.length;
+    
+    // Calculate average GW points - use live points if available
+    let avgGWPoints = 0;
+    let totalGWPoints = 0;
+    let countWithLivePoints = 0;
 
     // Check if mobile layout
     const useMobile = shouldUseMobileLayout();
@@ -359,7 +421,64 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
         // Load captain data for all entries in parallel
         const captainPromises = results.slice(0, 50).map(entry => getCaptainName(entry.entry, myTeamState));
         const captainNames = await Promise.all(captainPromises);
+        
+        // Calculate live points for entries with cached team data
+        const livePointsMap = new Map();
+        if (isLive) {
+            results.slice(0, 50).forEach((entry, index) => {
+                const cachedTeamData = myTeamState.rivalTeamCache?.get(entry.entry);
+                if (cachedTeamData && cachedTeamData.isLive) {
+                    const livePoints = calculateLiveTeamPoints(cachedTeamData);
+                    if (livePoints !== null) {
+                        livePointsMap.set(entry.entry, livePoints);
+                        totalGWPoints += livePoints;
+                        countWithLivePoints++;
+                    }
+                }
+            });
+        }
+        
+        // Calculate average (use live points where available, otherwise event_total)
+        results.slice(0, 50).forEach(entry => {
+            const livePoints = livePointsMap.get(entry.entry);
+            if (livePoints !== undefined) {
+                // Already counted above
+            } else {
+                totalGWPoints += (entry.event_total || 0);
+            }
+        });
+        avgGWPoints = totalGWPoints / results.slice(0, 50).length;
+    } else {
+        // Desktop view - calculate average with live points if available
+        if (isLive) {
+            // Calculate live points for entries with cached team data
+            const livePointsMap = new Map();
+            results.slice(0, 50).forEach(entry => {
+                const cachedTeamData = myTeamState.rivalTeamCache?.get(entry.entry);
+                if (cachedTeamData && cachedTeamData.isLive) {
+                    const livePoints = calculateLiveTeamPoints(cachedTeamData);
+                    if (livePoints !== null) {
+                        livePointsMap.set(entry.entry, livePoints);
+                        totalGWPoints += livePoints;
+                    }
+                }
+            });
+            
+            // Calculate average (use live points where available, otherwise event_total)
+            results.slice(0, 50).forEach(entry => {
+                const livePoints = livePointsMap.get(entry.entry);
+                if (livePoints === undefined) {
+                    totalGWPoints += (entry.event_total || 0);
+                }
+            });
+            avgGWPoints = totalGWPoints / results.slice(0, 50).length;
+        } else {
+            // Not live - use event_total
+            avgGWPoints = results.reduce((sum, r) => sum + (r.event_total || 0), 0) / results.length;
+        }
+    }
 
+    if (useMobile) {
         // Compact grid-based layout for mobile (matching team table)
         const headerRow = `
             <div class="mobile-table-header mobile-table-header-sticky mobile-table-league" style="top: calc(3.5rem + 8rem + env(safe-area-inset-top));">
@@ -393,8 +512,17 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
                 }
             }
 
-            // Color-code GW points
-            const gwPoints = entry.event_total || 0;
+            // Get GW points - use live points if available, otherwise event_total
+            let gwPoints = entry.event_total || 0;
+            if (isLive) {
+                const cachedTeamData = myTeamState.rivalTeamCache?.get(entry.entry);
+                if (cachedTeamData && cachedTeamData.isLive) {
+                    const livePoints = calculateLiveTeamPoints(cachedTeamData);
+                    if (livePoints !== null) {
+                        gwPoints = livePoints;
+                    }
+                }
+            }
             let gwBgColor = 'transparent';
             let gwTextColor = 'var(--text-primary)';
             if (gwPoints > avgGWPoints + 10) {
@@ -502,7 +630,17 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
                                 }
                             }
 
-                            const gwPoints = entry.event_total || 0;
+                            // Get GW points - use live points if available, otherwise event_total
+                            let gwPoints = entry.event_total || 0;
+                            if (isLive) {
+                                const cachedTeamData = myTeamState.rivalTeamCache?.get(entry.entry);
+                                if (cachedTeamData && cachedTeamData.isLive) {
+                                    const livePoints = calculateLiveTeamPoints(cachedTeamData);
+                                    if (livePoints !== null) {
+                                        gwPoints = livePoints;
+                                    }
+                                }
+                            }
                             let gwBgColor = 'transparent';
                             let gwTextColor = 'inherit';
                             if (gwPoints > avgGWPoints + 10) {
