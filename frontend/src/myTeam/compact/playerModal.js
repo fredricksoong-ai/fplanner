@@ -238,7 +238,9 @@ function getComparisonPlayers(player, myTeamState) {
 }
 
 const PLAYER_SUMMARY_TTL = 5 * 60 * 1000; // 5 minutes
+const PLAYER_HISTORY_TTL = 10 * 60 * 1000; // 10 minutes (historical data changes less frequently)
 const playerSummaryCache = new Map();
+const playerHistoryCache = new Map();
 
 function getCachedPlayerSummary(playerId) {
     const cached = playerSummaryCache.get(playerId);
@@ -254,6 +256,25 @@ function getCachedPlayerSummary(playerId) {
 
 function setPlayerSummaryCache(playerId, data) {
     playerSummaryCache.set(playerId, {
+        data,
+        timestamp: Date.now()
+    });
+}
+
+function getCachedPlayerHistory(playerId) {
+    const cached = playerHistoryCache.get(playerId);
+    if (!cached) return null;
+
+    if (Date.now() - cached.timestamp > PLAYER_HISTORY_TTL) {
+        playerHistoryCache.delete(playerId);
+        return null;
+    }
+
+    return cached.data;
+}
+
+function setPlayerHistoryCache(playerId, data) {
+    playerHistoryCache.set(playerId, {
         data,
         timestamp: Date.now()
     });
@@ -540,16 +561,28 @@ export async function showPlayerModal(playerId, myTeamState = null, options = {}
     // Fetch player history
     const playerSummary = await fetchPlayerHistory(playerId);
 
-    // Fetch historical data for charts (form and price)
+    // Fetch historical data for charts (form and price) - with caching
     let historicalData = null;
-    try {
-        const response = await fetch(`/api/history/player/${playerId}/ownership`);
-        if (response.ok) {
-            const data = await response.json();
-            historicalData = data.gameweeks || [];
+    const cachedHistory = getCachedPlayerHistory(playerId);
+    if (cachedHistory) {
+        historicalData = cachedHistory;
+    } else {
+        try {
+            const response = await fetch(`/api/history/player/${playerId}/ownership`);
+            if (response.ok) {
+                const data = await response.json();
+                historicalData = data.gameweeks || [];
+                // Cache the historical data
+                setPlayerHistoryCache(playerId, historicalData);
+            }
+        } catch (err) {
+            console.error('Failed to fetch historical data:', err);
+            // Try to return stale cache if available
+            const staleCache = playerHistoryCache.get(playerId)?.data;
+            if (staleCache) {
+                historicalData = staleCache;
+            }
         }
-    } catch (err) {
-        console.error('Failed to fetch historical data:', err);
     }
 
     // Get live stats from enriched bootstrap (available on all players during live GW)
@@ -1502,15 +1535,47 @@ async function initializePlayerCharts(historicalData) {
 /**
  * Attach modal event listeners
  */
+// Track if modal click handler is already attached to avoid duplicates
+let modalClickHandlerAttached = false;
+
 function attachModalListeners(config = {}) {
     const { actionConfig = null, wishlistConfig = null, playerId = null, historicalData = null } = config;
-    const closeBtn = document.getElementById('close-player-modal');
     const modal = document.getElementById('player-modal');
     const primaryBtn = document.getElementById('player-modal-primary-btn');
     const wishlistBtn = document.getElementById('player-modal-wishlist-btn');
 
+    // Attach modal click handler (close button and backdrop) - only once
+    if (modal && !modalClickHandlerAttached) {
+        modal.addEventListener('click', (e) => {
+            // Handle close button click
+            if (e.target.id === 'close-player-modal' || e.target.closest('#close-player-modal')) {
+                e.preventDefault();
+                e.stopPropagation();
+                closePlayerModal();
+                return;
+            }
+            
+            // Handle backdrop click
+            if (e.target.id === 'player-modal') {
+                closePlayerModal();
+            }
+        });
+        modalClickHandlerAttached = true;
+    }
+
+    // Attach close button listener directly (in case event delegation doesn't catch it)
+    const closeBtn = document.getElementById('close-player-modal');
     if (closeBtn) {
-        closeBtn.addEventListener('click', closePlayerModal);
+        // Remove any existing listeners by cloning
+        const newCloseBtn = closeBtn.cloneNode(true);
+        closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+        
+        // Attach fresh listener
+        newCloseBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            closePlayerModal();
+        });
     }
 
     if (primaryBtn && actionConfig?.onClick) {
@@ -1528,13 +1593,6 @@ function attachModalListeners(config = {}) {
         });
     }
 
-    if (modal) {
-        modal.addEventListener('click', (e) => {
-            if (e.target.id === 'player-modal') {
-                closePlayerModal();
-            }
-        });
-    }
 
     // Tab switching
     const tabButtons = document.querySelectorAll('.player-modal-tab-btn');
@@ -1590,14 +1648,13 @@ export function closePlayerModal() {
     const modal = document.getElementById('player-modal');
     if (!modal) return;
 
+    // Reset the flag so next modal can attach listeners
+    modalClickHandlerAttached = false;
+
     // Cleanup charts
-    if (formChartInstance) {
-        formChartInstance.dispose();
-        formChartInstance = null;
-    }
-    if (priceChartInstance) {
-        priceChartInstance.dispose();
-        priceChartInstance = null;
+    if (combinedChartInstance) {
+        combinedChartInstance.dispose();
+        combinedChartInstance = null;
     }
 
     const animationDuration = getAnimationDuration('modal');

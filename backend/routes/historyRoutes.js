@@ -153,6 +153,7 @@ router.get('/api/history/gameweek/:gw/picks', async (req, res) => {
 /**
  * GET /api/history/player/:playerId/ownership
  * Returns ownership trend for a specific player across all archived gameweeks
+ * Uses pre-aggregated data if available, otherwise falls back to on-demand computation
  */
 router.get('/api/history/player/:playerId/ownership', async (req, res) => {
   const playerId = parseInt(req.params.playerId, 10);
@@ -165,6 +166,19 @@ router.get('/api/history/player/:playerId/ownership', async (req, res) => {
   }
 
   try {
+    // Try to load from aggregated data first (much more efficient)
+    const aggregatedData = await s3Storage.loadAggregatedPlayerHistory(playerId);
+    if (aggregatedData && aggregatedData.gameweeks && aggregatedData.gameweeks.length > 0) {
+      logger.log(`✅ Using aggregated data for player ${playerId}`);
+      return res.json({
+        playerId,
+        gameweeks: aggregatedData.gameweeks,
+        source: 'aggregated'
+      });
+    }
+
+    // Fallback to on-demand computation if aggregated data not available
+    logger.log(`⚠️ Aggregated data not found for player ${playerId}, computing on-demand...`);
     const latestFinished = getLatestFinishedGameweek();
     
     // Fetch player history for correct historical price and points data
@@ -281,7 +295,8 @@ router.get('/api/history/player/:playerId/ownership', async (req, res) => {
 
     res.json({
       playerId,
-      gameweeks: ownership
+      gameweeks: ownership,
+      source: 'computed'
     });
   } catch (err) {
     logger.error(`❌ Failed to load player ownership:`, err.message);
