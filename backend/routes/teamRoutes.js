@@ -24,6 +24,63 @@ import logger from '../logger.js';
 const router = express.Router();
 
 // ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+/**
+ * Calculate total team points from live stats
+ * Handles captain multiplier and automatic subs
+ * @param {Array} picks - Team picks array with live_stats
+ * @param {Array} automaticSubs - Automatic substitutions array
+ * @returns {number} Total calculated points
+ */
+function calculateLiveTeamPoints(picks, automaticSubs = []) {
+  if (!picks || picks.length === 0) {
+    return 0;
+  }
+
+  // Create a map of automatic subs for quick lookup
+  const subMap = new Map();
+  automaticSubs.forEach(sub => {
+    subMap.set(sub.element_in, sub.element_out);
+  });
+
+  let totalPoints = 0;
+  const starting11 = picks.filter(p => p.position <= 11).sort((a, b) => a.position - b.position);
+
+  starting11.forEach(pick => {
+    // Check if this player was subbed out
+    const wasSubbedOut = Array.from(subMap.values()).includes(pick.element);
+    if (wasSubbedOut) {
+      // Player was subbed out, don't count their points
+      return;
+    }
+
+    // Get points from live_stats
+    const livePoints = pick.live_stats?.total_points ?? 0;
+
+    // Apply captain multiplier
+    if (pick.is_captain) {
+      totalPoints += livePoints * 2;
+    } else {
+      totalPoints += livePoints;
+    }
+  });
+
+  // Add points from players who were subbed in
+  automaticSubs.forEach(sub => {
+    const subbedInPick = picks.find(p => p.element === sub.element_in);
+    if (subbedInPick && subbedInPick.live_stats) {
+      const livePoints = subbedInPick.live_stats.total_points ?? 0;
+      // Subs don't get captain multiplier (captain must be in starting 11)
+      totalPoints += livePoints;
+    }
+  });
+
+  return totalPoints;
+}
+
+// ============================================================================
 // TEAM DATA ENDPOINT
 // ============================================================================
 
@@ -68,6 +125,7 @@ router.get('/api/team/:teamId', async (req, res) => {
     const gwStatus = getGameweekStatus(currentGW);
     let liveData = null;
     let enrichedPicks = teamPicks;
+    let calculatedLivePoints = null;
 
     if (gwStatus === GW_STATUS.LIVE) {
       try {
@@ -88,16 +146,30 @@ router.get('/api/team/:teamId', async (req, res) => {
           }))
         };
 
+        // Calculate total team points from live stats
+        calculatedLivePoints = calculateLiveTeamPoints(enrichedPicks.picks, enrichedPicks.automatic_subs);
+
         logger.log(`   ⚡ Enriched with live data (${liveData.elements.length} players)`);
+        logger.log(`   📊 Calculated live points: ${calculatedLivePoints}`);
       } catch (err) {
         logger.warn(`⚠️ Failed to fetch live data: ${err.message}`);
         // Continue without live data
       }
     }
 
+    // Update entry_history with calculated live points if available
+    const entryHistory = enrichedPicks.entry_history ? { ...enrichedPicks.entry_history } : null;
+    if (calculatedLivePoints !== null && entryHistory) {
+      entryHistory.points = calculatedLivePoints;
+      entryHistory.live_points = calculatedLivePoints; // Also store as separate field for clarity
+    }
+
     const response = {
       team: teamInfo,
-      picks: enrichedPicks,
+      picks: {
+        ...enrichedPicks,
+        entry_history: entryHistory || enrichedPicks.entry_history
+      },
       gameweek: currentGW,
       gwStatus: gwStatus,
       isLive: gwStatus === GW_STATUS.LIVE,
