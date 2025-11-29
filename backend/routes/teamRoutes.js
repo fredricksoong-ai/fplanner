@@ -160,8 +160,19 @@ router.get('/api/team/:teamId', async (req, res) => {
     // Update entry_history with calculated live points if available
     const entryHistory = enrichedPicks.entry_history ? { ...enrichedPicks.entry_history } : null;
     if (calculatedLivePoints !== null && entryHistory) {
+      const oldGWPoints = entryHistory.points || 0;
+      const oldTotalPoints = entryHistory.total_points || 0;
+      
+      // Update GW points
       entryHistory.points = calculatedLivePoints;
       entryHistory.live_points = calculatedLivePoints; // Also store as separate field for clarity
+      
+      // Calculate live total points:
+      // total_points is cumulative up to last finished GW (doesn't include current GW)
+      // If oldGWPoints > 0, FPL has partially updated it (some matches finished)
+      // We subtract the old/partial GW points and add our more accurate live GW points
+      // Formula: live_total = (total_up_to_last_finished_gw) - (old_gw_points_if_any) + (live_gw_points)
+      entryHistory.live_total_points = oldTotalPoints - oldGWPoints + calculatedLivePoints;
     }
 
     const response = {
