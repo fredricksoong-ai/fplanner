@@ -546,7 +546,28 @@ export async function loadMyTeam(teamId, options = {}) {
         const response = await fetch(`${API_BASE}/team/${teamId}`);
 
         if (!response.ok) {
-            throw new Error(`Failed to load team ${teamId}`);
+            // Try to parse error response for user-friendly message
+            let errorMessage = `Failed to load team ${teamId}`;
+            let errorData = null;
+            try {
+                errorData = await response.json();
+                if (errorData.message) {
+                    errorMessage = errorData.message;
+                }
+            } catch (parseErr) {
+                // If JSON parse fails, use default message
+            }
+            
+            const error = new Error(errorMessage);
+            error.status = response.status;
+            error.is503 = response.status === 503;
+            error.errorData = errorData; // Store for display
+            
+            // Show warning toast for 503 errors (FPL API updating)
+            // Note: Toast will be shown by the calling code to avoid circular dependencies
+            // The error object includes is503 flag for handlers to show appropriate UI
+            
+            throw error;
         }
 
         const data = await response.json();

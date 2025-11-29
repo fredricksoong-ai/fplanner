@@ -125,7 +125,8 @@ import {
 } from './renderMyTeamCompact.js';
 
 import {
-    showRefreshToast
+    showRefreshToast,
+    showWarningToast
 } from './pullToRefresh.js';
 
 import {
@@ -184,6 +185,10 @@ function setupTeamAutoRefresh() {
                                 myTeamState.teamData = teamData;
                             } catch (err) {
                                 console.error('Failed to refresh team data:', err);
+                                // Show warning toast for 503 errors
+                                if (err.is503) {
+                                    showWarningToast(err.message || 'FPL API is temporarily unavailable. Please try again in a few minutes.');
+                                }
                             }
                         }
                     }
@@ -240,8 +245,12 @@ export function renderMyTeamForm() {
                         window.currentTeamId = cachedTeamId;
                         renderMyTeam(teamData, targetSubTab);
                     })
-                    .catch(err => {
+                    .catch((err) => {
                         console.error('Failed to auto-load team:', err);
+                        // Show warning toast for 503 errors (FPL API updating)
+                        if (err.is503) {
+                            showWarningToast(err.message || 'FPL API is temporarily unavailable. Please try again in a few minutes.');
+                        }
                         localStorage.removeItem('fplanner_team_id');
                         renderMyTeamFormContent();
                     });
@@ -1058,7 +1067,12 @@ window.loadAndRenderTeam = async function() {
 
         renderMyTeam(teamData);
     } catch (err) {
-        alert(`Failed to load team: ${err.message}`);
+        // Show warning toast for 503 errors (FPL API updating)
+        if (err.is503) {
+            showWarningToast(err.message || 'FPL API is temporarily unavailable. Please try again in a few minutes.');
+        } else {
+            alert(`Failed to load team: ${err.message}`);
+        }
         renderMyTeamForm();
     }
 };

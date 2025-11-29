@@ -224,9 +224,33 @@ export function initPullToRefresh(refreshCallback) {
  * Show a simple refresh success toast
  */
 export function showRefreshToast(message = 'Team data refreshed!') {
+    showToast(message, 'success');
+}
+
+/**
+ * Show a warning toast (for API errors, stale data, etc.)
+ */
+export function showWarningToast(message = 'Warning') {
+    showToast(message, 'warning');
+}
+
+/**
+ * Show a toast notification
+ * @param {string} message - Message to display
+ * @param {string} type - 'success' or 'warning'
+ * @param {number} duration - Duration in milliseconds (default: 3000 for warning, 2000 for success)
+ */
+function showToast(message, type = 'success', duration = null) {
     const shadow = getShadow('medium');
     const springCurve = getAnimationCurve('spring');
     const standardDuration = getAnimationDuration('standard');
+    
+    const isWarning = type === 'warning';
+    const defaultDuration = isWarning ? 5000 : 2000; // Warnings stay longer
+    const displayDuration = duration || defaultDuration;
+    
+    const bgColor = isWarning ? '#f59e0b' : 'var(--success-color)';
+    const icon = isWarning ? 'fa-exclamation-triangle' : 'fa-check-circle';
 
     const toast = document.createElement('div');
     toast.style.cssText = `
@@ -234,8 +258,8 @@ export function showRefreshToast(message = 'Team data refreshed!') {
         top: 80px;
         left: 50%;
         transform: translateX(-50%) translateY(-20px) scale(0.9);
-        background: var(--success-color);
-        color: var(--primary-color);
+        background: ${bgColor};
+        color: white;
         padding: 0.75rem 1.5rem;
         border-radius: 2rem;
         font-weight: 600;
@@ -244,8 +268,11 @@ export function showRefreshToast(message = 'Team data refreshed!') {
         box-shadow: ${shadow};
         opacity: 0;
         transition: all ${standardDuration} ${springCurve};
+        max-width: 90%;
+        text-align: center;
+        word-wrap: break-word;
     `;
-    toast.innerHTML = `<i class="fas fa-check-circle" style="margin-right: 0.5rem;"></i>${message}`;
+    toast.innerHTML = `<i class="fas ${icon}" style="margin-right: 0.5rem;"></i>${message}`;
     document.body.appendChild(toast);
 
     // Animate in with spring bounce
@@ -254,7 +281,7 @@ export function showRefreshToast(message = 'Team data refreshed!') {
         toast.style.transform = 'translateX(-50%) translateY(0) scale(1)';
     });
 
-    // Remove after 2 seconds
+    // Remove after duration
     setTimeout(() => {
         toast.style.opacity = '0';
         toast.style.transform = 'translateX(-50%) translateY(-20px) scale(0.9)';
@@ -263,7 +290,7 @@ export function showRefreshToast(message = 'Team data refreshed!') {
                 toast.parentNode.removeChild(toast);
             }
         }, parseInt(standardDuration));
-    }, 2000);
+    }, displayDuration);
 }
 
 export default PullToRefresh;

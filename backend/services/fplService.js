@@ -195,6 +195,17 @@ export async function fetchTeamData(teamId) {
     return response.data;
   } catch (err) {
     logger.error(`❌ Failed to fetch team ${teamId}:`, err.message);
+    
+    // Fallback to stale cache if available (even if expired)
+    // This helps during FPL API outages/maintenance
+    const staleCache = cache.teams.entries.get(String(teamId));
+    if (staleCache && staleCache.data) {
+      const age = Date.now() - staleCache.timestamp;
+      const ageMinutes = Math.floor(age / 60000);
+      logger.warn(`⚠️ Using stale team cache for ${teamId} (${ageMinutes} min old) as fallback`);
+      return staleCache.data;
+    }
+    
     throw new Error(`Team data unavailable for team ${teamId}`);
   }
 }
@@ -230,6 +241,18 @@ export async function fetchTeamPicks(teamId, gameweek) {
     return response.data;
   } catch (err) {
     logger.error(`❌ Failed to fetch picks for team ${teamId}:`, err.message);
+    
+    // Fallback to stale cache if available (even if expired)
+    // This helps during FPL API outages/maintenance
+    const key = `${teamId}-${gameweek}`;
+    const staleCache = cache.teams.picks.get(key);
+    if (staleCache && staleCache.data) {
+      const age = Date.now() - staleCache.timestamp;
+      const ageMinutes = Math.floor(age / 60000);
+      logger.warn(`⚠️ Using stale picks cache for ${teamId}, GW${gameweek} (${ageMinutes} min old) as fallback`);
+      return staleCache.data;
+    }
+    
     throw new Error(`Picks unavailable for team ${teamId}, GW${gameweek}`);
   }
 }
