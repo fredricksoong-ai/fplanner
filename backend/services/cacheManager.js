@@ -516,26 +516,35 @@ export async function loadCacheFromDisk() {
     cache.github = backup.github || { data: null, timestamp: null, era: null };
     cache.stats = backup.stats || { totalFetches: 0, cacheHits: 0, cacheMisses: 0, lastFetch: null };
 
-    // Restore team caches from arrays back to Maps
+    // Restore team caches from arrays back to Maps (if present in old backups)
+    // Note: New backups don't include teams/cohorts/live to save memory
     if (backup.teams) {
       cache.teams.entries = new Map(backup.teams.entries || []);
       cache.teams.picks = new Map(backup.teams.picks || []);
+    } else {
+      // Initialize empty if not in backup (new format)
+      cache.teams.entries = new Map();
+      cache.teams.picks = new Map();
     }
 
     if (backup.cohorts) {
       cache.cohorts.entries = new Map(backup.cohorts.entries || []);
+    } else {
+      cache.cohorts.entries = new Map();
     }
 
-    // Restore live cache from arrays back to Map
+    // Restore live cache from arrays back to Map (if present in old backups)
     if (backup.live) {
       cache.live.entries = new Map(backup.live.entries || []);
+    } else {
+      cache.live.entries = new Map();
     }
 
     logger.log(`✅ Cache restored from ${source}`);
     logger.log(`   Bootstrap: ${cache.bootstrap.data ? 'loaded' : 'empty'}`);
     logger.log(`   Fixtures: ${cache.fixtures.data ? 'loaded' : 'empty'}`);
     logger.log(`   GitHub: ${cache.github.data ? 'loaded' : 'empty'}`);
-    logger.log(`   Teams: ${cache.teams.entries.size} entries, ${cache.teams.picks.size} picks`);
+    logger.log(`   Teams: ${cache.teams.entries.size} entries, ${cache.teams.picks.size} picks (transient, not saved)`);
   } catch (err) {
     logger.error('❌ Failed to restore cache:', err.message);
     logger.log('   Starting with empty cache');
@@ -544,26 +553,31 @@ export async function loadCacheFromDisk() {
 
 /**
  * Save cache to disk and S3 (async)
+ * Only saves essential data to avoid memory issues - excludes large transient caches
  */
 export async function saveCacheToDisk() {
   try {
-    // Convert Maps to arrays for JSON serialization
+    // Only save essential, non-transient data to avoid memory issues
+    // Exclude: teams, cohorts, live (these are transient and can be refetched)
     const serializable = {
       bootstrap: cache.bootstrap,
       fixtures: cache.fixtures,
       github: cache.github,
-      live: {
-        entries: Array.from(cache.live.entries.entries())
-      },
-      cohorts: {
-        entries: Array.from(cache.cohorts.entries.entries())
-      },
-      teams: {
-        entries: Array.from(cache.teams.entries.entries()),
-        picks: Array.from(cache.teams.picks.entries())
-      },
       stats: cache.stats
+      // NOTE: Excluding teams, cohorts, and live caches to prevent OOM
+      // - teams: Can be refetched from API
+      // - cohorts: Already archived to S3 per-gameweek
+      // - live: Transient data, not needed on restart
     };
+
+    // Estimate size before serialization to avoid OOM
+    const estimatedSize = JSON.stringify(serializable).length;
+    const maxSize = 50 * 1024 * 1024; // 50MB limit
+    
+    if (estimatedSize > maxSize) {
+      logger.warn(`⚠️ Cache too large (${(estimatedSize / 1024 / 1024).toFixed(2)}MB), skipping backup to prevent OOM`);
+      return;
+    }
 
     // Save to local file (always, for redundancy)
     try {
@@ -579,6 +593,10 @@ export async function saveCacheToDisk() {
     }
   } catch (err) {
     logger.error('❌ Failed to backup cache:', err.message);
+    // If it's a memory error, log it specifically
+    if (err.message.includes('memory') || err.message.includes('allocation')) {
+      logger.error('💥 Memory error during cache backup - consider reducing cache size');
+    }
   }
 }
 
