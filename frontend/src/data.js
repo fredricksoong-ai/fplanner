@@ -88,6 +88,16 @@ export const GW_STATUS = {
  * @returns {string} GW_STATUS value
  */
 export function getGameweekStatus(gameweek) {
+    // If we have enriched bootstrap with meta status, use that for the current GW
+    // This is more reliable as it comes from the backend's real-time check
+    if (fplBootstrap && fplBootstrap.meta && fplBootstrap.meta.gameweek === gameweek) {
+        const status = fplBootstrap.meta.gwStatus;
+        if (status && Object.values(GW_STATUS).includes(status)) {
+            return status;
+        }
+    }
+
+    // Fallback to calculating from events data
     if (!fplBootstrap || !fplBootstrap.events) {
         return GW_STATUS.UNKNOWN;
     }
