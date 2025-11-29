@@ -118,6 +118,68 @@ export async function loadCacheFromS3() {
 }
 
 /**
+ * Archive a specific gameweek's data to S3
+ * @param {number} gameweek - Gameweek number
+ * @param {Object} data - Gameweek data to archive (cohorts, etc.)
+ * @returns {Promise<boolean>} True if successful, false otherwise
+ */
+export async function archiveGameweekToS3(gameweek, data) {
+  if (!s3Client) {
+    return false;
+  }
+
+  try {
+    const key = `gameweeks/gw${gameweek}.json`;
+    const command = new PutObjectCommand({
+      Bucket: S3.BUCKET,
+      Key: key,
+      Body: JSON.stringify(data, null, 2),
+      ContentType: 'application/json',
+    });
+
+    await s3Client.send(command);
+    logger.log(`📦 GW${gameweek} archived to S3 (${key})`);
+    return true;
+  } catch (err) {
+    logger.error(`❌ Failed to archive GW${gameweek} to S3:`, err.message);
+    return false;
+  }
+}
+
+/**
+ * Load a specific gameweek's archived data from S3
+ * @param {number} gameweek - Gameweek number
+ * @returns {Promise<Object|null>} Parsed gameweek data or null if not found
+ */
+export async function loadGameweekFromS3(gameweek) {
+  if (!s3Client) {
+    return null;
+  }
+
+  try {
+    const key = `gameweeks/gw${gameweek}.json`;
+    const getCommand = new GetObjectCommand({
+      Bucket: S3.BUCKET,
+      Key: key,
+    });
+
+    const response = await s3Client.send(getCommand);
+    const bodyString = await streamToString(response.Body);
+    const data = JSON.parse(bodyString);
+
+    logger.log(`📦 GW${gameweek} loaded from S3 archive`);
+    return data;
+  } catch (err) {
+    if (err.name === 'NoSuchKey' || err.$metadata?.httpStatusCode === 404) {
+      logger.log(`ℹ️ GW${gameweek} not found in S3 archive`);
+      return null;
+    }
+    logger.error(`❌ Failed to load GW${gameweek} from S3:`, err.message);
+    return null;
+  }
+}
+
+/**
  * Helper function to convert stream to string
  * @param {ReadableStream} stream - Response body stream
  * @returns {Promise<string>} String contents
@@ -137,5 +199,7 @@ async function streamToString(stream) {
 export default {
   saveCacheToS3,
   loadCacheFromS3,
+  archiveGameweekToS3,
+  loadGameweekFromS3,
   isEnabled: () => s3Client !== null,
 };

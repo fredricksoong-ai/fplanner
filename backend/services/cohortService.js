@@ -18,6 +18,7 @@ import {
 } from './cacheManager.js';
 import { getLatestFinishedGameweek, isGameweekCompleted } from './gameweekUtils.js';
 import { calculateTeamMetricsFromPicks, metricKeys } from './teamMetrics.js';
+import s3Storage from './s3Storage.js';
 import logger from '../logger.js';
 
 const OVERALL_LEAGUE_ID = 314;
@@ -46,13 +47,38 @@ export const executors = {
 
 export async function getCohortMetrics(gameweek = getLatestFinishedGameweek(), options = {}) {
   const targetGameweek = normalizeTargetGameweek(gameweek);
+
+  // Step 1: Check in-memory cache
   const cached = getCachedCohortMetrics(targetGameweek);
   if (!options.force && isCohortDataFresh(cached, targetGameweek)) {
     return cached;
   }
 
+  // Step 2: For completed GWs, try loading from S3 archive
+  const isCompleted = isGameweekCompleted(targetGameweek);
+  if (isCompleted && !options.force) {
+    const archived = await s3Storage.loadGameweekFromS3(targetGameweek);
+    if (archived && archived.cohorts) {
+      // Update in-memory cache with archived data
+      updateCohortCache(targetGameweek, archived.cohorts);
+      logger.log(`✅ GW${targetGameweek} cohorts restored from S3 archive`);
+      return archived.cohorts;
+    }
+  }
+
+  // Step 3: Not in cache or archive - compute from scratch
   const computed = await executors.computeCohorts(targetGameweek);
   updateCohortCache(targetGameweek, computed);
+
+  // Step 4: Archive to S3 if gameweek is completed
+  if (isCompleted && s3Storage.isEnabled()) {
+    await s3Storage.archiveGameweekToS3(targetGameweek, {
+      gameweek: targetGameweek,
+      cohorts: computed,
+      archivedAt: Date.now()
+    });
+  }
+
   return computed;
 }
 

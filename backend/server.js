@@ -31,6 +31,7 @@ import teamRoutes from './routes/teamRoutes.js';
 import leagueRoutes from './routes/leagueRoutes.js';
 import aiRoutes from './routes/aiRoutes.js';
 import plannerRoutes from './routes/plannerRoutes.js';
+import historyRoutes from './routes/historyRoutes.js';
 import { startCohortScheduler } from './services/cohortScheduler.js';
 
 // Logger
@@ -146,6 +147,9 @@ app.use('/', aiRoutes);
 
 // Planner Routes (/api/planner/*)
 app.use('/', plannerRoutes);
+
+// History Routes (/api/history/*)
+app.use('/', historyRoutes);
 
 // ============================================================================
 // SERVE FRONTEND IN PRODUCTION
