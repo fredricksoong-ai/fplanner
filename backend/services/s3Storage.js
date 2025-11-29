@@ -208,6 +208,94 @@ export async function loadCompleteGameweekFromS3(gameweek) {
 }
 
 /**
+ * Save aggregated player history to S3
+ * @param {number} playerId - Player ID
+ * @param {Object} data - Aggregated player history data
+ * @returns {Promise<boolean>} True if successful, false otherwise
+ */
+export async function saveAggregatedPlayerHistory(playerId, data) {
+  if (!s3Client) {
+    return false;
+  }
+
+  try {
+    const key = `aggregated/players/${playerId}.json`;
+    const command = new PutObjectCommand({
+      Bucket: S3.BUCKET,
+      Key: key,
+      Body: JSON.stringify(data, null, 2),
+      ContentType: 'application/json',
+    });
+
+    await s3Client.send(command);
+    logger.log(`📦 Aggregated player history for ${playerId} saved to S3`);
+    return true;
+  } catch (err) {
+    logger.error(`❌ Failed to save aggregated player history for ${playerId}:`, err.message);
+    return false;
+  }
+}
+
+/**
+ * Load aggregated player history from S3
+ * @param {number} playerId - Player ID
+ * @returns {Promise<Object|null>} Aggregated player history or null if not found
+ */
+export async function loadAggregatedPlayerHistory(playerId) {
+  if (!s3Client) {
+    return null;
+  }
+
+  try {
+    const key = `aggregated/players/${playerId}.json`;
+    const getCommand = new GetObjectCommand({
+      Bucket: S3.BUCKET,
+      Key: key,
+    });
+
+    const response = await s3Client.send(getCommand);
+    const bodyString = await streamToString(response.Body);
+    const data = JSON.parse(bodyString);
+
+    logger.log(`📦 Aggregated player history for ${playerId} loaded from S3`);
+    return data;
+  } catch (err) {
+    if (err.name === 'NoSuchKey' || err.$metadata?.httpStatusCode === 404) {
+      return null;
+    }
+    logger.error(`❌ Failed to load aggregated player history for ${playerId}:`, err.message);
+    return null;
+  }
+}
+
+/**
+ * Check if aggregated player history exists in S3
+ * @param {number} playerId - Player ID
+ * @returns {Promise<boolean>} True if exists, false otherwise
+ */
+export async function hasAggregatedPlayerHistory(playerId) {
+  if (!s3Client) {
+    return false;
+  }
+
+  try {
+    const key = `aggregated/players/${playerId}.json`;
+    const headCommand = new HeadObjectCommand({
+      Bucket: S3.BUCKET,
+      Key: key,
+    });
+    await s3Client.send(headCommand);
+    return true;
+  } catch (err) {
+    if (err.name === 'NotFound' || err.$metadata?.httpStatusCode === 404) {
+      return false;
+    }
+    logger.error(`❌ Failed to check aggregated player history for ${playerId}:`, err.message);
+    return false;
+  }
+}
+
+/**
  * Helper function to convert stream to string
  * @param {ReadableStream} stream - Response body stream
  * @returns {Promise<string>} String contents
@@ -230,5 +318,8 @@ export default {
   archiveGameweekToS3,
   loadGameweekFromS3,
   loadCompleteGameweekFromS3,
+  saveAggregatedPlayerHistory,
+  loadAggregatedPlayerHistory,
+  hasAggregatedPlayerHistory,
   isEnabled: () => s3Client !== null,
 };

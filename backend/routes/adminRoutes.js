@@ -7,6 +7,7 @@ import express from 'express';
 import { getCohortMetrics } from '../services/cohortService.js';
 import { getLatestFinishedGameweek } from '../services/gameweekUtils.js';
 import { isValidGameweek } from '../config.js';
+import { aggregatePlayerHistory } from '../services/playerHistoryAggregator.js';
 import logger from '../logger.js';
 
 const router = express.Router();
@@ -19,6 +20,18 @@ let backfillStatus = {
   toGW: null,
   completed: [],
   failed: [],
+  startedAt: null,
+  completedAt: null
+};
+
+// Track aggregation status
+let aggregationStatus = {
+  running: false,
+  fromGW: null,
+  toGW: null,
+  totalPlayers: 0,
+  aggregated: 0,
+  skipped: 0,
   startedAt: null,
   completedAt: null
 };
@@ -138,6 +151,99 @@ async function runBackfill(fromGW, toGW, force) {
 
   const duration = Math.round((new Date(backfillStatus.completedAt) - new Date(backfillStatus.startedAt)) / 1000);
   logger.log(`🎉 Backfill complete! Duration: ${duration}s, Completed: ${backfillStatus.completed.length}, Failed: ${backfillStatus.failed.length}`);
+
+  // Auto-trigger player history aggregation after backfill completes
+  if (backfillStatus.completed.length > 0) {
+    logger.log(`🔄 Auto-triggering player history aggregation after backfill...`);
+    runAggregation(fromGW, toGW, force);
+  }
+}
+
+/**
+ * POST /api/admin/aggregate-player-history
+ * Manually trigger player history aggregation
+ * Query params:
+ *   - from: Starting gameweek (default: 1)
+ *   - to: Ending gameweek (default: latest finished)
+ *   - force: Force re-aggregation even if exists (default: false)
+ */
+router.post('/api/admin/aggregate-player-history', async (req, res) => {
+  // Check if aggregation is already running
+  if (aggregationStatus.running) {
+    return res.status(409).json({
+      error: 'Aggregation already in progress',
+      status: aggregationStatus
+    });
+  }
+
+  const latestFinished = getLatestFinishedGameweek();
+  const fromGW = parseInt(req.query.from, 10) || 1;
+  const toGW = parseInt(req.query.to, 10) || latestFinished;
+  const force = req.query.force === 'true';
+
+  // Validate range
+  if (!isValidGameweek(fromGW) || !isValidGameweek(toGW)) {
+    return res.status(400).json({
+      error: 'Invalid gameweek range',
+      message: 'Both from and to must be between 1 and 38'
+    });
+  }
+
+  if (fromGW > toGW) {
+    return res.status(400).json({
+      error: 'Invalid range',
+      message: 'from must be less than or equal to to'
+    });
+  }
+
+  // Return immediately - aggregation runs in background
+  res.json({
+    message: 'Player history aggregation started',
+    from: fromGW,
+    to: toGW,
+    force,
+    checkStatus: '/api/admin/aggregate-player-history/status'
+  });
+
+  // Run aggregation in background
+  runAggregation(fromGW, toGW, force);
+});
+
+/**
+ * GET /api/admin/aggregate-player-history/status
+ * Get current aggregation status
+ */
+router.get('/api/admin/aggregate-player-history/status', (req, res) => {
+  res.json(aggregationStatus);
+});
+
+/**
+ * Background aggregation function
+ */
+async function runAggregation(fromGW, toGW, force) {
+  aggregationStatus = {
+    running: true,
+    fromGW,
+    toGW,
+    totalPlayers: 0,
+    aggregated: 0,
+    skipped: 0,
+    startedAt: new Date().toISOString(),
+    completedAt: null
+  };
+
+  try {
+    const result = await aggregatePlayerHistory({ fromGW, toGW, force });
+    
+    aggregationStatus.totalPlayers = result.totalPlayers;
+    aggregationStatus.aggregated = result.aggregated;
+    aggregationStatus.skipped = result.skipped;
+    aggregationStatus.completedAt = result.completedAt;
+  } catch (err) {
+    logger.error(`❌ Player history aggregation failed:`, err.message);
+  } finally {
+    aggregationStatus.running = false;
+  }
 }
 
 export default router;
