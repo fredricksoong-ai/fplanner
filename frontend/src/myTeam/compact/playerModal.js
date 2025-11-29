@@ -1210,19 +1210,11 @@ function buildModalHTML(data) {
                     <!-- Charts Tab -->
                     <div id="player-modal-tab-charts" class="player-modal-tab-content" style="display: none;">
                         ${historicalData && historicalData.length > 0 ? `
-                            <div style="display: flex; flex-direction: column; gap: 1rem;">
-                                <div>
-                                    <div style="font-size: 0.7rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem; text-transform: uppercase;">
-                                        Form (Last 5 GWs)
-                                    </div>
-                                    <div id="player-modal-form-chart" style="width: 100%; height: 80px; background: var(--bg-secondary); border-radius: 0.5rem;"></div>
+                            <div>
+                                <div style="font-size: 0.7rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem; text-transform: uppercase;">
+                                    Performance Overview
                                 </div>
-                                <div>
-                                    <div style="font-size: 0.7rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem; text-transform: uppercase;">
-                                        Price (Since GW1)
-                                    </div>
-                                    <div id="player-modal-price-chart" style="width: 100%; height: 80px; background: var(--bg-secondary); border-radius: 0.5rem;"></div>
-                                </div>
+                                <div id="player-modal-combined-chart" style="width: 100%; height: 200px; background: var(--bg-secondary); border-radius: 0.5rem;"></div>
                             </div>
                         ` : `
                             <div style="text-align: center; padding: 2rem; color: var(--text-secondary); font-size: 0.75rem;">
@@ -1270,9 +1262,8 @@ function buildModalHTML(data) {
     `;
 }
 
-// Chart instances for cleanup
-let formChartInstance = null;
-let priceChartInstance = null;
+// Chart instance for cleanup
+let combinedChartInstance = null;
 
 /**
  * Initialize player charts
@@ -1282,14 +1273,10 @@ async function initializePlayerCharts(historicalData) {
         return;
     }
 
-    // Cleanup existing charts
-    if (formChartInstance) {
-        formChartInstance.dispose();
-        formChartInstance = null;
-    }
-    if (priceChartInstance) {
-        priceChartInstance.dispose();
-        priceChartInstance = null;
+    // Cleanup existing chart
+    if (combinedChartInstance) {
+        combinedChartInstance.dispose();
+        combinedChartInstance = null;
     }
 
     // Load ECharts
@@ -1299,100 +1286,127 @@ async function initializePlayerCharts(historicalData) {
         return;
     }
 
-    // Prepare form chart data (last 5 GWs)
-    const formData = historicalData
-        .filter(gw => gw.form !== null && gw.form !== undefined)
-        .slice(-5)
-        .map(gw => ({
-            gameweek: gw.gameweek,
-            form: parseFloat(gw.form) || 0
-        }));
+    // Prepare combined chart data
+    // Always show from GW1 to the latest gameweek
+    const latestGW = getActiveGW() || 1;
+    const startGW = 1;
+    
+    // Create a map of historical data for quick lookup
+    const dataMap = new Map();
+    historicalData.forEach(gw => {
+        dataMap.set(gw.gameweek, gw);
+    });
 
-    // Prepare price chart data (all GWs)
-    const priceData = historicalData
-        .filter(gw => gw.price !== null && gw.price !== undefined)
-        .map(gw => ({
-            gameweek: gw.gameweek,
-            price: (gw.price / 10).toFixed(1) // Convert to £m
-        }));
+    // Prepare data arrays for all gameweeks from 1 to latest
+    const pointsData = [];
+    const formData = [];
+    const priceData = [];
+    const gameweekLabels = [];
 
-    // Render form chart
-    const formChartContainer = document.getElementById('player-modal-form-chart');
-    if (formChartContainer && formData.length > 0) {
-        formChartInstance = echarts.init(formChartContainer);
+    for (let gw = startGW; gw <= latestGW; gw++) {
+        const data = dataMap.get(gw);
+        gameweekLabels.push(`GW${gw}`);
+        pointsData.push(data?.gw_points ?? null);
+        formData.push(data?.form !== null && data?.form !== undefined ? parseFloat(data.form) : null);
+        priceData.push(data?.price !== null && data?.price !== undefined ? (data.price / 10) : null);
+    }
+
+    // Calculate max values for axis scaling
+    const maxPoints = Math.max(...pointsData.filter(p => p !== null), 0);
+    const maxForm = Math.max(...formData.filter(f => f !== null), 0);
+    const maxPrice = Math.max(...priceData.filter(p => p !== null), 0);
+    const minPrice = Math.min(...priceData.filter(p => p !== null), Infinity);
+
+    // Render combined chart
+    const combinedChartContainer = document.getElementById('player-modal-combined-chart');
+    if (combinedChartContainer && gameweekLabels.length > 0) {
+        combinedChartInstance = echarts.init(combinedChartContainer);
         const isDark = isDarkMode();
         const textColor = isDark ? '#e5e7eb' : '#374151';
         const gridColor = isDark ? '#374151' : '#e5e7eb';
         
-        // Calculate trend color
-        const firstForm = formData[0].form;
-        const lastForm = formData[formData.length - 1].form;
-        const trendColor = lastForm >= firstForm ? '#22c55e' : '#ef4444';
+        // Colors for each series
+        const pointsColor = isDark ? '#22c55e' : '#16a34a'; // Green
+        const formColor = isDark ? '#f59e0b' : '#d97706'; // Amber
+        const priceColor = isDark ? '#3b82f6' : '#2563eb'; // Blue
 
-        formChartInstance.setOption({
+        combinedChartInstance.setOption({
             grid: {
-                left: '10%',
-                right: '10%',
+                left: '12%',
+                right: '15%',
                 top: '15%',
                 bottom: '15%',
                 containLabel: false
             },
             xAxis: {
                 type: 'category',
-                data: formData.map(d => `GW${d.gameweek}`),
+                data: gameweekLabels,
                 axisLabel: {
                     fontSize: 9,
-                    color: textColor
+                    color: textColor,
+                    interval: Math.max(0, Math.floor(gameweekLabels.length / 8)) // Show every Nth label
                 },
                 axisLine: {
                     lineStyle: { color: gridColor }
                 }
             },
-            yAxis: {
-                type: 'value',
-                min: 0,
-                max: 10,
-                axisLabel: {
-                    fontSize: 9,
-                    color: textColor
+            yAxis: [
+                {
+                    type: 'value',
+                    name: 'Points / Form',
+                    nameLocation: 'middle',
+                    nameGap: 50,
+                    nameTextStyle: {
+                        color: textColor,
+                        fontSize: 9
+                    },
+                    min: 0,
+                    max: Math.max(maxPoints, maxForm * 1.1, 15), // Scale to fit both points and form
+                    axisLabel: {
+                        fontSize: 9,
+                        color: textColor
+                    },
+                    axisLine: {
+                        lineStyle: { color: gridColor }
+                    },
+                    splitLine: {
+                        lineStyle: { color: gridColor, opacity: 0.2 }
+                    },
+                    position: 'left'
                 },
-                axisLine: {
-                    lineStyle: { color: gridColor }
-                },
-                splitLine: {
-                    lineStyle: { color: gridColor, opacity: 0.2 }
+                {
+                    type: 'value',
+                    name: 'Price (£m)',
+                    nameLocation: 'middle',
+                    nameGap: 50,
+                    nameTextStyle: {
+                        color: textColor,
+                        fontSize: 9
+                    },
+                    min: Math.max(0, minPrice * 0.95),
+                    max: maxPrice * 1.05,
+                    axisLabel: {
+                        fontSize: 9,
+                        color: textColor,
+                        formatter: (value) => `£${value.toFixed(1)}`
+                    },
+                    axisLine: {
+                        lineStyle: { color: gridColor }
+                    },
+                    splitLine: {
+                        show: false // Avoid cluttering with price grid lines
+                    },
+                    position: 'right'
+                }
+            ],
+            legend: {
+                data: ['Points', 'Form', 'Price'],
+                top: 5,
+                textStyle: {
+                    color: textColor,
+                    fontSize: 9
                 }
             },
-            series: [{
-                type: 'line',
-                data: formData.map(d => d.form),
-                smooth: true,
-                symbol: 'circle',
-                symbolSize: 6,
-                lineStyle: {
-                    color: trendColor,
-                    width: 2
-                },
-                itemStyle: {
-                    color: trendColor
-                },
-                areaStyle: {
-                    color: {
-                        type: 'linear',
-                        x: 0,
-                        y: 0,
-                        x2: 0,
-                        y2: 1,
-                        colorStops: [{
-                            offset: 0,
-                            color: trendColor + '40'
-                        }, {
-                            offset: 1,
-                            color: trendColor + '00'
-                        }]
-                    }
-                }
-            }],
             tooltip: {
                 trigger: 'axis',
                 backgroundColor: isDark ? 'rgba(0, 0, 0, 0.8)' : 'rgba(255, 255, 255, 0.9)',
@@ -1402,99 +1416,85 @@ async function initializePlayerCharts(historicalData) {
                     fontSize: 10
                 },
                 formatter: (params) => {
-                    const data = params[0];
-                    return `${data.name}<br/>Form: ${data.value.toFixed(1)}`;
-                }
-            }
-        });
-    }
-
-    // Render price chart
-    const priceChartContainer = document.getElementById('player-modal-price-chart');
-    if (priceChartContainer && priceData.length > 0) {
-        priceChartInstance = echarts.init(priceChartContainer);
-        const isDark = isDarkMode();
-        const textColor = isDark ? '#e5e7eb' : '#374151';
-        const gridColor = isDark ? '#374151' : '#e5e7eb';
-        const primaryColor = isDark ? '#3b82f6' : '#2563eb';
-
-        priceChartInstance.setOption({
-            grid: {
-                left: '10%',
-                right: '10%',
-                top: '15%',
-                bottom: '15%',
-                containLabel: false
-            },
-            xAxis: {
-                type: 'category',
-                data: priceData.map(d => `GW${d.gameweek}`),
-                axisLabel: {
-                    fontSize: 9,
-                    color: textColor,
-                    interval: Math.max(0, Math.floor(priceData.length / 6)) // Show every Nth label
-                },
-                axisLine: {
-                    lineStyle: { color: gridColor }
+                    let result = params[0].name + '<br/>';
+                    params.forEach(param => {
+                        if (param.value !== null && param.value !== undefined) {
+                            const value = param.seriesName === 'Price' 
+                                ? `£${param.value.toFixed(1)}m` 
+                                : param.value.toFixed(1);
+                            result += `${param.marker} ${param.seriesName}: ${value}<br/>`;
+                        }
+                    });
+                    return result;
                 }
             },
-            yAxis: {
-                type: 'value',
-                axisLabel: {
-                    fontSize: 9,
-                    color: textColor,
-                    formatter: (value) => `£${value.toFixed(1)}m`
+            series: [
+                {
+                    name: 'Points',
+                    type: 'line',
+                    data: pointsData,
+                    yAxisIndex: 0,
+                    smooth: true,
+                    symbol: 'circle',
+                    symbolSize: 6,
+                    lineStyle: {
+                        color: pointsColor,
+                        width: 2
+                    },
+                    itemStyle: {
+                        color: pointsColor
+                    },
+                    areaStyle: {
+                        color: {
+                            type: 'linear',
+                            x: 0,
+                            y: 0,
+                            x2: 0,
+                            y2: 1,
+                            colorStops: [{
+                                offset: 0,
+                                color: pointsColor + '40'
+                            }, {
+                                offset: 1,
+                                color: pointsColor + '00'
+                            }]
+                        }
+                    }
                 },
-                axisLine: {
-                    lineStyle: { color: gridColor }
+                {
+                    name: 'Form',
+                    type: 'line',
+                    data: formData,
+                    yAxisIndex: 0,
+                    smooth: true,
+                    symbol: 'diamond',
+                    symbolSize: 6,
+                    lineStyle: {
+                        color: formColor,
+                        width: 2,
+                        type: 'dashed'
+                    },
+                    itemStyle: {
+                        color: formColor
+                    }
                 },
-                splitLine: {
-                    lineStyle: { color: gridColor, opacity: 0.2 }
-                }
-            },
-            series: [{
-                type: 'line',
-                data: priceData.map(d => parseFloat(d.price)),
-                smooth: true,
-                symbol: 'circle',
-                symbolSize: 6,
-                lineStyle: {
-                    color: primaryColor,
-                    width: 2
-                },
-                itemStyle: {
-                    color: primaryColor
-                },
-                areaStyle: {
-                    color: {
-                        type: 'linear',
-                        x: 0,
-                        y: 0,
-                        x2: 0,
-                        y2: 1,
-                        colorStops: [{
-                            offset: 0,
-                            color: primaryColor + '40'
-                        }, {
-                            offset: 1,
-                            color: primaryColor + '00'
-                        }]
+                {
+                    name: 'Price',
+                    type: 'line',
+                    data: priceData,
+                    yAxisIndex: 1,
+                    smooth: true,
+                    symbol: 'rect',
+                    symbolSize: 6,
+                    lineStyle: {
+                        color: priceColor,
+                        width: 2
+                    },
+                    itemStyle: {
+                        color: priceColor
                     }
                 }
-            }],
-            tooltip: {
-                trigger: 'axis',
-                backgroundColor: isDark ? 'rgba(0, 0, 0, 0.8)' : 'rgba(255, 255, 255, 0.9)',
-                borderColor: gridColor,
-                textStyle: {
-                    color: textColor,
-                    fontSize: 10
-                },
-                formatter: (params) => {
-                    const data = params[0];
-                    return `${data.name}<br/>Price: £${data.value.toFixed(1)}m`;
-                }
-            }
+            ]
         });
     }
 }
