@@ -4,7 +4,7 @@
 // ============================================================================
 
 import { getPlayerById, fplFixtures, getActiveGW, getAllPlayers } from '../../data.js';
-import { getGlassmorphism, getShadow, getAnimationCurve, getAnimationDuration, getMobileBorderRadius } from '../../styles/mobileDesignSystem.js';
+import { getGlassmorphism, getShadow, getAnimationCurve, getAnimationDuration, getMobileBorderRadius, getSegmentedControlStyles } from '../../styles/mobileDesignSystem.js';
 import {
     getPositionShort,
     getTeamShortName,
@@ -17,6 +17,7 @@ import { analyzePlayerRisks } from '../../risk.js';
 import { renderOpponentBadge } from './compactStyleHelpers.js';
 import { isWishlisted, toggleWishlist } from '../../wishlist/store.js';
 import { getMyPlayerIdSet } from '../../utils/myPlayers.js';
+import { loadECharts } from '../../charts/chartHelpers.js';
 
 /**
  * Check if dark mode is active
@@ -539,6 +540,18 @@ export async function showPlayerModal(playerId, myTeamState = null, options = {}
     // Fetch player history
     const playerSummary = await fetchPlayerHistory(playerId);
 
+    // Fetch historical data for charts (form and price)
+    let historicalData = null;
+    try {
+        const response = await fetch(`/api/history/player/${playerId}/ownership`);
+        if (response.ok) {
+            const data = await response.json();
+            historicalData = data.gameweeks || [];
+        }
+    } catch (err) {
+        console.error('Failed to fetch historical data:', err);
+    }
+
     // Get live stats from enriched bootstrap (available on all players during live GW)
     const liveStats = player.live_stats;
     const hasLiveStats = !!liveStats;
@@ -615,7 +628,8 @@ export async function showPlayerModal(playerId, myTeamState = null, options = {}
         comparisonPlayers,
         actionConfig: options.primaryAction || null,
         canWishlist,
-        wishlistActive
+        wishlistActive,
+        historicalData
     });
 
     // Update modal content
@@ -624,7 +638,9 @@ export async function showPlayerModal(playerId, myTeamState = null, options = {}
         modal.innerHTML = modalHTML;
         attachModalListeners({
             actionConfig: options.primaryAction || null,
-            wishlistConfig: canWishlist ? { playerId, isActive: wishlistActive } : null
+            wishlistConfig: canWishlist ? { playerId, isActive: wishlistActive } : null,
+            playerId,
+            historicalData
         });
     }
 }
@@ -725,7 +741,8 @@ function buildModalHTML(data) {
         risks, comparisonPlayers,
         actionConfig,
         canWishlist = false,
-        wishlistActive = false
+        wishlistActive = false,
+        historicalData = null
     } = data;
 
     // LIVE indicator styles
@@ -1125,20 +1142,100 @@ function buildModalHTML(data) {
                 </div>
 
                 <div style="padding: 0.75rem; display: flex; flex-direction: column; gap: 0.75rem;">
-                    <div>
-                        ${injuryBannerHTML}
-                        <div style="display: flex; gap: 0.75rem; margin-bottom: 0.75rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border-color);">
+                    ${injuryBannerHTML}
+                    
+                    <!-- Tab Navigation -->
+                    ${(() => {
+                        const segStyles = getSegmentedControlStyles(isDarkMode(), true);
+                        const tabs = [
+                            { id: 'summary', label: 'Summary' },
+                            { id: 'fixtures', label: 'Fixtures' },
+                            { id: 'charts', label: 'Charts' },
+                            { id: 'alternatives', label: 'Alternatives' }
+                        ];
+
+                        const containerStyle = Object.entries(segStyles.container)
+                            .map(([k, v]) => `${k.replace(/[A-Z]/g, m => '-' + m.toLowerCase())}: ${v}`)
+                            .join('; ');
+
+                        return `
+                            <div style="margin-bottom: 0.75rem; overflow-x: auto;">
+                                <div style="${containerStyle}">
+                                    ${tabs.map(tab => {
+                                        const isActive = tab.id === 'summary';
+                                        const buttonStyle = Object.entries({
+                                            ...segStyles.button,
+                                            ...(isActive ? segStyles.activeButton : {})
+                                        })
+                                        .map(([k, v]) => `${k.replace(/[A-Z]/g, m => '-' + m.toLowerCase())}: ${v}`)
+                                        .join('; ');
+
+                                        return `
+                                            <button
+                                                class="player-modal-tab-btn"
+                                                data-tab="${tab.id}"
+                                                style="${buttonStyle}"
+                                                onmousedown="this.style.transform='scale(0.95)'"
+                                                onmouseup="this.style.transform='scale(1)'"
+                                                onmouseleave="this.style.transform='scale(1)'"
+                                                ontouchstart="this.style.transform='scale(0.95)'"
+                                                ontouchend="this.style.transform='scale(1)'"
+                                            >
+                                                ${tab.label}
+                                            </button>
+                                        `;
+                                    }).join('')}
+                                </div>
+                            </div>
+                        `;
+                    })()}
+
+                    <!-- Tab Content -->
+                    <!-- Summary Tab -->
+                    <div id="player-modal-tab-summary" class="player-modal-tab-content" style="display: block;">
+                        <div style="display: flex; gap: 0.75rem; margin-bottom: 0.75rem;">
                             ${gwStatsHTML}
                             ${ownershipAndLeagueHTML}
                         </div>
-                        <div style="display: flex; gap: 0.75rem;">
-                            <div style="flex: 1; min-width: 140px;">
-                                ${historyHTML}
-                                ${fixturesHTML}
-                            </div>
-                            ${comparisonHTML}
+                    </div>
+
+                    <!-- Fixtures Tab -->
+                    <div id="player-modal-tab-fixtures" class="player-modal-tab-content" style="display: none;">
+                        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                            ${historyHTML}
+                            ${fixturesHTML}
                         </div>
                     </div>
+
+                    <!-- Charts Tab -->
+                    <div id="player-modal-tab-charts" class="player-modal-tab-content" style="display: none;">
+                        ${historicalData && historicalData.length > 0 ? `
+                            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                                <div>
+                                    <div style="font-size: 0.7rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem; text-transform: uppercase;">
+                                        Form (Last 5 GWs)
+                                    </div>
+                                    <div id="player-modal-form-chart" style="width: 100%; height: 80px; background: var(--bg-secondary); border-radius: 0.5rem;"></div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.7rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem; text-transform: uppercase;">
+                                        Price (Since GW1)
+                                    </div>
+                                    <div id="player-modal-price-chart" style="width: 100%; height: 80px; background: var(--bg-secondary); border-radius: 0.5rem;"></div>
+                                </div>
+                            </div>
+                        ` : `
+                            <div style="text-align: center; padding: 2rem; color: var(--text-secondary); font-size: 0.75rem;">
+                                Historical data not available yet
+                            </div>
+                        `}
+                    </div>
+
+                    <!-- Alternatives Tab -->
+                    <div id="player-modal-tab-alternatives" class="player-modal-tab-content" style="display: none;">
+                        ${comparisonHTML}
+                    </div>
+
                     ${actionConfig ? `
                         <div style="display: flex; justify-content: flex-end;">
                             <button
@@ -1173,11 +1270,240 @@ function buildModalHTML(data) {
     `;
 }
 
+// Chart instances for cleanup
+let formChartInstance = null;
+let priceChartInstance = null;
+
+/**
+ * Initialize player charts
+ */
+async function initializePlayerCharts(historicalData) {
+    if (!historicalData || historicalData.length === 0) {
+        return;
+    }
+
+    // Cleanup existing charts
+    if (formChartInstance) {
+        formChartInstance.dispose();
+        formChartInstance = null;
+    }
+    if (priceChartInstance) {
+        priceChartInstance.dispose();
+        priceChartInstance = null;
+    }
+
+    // Load ECharts
+    const echarts = await loadECharts();
+    if (!echarts) {
+        console.error('Failed to load ECharts');
+        return;
+    }
+
+    // Prepare form chart data (last 5 GWs)
+    const formData = historicalData
+        .filter(gw => gw.form !== null && gw.form !== undefined)
+        .slice(-5)
+        .map(gw => ({
+            gameweek: gw.gameweek,
+            form: parseFloat(gw.form) || 0
+        }));
+
+    // Prepare price chart data (all GWs)
+    const priceData = historicalData
+        .filter(gw => gw.price !== null && gw.price !== undefined)
+        .map(gw => ({
+            gameweek: gw.gameweek,
+            price: (gw.price / 10).toFixed(1) // Convert to £m
+        }));
+
+    // Render form chart
+    const formChartContainer = document.getElementById('player-modal-form-chart');
+    if (formChartContainer && formData.length > 0) {
+        formChartInstance = echarts.init(formChartContainer);
+        const isDark = isDarkMode();
+        const textColor = isDark ? '#e5e7eb' : '#374151';
+        const gridColor = isDark ? '#374151' : '#e5e7eb';
+        
+        // Calculate trend color
+        const firstForm = formData[0].form;
+        const lastForm = formData[formData.length - 1].form;
+        const trendColor = lastForm >= firstForm ? '#22c55e' : '#ef4444';
+
+        formChartInstance.setOption({
+            grid: {
+                left: '10%',
+                right: '10%',
+                top: '15%',
+                bottom: '15%',
+                containLabel: false
+            },
+            xAxis: {
+                type: 'category',
+                data: formData.map(d => `GW${d.gameweek}`),
+                axisLabel: {
+                    fontSize: 9,
+                    color: textColor
+                },
+                axisLine: {
+                    lineStyle: { color: gridColor }
+                }
+            },
+            yAxis: {
+                type: 'value',
+                min: 0,
+                max: 10,
+                axisLabel: {
+                    fontSize: 9,
+                    color: textColor
+                },
+                axisLine: {
+                    lineStyle: { color: gridColor }
+                },
+                splitLine: {
+                    lineStyle: { color: gridColor, opacity: 0.2 }
+                }
+            },
+            series: [{
+                type: 'line',
+                data: formData.map(d => d.form),
+                smooth: true,
+                symbol: 'circle',
+                symbolSize: 6,
+                lineStyle: {
+                    color: trendColor,
+                    width: 2
+                },
+                itemStyle: {
+                    color: trendColor
+                },
+                areaStyle: {
+                    color: {
+                        type: 'linear',
+                        x: 0,
+                        y: 0,
+                        x2: 0,
+                        y2: 1,
+                        colorStops: [{
+                            offset: 0,
+                            color: trendColor + '40'
+                        }, {
+                            offset: 1,
+                            color: trendColor + '00'
+                        }]
+                    }
+                }
+            }],
+            tooltip: {
+                trigger: 'axis',
+                backgroundColor: isDark ? 'rgba(0, 0, 0, 0.8)' : 'rgba(255, 255, 255, 0.9)',
+                borderColor: gridColor,
+                textStyle: {
+                    color: textColor,
+                    fontSize: 10
+                },
+                formatter: (params) => {
+                    const data = params[0];
+                    return `${data.name}<br/>Form: ${data.value.toFixed(1)}`;
+                }
+            }
+        });
+    }
+
+    // Render price chart
+    const priceChartContainer = document.getElementById('player-modal-price-chart');
+    if (priceChartContainer && priceData.length > 0) {
+        priceChartInstance = echarts.init(priceChartContainer);
+        const isDark = isDarkMode();
+        const textColor = isDark ? '#e5e7eb' : '#374151';
+        const gridColor = isDark ? '#374151' : '#e5e7eb';
+        const primaryColor = isDark ? '#3b82f6' : '#2563eb';
+
+        priceChartInstance.setOption({
+            grid: {
+                left: '10%',
+                right: '10%',
+                top: '15%',
+                bottom: '15%',
+                containLabel: false
+            },
+            xAxis: {
+                type: 'category',
+                data: priceData.map(d => `GW${d.gameweek}`),
+                axisLabel: {
+                    fontSize: 9,
+                    color: textColor,
+                    interval: Math.max(0, Math.floor(priceData.length / 6)) // Show every Nth label
+                },
+                axisLine: {
+                    lineStyle: { color: gridColor }
+                }
+            },
+            yAxis: {
+                type: 'value',
+                axisLabel: {
+                    fontSize: 9,
+                    color: textColor,
+                    formatter: (value) => `£${value.toFixed(1)}m`
+                },
+                axisLine: {
+                    lineStyle: { color: gridColor }
+                },
+                splitLine: {
+                    lineStyle: { color: gridColor, opacity: 0.2 }
+                }
+            },
+            series: [{
+                type: 'line',
+                data: priceData.map(d => parseFloat(d.price)),
+                smooth: true,
+                symbol: 'circle',
+                symbolSize: 6,
+                lineStyle: {
+                    color: primaryColor,
+                    width: 2
+                },
+                itemStyle: {
+                    color: primaryColor
+                },
+                areaStyle: {
+                    color: {
+                        type: 'linear',
+                        x: 0,
+                        y: 0,
+                        x2: 0,
+                        y2: 1,
+                        colorStops: [{
+                            offset: 0,
+                            color: primaryColor + '40'
+                        }, {
+                            offset: 1,
+                            color: primaryColor + '00'
+                        }]
+                    }
+                }
+            }],
+            tooltip: {
+                trigger: 'axis',
+                backgroundColor: isDark ? 'rgba(0, 0, 0, 0.8)' : 'rgba(255, 255, 255, 0.9)',
+                borderColor: gridColor,
+                textStyle: {
+                    color: textColor,
+                    fontSize: 10
+                },
+                formatter: (params) => {
+                    const data = params[0];
+                    return `${data.name}<br/>Price: £${data.value.toFixed(1)}m`;
+                }
+            }
+        });
+    }
+}
+
 /**
  * Attach modal event listeners
  */
 function attachModalListeners(config = {}) {
-    const { actionConfig = null, wishlistConfig = null } = config;
+    const { actionConfig = null, wishlistConfig = null, playerId = null, historicalData = null } = config;
     const closeBtn = document.getElementById('close-player-modal');
     const modal = document.getElementById('player-modal');
     const primaryBtn = document.getElementById('player-modal-primary-btn');
@@ -1209,6 +1535,43 @@ function attachModalListeners(config = {}) {
             }
         });
     }
+
+    // Tab switching
+    const tabButtons = document.querySelectorAll('.player-modal-tab-btn');
+    const segStyles = getSegmentedControlStyles(isDarkMode(), true);
+    
+    tabButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tabId = btn.dataset.tab;
+            
+            // Update button styles
+            tabButtons.forEach(b => {
+                const isActive = b === btn;
+                const buttonStyle = Object.entries({
+                    ...segStyles.button,
+                    ...(isActive ? segStyles.activeButton : {})
+                })
+                .map(([k, v]) => `${k.replace(/[A-Z]/g, m => '-' + m.toLowerCase())}: ${v}`)
+                .join('; ');
+                b.style.cssText = buttonStyle;
+            });
+
+            // Show/hide tab content
+            const tabContents = document.querySelectorAll('.player-modal-tab-content');
+            tabContents.forEach(content => {
+                content.style.display = 'none';
+            });
+            const activeContent = document.getElementById(`player-modal-tab-${tabId}`);
+            if (activeContent) {
+                activeContent.style.display = 'block';
+                
+                // Initialize charts if Charts tab is opened
+                if (tabId === 'charts' && historicalData) {
+                    initializePlayerCharts(historicalData);
+                }
+            }
+        });
+    });
 }
 
 function updateWishlistButtonState(button, active) {
@@ -1226,6 +1589,16 @@ function updateWishlistButtonState(button, active) {
 export function closePlayerModal() {
     const modal = document.getElementById('player-modal');
     if (!modal) return;
+
+    // Cleanup charts
+    if (formChartInstance) {
+        formChartInstance.dispose();
+        formChartInstance = null;
+    }
+    if (priceChartInstance) {
+        priceChartInstance.dispose();
+        priceChartInstance = null;
+    }
 
     const animationDuration = getAnimationDuration('modal');
     const animationCurve = getAnimationCurve('accelerate');
