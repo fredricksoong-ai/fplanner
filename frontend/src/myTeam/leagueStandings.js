@@ -412,16 +412,19 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
     // Calculate average GW points - use live points if available
     let avgGWPoints = 0;
     let totalGWPoints = 0;
-    let countWithLivePoints = 0;
 
     // Check if mobile layout
     const useMobile = shouldUseMobileLayout();
 
+    // Load captain data for mobile view (needed for rendering)
+    let captainNames = [];
     if (useMobile) {
         // Load captain data for all entries in parallel
         const captainPromises = results.slice(0, 50).map(entry => getCaptainName(entry.entry, myTeamState));
-        const captainNames = await Promise.all(captainPromises);
-        
+        captainNames = await Promise.all(captainPromises);
+    }
+
+    if (useMobile) {
         // Calculate live points for entries with cached team data
         const livePointsMap = new Map();
         if (isLive) {
@@ -432,7 +435,6 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
                     if (livePoints !== null) {
                         livePointsMap.set(entry.entry, livePoints);
                         totalGWPoints += livePoints;
-                        countWithLivePoints++;
                     }
                 }
             });
@@ -441,9 +443,7 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
         // Calculate average (use live points where available, otherwise event_total)
         results.slice(0, 50).forEach(entry => {
             const livePoints = livePointsMap.get(entry.entry);
-            if (livePoints !== undefined) {
-                // Already counted above
-            } else {
+            if (livePoints === undefined) {
                 totalGWPoints += (entry.event_total || 0);
             }
         });
