@@ -118,18 +118,19 @@ export async function loadCacheFromS3() {
 }
 
 /**
- * Archive a specific gameweek's data to S3
+ * Archive a specific type of gameweek data to S3
  * @param {number} gameweek - Gameweek number
- * @param {Object} data - Gameweek data to archive (cohorts, etc.)
+ * @param {string} type - Data type (cohorts, picks, bootstrap, github)
+ * @param {Object} data - Data to archive
  * @returns {Promise<boolean>} True if successful, false otherwise
  */
-export async function archiveGameweekToS3(gameweek, data) {
+export async function archiveGameweekToS3(gameweek, type, data) {
   if (!s3Client) {
     return false;
   }
 
   try {
-    const key = `gameweeks/gw${gameweek}.json`;
+    const key = `gameweeks/gw${gameweek}/${type}.json`;
     const command = new PutObjectCommand({
       Bucket: S3.BUCKET,
       Key: key,
@@ -138,26 +139,27 @@ export async function archiveGameweekToS3(gameweek, data) {
     });
 
     await s3Client.send(command);
-    logger.log(`📦 GW${gameweek} archived to S3 (${key})`);
+    logger.log(`📦 GW${gameweek}/${type} archived to S3`);
     return true;
   } catch (err) {
-    logger.error(`❌ Failed to archive GW${gameweek} to S3:`, err.message);
+    logger.error(`❌ Failed to archive GW${gameweek}/${type} to S3:`, err.message);
     return false;
   }
 }
 
 /**
- * Load a specific gameweek's archived data from S3
+ * Load a specific type of gameweek data from S3
  * @param {number} gameweek - Gameweek number
- * @returns {Promise<Object|null>} Parsed gameweek data or null if not found
+ * @param {string} type - Data type (cohorts, picks, bootstrap, github)
+ * @returns {Promise<Object|null>} Parsed data or null if not found
  */
-export async function loadGameweekFromS3(gameweek) {
+export async function loadGameweekFromS3(gameweek, type = 'cohorts') {
   if (!s3Client) {
     return null;
   }
 
   try {
-    const key = `gameweeks/gw${gameweek}.json`;
+    const key = `gameweeks/gw${gameweek}/${type}.json`;
     const getCommand = new GetObjectCommand({
       Bucket: S3.BUCKET,
       Key: key,
@@ -167,16 +169,42 @@ export async function loadGameweekFromS3(gameweek) {
     const bodyString = await streamToString(response.Body);
     const data = JSON.parse(bodyString);
 
-    logger.log(`📦 GW${gameweek} loaded from S3 archive`);
+    logger.log(`📦 GW${gameweek}/${type} loaded from S3`);
     return data;
   } catch (err) {
     if (err.name === 'NoSuchKey' || err.$metadata?.httpStatusCode === 404) {
-      logger.log(`ℹ️ GW${gameweek} not found in S3 archive`);
+      logger.log(`ℹ️ GW${gameweek}/${type} not found in S3 archive`);
       return null;
     }
-    logger.error(`❌ Failed to load GW${gameweek} from S3:`, err.message);
+    logger.error(`❌ Failed to load GW${gameweek}/${type} from S3:`, err.message);
     return null;
   }
+}
+
+/**
+ * Load all data types for a gameweek from S3
+ * @param {number} gameweek - Gameweek number
+ * @returns {Promise<Object>} Object with cohorts, picks, bootstrap, github data
+ */
+export async function loadCompleteGameweekFromS3(gameweek) {
+  if (!s3Client) {
+    return null;
+  }
+
+  const types = ['cohorts', 'picks', 'bootstrap', 'github'];
+  const results = await Promise.all(
+    types.map(async type => {
+      const data = await loadGameweekFromS3(gameweek, type);
+      return { type, data };
+    })
+  );
+
+  const complete = {};
+  for (const { type, data } of results) {
+    complete[type] = data;
+  }
+
+  return complete;
 }
 
 /**
@@ -201,5 +229,6 @@ export default {
   loadCacheFromS3,
   archiveGameweekToS3,
   loadGameweekFromS3,
+  loadCompleteGameweekFromS3,
   isEnabled: () => s3Client !== null,
 };

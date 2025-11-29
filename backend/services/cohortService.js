@@ -57,29 +57,60 @@ export async function getCohortMetrics(gameweek = getLatestFinishedGameweek(), o
   // Step 2: For completed GWs, try loading from S3 archive
   const isCompleted = isGameweekCompleted(targetGameweek);
   if (isCompleted && !options.force) {
-    const archived = await s3Storage.loadGameweekFromS3(targetGameweek);
-    if (archived && archived.cohorts) {
+    const archived = await s3Storage.loadGameweekFromS3(targetGameweek, 'cohorts');
+    if (archived) {
       // Update in-memory cache with archived data
-      updateCohortCache(targetGameweek, archived.cohorts);
+      updateCohortCache(targetGameweek, archived);
       logger.log(`✅ GW${targetGameweek} cohorts restored from S3 archive`);
-      return archived.cohorts;
+      return archived;
     }
   }
 
   // Step 3: Not in cache or archive - compute from scratch
   const computed = await executors.computeCohorts(targetGameweek);
-  updateCohortCache(targetGameweek, computed);
+  const { cohorts, picks } = computed;
 
-  // Step 4: Archive to S3 if gameweek is completed
+  // Update in-memory cache with cohort metrics only
+  updateCohortCache(targetGameweek, cohorts);
+
+  // Step 4: Archive all data types to S3 if gameweek is completed
   if (isCompleted && s3Storage.isEnabled()) {
-    await s3Storage.archiveGameweekToS3(targetGameweek, {
-      gameweek: targetGameweek,
-      cohorts: computed,
-      archivedAt: Date.now()
-    });
+    logger.log(`📦 Archiving GW${targetGameweek} complete dataset to S3...`);
+
+    // Archive cohorts
+    await s3Storage.archiveGameweekToS3(targetGameweek, 'cohorts', cohorts);
+
+    // Archive picks
+    await s3Storage.archiveGameweekToS3(targetGameweek, 'picks', picks);
+
+    // Archive bootstrap snapshot (player prices, ownership, form)
+    if (cache.bootstrap?.data) {
+      const bootstrapSnapshot = {
+        gameweek: targetGameweek,
+        timestamp: Date.now(),
+        elements: cache.bootstrap.data.elements,
+        teams: cache.bootstrap.data.teams,
+        events: cache.bootstrap.data.events
+      };
+      await s3Storage.archiveGameweekToS3(targetGameweek, 'bootstrap', bootstrapSnapshot);
+    }
+
+    // Archive GitHub snapshot (enriched metrics)
+    if (cache.github?.data) {
+      const githubSnapshot = {
+        gameweek: targetGameweek,
+        timestamp: Date.now(),
+        currentGW: cache.github.data.currentGW,
+        seasonStats: cache.github.data.seasonStats,
+        currentGWStats: cache.github.data.currentGWStats
+      };
+      await s3Storage.archiveGameweekToS3(targetGameweek, 'github', githubSnapshot);
+    }
+
+    logger.log(`✅ GW${targetGameweek} complete dataset archived to S3`);
   }
 
-  return computed;
+  return cohorts;
 }
 
 /**
@@ -95,16 +126,27 @@ export async function computeCohortMetrics(gameweek) {
   await ensureBaseData();
 
   const bucketResults = {};
+  const bucketPicks = {};
+
   for (const bucket of COHORT_BUCKETS) {
     const entryIds = await collectEntryIdsForBucket(bucket);
-    const metrics = await fetchMetricsForEntries(entryIds, gameweek);
+    const { metrics, allPicks } = await fetchMetricsForEntries(entryIds, gameweek);
+
     bucketResults[bucket.key] = buildBucketSummary(bucket, metrics, entryIds.length);
+    bucketPicks[bucket.key] = aggregatePicksData(allPicks);
   }
 
   return {
-    gameweek,
-    timestamp: Date.now(),
-    buckets: bucketResults
+    cohorts: {
+      gameweek,
+      timestamp: Date.now(),
+      buckets: bucketResults
+    },
+    picks: {
+      gameweek,
+      timestamp: Date.now(),
+      buckets: bucketPicks
+    }
   };
 }
 
@@ -171,6 +213,7 @@ function getSamplePagesForBucket(bucket) {
 
 async function fetchMetricsForEntries(entryIds, gameweek) {
   const metrics = [];
+  const allPicks = [];  // Store raw picks for archiving
 
   let index = 0;
   async function worker() {
@@ -179,9 +222,12 @@ async function fetchMetricsForEntries(entryIds, gameweek) {
       const teamId = entryIds[currentIndex];
       try {
         const picks = await fetchTeamPicks(teamId, gameweek);
-        const calculated = calculateTeamMetricsFromPicks(picks?.picks || [], gameweek);
+        const picksArray = picks?.picks || [];
+        const calculated = calculateTeamMetricsFromPicks(picksArray, gameweek);
         if (calculated) {
           metrics.push(calculated);
+          // Store raw picks for aggregation
+          allPicks.push({ teamId, picks: picksArray });
         }
       } catch (err) {
         logger.warn(`⚠️ Failed to fetch picks for team ${teamId}: ${err.message}`);
@@ -192,7 +238,58 @@ async function fetchMetricsForEntries(entryIds, gameweek) {
   const workers = Array.from({ length: Math.min(MAX_CONCURRENT_FETCHES, entryIds.length || 1) }, () => worker());
   await Promise.all(workers);
 
-  return metrics;
+  return { metrics, allPicks };
+}
+
+/**
+ * Aggregate raw picks into player ownership data
+ * @param {Array} allPicks - Array of {teamId, picks} objects
+ * @returns {Object} Aggregated ownership data
+ */
+function aggregatePicksData(allPicks) {
+  const playerMap = new Map();
+  const formations = {};
+
+  allPicks.forEach(({ picks }) => {
+    // Track formation
+    const defenders = picks.filter(p => p.position <= 2).length;
+    const midfielders = picks.filter(p => p.position === 3).length;
+    const forwards = picks.filter(p => p.position === 4).length;
+    const formation = `${defenders}-${midfielders}-${forwards}`;
+    formations[formation] = (formations[formation] || 0) + 1;
+
+    // Track player ownership
+    picks.forEach(pick => {
+      if (!playerMap.has(pick.element)) {
+        playerMap.set(pick.element, {
+          element: pick.element,
+          ownership: 0,
+          captainCount: 0,
+          viceCaptainCount: 0,
+          benchCount: 0,
+          multiplierSum: 0
+        });
+      }
+
+      const stats = playerMap.get(pick.element);
+      stats.ownership++;
+
+      if (pick.is_captain) stats.captainCount++;
+      if (pick.is_vice_captain) stats.viceCaptainCount++;
+      if (pick.multiplier) stats.multiplierSum += pick.multiplier;
+      if (pick.position > 11) stats.benchCount++;
+    });
+  });
+
+  // Convert to array and sort by ownership
+  const players = Array.from(playerMap.values())
+    .sort((a, b) => b.ownership - a.ownership);
+
+  return {
+    players,
+    formations,
+    sampleSize: allPicks.length
+  };
 }
 
 function buildBucketSummary(bucket, metrics, attempted) {
