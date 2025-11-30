@@ -75,6 +75,27 @@ export function getTeamCacheTTL() {
   return TEAM_CACHE_TTL_LIVE;
 }
 
+/**
+ * Get appropriate fixtures cache TTL based on current GW status
+ * During live GW, fixtures need frequent updates to catch when matches finish
+ * @returns {number} TTL in milliseconds
+ */
+export function getFixturesCacheTTL() {
+  if (!cache.bootstrap?.data?.events) {
+    return TTL.FIXTURES_LIVE; // Default to short TTL if we can't determine
+  }
+
+  const currentEvent = cache.bootstrap.data.events.find(e => e.is_current);
+
+  // If no current event or it's finished, use long TTL (fixtures rarely change)
+  if (!currentEvent || currentEvent.finished) {
+    return TTL.FIXTURES_FINISHED;
+  }
+
+  // GW in progress - use short TTL to catch match status changes (started/finished flags)
+  return TTL.FIXTURES_LIVE;
+}
+
 // ============================================================================
 // ERA MANAGEMENT
 // ============================================================================
@@ -168,7 +189,9 @@ export function shouldRefreshBootstrap() {
 }
 
 /**
- * Determine if fixtures data needs refresh
+ * Determine if fixtures data needs refresh based on GW status
+ * During live GW, refresh every 2 minutes to catch match status changes
+ * When GW finished, refresh every 12 hours (fixtures rarely change)
  * @returns {boolean} True if refresh needed
  */
 export function shouldRefreshFixtures() {
@@ -178,10 +201,16 @@ export function shouldRefreshFixtures() {
   }
 
   const age = Date.now() - cache.fixtures.timestamp;
-  const shouldRefresh = age > TTL.FIXTURES;
+  const ttl = getFixturesCacheTTL();
+  const shouldRefresh = age > ttl;
 
   if (shouldRefresh) {
-    logger.log(`🔄 Fixtures cache stale (${Math.round(age / 1000 / 60 / 60)} hours old)`);
+    const isLive = ttl === TTL.FIXTURES_LIVE;
+    const ageDisplay = isLive
+      ? `${Math.round(age / 1000)} sec`
+      : `${Math.round(age / 1000 / 60 / 60)} hours`;
+    const gwStatus = isLive ? 'GW live' : 'GW finished';
+    logger.log(`🔄 Fixtures cache stale (${ageDisplay} old, ${gwStatus})`);
   }
 
   return shouldRefresh;

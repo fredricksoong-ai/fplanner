@@ -74,7 +74,8 @@ export function getGithubUrls(currentGW, isFinished) {
 // ============================================================================
 
 export const TTL = {
-  FIXTURES: 12 * 60 * 60 * 1000,      // 12 hours (rarely changes)
+  FIXTURES_LIVE: 2 * 60 * 1000,       // 2 minutes (during live GW - need frequent updates for match status)
+  FIXTURES_FINISHED: 12 * 60 * 60 * 1000,  // 12 hours (when GW finished - rarely changes)
   GW_LIVE: 30 * 60 * 1000,            // 30 minutes (during live GW)
   GW_FINISHED: 12 * 60 * 60 * 1000,   // 12 hours (GW finished)
   GITHUB_CHECK_INTERVAL: 5 * 60 * 1000 // Check GitHub era every 5 min
