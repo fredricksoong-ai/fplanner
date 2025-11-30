@@ -254,27 +254,26 @@ function renderWishlistSection(entries = [], gwNumber = currentGW) {
         badges.push('⭐');
         const badgeMarkup = badges.length > 0 ? ` <span style="font-size: 0.65rem;">${badges.join(' ')}</span>` : '';
 
-        // Risk analysis for Line 3
-        const risks = analyzePlayerRisks(player);
+        // Use FPL news for Line 3
         let riskContextMessage = '';
         let riskContextColor = '';
 
         if (player.news && player.news.trim() !== '') {
+            // Use FPL news directly (e.g., "Suspended until 06 Dec", "Hamstring injury")
+            riskContextMessage = player.news;
+
+            // Color based on chance of playing severity
             const chanceOfPlaying = player.chance_of_playing_next_round;
             if (chanceOfPlaying !== null && chanceOfPlaying !== undefined) {
                 if (chanceOfPlaying <= 25) {
-                    riskContextColor = '#ef4444';
-                    riskContextMessage = `${chanceOfPlaying}% chance: ${player.news}`;
+                    riskContextColor = '#ef4444'; // Red - very unlikely to play
                 } else if (chanceOfPlaying <= 50) {
-                    riskContextColor = '#f97316';
-                    riskContextMessage = `${chanceOfPlaying}% chance: ${player.news}`;
+                    riskContextColor = '#f97316'; // Orange - doubtful
                 } else {
-                    riskContextColor = '#fbbf24';
-                    riskContextMessage = `${chanceOfPlaying}% chance: ${player.news}`;
+                    riskContextColor = '#fbbf24'; // Yellow - possible
                 }
             } else {
-                riskContextColor = '#fbbf24';
-                riskContextMessage = player.news;
+                riskContextColor = '#fbbf24'; // Yellow default
             }
         }
 
@@ -298,7 +297,7 @@ function renderWishlistSection(entries = [], gwNumber = currentGW) {
                         </div>
                         <!-- Line 2: Team • Price • Own% • Form -->
                         <div style="font-size: 0.6rem; color: var(--text-secondary); white-space: nowrap;">
-                            ${getTeamShortName(player.team)} • ${formatCurrency(player.now_cost)} • ${(parseFloat(player.selected_by_percent) || 0).toFixed(1)}% • <span style="background: ${formStyle.background}; color: ${formStyle.color}; padding: 0.1rem 0.25rem; border-radius: 0.25rem; font-weight: 600;">${formatDecimal(player.form)}</span>
+                            ${getTeamShortName(player.team)} • ${formatCurrency(player.now_cost)} • ${(parseFloat(player.selected_by_percent) || 0).toFixed(1)}% • <span style="display: inline-block; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem; background: ${formStyle.background}; color: ${formStyle.color};">${formatDecimal(player.form)}</span>
                         </div>
                         <!-- Line 3: Risk context or added date -->
                         ${line3Content}

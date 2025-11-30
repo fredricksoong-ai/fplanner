@@ -17,7 +17,6 @@ import {
     getTeamShortName
 } from '../../utils.js';
 import { getFixtures, getGWOpponent, getMatchStatus } from '../../fixtures.js';
-import { analyzePlayerRisks } from '../../risk.js';
 import { calculateStatusColor } from './compactStyleHelpers.js';
 import { isWishlisted } from '../../wishlist/store.js';
 
@@ -74,16 +73,27 @@ function renderTeamSection(players, gwNumber, isLive, next5GWs, activeGW, sectio
         const player = getPlayerById(pick.element);
         if (!player) return;
 
-        // Get risk data
-        const risks = analyzePlayerRisks(player);
-        const hasHighRisk = risks.some(r => r.severity === 'high');
-        const hasMediumRisk = risks.some(r => r.severity === 'medium');
-        const hasLowRisk = risks.length > 0;
-
+        // Use FPL news for Line 3 and border color
+        let newsMessage = '';
         let borderColor = '';
-        if (hasHighRisk) borderColor = '#ef4444';
-        else if (hasMediumRisk) borderColor = '#fb923c';
-        else if (hasLowRisk) borderColor = '#eab308';
+
+        if (player.news && player.news.trim() !== '') {
+            newsMessage = player.news;
+
+            // Color based on chance of playing severity
+            const chanceOfPlaying = player.chance_of_playing_next_round;
+            if (chanceOfPlaying !== null && chanceOfPlaying !== undefined) {
+                if (chanceOfPlaying <= 25) {
+                    borderColor = '#ef4444'; // Red - very unlikely to play
+                } else if (chanceOfPlaying <= 50) {
+                    borderColor = '#f97316'; // Orange - doubtful
+                } else {
+                    borderColor = '#fbbf24'; // Yellow - possible
+                }
+            } else {
+                borderColor = '#fbbf24'; // Yellow default
+            }
+        }
 
         // Current GW opponent for Opp column (use active GW, not gwNumber)
         const opponent = getGWOpponent(player.team, activeGW);
@@ -173,10 +183,10 @@ function renderTeamSection(players, gwNumber, isLive, next5GWs, activeGW, sectio
                         </div>
                         <!-- Line 2: Team • Price • Own% • Form -->
                         <div style="font-size: 0.6rem; color: var(--text-secondary); white-space: nowrap;">
-                            ${getTeamShortName(player.team)} • ${formatCurrency(player.now_cost)} • ${ownership.toFixed(1)}% • <span style="background: ${formStyle.background}; color: ${formStyle.color}; padding: 0.1rem 0.25rem; border-radius: 0.25rem; font-weight: 600;">${formatDecimal(player.form)}</span>
+                            ${getTeamShortName(player.team)} • ${formatCurrency(player.now_cost)} • ${ownership.toFixed(1)}% • <span style="display: inline-block; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem; background: ${formStyle.background}; color: ${formStyle.color};">${formatDecimal(player.form)}</span>
                         </div>
-                        <!-- Line 3: Risk context (if any) -->
-                        ${risks.length > 0 ? `<div style="font-size: 0.6rem; color: ${borderColor}; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(risks[0]?.message || 'Issue')}</div>` : `<div style="height: 0.8rem;"></div>`}
+                        <!-- Line 3: FPL News (if any) -->
+                        ${newsMessage ? `<div style="font-size: 0.6rem; color: ${borderColor}; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(newsMessage)}</div>` : `<div style="height: 0.8rem;"></div>`}
                     </div>
                 </td>
                 <td style="text-align: center; padding: 0.5rem;">
