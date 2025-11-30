@@ -3,7 +3,7 @@
 // Handles league standings rendering and team comparison
 // ============================================================================
 
-import { loadLeagueStandings, loadMyTeam, getPlayerById, getActiveGW, isGameweekLive, getGameweekStatus, GW_STATUS } from '../data.js';
+import { loadLeagueStandings, loadMyTeam, getPlayerById, getActiveGW, isGameweekLive, getGameweekStatus, getGameweekEvent, GW_STATUS } from '../data.js';
 import { escapeHtml, formatDecimal, getPtsHeatmap, getFormHeatmap, getHeatmapStyle } from '../utils.js';
 import { renderTeamComparison } from './teamComparison.js';
 import { shouldUseMobileLayout } from '../renderMyTeamMobile.js';
@@ -420,9 +420,10 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
         captainNames = await Promise.all(captainPromises);
     }
 
-    // Calculate average GW points from event_total (most reliable source)
-    const avgGWPoints = results.slice(0, 50).reduce((sum, r) => sum + (r.event_total || 0), 0) / results.slice(0, 50).length;
-    console.log(`League standings - Average GW points: ${avgGWPoints.toFixed(1)}`);
+    // Get GW average from gameweek event data (same source as scorecard)
+    const gwEvent = getGameweekEvent(activeGW);
+    const avgGWPoints = gwEvent?.average_entry_score || 0;
+    console.log(`League standings - GW ${activeGW} average: ${avgGWPoints}`);
 
     // Helper function to get chip abbreviation
     function getChipAbbreviation(activeChip) {
