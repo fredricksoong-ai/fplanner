@@ -184,11 +184,11 @@ function renderTeamSection(players, gwNumber, isLive, next5GWs, activeGW, sectio
                         ${opponent.name} (${opponent.isHome ? 'H' : 'A'})
                     </span>
                 </td>
-                <td style="text-align: center; padding: 0.5rem; font-size: 0.6rem; font-weight: ${statusColors.statusWeight}; color: ${statusColors.statusColor}; background: ${statusColors.statusBgColor}; padding: 0.08rem 0.25rem; border-radius: 0.25rem; white-space: nowrap;">
-                    ${matchStatus}
+                <td style="text-align: center; padding: 0.5rem;">
+                    <span style="display: inline-block; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem; background: ${statusColors.statusBgColor}; color: ${statusColors.statusColor}; white-space: nowrap;">${matchStatus}</span>
                 </td>
-                <td style="text-align: center; padding: 0.5rem; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 700; border-radius: 0.25rem;">
-                    ${displayPoints}
+                <td style="text-align: center; padding: 0.5rem;">
+                    <span style="display: inline-block; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem; background: ${ptsStyle.background}; color: ${ptsStyle.color};">${displayPoints}</span>
                 </td>
                 <td style="text-align: center; padding: 0.5rem;">
                     <span style="display: inline-block; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem; background: ${transferDelta > 0 ? 'rgba(34, 197, 94, 0.2)' : transferDelta < 0 ? 'rgba(239, 68, 68, 0.2)' : 'transparent'}; color: ${transferColor};">

@@ -125,7 +125,7 @@ export function renderCompactPlayerRow(pick, player, gwNumber) {
                 </div>
                 <!-- Line 2: Team • Price • Own% • Form -->
                 <div style="font-size: 0.6rem; color: var(--text-secondary); white-space: nowrap;">
-                    ${getTeamShortName(player.team)} • ${formatCurrency(player.now_cost)} • ${(parseFloat(player.selected_by_percent) || 0).toFixed(1)}% • <span style="background: ${formStyle.background}; color: ${formStyle.color}; padding: 0.1rem 0.25rem; border-radius: 0.25rem; font-weight: 600;">${formatDecimal(player.form)}</span>
+                    ${getTeamShortName(player.team)} • ${formatCurrency(player.now_cost)} • ${(parseFloat(player.selected_by_percent) || 0).toFixed(1)}% • <span style="display: inline-block; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem; background: ${formStyle.background}; color: ${formStyle.color};">${formatDecimal(player.form)}</span>
                 </div>
                 <!-- Line 3: Risk context (if any) -->
                 ${riskContextMessage ? `<div style="font-size: 0.6rem; color: ${riskContextColor}; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(riskContextMessage)}</div>` : '<div style="height: 0.8rem;"></div>'}
@@ -133,8 +133,12 @@ export function renderCompactPlayerRow(pick, player, gwNumber) {
             <div style="text-align: center;">
                 ${renderOpponentBadge(gwOpp, 'small')}
             </div>
-            <div style="text-align: center; font-size: 0.6rem; font-weight: ${statusColors.statusWeight}; color: ${statusColors.statusColor}; background: ${statusColors.statusBgColor}; padding: 0.08rem 0.25rem; border-radius: 0.25rem; white-space: nowrap;">${matchStatus}</div>
-            <div style="text-align: center; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 700; padding: 0.08rem 0.25rem; border-radius: 0.25rem; font-size: 0.6rem;">${displayPoints}</div>
+            <div style="text-align: center; padding: 0.5rem;">
+                <span style="display: inline-block; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem; background: ${statusColors.statusBgColor}; color: ${statusColors.statusColor}; white-space: nowrap;">${matchStatus}</span>
+            </div>
+            <div style="text-align: center; padding: 0.5rem;">
+                <span style="display: inline-block; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem; background: ${ptsStyle.background}; color: ${ptsStyle.color};">${displayPoints}</span>
+            </div>
         </div>
     `;
 }
