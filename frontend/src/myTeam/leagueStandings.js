@@ -620,15 +620,30 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
                 }
             }
 
-            // GW points heatmap
+            // GW points color coding (matching scorecard logic)
             let gwBgColor = 'transparent';
             let gwTextColor = 'var(--text-primary)';
-            if (gwPoints > avgGWPoints + 10) {
-                gwBgColor = 'rgba(34, 197, 94, 0.2)';
-                gwTextColor = '#22c55e';
-            } else if (gwPoints < avgGWPoints - 10) {
-                gwBgColor = 'rgba(239, 68, 68, 0.2)';
-                gwTextColor = '#ef4444';
+
+            if (avgGWPoints > 0) {
+                const diff = gwPoints - avgGWPoints;
+
+                if (diff >= 15) {
+                    // Exceptional - Purple
+                    gwBgColor = 'rgba(147, 51, 234, 0.2)';
+                    gwTextColor = '#9333ea';
+                } else if (diff >= 5) {
+                    // Above average - Green
+                    gwBgColor = 'rgba(34, 197, 94, 0.2)';
+                    gwTextColor = '#22c55e';
+                } else if (diff >= -4) {
+                    // On average - Yellow
+                    gwBgColor = 'rgba(234, 179, 8, 0.2)';
+                    gwTextColor = '#eab308';
+                } else {
+                    // Below average - Red
+                    gwBgColor = 'rgba(239, 68, 68, 0.2)';
+                    gwTextColor = '#ef4444';
+                }
             }
 
             // Build Line 2: Overall Rank • Chips Used (no "• " if no chips)
@@ -767,14 +782,30 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
                                     gapColor = '#22c55e';
                                 }
                             }
+                            // GW points color coding (matching scorecard logic)
                             let gwBgColor = 'transparent';
                             let gwTextColor = 'inherit';
-                            if (gwPoints > avgGWPoints + 10) {
-                                gwBgColor = 'rgba(34, 197, 94, 0.15)';
-                                gwTextColor = '#22c55e';
-                            } else if (gwPoints < avgGWPoints - 10) {
-                                gwBgColor = 'rgba(239, 68, 68, 0.15)';
-                                gwTextColor = '#ef4444';
+
+                            if (avgGWPoints > 0) {
+                                const diff = gwPoints - avgGWPoints;
+
+                                if (diff >= 15) {
+                                    // Exceptional - Purple
+                                    gwBgColor = 'rgba(147, 51, 234, 0.15)';
+                                    gwTextColor = '#9333ea';
+                                } else if (diff >= 5) {
+                                    // Above average - Green
+                                    gwBgColor = 'rgba(34, 197, 94, 0.15)';
+                                    gwTextColor = '#22c55e';
+                                } else if (diff >= -4) {
+                                    // On average - Yellow
+                                    gwBgColor = 'rgba(234, 179, 8, 0.15)';
+                                    gwTextColor = '#eab308';
+                                } else {
+                                    // Below average - Red
+                                    gwBgColor = 'rgba(239, 68, 68, 0.15)';
+                                    gwTextColor = '#ef4444';
+                                }
                             }
 
                             return `
