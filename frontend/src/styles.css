@@ -486,7 +486,7 @@ body {
   }
 
   .mobile-table-league {
-    grid-template-columns: 0.7fr 2fr 0.7fr 0.8fr 0.8fr;
+    grid-template-columns: 120px 60px 60px 60px;
   }
 
   .mobile-table-dashboard-team {

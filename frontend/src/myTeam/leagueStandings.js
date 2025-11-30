@@ -409,10 +409,6 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
     const leaderPoints = results[0]?.total || 0;
     const userPoints = userEntry?.total || 0;
     
-    // Calculate average GW points - use live points if available
-    let avgGWPoints = 0;
-    let totalGWPoints = 0;
-
     // Check if mobile layout
     const useMobile = shouldUseMobileLayout();
 
@@ -424,59 +420,9 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
         captainNames = await Promise.all(captainPromises);
     }
 
-    if (useMobile) {
-        // Calculate live points for entries with cached team data
-        const livePointsMap = new Map();
-        if (isLive) {
-            results.slice(0, 50).forEach((entry, index) => {
-                const cachedTeamData = myTeamState.rivalTeamCache?.get(entry.entry);
-                if (cachedTeamData && cachedTeamData.isLive) {
-                    const livePoints = calculateLiveTeamPoints(cachedTeamData);
-                    if (livePoints !== null) {
-                        livePointsMap.set(entry.entry, livePoints);
-                        totalGWPoints += livePoints;
-                    }
-                }
-            });
-        }
-        
-        // Calculate average (use live points where available, otherwise event_total)
-        results.slice(0, 50).forEach(entry => {
-            const livePoints = livePointsMap.get(entry.entry);
-            if (livePoints === undefined) {
-                totalGWPoints += (entry.event_total || 0);
-            }
-        });
-        avgGWPoints = totalGWPoints / results.slice(0, 50).length;
-    } else {
-        // Desktop view - calculate average with live points if available
-        if (isLive) {
-            // Calculate live points for entries with cached team data
-            const livePointsMap = new Map();
-            results.slice(0, 50).forEach(entry => {
-                const cachedTeamData = myTeamState.rivalTeamCache?.get(entry.entry);
-                if (cachedTeamData && cachedTeamData.isLive) {
-                    const livePoints = calculateLiveTeamPoints(cachedTeamData);
-                    if (livePoints !== null) {
-                        livePointsMap.set(entry.entry, livePoints);
-                        totalGWPoints += livePoints;
-                    }
-                }
-            });
-            
-            // Calculate average (use live points where available, otherwise event_total)
-            results.slice(0, 50).forEach(entry => {
-                const livePoints = livePointsMap.get(entry.entry);
-                if (livePoints === undefined) {
-                    totalGWPoints += (entry.event_total || 0);
-                }
-            });
-            avgGWPoints = totalGWPoints / results.slice(0, 50).length;
-        } else {
-            // Not live - use event_total
-            avgGWPoints = results.reduce((sum, r) => sum + (r.event_total || 0), 0) / results.length;
-        }
-    }
+    // Calculate average GW points from event_total (most reliable source)
+    const avgGWPoints = results.slice(0, 50).reduce((sum, r) => sum + (r.event_total || 0), 0) / results.slice(0, 50).length;
+    console.log(`League standings - Average GW points: ${avgGWPoints.toFixed(1)}`);
 
     // Helper function to get chip abbreviation
     function getChipAbbreviation(activeChip) {
@@ -541,8 +487,9 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
 
     if (useMobile) {
         // Compact grid-based layout for mobile (matching team table)
+        const gridColumns = isLive ? '120px 60px 60px 60px 60px' : '120px 60px 60px 60px';
         const headerRow = `
-            <div class="mobile-table-header mobile-table-header-sticky mobile-table-league" style="top: calc(3.5rem + 8rem + env(safe-area-inset-top));">
+            <div class="mobile-table-header mobile-table-header-sticky mobile-table-league" style="top: calc(3.5rem + 8rem + env(safe-area-inset-top)); grid-template-columns: ${gridColumns};">
                 <div>Team</div>
                 ${isLive ? '<div style="text-align: center;">Played</div>' : ''}
                 <div style="text-align: center;">GW Pts</div>
@@ -644,6 +591,11 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
                     gwBgColor = 'rgba(239, 68, 68, 0.2)';
                     gwTextColor = '#ef4444';
                 }
+
+                // Debug logging for first entry
+                if (index === 0) {
+                    console.log(`GW Pts color - Entry: ${entry.entry_name}, Points: ${gwPoints}, Avg: ${avgGWPoints.toFixed(1)}, Diff: ${diff.toFixed(1)}, Color: ${gwTextColor}`);
+                }
             }
 
             // Build Line 2: Overall Rank • Chips Used (no "• " if no chips)
@@ -662,7 +614,7 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
                 <div class="mobile-table-row mobile-table-league ${!isUser ? 'mobile-rival-team-row' : ''}"
                      data-rival-id="${entry.entry}"
                      data-league-id="${leagueData.league.id}"
-                     style="background: ${bgColor}; ${isUser ? 'border-left: 3px solid var(--primary-color);' : ''} ${!isUser ? 'cursor: pointer;' : ''}">
+                     style="background: ${bgColor}; ${isUser ? 'border-left: 3px solid var(--primary-color);' : ''} ${!isUser ? 'cursor: pointer;' : ''} grid-template-columns: ${gridColumns};">
                     <div style="display: flex; flex-direction: column; gap: 0.1rem; overflow: hidden;">
                         <!-- Line 1: Rank + Team Name • Manager Name -->
                         <div style="display: flex; align-items: center; gap: 0.3rem; font-size: 0.7rem; font-weight: 600; color: var(--text-primary);">
