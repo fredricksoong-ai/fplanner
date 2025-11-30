@@ -14,7 +14,6 @@ import {
     getPositionShort
 } from '../../utils.js';
 import { getGWOpponent, getMatchStatus } from '../../fixtures.js';
-import { analyzePlayerRisks, renderRiskTooltip } from '../../risk.js';
 import {
     renderOpponentBadge,
     calculateStatusColor,
@@ -46,8 +45,6 @@ export function renderCompactPlayerRow(pick, player, gwNumber) {
     const badgeMarkup = badges.length > 0 ? ` <span style="font-size: 0.65rem;">${badges.join(' ')}</span>` : '';
 
     const gwOpp = getGWOpponent(player.team, gwNumber);
-    const risks = analyzePlayerRisks(player);
-    const riskTooltip = renderRiskTooltip(risks);
 
     // Get match status display with color coding
     const matchStatus = getMatchStatus(player.team, gwNumber, player);
@@ -77,31 +74,32 @@ export function renderCompactPlayerRow(pick, player, gwNumber) {
     // Add thick border after row 11 (last starter)
     const borderStyle = pick.position === 11 ? '3px solid var(--border-color)' : '1px solid var(--border-color)';
 
-    // Colored left border for players with news/injury
+    // Display FPL news with colored left border based on severity
     let leftBorderStyle = 'none';
     let riskContextMessage = '';
     let riskContextColor = '';
 
     if (player.news && player.news.trim() !== '') {
+        // Use FPL news directly (e.g., "Suspended until 06 Dec", "Hamstring injury")
+        riskContextMessage = player.news;
+
+        // Color based on chance of playing severity
         const chanceOfPlaying = player.chance_of_playing_next_round;
         if (chanceOfPlaying !== null && chanceOfPlaying !== undefined) {
             if (chanceOfPlaying <= 25) {
-                leftBorderStyle = '3px solid #ef4444'; // Red
+                leftBorderStyle = '3px solid #ef4444'; // Red - very unlikely to play
                 riskContextColor = '#ef4444';
-                riskContextMessage = `${chanceOfPlaying}% chance: ${player.news}`;
             } else if (chanceOfPlaying <= 50) {
-                leftBorderStyle = '3px solid #f97316'; // Orange
+                leftBorderStyle = '3px solid #f97316'; // Orange - doubtful
                 riskContextColor = '#f97316';
-                riskContextMessage = `${chanceOfPlaying}% chance: ${player.news}`;
             } else {
-                leftBorderStyle = '3px solid #fbbf24'; // Yellow
+                leftBorderStyle = '3px solid #fbbf24'; // Yellow - possible
                 riskContextColor = '#fbbf24';
-                riskContextMessage = `${chanceOfPlaying}% chance: ${player.news}`;
             }
         } else {
-            leftBorderStyle = '3px solid #fbbf24'; // Yellow default for news
+            // No percentage data - default to yellow
+            leftBorderStyle = '3px solid #fbbf24';
             riskContextColor = '#fbbf24';
-            riskContextMessage = player.news;
         }
     }
 
