@@ -508,6 +508,62 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
     }
 
     /**
+     * Calculate column-relative heatmap style
+     * If values are too close (range < 20% of max), highlight highest/lowest only
+     * Otherwise use proper heatmap based on value distribution
+     * @param {number|null} value - Current value
+     * @param {Array} allValues - All values in the column (excluding null)
+     * @param {boolean} inverted - If true, lower is better (e.g., FDR)
+     * @returns {Object} Style object with color only (no background)
+     */
+    function getColumnRelativeHeatmap(value, allValues, inverted = false) {
+        if (value === null || allValues.length === 0) {
+            return { color: 'var(--text-secondary)' };
+        }
+
+        const validValues = allValues.filter(v => v !== null);
+        if (validValues.length === 0) {
+            return { color: 'var(--text-secondary)' };
+        }
+
+        const min = Math.min(...validValues);
+        const max = Math.max(...validValues);
+        const range = max - min;
+
+        // If range is too small (< 20% of max), just highlight highest/lowest
+        const threshold = max * 0.2;
+        if (range < threshold && validValues.length > 1) {
+            if (inverted) {
+                // Lower is better - highlight lowest in green, highest in red
+                if (value === min) return { color: '#22c55e' }; // Green for lowest
+                if (value === max) return { color: '#ef4444' }; // Red for highest
+            } else {
+                // Higher is better - highlight highest in green, lowest in red
+                if (value === max) return { color: '#22c55e' }; // Green for highest
+                if (value === min) return { color: '#ef4444' }; // Red for lowest
+            }
+            return { color: 'var(--text-primary)' };
+        }
+
+        // Otherwise use percentile-based heatmap
+        const percentile = ((value - min) / range) * 100;
+        
+        if (inverted) {
+            // Lower is better (FDR)
+            if (percentile <= 25) return { color: '#22c55e' }; // Green for lowest 25%
+            if (percentile <= 50) return { color: '#eab308' }; // Yellow for 25-50%
+            if (percentile <= 75) return { color: '#f97316' }; // Orange for 50-75%
+            return { color: '#ef4444' }; // Red for highest 25%
+        } else {
+            // Higher is better (xPts, xGI, Form, PPM, Own%)
+            if (percentile >= 75) return { color: '#22c55e' }; // Green for top 25%
+            if (percentile >= 50) return { color: '#eab308' }; // Yellow for 50-75%
+            if (percentile >= 25) return { color: '#f97316' }; // Orange for 25-50%
+            return { color: '#ef4444' }; // Red for bottom 25%
+        }
+    }
+
+    /**
      * Calculate team-level metrics from starting 11 picks
      * @param {Object} teamData - Team data with picks
      * @param {number} gameweek - Current gameweek
@@ -610,10 +666,23 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
                         <tbody>
         `;
 
+        // First pass: collect all team metrics to calculate column-relative heatmaps
+        const allMetrics = results.slice(0, 50).map((entry, index) => {
+            const cachedTeamData = myTeamState.rivalTeamCache?.get(entry.entry);
+            return calculateTeamMetrics(cachedTeamData, activeGW);
+        });
+
+        // Extract column values for heatmapping
+        const allXPts = allMetrics.map(m => m.xPts).filter(v => v !== null);
+        const allXGI = allMetrics.map(m => m.xGI).filter(v => v !== null);
+        const allForm = allMetrics.map(m => m.avgForm).filter(v => v !== null);
+        const allPPM = allMetrics.map(m => m.avgPPM).filter(v => v !== null);
+        const allOwnership = allMetrics.map(m => m.avgOwnership).filter(v => v !== null);
+        const allFDR = allMetrics.map(m => m.avgFDR).filter(v => v !== null);
+
         const rowsHtml = results.slice(0, 50).map((entry, index) => {
             const captainName = captainNames[index];
             const isUser = entry.entry === userTeamId;
-            const bgColor = isUser ? 'rgba(56, 189, 248, 0.1)' : 'var(--bg-primary)';
 
             // Get GW points - use live points if available, otherwise event_total
             let gwPoints = entry.event_total || 0;
@@ -687,8 +756,8 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
                 const diff = gwPoints - avgGWPoints;
 
                 if (diff >= 15) {
-                    // Exceptional - Purple
-                    gwBgColor = 'rgba(147, 51, 234, 0.2)';
+                    // Exceptional - Purple (improved readability)
+                    gwBgColor = 'rgba(147, 51, 234, 0.15)'; // Lighter background for better readability
                     gwTextColor = '#9333ea';
                 } else if (diff >= 5) {
                     // Above average - Green
@@ -703,47 +772,18 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
                     gwBgColor = 'rgba(239, 68, 68, 0.2)';
                     gwTextColor = '#ef4444';
                 }
-
-                // Debug logging for first entry
-                if (index === 0) {
-                    console.log(`GW Pts color - Entry: ${entry.entry_name}, Points: ${gwPoints}, Avg: ${avgGWPoints.toFixed(1)}, Diff: ${diff.toFixed(1)}, Color: ${gwTextColor}`);
-                }
             }
 
-            // Calculate team metrics
-            const teamMetrics = calculateTeamMetrics(cachedTeamData, activeGW);
+            // Get team metrics (already calculated in first pass)
+            const teamMetrics = allMetrics[index];
 
-            // Heatmap styles for new columns
-            const xPtsHeatmap = teamMetrics.xPts !== null ? getPtsHeatmap(teamMetrics.xPts, 'pts') : null;
-            const xPtsStyle = xPtsHeatmap ? getHeatmapStyle(xPtsHeatmap) : { background: 'transparent', color: 'var(--text-secondary)' };
-            
-            const xGIHeatmap = teamMetrics.xGI !== null ? getPtsHeatmap(teamMetrics.xGI, 'form') : null;
-            const xGIStyle = xGIHeatmap ? getHeatmapStyle(xGIHeatmap) : { background: 'transparent', color: 'var(--text-secondary)' };
-            
-            const formHeatmap = teamMetrics.avgForm !== null ? getFormHeatmap(teamMetrics.avgForm) : null;
-            const formStyle = formHeatmap ? getHeatmapStyle(formHeatmap) : { background: 'transparent', color: 'var(--text-secondary)' };
-            
-            const ppmHeatmap = teamMetrics.avgPPM !== null ? getPtsHeatmap(teamMetrics.avgPPM, 'form') : null;
-            const ppmStyle = ppmHeatmap ? getHeatmapStyle(ppmHeatmap) : { background: 'transparent', color: 'var(--text-secondary)' };
-            
-            const ownHeatmap = teamMetrics.avgOwnership !== null ? getPtsHeatmap(teamMetrics.avgOwnership, 'form') : null;
-            const ownStyle = ownHeatmap ? getHeatmapStyle(ownHeatmap) : { background: 'transparent', color: 'var(--text-secondary)' };
-            
-            // FDR color (inverted - lower is better)
-            let fdrColor = 'var(--text-secondary)';
-            let fdrBg = 'transparent';
-            if (teamMetrics.avgFDR !== null) {
-                if (teamMetrics.avgFDR <= 2.5) {
-                    fdrColor = '#22c55e';
-                    fdrBg = 'rgba(34, 197, 94, 0.2)';
-                } else if (teamMetrics.avgFDR <= 3.5) {
-                    fdrColor = '#eab308';
-                    fdrBg = 'rgba(234, 179, 8, 0.2)';
-                } else {
-                    fdrColor = '#ef4444';
-                    fdrBg = 'rgba(239, 68, 68, 0.2)';
-                }
-            }
+            // Column-relative heatmap styles (no background, just color)
+            const xPtsStyle = getColumnRelativeHeatmap(teamMetrics.xPts, allXPts, false);
+            const xGIStyle = getColumnRelativeHeatmap(teamMetrics.xGI, allXGI, false);
+            const formStyle = getColumnRelativeHeatmap(teamMetrics.avgForm, allForm, false);
+            const ppmStyle = getColumnRelativeHeatmap(teamMetrics.avgPPM, allPPM, false);
+            const ownStyle = getColumnRelativeHeatmap(teamMetrics.avgOwnership, allOwnership, false);
+            const fdrStyle = getColumnRelativeHeatmap(teamMetrics.avgFDR, allFDR, true); // Inverted (lower is better)
 
             // Build chip badge if active chip exists
             let chipBadge = '';
@@ -763,12 +803,12 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
                 line3 += ` • ${overallRank}`;
             }
 
-            // Row background for sticky column
-            const rowBg = isUser ? 'rgba(56, 189, 248, 0.1)' : (index % 2 === 0 ? 'var(--bg-primary)' : 'var(--bg-secondary)');
-            const stickyColumnBg = isUser ? 'rgba(56, 189, 248, 0.16)' : rowBg;
+            // Row background for sticky column (no tint for user, use 👤 emoji instead)
+            const rowBg = index % 2 === 0 ? 'var(--bg-primary)' : 'var(--bg-secondary)';
+            const stickyColumnBg = rowBg;
 
             return `
-                <tr style="background: ${rowBg}; ${isUser ? 'border-left: 3px solid var(--primary-color);' : ''} ${!isUser ? 'cursor: pointer;' : ''}" 
+                <tr style="background: ${rowBg}; ${!isUser ? 'cursor: pointer;' : ''}" 
                     class="${!isUser ? 'mobile-rival-team-row' : ''}"
                     data-rival-id="${entry.entry}"
                     data-league-id="${leagueData.league.id}">
@@ -783,10 +823,11 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
                         min-height: 3rem;
                     ">
                         <div style="display: flex; flex-direction: column; gap: 0.1rem;">
-                            <!-- Line 1: [Rank] [Team Name] [Chip Badge] -->
+                            <!-- Line 1: [Rank] [Team Name] [👤 Badge] [Chip Badge] -->
                             <div style="display: flex; align-items: center; gap: 0.3rem; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden;">
                                 <span style="font-size: 0.6rem; color: var(--text-secondary);">${entry.rank}</span>
-                                <span style="font-size: 0.7rem; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(entry.entry_name)}${isUser ? ' (You)' : ''}</span>
+                                <span style="font-size: 0.7rem; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(entry.entry_name)}</span>
+                                ${isUser ? '<span style="font-size: 0.7rem;">👤</span>' : ''}
                                 ${chipBadge}
                             </div>
                             <!-- Line 2: [Manager Name] • [Captain] -->
@@ -807,22 +848,22 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
                     <td style="text-align: center; padding: 0.5rem; font-weight: 600; font-size: 0.7rem;">
                         ${totalPoints.toLocaleString()}${!isUser && gapText !== '—' ? `<sup style="font-size: 0.5rem; color: ${gapColor}; margin-left: 0.1rem; font-weight: 600;">${gapText}</sup>` : ''}
                     </td>
-                    <td style="text-align: center; padding: 0.5rem; font-weight: 600; font-size: 0.65rem; background: ${xPtsStyle.background}; color: ${xPtsStyle.color};">
+                    <td style="text-align: center; padding: 0.5rem; font-weight: 600; font-size: 0.65rem; color: ${xPtsStyle.color};">
                         ${teamMetrics.xPts !== null ? Math.round(teamMetrics.xPts) : '—'}
                     </td>
-                    <td style="text-align: center; padding: 0.5rem; font-weight: 600; font-size: 0.65rem; background: ${xGIStyle.background}; color: ${xGIStyle.color};">
+                    <td style="text-align: center; padding: 0.5rem; font-weight: 600; font-size: 0.65rem; color: ${xGIStyle.color};">
                         ${teamMetrics.xGI !== null ? formatDecimal(teamMetrics.xGI) : '—'}
                     </td>
-                    <td style="text-align: center; padding: 0.5rem; font-weight: 600; font-size: 0.65rem; background: ${formStyle.background}; color: ${formStyle.color};">
+                    <td style="text-align: center; padding: 0.5rem; font-weight: 600; font-size: 0.65rem; color: ${formStyle.color};">
                         ${teamMetrics.avgForm !== null ? formatDecimal(teamMetrics.avgForm) : '—'}
                     </td>
-                    <td style="text-align: center; padding: 0.5rem; font-weight: 600; font-size: 0.65rem; background: ${ppmStyle.background}; color: ${ppmStyle.color};">
+                    <td style="text-align: center; padding: 0.5rem; font-weight: 600; font-size: 0.65rem; color: ${ppmStyle.color};">
                         ${teamMetrics.avgPPM !== null ? formatDecimal(teamMetrics.avgPPM) : '—'}
                     </td>
-                    <td style="text-align: center; padding: 0.5rem; font-weight: 600; font-size: 0.65rem; background: ${ownStyle.background}; color: ${ownStyle.color};">
+                    <td style="text-align: center; padding: 0.5rem; font-weight: 600; font-size: 0.65rem; color: ${ownStyle.color};">
                         ${teamMetrics.avgOwnership !== null ? formatDecimal(teamMetrics.avgOwnership) + '%' : '—'}
                     </td>
-                    <td style="text-align: center; padding: 0.5rem; font-weight: 600; font-size: 0.65rem; background: ${fdrBg}; color: ${fdrColor};">
+                    <td style="text-align: center; padding: 0.5rem; font-weight: 600; font-size: 0.65rem; color: ${fdrStyle.color};">
                         ${teamMetrics.avgFDR !== null ? formatDecimal(teamMetrics.avgFDR) : '—'}
                     </td>
                 </tr>
