@@ -4,10 +4,10 @@
 // ============================================================================
 
 import { loadLeagueStandings, loadMyTeam, getPlayerById, getActiveGW, isGameweekLive, getGameweekStatus, getGameweekEvent, GW_STATUS } from '../data.js';
-import { escapeHtml, formatDecimal, getPtsHeatmap, getFormHeatmap, getHeatmapStyle } from '../utils.js';
+import { escapeHtml, formatDecimal, getPtsHeatmap, getFormHeatmap, getHeatmapStyle, calculatePPM } from '../utils.js';
 import { renderTeamComparison } from './teamComparison.js';
 import { shouldUseMobileLayout } from '../renderMyTeamMobile.js';
-import { getGWOpponent, getMatchStatus } from '../fixtures.js';
+import { getGWOpponent, getMatchStatus, calculateFixtureDifficulty } from '../fixtures.js';
 import { renderOpponentBadge, calculateStatusColor, calculatePlayerBgColor } from './compact/compactStyleHelpers.js';
 
 /**
@@ -429,7 +429,7 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
     function getChipAbbreviation(activeChip) {
         if (!activeChip) return '';
         const chipMap = {
-            'freehit': 'Free Hit',
+            'freehit': 'FH',
             'wildcard': 'WC',
             'bboost': 'BB',
             'benchboost': 'BB',
@@ -482,32 +482,132 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
         return chipsUsed.join(' ');
     }
 
-    // Helper function to count players played (all picks, not just starting 11 - for Bench Boost)
+    // Helper function to count players played
+    // If Bench Boost is active: count all 15 players
+    // Otherwise: only count starting 11
     function countPlayersPlayed(teamData) {
         if (!teamData || !teamData.picks || !teamData.picks.picks) return null;
 
+        const activeChip = teamData.picks?.active_chip;
+        const isBenchBoost = activeChip === 'bboost' || activeChip === 'benchboost';
+
         let played = 0;
         teamData.picks.picks.forEach(pick => {
+            // Only count starting 11 unless Bench Boost is active
+            if (!isBenchBoost && pick.position > 11) {
+                return;
+            }
+
             const minutes = pick.live_stats?.minutes ?? 0;
             if (minutes > 0) {
                 played++;
             }
         });
 
-        return played; // Just return count, not object
+        return played;
+    }
+
+    /**
+     * Calculate team-level metrics from starting 11 picks
+     * @param {Object} teamData - Team data with picks
+     * @param {number} gameweek - Current gameweek
+     * @returns {Object} Team metrics
+     */
+    function calculateTeamMetrics(teamData, gameweek) {
+        if (!teamData || !teamData.picks || !teamData.picks.picks) {
+            return {
+                xPts: null,
+                xGI: null,
+                avgForm: null,
+                avgPPM: null,
+                avgOwnership: null,
+                avgFDR: null
+            };
+        }
+
+        // Get starting 11 only
+        const starting11 = teamData.picks.picks
+            .filter(p => p.position <= 11)
+            .map(pick => getPlayerById(pick.element))
+            .filter(Boolean);
+
+        if (starting11.length === 0) {
+            return {
+                xPts: null,
+                xGI: null,
+                avgForm: null,
+                avgPPM: null,
+                avgOwnership: null,
+                avgFDR: null
+            };
+        }
+
+        // Calculate metrics
+        let totalXPts = 0;
+        let totalXGI = 0;
+        let totalForm = 0;
+        let totalPPM = 0;
+        let totalOwnership = 0;
+        let totalFDR = 0;
+
+        starting11.forEach(player => {
+            // Expected points (ep_next)
+            totalXPts += parseFloat(player.ep_next) || 0;
+            
+            // Expected goal involvements per 90
+            totalXGI += parseFloat(player.expected_goal_involvements_per_90) || 0;
+            
+            // Form
+            totalForm += parseFloat(player.form) || 0;
+            
+            // PPM
+            totalPPM += calculatePPM(player);
+            
+            // Ownership
+            totalOwnership += parseFloat(player.selected_by_percent) || 0;
+            
+            // FDR (next 5 GWs)
+            totalFDR += calculateFixtureDifficulty(player.team, 5);
+        });
+
+        const count = starting11.length;
+
+        return {
+            xPts: count > 0 ? totalXPts : null,
+            xGI: count > 0 ? totalXGI / count : null,
+            avgForm: count > 0 ? totalForm / count : null,
+            avgPPM: count > 0 ? totalPPM / count : null,
+            avgOwnership: count > 0 ? totalOwnership / count : null,
+            avgFDR: count > 0 ? totalFDR / count : null
+        };
     }
 
     if (useMobile) {
-        // Compact grid-based layout for mobile (matching team table)
-        const gridColumns = isLive ? '120px 50px 60px 60px 60px' : '120px 60px 60px 60px';
+        // Table-based layout with sticky first column and horizontal scroll (matching mobile Team page)
         const headerRow = `
-            <div class="mobile-table-header mobile-table-header-sticky mobile-table-league" style="top: calc(3.5rem + 8rem + env(safe-area-inset-top)); grid-template-columns: ${gridColumns};">
-                <div>Team</div>
-                ${isLive ? '<div style="text-align: center;">Played</div>' : ''}
-                <div style="text-align: center;">GW Pts</div>
-                <div style="text-align: center;">Total</div>
-                <div style="text-align: center;">Gap</div>
-            </div>
+            <div style="
+                background: var(--bg-secondary);
+                border-radius: 8px;
+                overflow: hidden;
+                margin-bottom: 0.5rem;
+            ">
+                <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                    <table style="width: 100%; font-size: 0.7rem; border-collapse: collapse;">
+                        <thead style="background: var(--bg-tertiary);">
+                            <tr>
+                                <th style="position: sticky; left: 0; background: var(--bg-tertiary); z-index: 10; text-align: left; padding: 0.5rem; min-width: 120px;">Team</th>
+                                ${isLive ? '<th style="text-align: center; padding: 0.5rem; min-width: 50px;">Played</th>' : ''}
+                                <th style="text-align: center; padding: 0.5rem; min-width: 60px;">GW Pts</th>
+                                <th style="text-align: center; padding: 0.5rem; min-width: 70px;">Total</th>
+                                <th style="text-align: center; padding: 0.5rem; min-width: 60px;">xPts</th>
+                                <th style="text-align: center; padding: 0.5rem; min-width: 60px;">xGI</th>
+                                <th style="text-align: center; padding: 0.5rem; min-width: 60px;">Form</th>
+                                <th style="text-align: center; padding: 0.5rem; min-width: 60px;">PPM</th>
+                                <th style="text-align: center; padding: 0.5rem; min-width: 60px;">Own%</th>
+                                <th style="text-align: center; padding: 0.5rem; min-width: 60px;">FDR</th>
+                            </tr>
+                        </thead>
+                        <tbody>
         `;
 
         const rowsHtml = results.slice(0, 50).map((entry, index) => {
@@ -610,10 +710,45 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
                 }
             }
 
-            // Build Line 1: [Rank] [Team Name] • [Chip]
-            let line1 = `${entry.rank} ${escapeHtml(entry.entry_name)}`;
+            // Calculate team metrics
+            const teamMetrics = calculateTeamMetrics(cachedTeamData, activeGW);
+
+            // Heatmap styles for new columns
+            const xPtsHeatmap = teamMetrics.xPts !== null ? getPtsHeatmap(teamMetrics.xPts, 'pts') : null;
+            const xPtsStyle = xPtsHeatmap ? getHeatmapStyle(xPtsHeatmap) : { background: 'transparent', color: 'var(--text-secondary)' };
+            
+            const xGIHeatmap = teamMetrics.xGI !== null ? getPtsHeatmap(teamMetrics.xGI, 'form') : null;
+            const xGIStyle = xGIHeatmap ? getHeatmapStyle(xGIHeatmap) : { background: 'transparent', color: 'var(--text-secondary)' };
+            
+            const formHeatmap = teamMetrics.avgForm !== null ? getFormHeatmap(teamMetrics.avgForm) : null;
+            const formStyle = formHeatmap ? getHeatmapStyle(formHeatmap) : { background: 'transparent', color: 'var(--text-secondary)' };
+            
+            const ppmHeatmap = teamMetrics.avgPPM !== null ? getPtsHeatmap(teamMetrics.avgPPM, 'form') : null;
+            const ppmStyle = ppmHeatmap ? getHeatmapStyle(ppmHeatmap) : { background: 'transparent', color: 'var(--text-secondary)' };
+            
+            const ownHeatmap = teamMetrics.avgOwnership !== null ? getPtsHeatmap(teamMetrics.avgOwnership, 'form') : null;
+            const ownStyle = ownHeatmap ? getHeatmapStyle(ownHeatmap) : { background: 'transparent', color: 'var(--text-secondary)' };
+            
+            // FDR color (inverted - lower is better)
+            let fdrColor = 'var(--text-secondary)';
+            let fdrBg = 'transparent';
+            if (teamMetrics.avgFDR !== null) {
+                if (teamMetrics.avgFDR <= 2.5) {
+                    fdrColor = '#22c55e';
+                    fdrBg = 'rgba(34, 197, 94, 0.2)';
+                } else if (teamMetrics.avgFDR <= 3.5) {
+                    fdrColor = '#eab308';
+                    fdrBg = 'rgba(234, 179, 8, 0.2)';
+                } else {
+                    fdrColor = '#ef4444';
+                    fdrBg = 'rgba(239, 68, 68, 0.2)';
+                }
+            }
+
+            // Build chip badge if active chip exists
+            let chipBadge = '';
             if (activeChipName) {
-                line1 += ` • ${activeChipName}`;
+                chipBadge = `<span style="display: inline-block; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem; background: #000000; color: #e5e7eb; margin-left: 0.3rem;">${activeChipName}</span>`;
             }
 
             // Build Line 2: [Manager Name] • [Captain]
@@ -628,35 +763,69 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
                 line3 += ` • ${overallRank}`;
             }
 
+            // Row background for sticky column
+            const rowBg = isUser ? 'rgba(56, 189, 248, 0.1)' : (index % 2 === 0 ? 'var(--bg-primary)' : 'var(--bg-secondary)');
+            const stickyColumnBg = isUser ? 'rgba(56, 189, 248, 0.16)' : rowBg;
+
             return `
-                <div class="mobile-table-row mobile-table-league ${!isUser ? 'mobile-rival-team-row' : ''}"
-                     data-rival-id="${entry.entry}"
-                     data-league-id="${leagueData.league.id}"
-                     style="background: ${bgColor}; ${isUser ? 'border-left: 3px solid var(--primary-color);' : ''} ${!isUser ? 'cursor: pointer;' : ''} grid-template-columns: ${gridColumns};">
-                    <div style="display: flex; flex-direction: column; gap: 0.1rem; overflow: hidden;">
-                        <!-- Line 1: [Rank] [Team Name] • [Chip] -->
-                        <div style="font-size: 0.7rem; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                            ${line1}${isUser ? ' (You)' : ''}
+                <tr style="background: ${rowBg}; ${isUser ? 'border-left: 3px solid var(--primary-color);' : ''} ${!isUser ? 'cursor: pointer;' : ''}" 
+                    class="${!isUser ? 'mobile-rival-team-row' : ''}"
+                    data-rival-id="${entry.entry}"
+                    data-league-id="${leagueData.league.id}">
+                    <!-- Sticky Team Column -->
+                    <td style="
+                        position: sticky;
+                        left: 0;
+                        background: ${stickyColumnBg};
+                        z-index: 5;
+                        padding: 0.5rem;
+                        border-right: 1px solid var(--border-color);
+                        min-height: 3rem;
+                    ">
+                        <div style="display: flex; flex-direction: column; gap: 0.1rem;">
+                            <!-- Line 1: [Rank] [Team Name] [Chip Badge] -->
+                            <div style="display: flex; align-items: center; gap: 0.3rem; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden;">
+                                <span style="font-size: 0.6rem; color: var(--text-secondary);">${entry.rank}</span>
+                                <span style="font-size: 0.7rem; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(entry.entry_name)}${isUser ? ' (You)' : ''}</span>
+                                ${chipBadge}
+                            </div>
+                            <!-- Line 2: [Manager Name] • [Captain] -->
+                            <div style="font-size: 0.6rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                ${line2}
+                            </div>
+                            <!-- Line 3: [Chips Played] • [Overall Rank] -->
+                            <div style="font-size: 0.6rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                ${line3}
+                                ${!isUser ? ' <i class="fas fa-eye" style="font-size: 0.55rem; opacity: 0.6;"></i>' : ''}
+                            </div>
                         </div>
-                        <!-- Line 2: [Manager Name] • [Captain] -->
-                        <div style="font-size: 0.6rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                            ${line2}
-                        </div>
-                        <!-- Line 3: [Chips Played] • [Overall Rank] -->
-                        <div style="font-size: 0.6rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                            ${line3}
-                            ${!isUser ? ' <i class="fas fa-eye" style="font-size: 0.55rem; opacity: 0.6;"></i>' : ''}
-                        </div>
-                    </div>
-                    ${isLive ? `<div style="text-align: center; font-size: 0.65rem; color: var(--text-secondary); font-weight: 600;">${playersPlayedText || '—'}</div>` : ''}
-                    <div style="text-align: center; padding: 0.5rem;">
+                    </td>
+                    ${isLive ? `<td style="text-align: center; padding: 0.5rem; font-size: 0.65rem; color: var(--text-secondary); font-weight: 600;">${playersPlayedText || '—'}</td>` : ''}
+                    <td style="text-align: center; padding: 0.5rem;">
                         <span style="display: inline-block; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem; background: ${gwBgColor}; color: ${gwTextColor};">${gwPoints}</span>
-                    </div>
-                    <div style="text-align: center; font-weight: 600; font-size: 0.7rem;">${totalPoints.toLocaleString()}</div>
-                    <div style="text-align: center; font-weight: 600; color: ${gapColor}; font-size: 0.7rem;">
-                        ${gapText}
-                    </div>
-                </div>
+                    </td>
+                    <td style="text-align: center; padding: 0.5rem; font-weight: 600; font-size: 0.7rem;">
+                        ${totalPoints.toLocaleString()}${!isUser && gapText !== '—' ? `<sup style="font-size: 0.5rem; color: ${gapColor}; margin-left: 0.1rem; font-weight: 600;">${gapText}</sup>` : ''}
+                    </td>
+                    <td style="text-align: center; padding: 0.5rem; font-weight: 600; font-size: 0.65rem; background: ${xPtsStyle.background}; color: ${xPtsStyle.color};">
+                        ${teamMetrics.xPts !== null ? Math.round(teamMetrics.xPts) : '—'}
+                    </td>
+                    <td style="text-align: center; padding: 0.5rem; font-weight: 600; font-size: 0.65rem; background: ${xGIStyle.background}; color: ${xGIStyle.color};">
+                        ${teamMetrics.xGI !== null ? formatDecimal(teamMetrics.xGI) : '—'}
+                    </td>
+                    <td style="text-align: center; padding: 0.5rem; font-weight: 600; font-size: 0.65rem; background: ${formStyle.background}; color: ${formStyle.color};">
+                        ${teamMetrics.avgForm !== null ? formatDecimal(teamMetrics.avgForm) : '—'}
+                    </td>
+                    <td style="text-align: center; padding: 0.5rem; font-weight: 600; font-size: 0.65rem; background: ${ppmStyle.background}; color: ${ppmStyle.color};">
+                        ${teamMetrics.avgPPM !== null ? formatDecimal(teamMetrics.avgPPM) : '—'}
+                    </td>
+                    <td style="text-align: center; padding: 0.5rem; font-weight: 600; font-size: 0.65rem; background: ${ownStyle.background}; color: ${ownStyle.color};">
+                        ${teamMetrics.avgOwnership !== null ? formatDecimal(teamMetrics.avgOwnership) + '%' : '—'}
+                    </td>
+                    <td style="text-align: center; padding: 0.5rem; font-weight: 600; font-size: 0.65rem; background: ${fdrBg}; color: ${fdrColor};">
+                        ${teamMetrics.avgFDR !== null ? formatDecimal(teamMetrics.avgFDR) : '—'}
+                    </td>
+                </tr>
             `;
         }).join('');
 
@@ -671,6 +840,10 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
             </div>
             ${headerRow}
             ${rowsHtml}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         `;
     }
 
