@@ -455,7 +455,7 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
         if (!teamData || !teamData.picks || !teamData.picks.chips) return '';
 
         const chipsUsed = teamData.picks.chips
-            .filter(chip => chip.played_by_entry && chip.played_by_entry.length > 0)
+            .filter(chip => chip.time !== null && chip.time !== undefined) // Chip has been played if time is set
             .map(chip => {
                 const chipMap = {
                     'freehit': 'FH',
@@ -472,23 +472,24 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
         return chipsUsed.join(' ');
     }
 
-    // Helper function to count players played
+    // Helper function to count players played (all picks, not just starting 11 - for Bench Boost)
     function countPlayersPlayed(teamData) {
         if (!teamData || !teamData.picks || !teamData.picks.picks) return null;
-        const starting11 = teamData.picks.picks.filter(p => p.position <= 11);
+
         let played = 0;
-        starting11.forEach(pick => {
+        teamData.picks.picks.forEach(pick => {
             const minutes = pick.live_stats?.minutes ?? 0;
             if (minutes > 0) {
                 played++;
             }
         });
-        return { played, total: 11 };
+
+        return played; // Just return count, not object
     }
 
     if (useMobile) {
         // Compact grid-based layout for mobile (matching team table)
-        const gridColumns = isLive ? '120px 60px 60px 60px 60px' : '120px 60px 60px 60px';
+        const gridColumns = isLive ? '140px 50px 60px 60px 60px' : '140px 60px 60px 60px';
         const headerRow = `
             <div class="mobile-table-header mobile-table-header-sticky mobile-table-league" style="top: calc(3.5rem + 8rem + env(safe-area-inset-top)); grid-template-columns: ${gridColumns};">
                 <div>Team</div>
@@ -564,7 +565,7 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
             if (isLive && cachedTeamData) {
                 const playedCount = countPlayersPlayed(cachedTeamData);
                 if (playedCount !== null) {
-                    playersPlayedText = `${playedCount.played} / ${playedCount.total}`;
+                    playersPlayedText = playedCount.toString();
                 }
             }
 
@@ -799,7 +800,7 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
                                         ${(() => {
                                             const cachedTeamData = myTeamState.rivalTeamCache?.get(entry.entry);
                                             const playedCount = cachedTeamData ? countPlayersPlayed(cachedTeamData) : null;
-                                            return playedCount ? `${playedCount.played} / ${playedCount.total}` : '—';
+                                            return playedCount !== null ? playedCount : '—';
                                         })()}
                                     </td>` : ''}
                                 </tr>
