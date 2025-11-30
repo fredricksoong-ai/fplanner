@@ -429,7 +429,7 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
     function getChipAbbreviation(activeChip) {
         if (!activeChip) return '';
         const chipMap = {
-            'freehit': 'Free Hit',
+            'freehit': 'FH',
             'wildcard': 'WC',
             'bboost': 'BB',
             'benchboost': 'BB',
@@ -437,6 +437,14 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
             '3xc': 'TC'
         };
         return chipMap[activeChip] || '';
+    }
+
+    // Helper function to render chip badges as pills
+    function renderChipBadges(chipsString) {
+        if (!chipsString) return '';
+        return chipsString.split(' ')
+            .map(chip => `<span style="display: inline-block; padding: 0.1rem 0.3rem; margin-right: 0.15rem; border-radius: 3px; background: #000; color: #fff; font-size: 0.55rem; font-weight: 700;">${chip}</span>`)
+            .join('');
     }
 
     // Helper function to format number compactly (50.2k, 2.1M)
@@ -613,13 +621,13 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
             // Build Line 2: Overall Rank • Chips Used (no "• " if no chips)
             let line2 = overallRank;
             if (chipsUsed) {
-                line2 += ` • ${chipsUsed}`;
+                line2 += ` • ${renderChipBadges(chipsUsed)}`;
             }
 
             // Build Line 3: Captain (C) • Active Chip (no "• " if no active chip)
             let line3 = `${escapeHtml(captainName)} (C)`;
             if (activeChipName) {
-                line3 += ` • ${activeChipName}`;
+                line3 += ` • ${renderChipBadges(activeChipName)}`;
             }
 
             return `
