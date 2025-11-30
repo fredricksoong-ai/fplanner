@@ -461,8 +461,8 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
 
         const chipsUsed = teamData.picks.chips
             .filter(chip => {
-                const isPlayed = chip.time !== null && chip.time !== undefined;
-                console.log(`Chip ${chip.name}: time=${chip.time}, event=${chip.event}, played=${isPlayed}`);
+                const isPlayed = chip.event !== null && chip.event !== undefined;
+                console.log(`Chip ${chip.name}: event=${chip.event}, played=${isPlayed}`);
                 return isPlayed;
             })
             .map(chip => {
