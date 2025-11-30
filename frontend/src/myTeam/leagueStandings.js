@@ -482,12 +482,47 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
     function getChipAbbreviation(activeChip) {
         if (!activeChip) return '';
         const chipMap = {
-            'freehit': 'FH',
+            'freehit': 'Free Hit',
             'wildcard': 'WC',
+            'bboost': 'BB',
             'benchboost': 'BB',
-            'triplecaptain': 'TC'
+            'triplecaptain': 'TC',
+            '3xc': 'TC'
         };
         return chipMap[activeChip] || '';
+    }
+
+    // Helper function to format number compactly (50.2k, 2.1M)
+    function formatCompactNumber(num) {
+        if (num >= 1000000) {
+            return (num / 1000000).toFixed(1) + 'M';
+        }
+        if (num >= 1000) {
+            return (num / 1000).toFixed(1) + 'k';
+        }
+        return num.toString();
+    }
+
+    // Helper function to get chips used abbreviations (excluding active chip)
+    function getChipsUsedAbbreviations(teamData) {
+        if (!teamData || !teamData.picks || !teamData.picks.chips) return '';
+
+        const chipsUsed = teamData.picks.chips
+            .filter(chip => chip.played_by_entry && chip.played_by_entry.length > 0)
+            .map(chip => {
+                const chipMap = {
+                    'freehit': 'FH',
+                    'wildcard': 'WC',
+                    'bboost': 'BB',
+                    'benchboost': 'BB',
+                    'triplecaptain': 'TC',
+                    '3xc': 'TC'
+                };
+                return chipMap[chip.name] || '';
+            })
+            .filter(abbr => abbr !== '');
+
+        return chipsUsed.join(' ');
     }
 
     // Helper function to count players played
@@ -508,12 +543,11 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
         // Compact grid-based layout for mobile (matching team table)
         const headerRow = `
             <div class="mobile-table-header mobile-table-header-sticky mobile-table-league" style="top: calc(3.5rem + 8rem + env(safe-area-inset-top));">
-                <div style="text-align: center;">Rank</div>
-                <div>Team/Manager</div>
-                <div style="text-align: center;">GW Pts</div>
-                <div style="text-align: center;">Total Pts</div>
-                <div style="text-align: center;">Gap</div>
+                <div>Team</div>
                 ${isLive ? '<div style="text-align: center;">Played</div>' : ''}
+                <div style="text-align: center;">GW Pts</div>
+                <div style="text-align: center;">Total</div>
+                <div style="text-align: center;">Gap</div>
             </div>
         `;
 
@@ -521,9 +555,6 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
             const captainName = captainNames[index];
             const isUser = entry.entry === userTeamId;
             const bgColor = isUser ? 'rgba(56, 189, 248, 0.1)' : 'var(--bg-primary)';
-            const rankChange = entry.last_rank - entry.rank;
-            const rankChangeIcon = rankChange > 0 ? '▲' : rankChange < 0 ? '▼' : '━';
-            const rankChangeColor = rankChange > 0 ? '#22c55e' : rankChange < 0 ? '#ef4444' : 'var(--text-secondary)';
 
             // Get GW points - use live points if available, otherwise event_total
             let gwPoints = entry.event_total || 0;
@@ -540,7 +571,7 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
                     totalPoints = liveTotal;
                 }
             }
-            
+
             // Get user's live total points for gap calculation
             let userTotalPoints = userPoints;
             if (isLive && userEntry) {
@@ -567,10 +598,19 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
                 }
             }
 
-            // Get chip abbreviation
+            // Get overall rank from cached team data
+            let overallRank = '—';
+            if (cachedTeamData?.picks?.entry_history?.overall_rank) {
+                overallRank = formatCompactNumber(cachedTeamData.picks.entry_history.overall_rank);
+            }
+
+            // Get chips used (excluding active chip)
+            const chipsUsed = getChipsUsedAbbreviations(cachedTeamData);
+
+            // Get active chip
             const activeChip = cachedTeamData?.picks?.active_chip;
-            const chipAbbr = getChipAbbreviation(activeChip);
-            
+            const activeChipName = getChipAbbreviation(activeChip);
+
             // Count players played (only during live GW)
             let playersPlayedText = '';
             if (isLive && cachedTeamData) {
@@ -579,6 +619,8 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
                     playersPlayedText = `${playedCount.played} / ${playedCount.total}`;
                 }
             }
+
+            // GW points heatmap
             let gwBgColor = 'transparent';
             let gwTextColor = 'var(--text-primary)';
             if (gwPoints > avgGWPoints + 10) {
@@ -589,37 +631,47 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
                 gwTextColor = '#ef4444';
             }
 
+            // Build Line 2: Overall Rank • Chips Used (no "• " if no chips)
+            let line2 = overallRank;
+            if (chipsUsed) {
+                line2 += ` • ${chipsUsed}`;
+            }
+
+            // Build Line 3: Captain (C) • Active Chip (no "• " if no active chip)
+            let line3 = `${escapeHtml(captainName)} (C)`;
+            if (activeChipName) {
+                line3 += ` • ${activeChipName}`;
+            }
+
             return `
                 <div class="mobile-table-row mobile-table-league ${!isUser ? 'mobile-rival-team-row' : ''}"
                      data-rival-id="${entry.entry}"
                      data-league-id="${leagueData.league.id}"
                      style="background: ${bgColor}; ${isUser ? 'border-left: 3px solid var(--primary-color);' : ''} ${!isUser ? 'cursor: pointer;' : ''}">
-                    <div style="text-align: center;">
-                        <div style="font-weight: 600;">${entry.rank}</div>
-                        <div style="font-size: 0.6rem; color: ${rankChangeColor};">
-                            ${rankChangeIcon}
+                    <div style="display: flex; flex-direction: column; gap: 0.1rem; overflow: hidden;">
+                        <!-- Line 1: Rank + Team Name • Manager Name -->
+                        <div style="display: flex; align-items: center; gap: 0.3rem; font-size: 0.7rem; font-weight: 600; color: var(--text-primary);">
+                            <span style="font-size: 0.65rem; color: var(--text-secondary);">${entry.rank}</span>
+                            <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(entry.entry_name)} • ${escapeHtml(entry.player_name)}${isUser ? ' (You)' : ''}</span>
+                        </div>
+                        <!-- Line 2: Overall Rank • Chips Used -->
+                        <div style="font-size: 0.6rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                            ${line2}
+                        </div>
+                        <!-- Line 3: Captain (C) • Active Chip -->
+                        <div style="font-size: 0.6rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                            ${line3}
+                            ${!isUser ? ' <i class="fas fa-eye" style="font-size: 0.55rem; opacity: 0.6;"></i>' : ''}
                         </div>
                     </div>
-                    <div style="overflow: hidden;">
-                        <div style="font-size: 0.7rem; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                            ${escapeHtml(entry.entry_name)}${isUser ? ' (You)' : ''}
-                        </div>
-                        <div style="font-size: 0.65rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 0.1rem;">
-                            ${escapeHtml(entry.player_name)}
-                        </div>
-                        <div style="font-size: 0.6rem; color: var(--text-secondary); margin-top: 0.15rem;">
-                            <i class="fas fa-star" style="font-size: 0.5rem; margin-right: 0.2rem;"></i>${escapeHtml(captainName)}${chipAbbr ? ` <span style="color: var(--primary-color); font-weight: 600;">(${chipAbbr})</span>` : ''}
-                            ${!isUser ? '<i class="fas fa-eye" style="margin-left: 0.35rem; font-size: 0.55rem; opacity: 0.6;"></i>' : ''}
-                        </div>
+                    ${isLive ? `<div style="text-align: center; font-size: 0.65rem; color: var(--text-secondary); font-weight: 600;">${playersPlayedText || '—'}</div>` : ''}
+                    <div style="text-align: center; padding: 0.5rem;">
+                        <span style="display: inline-block; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem; background: ${gwBgColor}; color: ${gwTextColor};">${gwPoints}</span>
                     </div>
-                    <div style="text-align: center; background: ${gwBgColor}; color: ${gwTextColor}; font-weight: 700; padding: 0.05rem; border-radius: 0.2rem;">
-                        ${gwPoints}
-                    </div>
-                    <div style="text-align: center; font-weight: 600;">${totalPoints.toLocaleString()}</div>
+                    <div style="text-align: center; font-weight: 600; font-size: 0.7rem;">${totalPoints.toLocaleString()}</div>
                     <div style="text-align: center; font-weight: 600; color: ${gapColor}; font-size: 0.7rem;">
                         ${gapText}
                     </div>
-                    ${isLive ? `<div style="text-align: center; font-size: 0.65rem; color: var(--text-secondary); font-weight: 600;">${playersPlayedText || '—'}</div>` : ''}
                 </div>
             `;
         }).join('');
