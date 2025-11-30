@@ -452,10 +452,19 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
 
     // Helper function to get chips used abbreviations (excluding active chip)
     function getChipsUsedAbbreviations(teamData) {
-        if (!teamData || !teamData.picks || !teamData.picks.chips) return '';
+        if (!teamData || !teamData.picks || !teamData.picks.chips) {
+            console.log('No chips data available:', teamData?.picks?.chips);
+            return '';
+        }
+
+        console.log('Chips array:', teamData.picks.chips);
 
         const chipsUsed = teamData.picks.chips
-            .filter(chip => chip.time !== null && chip.time !== undefined) // Chip has been played if time is set
+            .filter(chip => {
+                const isPlayed = chip.time !== null && chip.time !== undefined;
+                console.log(`Chip ${chip.name}: time=${chip.time}, event=${chip.event}, played=${isPlayed}`);
+                return isPlayed;
+            })
             .map(chip => {
                 const chipMap = {
                     'freehit': 'FH',
@@ -469,6 +478,7 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
             })
             .filter(abbr => abbr !== '');
 
+        console.log('Chips used abbreviations:', chipsUsed.join(' '));
         return chipsUsed.join(' ');
     }
 
@@ -489,7 +499,7 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
 
     if (useMobile) {
         // Compact grid-based layout for mobile (matching team table)
-        const gridColumns = isLive ? '140px 50px 60px 60px 60px' : '140px 60px 60px 60px';
+        const gridColumns = isLive ? '180px 50px 60px 60px 60px' : '180px 60px 60px 60px';
         const headerRow = `
             <div class="mobile-table-header mobile-table-header-sticky mobile-table-league" style="top: calc(3.5rem + 8rem + env(safe-area-inset-top)); grid-template-columns: ${gridColumns};">
                 <div>Team</div>
