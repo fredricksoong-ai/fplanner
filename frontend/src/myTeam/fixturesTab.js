@@ -716,9 +716,9 @@ export function renderMobileFixturesTab() {
                             const fixtureMinutes = typeof fixture.minutes === 'number' && fixture.minutes > 0
                                 ? fixture.minutes
                                 : null;
-                            statusBadge = `<span style="color: #22c55e; font-weight: 600; font-size: 0.65rem;">FT${fixtureMinutes ? ` (${fixtureMinutes})` : ''}</span>`;
+                            statusBadge = `<span style="display: inline-block; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem; background: rgba(34, 197, 94, 0.2); color: #22c55e;">FT${fixtureMinutes ? ` (${fixtureMinutes})` : ''}</span>`;
                         } else if (isStarted && !isFinished) {
-                            statusBadge = '<span style="color: #ef4444; font-weight: 600; font-size: 0.65rem;">LIVE</span>';
+                            statusBadge = '<span style="display: inline-block; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem; background: rgba(239, 68, 68, 0.2); color: #ef4444;">LIVE</span>';
                         }
 
                         const expandIcon = canShowStats
