@@ -108,7 +108,9 @@ export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = fa
     const transferCost = entry.event_transfers_cost || 0;
 
     // Calculate rank indicator (chevron) using helper
-    const rankIndicator = calculateRankIndicator(team.id, overallRankNum);
+    // Use previous_gw_rank from entry_history if available (from history endpoint)
+    const previousGWRank = entry.previous_gw_rank || null;
+    const rankIndicator = calculateRankIndicator(team.id, overallRankNum, previousGWRank);
 
     // Get captain and vice captain info
     const { captainInfo, viceInfo } = getCaptainViceInfo(picks.picks, gwNumber);

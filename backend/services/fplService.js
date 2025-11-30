@@ -314,6 +314,31 @@ export async function fetchTransferHistory(teamId) {
   }
 }
 
+/**
+ * Fetch team history (chips, current season gameweeks, past seasons)
+ * @param {string|number} teamId - FPL team ID
+ * @returns {Promise<Object>} Team history data with chips, current, and past
+ */
+export async function fetchTeamHistory(teamId) {
+  logger.log(`📡 Fetching team history for team ${teamId}...`);
+
+  try {
+    const response = await axios.get(`${FPL_BASE_URL}/entry/${teamId}/history/`, {
+      timeout: 10000,
+      headers: {
+        'User-Agent': 'FPLanner/1.0'
+      }
+    });
+
+    logger.log(`✅ Team history fetched for team ${teamId}`);
+    recordFetch();
+    return response.data;
+  } catch (err) {
+    logger.error(`❌ Failed to fetch team history for team ${teamId}:`, err.message);
+    throw new Error(`Team history unavailable for team ${teamId}`);
+  }
+}
+
 // ============================================================================
 // LEAGUE DATA
 // ============================================================================

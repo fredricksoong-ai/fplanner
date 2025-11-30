@@ -45,18 +45,31 @@ export function renderStatCard(value, label) {
 
 /**
  * Calculate rank indicator (chevron) based on rank change
- * @param {number} teamId - Team ID for caching
+ * @param {number} teamId - Team ID for caching (fallback only)
  * @param {number} overallRankNum - Current overall rank
+ * @param {number|null} previousGWRank - Previous GW overall rank from history (optional, preferred)
  * @returns {Object} Chevron icon and color for rank display
  */
-export function calculateRankIndicator(teamId, overallRankNum) {
-    const cacheKey = `fpl_rank_${teamId}`;
-    const cachedRank = localStorage.getItem(cacheKey);
+export function calculateRankIndicator(teamId, overallRankNum, previousGWRank = null) {
     let chevron = '▬';
     let color = '#eab308'; // Yellow for no change
 
-    if (cachedRank && overallRankNum > 0) {
-        const previousRank = parseInt(cachedRank, 10);
+    // Use previous_gw_rank from history if available (most accurate)
+    // Otherwise fall back to localStorage for backward compatibility
+    let previousRank = null;
+    
+    if (previousGWRank !== null && previousGWRank > 0) {
+        previousRank = previousGWRank;
+    } else {
+        // Fallback to localStorage cache
+        const cacheKey = `fpl_rank_${teamId}`;
+        const cachedRank = localStorage.getItem(cacheKey);
+        if (cachedRank) {
+            previousRank = parseInt(cachedRank, 10);
+        }
+    }
+
+    if (previousRank && overallRankNum > 0) {
         const rankChange = previousRank - overallRankNum;
 
         if (rankChange > 0) {
@@ -70,8 +83,9 @@ export function calculateRankIndicator(teamId, overallRankNum) {
         }
     }
 
-    // Store current rank for next comparison
+    // Store current rank in localStorage for next comparison (fallback)
     if (overallRankNum > 0) {
+        const cacheKey = `fpl_rank_${teamId}`;
         localStorage.setItem(cacheKey, overallRankNum.toString());
     }
 

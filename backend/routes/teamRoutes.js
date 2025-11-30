@@ -8,7 +8,8 @@ import {
   fetchBootstrap,
   fetchTeamData,
   fetchTeamPicks,
-  fetchLiveGameweekData
+  fetchLiveGameweekData,
+  fetchTeamHistory
 } from '../services/fplService.js';
 import {
   cache,
@@ -115,10 +116,15 @@ router.get('/api/team/:teamId', async (req, res) => {
 
     logger.log(`   Current GW: ${currentGW}`);
 
-    // Fetch team info and picks in parallel
-    const [teamInfo, teamPicks] = await Promise.all([
+    // Fetch team info, picks, and history in parallel
+    const [teamInfo, teamPicks, teamHistory] = await Promise.all([
       fetchTeamData(teamId),
-      fetchTeamPicks(teamId, currentGW)
+      fetchTeamPicks(teamId, currentGW),
+      fetchTeamHistory(teamId).catch(err => {
+        // History is optional, continue without it if fetch fails
+        logger.warn(`⚠️ Failed to fetch team history: ${err.message}`);
+        return null;
+      })
     ]);
 
     // Check if GW is live and enrich with live data
@@ -157,6 +163,23 @@ router.get('/api/team/:teamId', async (req, res) => {
       }
     }
 
+    // Extract chips and previous GW rank from history
+    let chips = [];
+    let previousGWRank = null;
+    
+    if (teamHistory) {
+      // Extract chips array
+      chips = teamHistory.chips || [];
+      
+      // Extract previous GW rank from current array
+      if (teamHistory.current && teamHistory.current.length > 0) {
+        const previousGW = teamHistory.current.find(gw => gw.event === currentGW - 1);
+        if (previousGW) {
+          previousGWRank = previousGW.overall_rank;
+        }
+      }
+    }
+
     // Update entry_history with calculated live points if available
     const entryHistory = enrichedPicks.entry_history ? { ...enrichedPicks.entry_history } : null;
     if (calculatedLivePoints !== null && entryHistory) {
@@ -174,11 +197,17 @@ router.get('/api/team/:teamId', async (req, res) => {
       // Formula: live_total = (total_up_to_last_finished_gw) - (old_gw_points_if_any) + (live_gw_points)
       entryHistory.live_total_points = oldTotalPoints - oldGWPoints + calculatedLivePoints;
     }
+    
+    // Add previous GW rank to entry_history if available
+    if (previousGWRank !== null && entryHistory) {
+      entryHistory.previous_gw_rank = previousGWRank;
+    }
 
     const response = {
       team: teamInfo,
       picks: {
         ...enrichedPicks,
+        chips: chips, // Add chips array from history
         entry_history: entryHistory || enrichedPicks.entry_history
       },
       gameweek: currentGW,

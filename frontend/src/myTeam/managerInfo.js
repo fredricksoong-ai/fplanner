@@ -4,6 +4,7 @@
  */
 
 import { escapeHtml } from '../utils.js';
+import { calculateRankIndicator } from './compact/compactStyleHelpers.js';
 
 /**
  * Render manager info card with team statistics
@@ -21,6 +22,11 @@ export function renderManagerInfo(teamData) {
     const gwPoints = team.summary_event_points || 0;
     const gwRank = team.summary_event_rank || 0;
 
+    // Calculate rank indicator (chevron) using helper
+    // Use previous_gw_rank from entry_history if available (from history endpoint)
+    const previousGWRank = entry?.previous_gw_rank || null;
+    const rankIndicator = calculateRankIndicator(team.id, overallRank, previousGWRank);
+
     return `
         <div style="
             background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
@@ -37,7 +43,10 @@ export function renderManagerInfo(teamData) {
                 </div>
                 <div>
                     <div style="font-size: 0.75rem; opacity: 0.9; margin-bottom: 0.25rem;">Overall Rank</div>
-                    <div style="font-size: 1.25rem; font-weight: 700; line-height: 1.2;">${overallRank.toLocaleString()}</div>
+                    <div style="font-size: 1.25rem; font-weight: 700; line-height: 1.2;">
+                        ${overallRank.toLocaleString()} 
+                        <span style="color: ${rankIndicator.color}; margin-left: 0.25rem; font-size: 0.9rem;">${rankIndicator.chevron}</span>
+                    </div>
                     <div style="font-size: 0.75rem; opacity: 0.8; margin-top: 0.25rem;">of ${totalPlayers.toLocaleString()}</div>
                 </div>
                 <div>

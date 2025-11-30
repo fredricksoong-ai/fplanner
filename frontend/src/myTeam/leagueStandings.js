@@ -499,7 +499,7 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
 
     if (useMobile) {
         // Compact grid-based layout for mobile (matching team table)
-        const gridColumns = isLive ? '180px 50px 60px 60px 60px' : '180px 60px 60px 60px';
+        const gridColumns = isLive ? '120px 50px 60px 60px 60px' : '120px 60px 60px 60px';
         const headerRow = `
             <div class="mobile-table-header mobile-table-header-sticky mobile-table-league" style="top: calc(3.5rem + 8rem + env(safe-area-inset-top)); grid-template-columns: ${gridColumns};">
                 <div>Team</div>
@@ -610,16 +610,22 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
                 }
             }
 
-            // Build Line 2: Overall Rank • Chips Used (no "• " if no chips)
-            let line2 = overallRank;
-            if (chipsUsed) {
-                line2 += ` • ${chipsUsed}`;
+            // Build Line 1: [Rank] [Team Name] • [Chip]
+            let line1 = `${entry.rank} ${escapeHtml(entry.entry_name)}`;
+            if (activeChipName) {
+                line1 += ` • ${activeChipName}`;
             }
 
-            // Build Line 3: Captain (C) • Active Chip (no "• " if no active chip)
-            let line3 = `${escapeHtml(captainName)} (C)`;
-            if (activeChipName) {
-                line3 += ` • ${activeChipName}`;
+            // Build Line 2: [Manager Name] • [Captain]
+            let line2 = escapeHtml(entry.player_name);
+            if (captainName && captainName !== '—' && captainName !== 'No Captain') {
+                line2 += ` • ${escapeHtml(captainName)}`;
+            }
+
+            // Build Line 3: [Chips Played] • [Overall Rank]
+            let line3 = chipsUsed || '—';
+            if (overallRank && overallRank !== '—') {
+                line3 += ` • ${overallRank}`;
             }
 
             return `
@@ -628,16 +634,15 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
                      data-league-id="${leagueData.league.id}"
                      style="background: ${bgColor}; ${isUser ? 'border-left: 3px solid var(--primary-color);' : ''} ${!isUser ? 'cursor: pointer;' : ''} grid-template-columns: ${gridColumns};">
                     <div style="display: flex; flex-direction: column; gap: 0.1rem; overflow: hidden;">
-                        <!-- Line 1: Rank + Team Name • Manager Name -->
-                        <div style="display: flex; align-items: center; gap: 0.3rem; font-size: 0.7rem; font-weight: 600; color: var(--text-primary);">
-                            <span style="font-size: 0.65rem; color: var(--text-secondary);">${entry.rank}</span>
-                            <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(entry.entry_name)} • ${escapeHtml(entry.player_name)}${isUser ? ' (You)' : ''}</span>
+                        <!-- Line 1: [Rank] [Team Name] • [Chip] -->
+                        <div style="font-size: 0.7rem; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                            ${line1}${isUser ? ' (You)' : ''}
                         </div>
-                        <!-- Line 2: Overall Rank • Chips Used -->
+                        <!-- Line 2: [Manager Name] • [Captain] -->
                         <div style="font-size: 0.6rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                             ${line2}
                         </div>
-                        <!-- Line 3: Captain (C) • Active Chip -->
+                        <!-- Line 3: [Chips Played] • [Overall Rank] -->
                         <div style="font-size: 0.6rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                             ${line3}
                             ${!isUser ? ' <i class="fas fa-eye" style="font-size: 0.55rem; opacity: 0.6;"></i>' : ''}

@@ -221,7 +221,9 @@ function renderRivalCompactHeader(teamData, gwNumber) {
     const transferCost = entry.event_transfers_cost || 0;
 
     // Calculate rank indicators (chevrons) using helpers
-    const rankIndicator = calculateRankIndicator(team.id, overallRankNum);
+    // Use previous_gw_rank from entry_history if available (from history endpoint)
+    const previousGWRank = entry?.previous_gw_rank || null;
+    const rankIndicator = calculateRankIndicator(team.id, overallRankNum, previousGWRank);
     const gwIndicator = calculateGWIndicator(gwRankNum, overallRankNum);
 
     // Get GW average from event data
