@@ -910,11 +910,11 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
             const contextClass = config.getClass(player);
             contextCellContent = `<span class="${contextClass}" style="display: inline-block; padding: 0.2rem 0.4rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.65rem;">${contextValue}</span>`;
         } else if (config.getHeatmap) {
-            // Use heatmap - full cell background
+            // Use heatmap - pill style
             const heatmap = config.getHeatmap(player);
             const heatmapStyle = getHeatmapStyle(heatmap);
-            contextCellStyle = `text-align: center; padding: 0.5rem; background: ${heatmapStyle.background}; color: ${heatmapStyle.color}; font-weight: 600;`;
-            contextCellContent = contextValue;
+            contextCellStyle = `text-align: center; padding: 0.5rem;`;
+            contextCellContent = `<span style="display: inline-block; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem; background: ${heatmapStyle.background}; color: ${heatmapStyle.color};">${contextValue}</span>`;
         } else if (config.getColor) {
             // Use custom color with pill (for transfers)
             const contextColor = config.getColor(player);
@@ -958,7 +958,7 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
                         </div>
                         <!-- Line 2: Team • Price • Own% • Form -->
                         <div style="font-size: 0.6rem; color: var(--text-secondary); white-space: nowrap;">
-                            ${getTeamShortName(player.team)} • ${formatCurrency(player.now_cost)} • ${(parseFloat(player.selected_by_percent) || 0).toFixed(1)}% • <span style="background: ${formStyle.background}; color: ${formStyle.color}; padding: 0.1rem 0.25rem; border-radius: 0.25rem; font-weight: 600;">${formatDecimal(player.form)}</span>
+                            ${getTeamShortName(player.team)} • ${formatCurrency(player.now_cost)} • ${(parseFloat(player.selected_by_percent) || 0).toFixed(1)}% • <span style="display: inline-block; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem; background: ${formStyle.background}; color: ${formStyle.color};">${formatDecimal(player.form)}</span>
                         </div>
                         <!-- Line 3: Risk context (if any) -->
                         ${risks.length > 0 ? `<div style="font-size: 0.6rem; color: ${borderColor}; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(risks[0]?.message || 'Issue')}</div>` : `<div style="height: 0.8rem;"></div>`}
@@ -969,14 +969,14 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
                         ${gwOpp.name} (${gwOpp.isHome ? 'H' : 'A'})
                     </span>
                 </td>
-                <td style="text-align: center; padding: 0.5rem; font-size: 0.6rem; font-weight: ${statusColors.statusWeight}; color: ${statusColors.statusColor}; background: ${statusColors.statusBgColor}; border-radius: 0.25rem; white-space: nowrap;">
-                    ${matchStatus}
+                <td style="text-align: center; padding: 0.5rem;">
+                    <span style="display: inline-block; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem; background: ${statusColors.statusBgColor}; color: ${statusColors.statusColor}; white-space: nowrap;">${matchStatus}</span>
                 </td>
-                <td style="text-align: center; padding: 0.5rem; background: ${ptsStyle.background}; color: ${ptsStyle.color}; font-weight: 700; border-radius: 0.25rem;">
-                    ${gwPoints}
+                <td style="text-align: center; padding: 0.5rem;">
+                    <span style="display: inline-block; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem; background: ${ptsStyle.background}; color: ${ptsStyle.color};">${gwPoints}</span>
                 </td>
-                <td style="text-align: center; padding: 0.5rem; background: ${totalPtsStyle.background}; color: ${totalPtsStyle.color}; font-weight: 700; border-radius: 0.25rem;">
-                    ${totalPoints}
+                <td style="text-align: center; padding: 0.5rem;">
+                    <span style="display: inline-block; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem; background: ${totalPtsStyle.background}; color: ${totalPtsStyle.color};">${totalPoints}</span>
                 </td>
                 <td style="${contextCellStyle}">${contextCellContent}</td>
             </tr>
