@@ -402,8 +402,21 @@ export function startAutoRefresh(onRefresh = null) {
                 return; // Skip this cycle
             }
 
-            console.log('🔄 Auto-refreshing enriched bootstrap...');
+            console.log('🔄 Auto-refreshing enriched bootstrap and fixtures...');
+
+            // Refresh enriched bootstrap (with live stats)
             await loadEnrichedBootstrap();
+
+            // Also refresh fixtures to catch match status changes (started/finished flags)
+            // Backend uses dynamic TTL: 2 min during live GW, 12 hours when finished
+            const fixturesResponse = await fetch(`${API_BASE}/fpl-data`);
+            if (fixturesResponse.ok) {
+                const data = await fixturesResponse.json();
+                if (data.fixtures) {
+                    fplFixtures = data.fixtures;
+                    console.log('✅ Fixtures refreshed');
+                }
+            }
 
             if (onDataRefreshCallback) {
                 onDataRefreshCallback();
