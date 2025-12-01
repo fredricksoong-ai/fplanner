@@ -196,23 +196,61 @@ export async function getCohortComparisonMetrics(userMetrics, gameweek) {
         return null;
     }
 
-    const buckets = Object.values(cached.buckets).map(bucket => ({
-        key: bucket.key,
-        label: bucket.label,
-        sampleSize: bucket.sampleSize,
-        maxRank: bucket.maxRank,
-        averages: bucket.averages,
-        percentiles: computePercentiles(userMetrics, bucket.distributions)
-    })).filter(bucket => bucket.sampleSize > 0);
+    const bucketsArray = Object.values(cached.buckets).filter(bucket => bucket.sampleSize > 0);
 
-    if (buckets.length === 0) {
+    if (bucketsArray.length === 0) {
         return null;
     }
+
+    // Find Top 10k bucket to use as reference distribution
+    const top10kBucket = bucketsArray.find(b => b.key === 'top10k');
+
+    if (!top10kBucket || !top10kBucket.distributions) {
+        // Fallback to original behavior if Top 10k not available
+        const buckets = bucketsArray.map(bucket => ({
+            key: bucket.key,
+            label: bucket.label,
+            sampleSize: bucket.sampleSize,
+            maxRank: bucket.maxRank,
+            averages: bucket.averages,
+            percentiles: computePercentiles(userMetrics, bucket.distributions)
+        }));
+
+        return {
+            gameweek: cached.gameweek,
+            updatedAt: cached.timestamp,
+            buckets
+        };
+    }
+
+    // Use Top 10k distribution as reference for all percentile calculations
+    const referenceDistributions = top10kBucket.distributions;
+
+    // Compute user's percentiles vs Top 10k
+    const userPercentiles = computePercentiles(userMetrics, referenceDistributions);
+
+    // Compute each cohort's average percentiles vs Top 10k
+    const buckets = bucketsArray.map(bucket => {
+        const cohortPercentiles = computePercentiles(bucket.averages, referenceDistributions);
+
+        return {
+            key: bucket.key,
+            label: bucket.label,
+            sampleSize: bucket.sampleSize,
+            maxRank: bucket.maxRank,
+            averages: bucket.averages,
+            percentiles: cohortPercentiles,
+            // Keep original percentiles for backward compatibility
+            originalPercentiles: computePercentiles(userMetrics, bucket.distributions)
+        };
+    });
 
     return {
         gameweek: cached.gameweek,
         updatedAt: cached.timestamp,
-        buckets
+        buckets,
+        userPercentiles, // User's percentiles vs Top 10k reference
+        referenceDistribution: 'top10k' // Indicates which cohort is the reference
     };
 }
 
