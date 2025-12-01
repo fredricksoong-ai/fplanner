@@ -34,14 +34,14 @@ function isCacheFresh(entry) {
     return entry && (Date.now() - entry.timestamp) < CACHE_TTL;
 }
 
-function computePercentiles(userMetrics, distributions) {
+function computePercentiles(userMetrics, distributions, debug = false) {
     const percentiles = {};
     const higherIsBetter = {
         avgPPM: true,
         avgFDR: false,
         avgForm: true,
         expectedPoints: true,
-        avgOwnership: null, // informational only
+        avgOwnership: true, // Changed: Higher ownership = popular/template picks
         avgXGI: true
     };
 
@@ -51,11 +51,13 @@ function computePercentiles(userMetrics, distributions) {
 
         if (!values || values.length === 0 || userValue === undefined || userValue === null) {
             percentiles[key] = null;
+            if (debug) console.log(`${key}: null (no data) - userValue: ${userValue}, distLength: ${values?.length}`);
             return;
         }
 
         if (higherIsBetter[key] === null) {
             percentiles[key] = null;
+            if (debug) console.log(`${key}: null (informational only)`);
             return;
         }
 
@@ -67,7 +69,15 @@ function computePercentiles(userMetrics, distributions) {
             return value >= userValue;
         }).length;
 
-        percentiles[key] = Math.round((betterCount / total) * 100);
+        const percentile = Math.round((betterCount / total) * 100);
+        percentiles[key] = percentile;
+
+        if (debug) {
+            const min = Math.min(...values);
+            const max = Math.max(...values);
+            const avg = values.reduce((a, b) => a + b, 0) / total;
+            console.log(`${key}: ${percentile}th percentile | Your value: ${userValue.toFixed(2)} | Range: ${min.toFixed(2)}-${max.toFixed(2)} | Avg: ${avg.toFixed(2)} | Better: ${higherIsBetter[key] ? '↑' : '↓'}`);
+        }
     });
 
     return percentiles;
@@ -227,11 +237,13 @@ export async function getCohortComparisonMetrics(userMetrics, gameweek) {
     const referenceDistributions = top10kBucket.distributions;
 
     // Compute user's percentiles vs Top 10k
-    const userPercentiles = computePercentiles(userMetrics, referenceDistributions);
+    console.log('=== USER TEAM vs TOP 10k ===');
+    const userPercentiles = computePercentiles(userMetrics, referenceDistributions, true);
 
     // Compute each cohort's average percentiles vs Top 10k
     const buckets = bucketsArray.map(bucket => {
-        const cohortPercentiles = computePercentiles(bucket.averages, referenceDistributions);
+        console.log(`\n=== ${bucket.label.toUpperCase()} AVERAGE vs TOP 10k ===`);
+        const cohortPercentiles = computePercentiles(bucket.averages, referenceDistributions, true);
 
         return {
             key: bucket.key,
