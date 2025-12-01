@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cohort Chart Mobile Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #1e293b;
+            --bg-secondary: #0f172a;
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --text-tertiary: #94a3b8;
+            --border-color: #334155;
+            --accent-color: #3b82f6;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            padding: 1rem;
+        }
+
+        .mobile-container {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .cohort-section {
+            margin-bottom: 1rem;
+            padding: 0.75rem;
+            background: var(--bg-secondary);
+            border-radius: 0.75rem;
+        }
+
+        .cohort-toggle {
+            width: 100%;
+            background: transparent;
+            border: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            cursor: pointer;
+        }
+
+        .cohort-toggle:hover {
+            color: var(--text-primary);
+        }
+
+        .toggle-header {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .toggle-subtitle {
+            font-size: 0.6rem;
+            font-weight: 400;
+            color: var(--text-tertiary);
+        }
+
+        .chevron {
+            color: var(--accent-color);
+            transition: transform 0.2s ease;
+            font-size: 1rem;
+        }
+
+        .chevron.expanded {
+            transform: rotate(180deg);
+        }
+
+        .cohort-content {
+            display: none;
+            margin-top: 0.75rem;
+        }
+
+        .cohort-content.expanded {
+            display: block;
+        }
+
+        #cohort-chart {
+            width: 100%;
+            height: 300px;
+        }
+
+        .chart-hint {
+            font-size: 0.65rem;
+            color: var(--text-tertiary);
+            margin-top: 0.5rem;
+            text-align: center;
+        }
+
+        .test-controls {
+            margin-bottom: 1rem;
+            padding: 1rem;
+            background: var(--bg-primary);
+            border-radius: 0.75rem;
+        }
+
+        .test-controls button {
+            margin: 0.25rem;
+            padding: 0.5rem 1rem;
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            cursor: pointer;
+        }
+
+        .test-controls button:hover {
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="mobile-container">
+        <div class="test-controls">
+            <h2 style="margin-bottom: 0.5rem; font-size: 1rem;">Test Controls</h2>
+            <button onclick="toggleTheme()">Toggle Theme</button>
+            <button onclick="resizeChart()">Resize Chart</button>
+        </div>
+
+        <div class="cohort-section">
+            <button class="cohort-toggle" onclick="toggleContent()">
+                <span class="toggle-header">
+                    <span>Top Manager Benchmarks</span>
+                    <span class="toggle-subtitle">Updated 2h ago • vs Top 10k benchmark</span>
+                </span>
+                <span class="chevron" id="chevron">▼</span>
+            </button>
+            <div class="cohort-content" id="content">
+                <div id="cohort-chart"></div>
+                <div class="chart-hint">
+                    Higher percentile = Better performance vs Top 10k managers
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Mock data matching the actual structure
+        const mockCohortData = {
+            gameweek: 14,
+            updatedAt: Date.now() - 2 * 60 * 60 * 1000, // 2 hours ago
+            referenceDistribution: 'top10k',
+            userPercentiles: {
+                avgPPM: 65,
+                avgFDR: 45,
+                avgForm: 72,
+                expectedPoints: 58,
+                avgOwnership: 55,
+                avgXGI: 68
+            },
+            buckets: [
+                {
+                    key: 'top10k',
+                    label: 'Top 10k',
+                    sampleSize: 400,
+                    maxRank: 10000,
+                    percentiles: {
+                        avgPPM: 92,
+                        avgFDR: 85,
+                        avgForm: 94,
+                        expectedPoints: 91,
+                        avgOwnership: 88,
+                        avgXGI: 90
+                    }
+                },
+                {
+                    key: 'top50k',
+                    label: 'Top 50k',
+                    sampleSize: 400,
+                    maxRank: 50000,
+                    percentiles: {
+                        avgPPM: 78,
+                        avgFDR: 72,
+                        avgForm: 80,
+                        expectedPoints: 75,
+                        avgOwnership: 70,
+                        avgXGI: 76
+                    }
+                },
+                {
+                    key: 'top100k',
+                    label: 'Top 100k',
+                    sampleSize: 400,
+                    maxRank: 100000,
+                    percentiles: {
+                        avgPPM: 68,
+                        avgFDR: 65,
+                        avgForm: 70,
+                        expectedPoints: 67,
+                        avgOwnership: 62,
+                        avgXGI: 69
+                    }
+                }
+            ]
+        };
+
+        const METRIC_LABELS = {
+            avgPPM: 'PPM',
+            avgFDR: 'FDR',
+            avgForm: 'Form',
+            expectedPoints: 'xPts',
+            avgOwnership: 'Own%',
+            avgXGI: 'xGI'
+        };
+
+        const METRIC_ORDER = ['avgPPM', 'avgFDR', 'avgForm', 'expectedPoints', 'avgOwnership', 'avgXGI'];
+
+        const COHORT_COLORS = {
+            myTeam: '#a855f7',
+            top10k: '#22c55e',
+            top50k: '#3b82f6',
+            top100k: '#f59e0b'
+        };
+
+        let chartInstance = null;
+
+        function initChart() {
+            const chartDom = document.getElementById('cohort-chart');
+
+            if (chartInstance) {
+                chartInstance.dispose();
+            }
+
+            chartInstance = echarts.init(chartDom);
+
+            const xAxisData = METRIC_ORDER.map(key => METRIC_LABELS[key]);
+
+            const series = [];
+
+            // User's team
+            const userPercentileData = METRIC_ORDER.map(key => mockCohortData.userPercentiles[key]);
+            series.push({
+                name: 'My Team',
+                type: 'line',
+                data: userPercentileData,
+                smooth: true,
+                symbol: 'circle',
+                symbolSize: 8,
+                lineStyle: {
+                    color: COHORT_COLORS.myTeam,
+                    width: 3
+                },
+                itemStyle: {
+                    color: COHORT_COLORS.myTeam,
+                    borderWidth: 2,
+                    borderColor: '#1e293b'
+                },
+                emphasis: {
+                    scale: 1.2,
+                    focus: 'series'
+                },
+                z: 10
+            });
+
+            // Cohorts
+            mockCohortData.buckets.forEach(bucket => {
+                const percentileData = METRIC_ORDER.map(key => bucket.percentiles[key]);
+                series.push({
+                    name: bucket.label,
+                    type: 'line',
+                    data: percentileData,
+                    smooth: true,
+                    symbol: 'circle',
+                    symbolSize: 6,
+                    lineStyle: {
+                        color: COHORT_COLORS[bucket.key],
+                        width: 2
+                    },
+                    itemStyle: {
+                        color: COHORT_COLORS[bucket.key]
+                    },
+                    emphasis: {
+                        focus: 'series'
+                    }
+                });
+            });
+
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const textColor = isDark ? '#e5e7eb' : '#374151';
+            const gridColor = isDark ? '#334155' : '#e5e7eb';
+            const tooltipBg = isDark ? 'rgba(0, 0, 0, 0.85)' : 'rgba(255, 255, 255, 0.95)';
+
+            const option = {
+                grid: {
+                    left: '12%',
+                    right: '5%',
+                    top: '20%',
+                    bottom: '15%',
+                    containLabel: false
+                },
+                tooltip: {
+                    trigger: 'axis',
+                    backgroundColor: tooltipBg,
+                    borderColor: gridColor,
+                    textStyle: {
+                        color: textColor,
+                        fontSize: 12
+                    },
+                    formatter: function(params) {
+                        const metricName = params[0].axisValue;
+                        let result = `<strong>${metricName}</strong><br/>`;
+                        params.forEach(param => {
+                            const value = param.value !== null ? `${param.value}th` : 'N/A';
+                            result += `${param.marker} ${param.seriesName}: <strong>${value}</strong> percentile<br/>`;
+                        });
+                        return result;
+                    }
+                },
+                legend: {
+                    data: ['My Team', 'Top 10k', 'Top 50k', 'Top 100k'],
+                    top: 5,
+                    left: 'center',
+                    textStyle: {
+                        color: textColor,
+                        fontSize: 11
+                    },
+                    icon: 'roundRect',
+                    itemWidth: 20,
+                    itemHeight: 3,
+                    itemGap: 12
+                },
+                xAxis: {
+                    type: 'category',
+                    data: xAxisData,
+                    axisLabel: {
+                        color: isDark ? '#94a3b8' : '#64748b',
+                        fontSize: 11,
+                        interval: 0
+                    },
+                    axisLine: {
+                        lineStyle: {
+                            color: gridColor
+                        }
+                    },
+                    axisTick: {
+                        show: false
+                    }
+                },
+                yAxis: {
+                    type: 'value',
+                    min: 0,
+                    max: 100,
+                    interval: 25,
+                    axisLabel: {
+                        color: isDark ? '#94a3b8' : '#64748b',
+                        fontSize: 11,
+                        formatter: '{value}th'
+                    },
+                    splitLine: {
+                        lineStyle: {
+                            color: gridColor,
+                            type: 'dashed',
+                            opacity: 0.3
+                        }
+                    },
+                    axisLine: {
+                        show: false
+                    },
+                    axisTick: {
+                        show: false
+                    }
+                },
+                series
+            };
+
+            chartInstance.setOption(option);
+        }
+
+        // Initialize chart on load
+        initChart();
+
+        // Make functions global
+        window.toggleContent = function() {
+            const content = document.getElementById('content');
+            const chevron = document.getElementById('chevron');
+            const isExpanded = content.classList.contains('expanded');
+
+            if (isExpanded) {
+                content.classList.remove('expanded');
+                chevron.classList.remove('expanded');
+            } else {
+                content.classList.add('expanded');
+                chevron.classList.add('expanded');
+                setTimeout(() => {
+                    if (chartInstance) {
+                        chartInstance.resize();
+                    }
+                }, 300);
+            }
+        };
+
+        window.toggleTheme = function() {
+            const html = document.documentElement;
+            const isDark = html.getAttribute('data-theme') === 'dark';
+            html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+
+            if (isDark) {
+                document.body.style.background = '#f1f5f9';
+                document.body.style.color = '#1e293b';
+            } else {
+                document.body.style.background = '#0f172a';
+                document.body.style.color = '#f8fafc';
+            }
+
+            initChart();
+        };
+
+        window.resizeChart = function() {
+            if (chartInstance) {
+                chartInstance.resize();
+            }
+        };
+
+        window.addEventListener('resize', () => {
+            if (chartInstance) {
+                chartInstance.resize();
+            }
+        });
+    </script>
+</body>
+</html>
