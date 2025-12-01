@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cohort Chart Wireframe</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #0f172a;
+            color: #e5e7eb;
+            padding: 1rem;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 1rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            font-size: 1.25rem;
+            margin-bottom: 0.5rem;
+            color: #f8fafc;
+        }
+
+        .subtitle {
+            font-size: 0.875rem;
+            color: #94a3b8;
+            margin-bottom: 1rem;
+        }
+
+        #chart {
+            width: 100%;
+            height: 300px;
+        }
+
+        .legend-note {
+            margin-top: 1rem;
+            padding: 0.75rem;
+            background: #334155;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            color: #cbd5e1;
+        }
+
+        .legend-note ul {
+            margin-top: 0.5rem;
+            padding-left: 1.5rem;
+        }
+
+        .legend-note li {
+            margin: 0.25rem 0;
+        }
+
+        .toggle-buttons {
+            margin-top: 1rem;
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 0.5rem 1rem;
+            background: #334155;
+            color: #e5e7eb;
+            border: 1px solid #475569;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.875rem;
+        }
+
+        button:hover {
+            background: #475569;
+        }
+
+        button.active {
+            background: #3b82f6;
+            border-color: #3b82f6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Cohort Performance Comparison</h1>
+        <p class="subtitle">Percentile rankings across key metrics</p>
+
+        <div id="chart"></div>
+
+        <div class="legend-note">
+            <strong>💡 How to read this chart:</strong>
+            <ul>
+                <li><strong>Y-axis:</strong> Percentile ranking (0-100%)</li>
+                <li><strong>X-axis:</strong> Team metrics</li>
+                <li><strong>Higher = Better:</strong> Being in the 90th percentile means you're better than 90% of managers</li>
+                <li><strong>Lines:</strong> Each line represents a cohort's performance across all metrics</li>
+            </ul>
+        </div>
+
+        <div class="toggle-buttons">
+            <button class="active" onclick="toggleLine('myTeam')">My Team</button>
+            <button class="active" onclick="toggleLine('top10k')">Top 10k</button>
+            <button class="active" onclick="toggleLine('top50k')">Top 50k</button>
+            <button class="active" onclick="toggleLine('top100k')">Top 100k</button>
+        </div>
+    </div>
+
+    <script>
+        // Initialize chart
+        const chartDom = document.getElementById('chart');
+        const myChart = echarts.init(chartDom);
+
+        // Sample data - percentiles for each metric
+        const metrics = ['Avg PPM', 'Avg FDR', 'Avg Form', 'Exp Points', 'Ownership %', 'Avg xGI'];
+
+        // Sample percentile data (0-100)
+        const data = {
+            myTeam: [65, 72, 58, 68, 45, 71],      // Your team's percentiles
+            top10k: [95, 88, 92, 94, 85, 90],      // Top 10k average percentiles
+            top50k: [82, 75, 80, 85, 72, 78],      // Top 50k average percentiles
+            top100k: [70, 68, 72, 75, 65, 70]      // Top 100k average percentiles
+        };
+
+        let visibleLines = {
+            myTeam: true,
+            top10k: true,
+            top50k: true,
+            top100k: true
+        };
+
+        function renderChart() {
+            const option = {
+                grid: {
+                    left: '10%',
+                    right: '5%',
+                    top: '15%',
+                    bottom: '15%',
+                    containLabel: true
+                },
+                tooltip: {
+                    trigger: 'axis',
+                    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+                    borderColor: '#475569',
+                    textStyle: {
+                        color: '#e5e7eb',
+                        fontSize: 12
+                    },
+                    formatter: function(params) {
+                        let result = `<strong>${params[0].axisValue}</strong><br/>`;
+                        params.forEach(param => {
+                            result += `${param.marker} ${param.seriesName}: <strong>${param.value}th</strong> percentile<br/>`;
+                        });
+                        return result;
+                    }
+                },
+                legend: {
+                    data: ['My Team', 'Top 10k', 'Top 50k', 'Top 100k'],
+                    top: 0,
+                    textStyle: {
+                        color: '#e5e7eb',
+                        fontSize: 11
+                    },
+                    icon: 'roundRect',
+                    itemWidth: 20,
+                    itemHeight: 3
+                },
+                xAxis: {
+                    type: 'category',
+                    data: metrics,
+                    axisLabel: {
+                        color: '#94a3b8',
+                        fontSize: 10,
+                        interval: 0,
+                        rotate: 0,
+                        formatter: function(value) {
+                            // Shorten labels for mobile
+                            const shortLabels = {
+                                'Avg PPM': 'PPM',
+                                'Avg FDR': 'FDR',
+                                'Avg Form': 'Form',
+                                'Exp Points': 'xPts',
+                                'Ownership %': 'Own%',
+                                'Avg xGI': 'xGI'
+                            };
+                            return shortLabels[value] || value;
+                        }
+                    },
+                    axisLine: {
+                        lineStyle: {
+                            color: '#475569'
+                        }
+                    },
+                    axisTick: {
+                        show: false
+                    }
+                },
+                yAxis: {
+                    type: 'value',
+                    min: 0,
+                    max: 100,
+                    interval: 25,
+                    axisLabel: {
+                        color: '#94a3b8',
+                        fontSize: 11,
+                        formatter: '{value}th'
+                    },
+                    splitLine: {
+                        lineStyle: {
+                            color: '#334155',
+                            type: 'dashed',
+                            opacity: 0.5
+                        }
+                    },
+                    axisLine: {
+                        show: false
+                    },
+                    axisTick: {
+                        show: false
+                    }
+                },
+                series: [
+                    {
+                        name: 'My Team',
+                        type: 'line',
+                        data: data.myTeam,
+                        smooth: true,
+                        symbol: 'circle',
+                        symbolSize: 8,
+                        lineStyle: {
+                            color: '#a855f7',
+                            width: 3
+                        },
+                        itemStyle: {
+                            color: '#a855f7',
+                            borderWidth: 2,
+                            borderColor: '#1e293b'
+                        },
+                        emphasis: {
+                            scale: 1.2
+                        },
+                        show: visibleLines.myTeam
+                    },
+                    {
+                        name: 'Top 10k',
+                        type: 'line',
+                        data: data.top10k,
+                        smooth: true,
+                        symbol: 'circle',
+                        symbolSize: 6,
+                        lineStyle: {
+                            color: '#22c55e',
+                            width: 2
+                        },
+                        itemStyle: {
+                            color: '#22c55e'
+                        },
+                        show: visibleLines.top10k
+                    },
+                    {
+                        name: 'Top 50k',
+                        type: 'line',
+                        data: data.top50k,
+                        smooth: true,
+                        symbol: 'circle',
+                        symbolSize: 6,
+                        lineStyle: {
+                            color: '#3b82f6',
+                            width: 2
+                        },
+                        itemStyle: {
+                            color: '#3b82f6'
+                        },
+                        show: visibleLines.top50k
+                    },
+                    {
+                        name: 'Top 100k',
+                        type: 'line',
+                        data: data.top100k,
+                        smooth: true,
+                        symbol: 'circle',
+                        symbolSize: 6,
+                        lineStyle: {
+                            color: '#f59e0b',
+                            width: 2
+                        },
+                        itemStyle: {
+                            color: '#f59e0b'
+                        },
+                        show: visibleLines.top100k
+                    }
+                ]
+            };
+
+            myChart.setOption(option);
+        }
+
+        function toggleLine(cohort) {
+            const button = event.target;
+            visibleLines[cohort] = !visibleLines[cohort];
+            button.classList.toggle('active');
+            renderChart();
+        }
+
+        // Initial render
+        renderChart();
+
+        // Resize handler
+        window.addEventListener('resize', () => {
+            myChart.resize();
+        });
+    </script>
+</body>
+</html>
