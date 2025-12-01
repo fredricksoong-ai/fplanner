@@ -36,6 +36,7 @@ import { renderCostSummary, getCurrentCostSummary } from './planner/costCalculat
 import { attachPlannerListeners } from './planner/eventHandlers.js';
 import { getLeagueComparisonMetrics, getCohortComparisonMetrics } from './planner/leagueComparison.js';
 import { getWishlistPlayers } from './wishlist/store.js';
+import { initializeCohortChart, disposeCohortChart } from './planner/cohortChart.js';
 
 const COHORT_METRICS = [
     { key: 'avgPPM', label: 'Avg PPM', suffix: '' },
@@ -47,6 +48,7 @@ const COHORT_METRICS = [
 ];
 
 let plannerWishlistListenerAttached = false;
+let cohortChartInstance = null;
 
 // ============================================================================
 // MAIN RENDER FUNCTION
@@ -174,10 +176,28 @@ export async function renderPlanner() {
         `;
 
         container.innerHTML = html;
-        
+
         // Attach event listeners (new modular handlers)
         attachPlannerListeners();
         attachCohortToggle();
+
+        // Initialize cohort chart if data available
+        if (cohortComparison && cohortComparison.userPercentiles) {
+            // Dispose existing chart instance if any
+            if (cohortChartInstance) {
+                disposeCohortChart(cohortChartInstance);
+                cohortChartInstance = null;
+            }
+
+            // Initialize chart asynchronously (will be visible when toggle is expanded)
+            setTimeout(async () => {
+                try {
+                    cohortChartInstance = await initializeCohortChart('planner-cohort-chart', cohortComparison);
+                } catch (err) {
+                    console.error('Failed to initialize cohort chart:', err);
+                }
+            }, 100);
+        }
     } catch (err) {
         console.error('Failed to load planner:', err);
         container.innerHTML = `
@@ -356,51 +376,9 @@ function renderCohortComparisonSection(cohortPayload, userMetrics) {
     }
 
     const updatedLabel = formatUpdatedLabel(cohortPayload.updatedAt);
-    const bucketCards = cohortPayload.buckets.map(bucket => {
-        const metricRows = COHORT_METRICS.map(metric => {
-            const userValue = formatMetricValue(userMetrics?.[metric.key], metric.suffix);
-            const cohortValue = formatMetricValue(bucket.averages?.[metric.key], metric.suffix);
-            const percentile = bucket.percentiles?.[metric.key];
-            const percentileText = formatPercentileBadge(percentile);
-
-            return `
-                <div style="
-                    display: grid;
-                    grid-template-columns: 1fr 1fr 1fr;
-                    gap: 0.25rem;
-                    font-size: 0.65rem;
-                    color: var(--text-secondary);
-                    margin-bottom: 0.25rem;
-                ">
-                    <span style="font-weight: 600; color: var(--text-primary);">${metric.label}</span>
-                    <span>You: ${userValue}</span>
-                    <span>
-                        Avg: ${cohortValue}<br>
-                        ${percentileText}
-                    </span>
-                </div>
-            `;
-        }).join('');
-
-        return `
-            <div style="
-                background: var(--bg-primary);
-                border-radius: 6px;
-                padding: 0.75rem;
-                border: 1px solid var(--border-color);
-            ">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                    <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-primary);">
-                        ${bucket.label}
-                    </div>
-                    <div style="font-size: 0.65rem; color: var(--text-tertiary);">
-                        Sample: ${bucket.sampleSize} squads ${bucket.maxRank ? `(≤ ${Number(bucket.maxRank).toLocaleString()})` : ''}
-                    </div>
-                </div>
-                ${metricRows}
-            </div>
-        `;
-    }).join('');
+    const referenceLabel = cohortPayload.referenceDistribution === 'top10k'
+        ? '<span style="font-size: 0.6rem; font-weight: 400; color: var(--text-tertiary);">vs Top 10k benchmark</span>'
+        : '';
 
     return `
         <div style="
@@ -430,7 +408,7 @@ function renderCohortComparisonSection(cohortPayload, userMetrics) {
             >
                 <span style="display: flex; flex-direction: column; align-items: flex-start;">
                     <span>Top Manager Benchmarks</span>
-                    ${updatedLabel ? `<span style="font-size: 0.6rem; font-weight: 400; color: var(--text-tertiary);">Updated ${updatedLabel}</span>` : ''}
+                    ${updatedLabel ? `<span style="font-size: 0.6rem; font-weight: 400; color: var(--text-tertiary);">Updated ${updatedLabel} ${referenceLabel ? '• ' : ''}${referenceLabel}</span>` : referenceLabel}
                 </span>
                 <span data-cohort-chevron style="color: var(--accent-color); transition: transform 0.2s ease;">
                     <i class="fas fa-chevron-down"></i>
@@ -443,8 +421,14 @@ function renderCohortComparisonSection(cohortPayload, userMetrics) {
                     margin-top: 0.75rem;
                 "
             >
-                <div style="display: grid; grid-template-columns: 1fr; gap: 0.5rem;">
-                    ${bucketCards}
+                <div id="planner-cohort-chart" style="width: 100%; height: 300px;"></div>
+                <div style="
+                    font-size: 0.65rem;
+                    color: var(--text-tertiary);
+                    margin-top: 0.5rem;
+                    text-align: center;
+                ">
+                    Higher percentile = Better performance vs Top 10k managers
                 </div>
             </div>
         </div>
@@ -475,6 +459,13 @@ function attachCohortToggle() {
         content.style.display = isExpanded ? 'block' : 'none';
         if (chevron) {
             chevron.style.transform = isExpanded ? 'rotate(180deg)' : 'rotate(0deg)';
+        }
+
+        // Resize chart when expanded to ensure proper rendering
+        if (isExpanded && cohortChartInstance) {
+            setTimeout(() => {
+                cohortChartInstance.resize();
+            }, 300); // Wait for CSS transition to complete
         }
     };
 
