@@ -24,12 +24,35 @@ const COHORT_COLORS = {
 };
 
 /**
+ * Get actual metric values for display
+ * @param {Object} cohortData - Cohort comparison data
+ * @returns {Object} User metrics and cohort averages by metric key
+ */
+function getActualValues(cohortData) {
+    const actualValues = {
+        userMetrics: {},
+        cohortAverages: {}
+    };
+
+    // Get user's actual metric values from the first bucket's originalPercentiles calculation
+    // We'll need to pass userMetrics separately, so we'll add it to cohortData in the calling function
+
+    // For now, extract from bucket averages
+    cohortData.buckets.forEach(bucket => {
+        actualValues.cohortAverages[bucket.key] = bucket.averages;
+    });
+
+    return actualValues;
+}
+
+/**
  * Initialize the cohort comparison chart
  * @param {string} containerId - DOM element ID to render chart
  * @param {Object} cohortData - Cohort comparison data with userPercentiles and buckets
+ * @param {Object} userMetrics - User's actual metric values
  * @returns {Object} ECharts instance
  */
-export async function initializeCohortChart(containerId, cohortData) {
+export async function initializeCohortChart(containerId, cohortData, userMetrics = null) {
     if (!cohortData || !cohortData.userPercentiles || !cohortData.buckets) {
         console.error('Invalid cohort data provided to chart');
         return null;
@@ -54,13 +77,18 @@ export async function initializeCohortChart(containerId, cohortData) {
     // Prepare data series
     const xAxisData = METRIC_ORDER.map(key => METRIC_LABELS[key] || key);
 
-    // Build series for chart
+    // Build series for chart with actual values attached
     const series = [];
 
     // User's team percentiles (vs Top 10k)
     const userPercentileData = METRIC_ORDER.map(key => {
-        const value = cohortData.userPercentiles[key];
-        return value !== null && value !== undefined ? value : null;
+        const percentile = cohortData.userPercentiles[key];
+        const actualValue = userMetrics?.[key];
+        return percentile !== null && percentile !== undefined ? {
+            value: percentile,
+            actualValue: actualValue,
+            metricKey: key
+        } : null;
     });
 
     series.push({
@@ -89,8 +117,13 @@ export async function initializeCohortChart(containerId, cohortData) {
     // Cohort averages percentiles (vs Top 10k)
     cohortData.buckets.forEach(bucket => {
         const percentileData = METRIC_ORDER.map(key => {
-            const value = bucket.percentiles[key];
-            return value !== null && value !== undefined ? value : null;
+            const percentile = bucket.percentiles[key];
+            const actualValue = bucket.averages[key];
+            return percentile !== null && percentile !== undefined ? {
+                value: percentile,
+                actualValue: actualValue,
+                metricKey: key
+            } : null;
         });
 
         series.push({
@@ -113,11 +146,41 @@ export async function initializeCohortChart(containerId, cohortData) {
         });
     });
 
+    // Calculate dynamic Y-axis range based on actual percentiles
+    const allPercentiles = [];
+    series.forEach(s => {
+        s.data.forEach(point => {
+            if (point && point.value !== null && point.value !== undefined) {
+                allPercentiles.push(point.value);
+            }
+        });
+    });
+
+    const minPercentile = Math.min(...allPercentiles);
+    const maxPercentile = Math.max(...allPercentiles);
+    const range = maxPercentile - minPercentile;
+    const padding = Math.max(5, range * 0.1); // At least 5% padding, or 10% of range
+
+    const yMin = Math.max(0, Math.floor(minPercentile - padding));
+    const yMax = Math.min(100, Math.ceil(maxPercentile + padding));
+
+    // Calculate appropriate interval for Y-axis
+    const yRange = yMax - yMin;
+    const interval = yRange <= 20 ? 5 : (yRange <= 40 ? 10 : 25);
+
     // Theme detection
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     const textColor = isDark ? '#e5e7eb' : '#374151';
     const gridColor = isDark ? '#334155' : '#e5e7eb';
     const tooltipBg = isDark ? 'rgba(0, 0, 0, 0.85)' : 'rgba(255, 255, 255, 0.95)';
+
+    // Helper to format actual values based on metric type
+    const formatActualValue = (metricKey, value) => {
+        if (value === null || value === undefined) return 'N/A';
+        if (metricKey === 'avgOwnership') return `${value.toFixed(1)}%`;
+        if (metricKey === 'expectedPoints') return value.toFixed(0);
+        return value.toFixed(2);
+    };
 
     const option = {
         grid: {
@@ -139,8 +202,13 @@ export async function initializeCohortChart(containerId, cohortData) {
                 const metricName = params[0].axisValue;
                 let result = `<strong>${metricName}</strong><br/>`;
                 params.forEach(param => {
-                    const value = param.value !== null ? `${param.value}th` : 'N/A';
-                    result += `${param.marker} ${param.seriesName}: <strong>${value}</strong> percentile<br/>`;
+                    if (param.data && param.data.value !== null) {
+                        const percentile = `${param.data.value}th`;
+                        const actualVal = formatActualValue(param.data.metricKey, param.data.actualValue);
+                        result += `${param.marker} ${param.seriesName}: <strong>${percentile}</strong> (${actualVal})<br/>`;
+                    } else {
+                        result += `${param.marker} ${param.seriesName}: N/A<br/>`;
+                    }
                 });
                 return result;
             }
@@ -178,9 +246,9 @@ export async function initializeCohortChart(containerId, cohortData) {
         },
         yAxis: {
             type: 'value',
-            min: 0,
-            max: 100,
-            interval: 25,
+            min: yMin,
+            max: yMax,
+            interval: interval,
             axisLabel: {
                 color: isDark ? '#94a3b8' : '#64748b',
                 fontSize: 11,

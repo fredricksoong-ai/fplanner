@@ -192,7 +192,7 @@ export async function renderPlanner() {
             // Initialize chart asynchronously (will be visible when toggle is expanded)
             setTimeout(async () => {
                 try {
-                    cohortChartInstance = await initializeCohortChart('planner-cohort-chart', cohortComparison);
+                    cohortChartInstance = await initializeCohortChart('planner-cohort-chart', cohortComparison, projectedMetrics);
                 } catch (err) {
                     console.error('Failed to initialize cohort chart:', err);
                 }
