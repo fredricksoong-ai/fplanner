@@ -290,6 +290,29 @@ export async function initializeTeamPointsChart(containerId, teamHistory, curren
                 result += `<span style="color: ${WORST_COLOR}; font-weight: 600;">⚠️ Worst GW</span><br/>`;
               }
             }
+          } else if (param.seriesName === 'FPL Average') {
+            if (param.data && param.data.value !== null) {
+              const idx = param.dataIndex;
+              const fplAvg = cumulativeFPLAverages[idx];
+              const actual = cumulativePoints[idx];
+              const diff = actual - fplAvg;
+              const diffText = diff > 0 ? `+${diff.toFixed(0)}` : diff.toFixed(0);
+              const gwAvg = fplGWaverages[idx];
+              result += `${param.marker} FPL Avg: <strong>${fplAvg.toFixed(0)}</strong> pts (GW avg: ${gwAvg.toFixed(1)})<br/>`;
+              result += `Your Total: <strong>${actual}</strong> pts (${diffText} vs FPL avg)<br/>`;
+            }
+          } else if (param.seriesName === paceLabel) {
+            if (param.data && param.data.value !== null) {
+              const idx = param.dataIndex;
+              const actual = cumulativePoints[idx];
+              const projected = recentPaceData[idx];
+              const diff = actual - projected;
+              const diffText = diff > 0 ? `+${diff.toFixed(0)}` : diff.toFixed(0);
+              result += `${param.marker} ${param.seriesName}<br/>`;
+              result += `Projected: <strong>${projected.toFixed(0)}</strong> pts<br/>`;
+              result += `Actual: <strong>${actual}</strong> pts (${diffText})<br/>`;
+            }
+          }
         });
         
         return result;
