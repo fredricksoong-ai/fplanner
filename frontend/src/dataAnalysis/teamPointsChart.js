@@ -319,7 +319,21 @@ export async function initializeTeamPointsChart(containerId, teamHistory, curren
         }
       },
       axisTick: {
-        show: false
+        show: true, // Show tick marks for each GW
+        alignWithLabel: true,
+        lineStyle: {
+          color: gridColor,
+          opacity: 0.3
+        },
+        length: 4
+      },
+      splitLine: {
+        show: true, // Show vertical grid lines for each GW
+        lineStyle: {
+          color: gridColor,
+          type: 'dashed',
+          opacity: 0.2
+        }
       }
     },
     yAxis: {
