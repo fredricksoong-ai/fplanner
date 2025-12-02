@@ -265,6 +265,7 @@ export async function initializeTeamPointsChart(containerId, teamHistory, curren
               result += `${param.marker} FPL Avg: <strong>${fplAvg.toFixed(0)}</strong> pts (GW avg: ${gwAvg.toFixed(1)})<br/>`;
               result += `Your Total: <strong>${actual}</strong> pts (${diffText} vs FPL avg)<br/>`;
             }
+          }
         });
         
         return result;
