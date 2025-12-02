@@ -4,8 +4,8 @@
  */
 
 import { loadECharts } from '../charts/chartHelpers.js';
-import { getAllPlayers } from '../data.js';
-import { getCurrentGW, getActiveGW } from '../data.js';
+import { getAllPlayers, getActiveGW } from '../data.js';
+import { getCurrentGW } from '../utils.js';
 
 const CHART_COLOR = '#a855f7'; // Purple, matching cohort chart
 const EXPECTED_COLOR = '#22c55e'; // Green for expected
