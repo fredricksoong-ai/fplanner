@@ -8,10 +8,9 @@ import { getAllPlayers, getActiveGW } from '../data.js';
 import { getCurrentGW } from '../utils.js';
 
 const CHART_COLOR = '#a855f7'; // Purple, matching cohort chart
-const EXPECTED_COLOR = '#22c55e'; // Green for expected
-const BAR_COLOR_GOOD = '#10b981'; // Green for good GWs
-const BAR_COLOR_BAD = '#ef4444'; // Red for bad GWs
-const BAR_COLOR_NEUTRAL = '#64748b'; // Gray for average GWs
+const EXPECTED_COLOR = '#3b82f6'; // Blue for forecast (not green since green is for best)
+const BEST_COLOR = '#10b981'; // Green for best GW
+const WORST_COLOR = '#ef4444'; // Red for worst GW
 
 /**
  * Calculate expected points for current team
@@ -147,39 +146,28 @@ export async function initializeTeamPointsChart(containerId, teamHistory, curren
   const yMin = Math.max(0, Math.floor(minPoints - padding));
   const yMax = Math.ceil(maxPoints + padding);
 
+  // Build selective X-axis labels: only best, worst, and forecast GWs
+  const xAxisLabels = xAxisData.map((label, idx) => {
+    const gw = sortedHistory[idx];
+    if (gw.event === bestGW.event) {
+      return `{best|${label}}`;
+    } else if (gw.event === worstGW.event) {
+      return `{worst|${label}}`;
+    }
+    return ''; // Empty string hides the label
+  });
+
+  // Add forecast GWs if available
+  if (expectedPointsLine) {
+    expectedPointsLine.labels.slice(1).forEach(label => {
+      xAxisLabels.push(`{forecast|${label}}`);
+    });
+  }
+
   // Build series array
   const series = [];
 
-  // 1. GW-by-GW points bars (secondary Y-axis)
-  const barColors = gwPoints.map(pts => {
-    if (pts > avgGWPoints * 1.1) return BAR_COLOR_GOOD;
-    if (pts < avgGWPoints * 0.9) return BAR_COLOR_BAD;
-    return BAR_COLOR_NEUTRAL;
-  });
-
-  // Pad bar data with nulls for forecast GWs if expected line exists
-  const barData = gwPoints.map((pts, idx) => ({
-    value: pts,
-    itemStyle: { color: barColors[idx] }
-  }));
-  
-  if (expectedPointsLine) {
-    // Add nulls for forecast GWs (bars only show historical)
-    for (let i = 0; i < 5; i++) {
-      barData.push(null);
-    }
-  }
-
-  series.push({
-    name: 'GW Points',
-    type: 'bar',
-    yAxisIndex: 1,
-    data: barData,
-    barWidth: '40%',
-    z: 1
-  });
-
-  // 2. Cumulative points line
+  // 1. Cumulative points line (main series)
   const cumulativeData = cumulativePoints.map((total, idx) => ({
     value: total,
     gwPoints: gwPoints[idx],
@@ -202,15 +190,14 @@ export async function initializeTeamPointsChart(containerId, teamHistory, curren
     smooth: true,
     symbol: function(data, params) {
       if (!data) return 'none';
-      // Larger symbols for best/worst GWs
+      // Highlight best/worst with larger symbols
       if (data.isBest || data.isWorst) return 'circle';
-      return 'circle';
+      return 'none'; // No symbols for regular points (cleaner)
     },
     symbolSize: function(data, params) {
       if (!data) return 0;
-      // Larger symbols for best/worst GWs
-      if (data.isBest || data.isWorst) return 12;
-      return 8;
+      if (data.isBest || data.isWorst) return 10;
+      return 0;
     },
     lineStyle: {
       color: CHART_COLOR,
@@ -220,39 +207,19 @@ export async function initializeTeamPointsChart(containerId, teamHistory, curren
       if (!params.data) return {};
       const data = params.data;
       return {
-        color: data.isBest ? '#10b981' : (data.isWorst ? '#ef4444' : CHART_COLOR),
-        borderWidth: 2,
+        color: data.isBest ? BEST_COLOR : (data.isWorst ? WORST_COLOR : CHART_COLOR),
+        borderWidth: data.isBest || data.isWorst ? 3 : 0,
         borderColor: getComputedStyle(document.documentElement).getPropertyValue('--bg-secondary').trim() || '#1e293b'
       };
     },
     emphasis: {
       scale: 1.2,
-      focus: 'series'
-    },
-    markPoint: {
-      data: [
-        { 
-          name: 'Best GW', 
-          coord: [bestGW.event - sortedHistory[0].event, bestGW.total_points], 
-          symbol: 'pin', 
-          symbolSize: 50,
-          itemStyle: { color: '#10b981' }
-        },
-        { 
-          name: 'Worst GW', 
-          coord: [worstGW.event - sortedHistory[0].event, worstGW.total_points], 
-          symbol: 'pin', 
-          symbolSize: 50,
-          itemStyle: { color: '#ef4444' }
-        }
-      ],
-      label: {
-        show: true,
-        position: 'top',
-        formatter: '{b}',
-        fontSize: 10
+      focus: 'series',
+      lineStyle: {
+        width: 4
       }
     },
+    // Reduced area fill opacity for cleaner look
     areaStyle: {
       color: {
         type: 'linear',
@@ -262,36 +229,32 @@ export async function initializeTeamPointsChart(containerId, teamHistory, curren
         y2: 1,
         colorStops: [{
           offset: 0,
-          color: isDark ? 'rgba(168, 85, 247, 0.3)' : 'rgba(168, 85, 247, 0.2)'
+          color: isDark ? 'rgba(168, 85, 247, 0.15)' : 'rgba(168, 85, 247, 0.1)'
         }, {
           offset: 1,
-          color: isDark ? 'rgba(168, 85, 247, 0.05)' : 'rgba(168, 85, 247, 0.05)'
+          color: isDark ? 'rgba(168, 85, 247, 0.02)' : 'rgba(168, 85, 247, 0.02)'
         }]
       }
     },
     z: 10
   });
 
-  // 3. Average cumulative trend line (markLine on cumulative series)
-  // Calculate what cumulative would be if scoring average every GW
+  // 2. Average trend line (more subtle)
   const firstGW = sortedHistory[0];
   const avgCumulativeData = sortedHistory.map((gw, idx) => {
     const expectedTotal = firstGW.total_points + (avgGWPoints * idx);
     return expectedTotal;
   });
   
-  // Add average line as a separate series for better control
   series.push({
     name: 'Average Trend',
     type: 'line',
-    data: avgCumulativeData.map(total => ({
-      value: total
-    })),
+    data: avgCumulativeData.map(total => ({ value: total })),
     lineStyle: {
       color: '#f59e0b',
       type: 'dashed',
-      width: 2,
-      opacity: 0.6
+      width: 1.5,
+      opacity: 0.4 // More subtle
     },
     symbol: 'none',
     tooltip: {
@@ -300,13 +263,12 @@ export async function initializeTeamPointsChart(containerId, teamHistory, curren
     z: 5
   });
 
-  // 4. Expected points line (if available)
+  // 3. Expected points forecast (if available)
   if (expectedPointsLine) {
-    // Start from last GW, then project forward
     const expectedData = [...Array(sortedHistory.length - 1).fill(null), expectedPointsLine.values[0], ...expectedPointsLine.values.slice(1)];
     
     series.push({
-      name: 'Expected (Forecast)',
+      name: 'Expected Forecast',
       type: 'line',
       data: expectedData.map((val, idx) => {
         if (val === null) return null;
@@ -318,12 +280,12 @@ export async function initializeTeamPointsChart(containerId, teamHistory, curren
       }),
       smooth: true,
       symbol: 'diamond',
-      symbolSize: 6,
+      symbolSize: 5,
       lineStyle: {
         color: EXPECTED_COLOR,
         width: 2,
         type: 'dashed',
-        opacity: 0.8
+        opacity: 0.7
       },
       itemStyle: {
         color: EXPECTED_COLOR
@@ -337,10 +299,10 @@ export async function initializeTeamPointsChart(containerId, teamHistory, curren
 
   const option = {
     grid: {
-      left: '12%',
-      right: '5%',
-      top: '20%',
-      bottom: '15%',
+      left: '10%',
+      right: '8%',
+      top: '15%',
+      bottom: '12%',
       containLabel: false
     },
     tooltip: {
@@ -355,27 +317,27 @@ export async function initializeTeamPointsChart(containerId, teamHistory, curren
         let result = `<strong>${params[0].axisValue}</strong><br/>`;
         
         params.forEach(param => {
-          if (param.seriesName === 'GW Points') {
-            const idx = param.dataIndex;
-            const pts = gwPoints[idx];
-            const vsAvg = pts > avgGWPoints ? '+' : '';
-            const diff = (pts - avgGWPoints).toFixed(1);
-            result += `${param.marker} <strong>${pts}</strong> pts (${vsAvg}${diff} vs avg)<br/>`;
-          } else if (param.seriesName === 'Cumulative Points') {
+          if (param.seriesName === 'Cumulative Points') {
             if (param.data && param.data.value !== null) {
-              const gw = sortedHistory[param.dataIndex];
+              const idx = param.dataIndex;
+              const gw = sortedHistory[idx];
               result += `${param.marker} Total: <strong>${gw.total_points}</strong> pts<br/>`;
+              // Include GW points in tooltip (removed from bars)
+              result += `GW Points: <strong>${param.data.gwPoints || 0}</strong> pts`;
+              const vsAvg = param.data.gwPoints > avgGWPoints ? '+' : '';
+              const diff = (param.data.gwPoints - avgGWPoints).toFixed(1);
+              result += ` (${vsAvg}${diff} vs avg)<br/>`;
               if (gw.overall_rank) {
                 result += `Rank: <strong>${gw.overall_rank.toLocaleString()}</strong><br/>`;
               }
               if (param.data.isBest) {
-                result += `<span style="color: #10b981;">⭐ Best GW!</span><br/>`;
+                result += `<span style="color: ${BEST_COLOR}; font-weight: 600;">⭐ Best GW!</span><br/>`;
               }
               if (param.data.isWorst) {
-                result += `<span style="color: #ef4444;">⚠️ Worst GW</span><br/>`;
+                result += `<span style="color: ${WORST_COLOR}; font-weight: 600;">⚠️ Worst GW</span><br/>`;
               }
             }
-          } else if (param.seriesName === 'Expected (Forecast)') {
+          } else if (param.seriesName === 'Expected Forecast') {
             if (param.data && param.data.value !== null) {
               result += `${param.marker} Expected: <strong>${param.data.value.toFixed(0)}</strong> pts`;
               if (param.data.isForecast) {
@@ -383,8 +345,6 @@ export async function initializeTeamPointsChart(containerId, teamHistory, curren
               }
               result += `<br/>`;
             }
-          } else if (param.seriesName === 'Average Trend') {
-            // Skip average trend in tooltip (it's just a reference line)
           }
         });
         
@@ -392,7 +352,7 @@ export async function initializeTeamPointsChart(containerId, teamHistory, curren
       }
     },
     legend: {
-      data: ['Cumulative Points', 'Average Trend', 'GW Points', ...(expectedPointsLine ? ['Expected (Forecast)'] : [])],
+      data: ['Cumulative Points', 'Average Trend', ...(expectedPointsLine ? ['Expected Forecast'] : [])],
       top: 5,
       left: 'center',
       textStyle: {
@@ -411,18 +371,25 @@ export async function initializeTeamPointsChart(containerId, teamHistory, curren
         color: isDark ? '#94a3b8' : '#64748b',
         fontSize: 11,
         interval: 0,
-        rotate: xAxisData.length > 10 ? 45 : 0,
+        rotate: 0, // No rotation needed with selective labels
         formatter: function(value, index) {
-          // Style forecast GWs differently
-          if (expectedPointsLine && index >= sortedHistory.length) {
-            return `{forecast|${value}}`;
-          }
-          return value;
+          return xAxisLabels[index] || '';
         },
         rich: {
+          best: {
+            color: BEST_COLOR,
+            fontWeight: 700,
+            fontSize: 12
+          },
+          worst: {
+            color: WORST_COLOR,
+            fontWeight: 700,
+            fontSize: 12
+          },
           forecast: {
             color: EXPECTED_COLOR,
-            fontStyle: 'italic'
+            fontStyle: 'italic',
+            fontSize: 11
           }
         }
       },
@@ -435,52 +402,30 @@ export async function initializeTeamPointsChart(containerId, teamHistory, curren
         show: false
       }
     },
-    yAxis: [
-      {
-        type: 'value',
-        name: 'Cumulative Points',
-        min: yMin,
-        max: yMax,
-        position: 'left',
-        axisLabel: {
-          color: isDark ? '#94a3b8' : '#64748b',
-          fontSize: 11,
-          formatter: '{value}'
-        },
-        splitLine: {
-          lineStyle: {
-            color: gridColor,
-            type: 'dashed',
-            opacity: 0.3
-          }
-        },
-        axisLine: {
-          show: false
-        },
-        axisTick: {
-          show: false
+    yAxis: {
+      type: 'value',
+      name: 'Cumulative Points',
+      min: yMin,
+      max: yMax,
+      axisLabel: {
+        color: isDark ? '#94a3b8' : '#64748b',
+        fontSize: 11,
+        formatter: '{value}'
+      },
+      splitLine: {
+        lineStyle: {
+          color: gridColor,
+          type: 'dashed',
+          opacity: 0.2 // More subtle grid
         }
       },
-      {
-        type: 'value',
-        name: 'GW Points',
-        position: 'right',
-        axisLabel: {
-          color: isDark ? '#94a3b8' : '#64748b',
-          fontSize: 11,
-          formatter: '{value}'
-        },
-        splitLine: {
-          show: false
-        },
-        axisLine: {
-          show: false
-        },
-        axisTick: {
-          show: false
-        }
+      axisLine: {
+        show: false
+      },
+      axisTick: {
+        show: false
       }
-    ],
+    },
     series
   };
 
