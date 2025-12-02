@@ -34,21 +34,10 @@ import { calculateTeamMetrics, calculateProjectedTeamMetrics } from './planner/m
 import { renderMetricIndicators } from './planner/indicators.js';
 import { renderCostSummary, getCurrentCostSummary } from './planner/costCalculator.js';
 import { attachPlannerListeners } from './planner/eventHandlers.js';
-import { getLeagueComparisonMetrics, getCohortComparisonMetrics } from './planner/leagueComparison.js';
+import { getLeagueComparisonMetrics } from './planner/leagueComparison.js';
 import { getWishlistPlayers } from './wishlist/store.js';
-import { initializeCohortChart, disposeCohortChart } from './planner/cohortChart.js';
-
-const COHORT_METRICS = [
-    { key: 'avgPPM', label: 'Avg PPM', suffix: '' },
-    { key: 'avgFDR', label: 'Avg FDR', suffix: '' },
-    { key: 'avgForm', label: 'Avg Form', suffix: '' },
-    { key: 'expectedPoints', label: 'Exp Pts', suffix: '' },
-    { key: 'avgOwnership', label: 'Avg Own%', suffix: '%' },
-    { key: 'avgXGI', label: 'Avg xGI', suffix: '' }
-];
 
 let plannerWishlistListenerAttached = false;
-let cohortChartInstance = null;
 
 // ============================================================================
 // MAIN RENDER FUNCTION
@@ -152,23 +141,16 @@ export async function renderPlanner() {
 
         // Build page HTML
         let leagueComparison = null;
-        let cohortComparison = null;
         try {
             leagueComparison = await getLeagueComparisonMetrics(numericTeamId, projectedMetrics, gwNumber);
         } catch (err) {
             console.warn('Planner league comparison unavailable:', err.message || err);
-        }
-        try {
-            cohortComparison = await getCohortComparisonMetrics(projectedMetrics, gwNumber);
-        } catch (err) {
-            console.warn('Planner cohort comparison unavailable:', err.message || err);
         }
 
         const html = `
             <div style="padding: 0.75rem;">
                 ${renderPlannerHeader(gwNumber, highCount, mediumCount, lowCount)}
                 ${renderMetricIndicators(originalMetrics, projectedMetrics, leagueComparison)}
-                ${renderCohortComparisonSection(cohortComparison, projectedMetrics)}
                 ${renderCostSummary(costSummary)}
                 ${renderWishlistSection(wishlistEntries, gwNumber)}
                 ${renderUnifiedFixtureTable(currentPlayers, riskPlayerMap, teamData.picks, gwNumber)}
@@ -179,25 +161,6 @@ export async function renderPlanner() {
 
         // Attach event listeners (new modular handlers)
         attachPlannerListeners();
-        attachCohortToggle();
-
-        // Initialize cohort chart if data available
-        if (cohortComparison && cohortComparison.userPercentiles) {
-            // Dispose existing chart instance if any
-            if (cohortChartInstance) {
-                disposeCohortChart(cohortChartInstance);
-                cohortChartInstance = null;
-            }
-
-            // Initialize chart asynchronously (will be visible when toggle is expanded)
-            setTimeout(async () => {
-                try {
-                    cohortChartInstance = await initializeCohortChart('planner-cohort-chart', cohortComparison, projectedMetrics);
-                } catch (err) {
-                    console.error('Failed to initialize cohort chart:', err);
-                }
-            }, 100);
-        }
     } catch (err) {
         console.error('Failed to load planner:', err);
         container.innerHTML = `
@@ -370,150 +333,6 @@ function renderWishlistSection(entries = [], gwNumber = currentGW) {
     `;
 }
 
-function renderCohortComparisonSection(cohortPayload, userMetrics) {
-    if (!cohortPayload || !Array.isArray(cohortPayload.buckets) || cohortPayload.buckets.length === 0) {
-        return '';
-    }
-
-    const updatedLabel = formatUpdatedLabel(cohortPayload.updatedAt);
-    const referenceLabel = cohortPayload.referenceDistribution === 'top10k'
-        ? '<span style="font-size: 0.6rem; font-weight: 400; color: var(--text-tertiary);">vs Top 10k benchmark</span>'
-        : '';
-
-    return `
-        <div style="
-            margin-bottom: 1rem;
-            padding: 0.75rem;
-            background: var(--bg-secondary);
-            border-radius: 0.75rem;
-        ">
-            <button
-                type="button"
-                data-cohort-toggle
-                aria-expanded="false"
-                style="
-                    width: 100%;
-                    background: transparent;
-                    border: none;
-                    padding: 0;
-                    margin: 0;
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    font-size: 0.75rem;
-                    font-weight: 600;
-                    color: var(--text-secondary);
-                    cursor: pointer;
-                "
-            >
-                <span style="display: flex; flex-direction: column; align-items: flex-start;">
-                    <span>Top Manager Benchmarks</span>
-                    ${updatedLabel ? `<span style="font-size: 0.6rem; font-weight: 400; color: var(--text-tertiary);">Updated ${updatedLabel} ${referenceLabel ? '• ' : ''}${referenceLabel}</span>` : referenceLabel}
-                </span>
-                <span data-cohort-chevron style="color: var(--accent-color); transition: transform 0.2s ease;">
-                    <i class="fas fa-chevron-down"></i>
-                </span>
-            </button>
-            <div
-                id="planner-cohort-content"
-                style="
-                    display: none;
-                    margin-top: 0.75rem;
-                "
-            >
-                <div id="planner-cohort-chart" style="width: 100%; height: 300px;"></div>
-                <div style="
-                    font-size: 0.65rem;
-                    color: var(--text-tertiary);
-                    margin-top: 0.5rem;
-                    text-align: center;
-                ">
-                    Higher percentile = Better performance vs Top 10k managers
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-function formatMetricValue(value, suffix = '') {
-    if (value === null || value === undefined || Number.isNaN(value)) {
-        return '—';
-    }
-    const formatted = formatDecimal(value);
-    return suffix ? `${formatted}${suffix}` : formatted;
-}
-
-function attachCohortToggle() {
-    const toggle = document.querySelector('[data-cohort-toggle]');
-    const content = document.getElementById('planner-cohort-content');
-    const chevron = toggle?.querySelector('[data-cohort-chevron] i');
-
-    if (!toggle || !content) {
-        return;
-    }
-
-    let isExpanded = false;
-
-    const updateState = () => {
-        toggle.setAttribute('aria-expanded', String(isExpanded));
-        content.style.display = isExpanded ? 'block' : 'none';
-        if (chevron) {
-            chevron.style.transform = isExpanded ? 'rotate(180deg)' : 'rotate(0deg)';
-        }
-
-        // Resize chart when expanded to ensure proper rendering
-        if (isExpanded && cohortChartInstance) {
-            setTimeout(() => {
-                cohortChartInstance.resize();
-            }, 300); // Wait for CSS transition to complete
-        }
-    };
-
-    toggle.addEventListener('click', () => {
-        isExpanded = !isExpanded;
-        updateState();
-    });
-
-    updateState();
-}
-
-function formatUpdatedLabel(timestamp) {
-    if (!timestamp) {
-        return '';
-    }
-    const ageMs = Date.now() - timestamp;
-    if (ageMs < 0) {
-        return '';
-    }
-    const minutes = Math.floor(ageMs / (1000 * 60));
-    if (minutes < 1) {
-        return 'just now';
-    }
-    if (minutes < 60) {
-        return `${minutes}m ago`;
-    }
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) {
-        return `${hours}h ago`;
-    }
-    const days = Math.floor(hours / 24);
-    return `${days}d ago`;
-}
-
-function formatPercentileBadge(percentile) {
-    if (percentile === null || percentile === undefined || Number.isNaN(percentile)) {
-        return '';
-    }
-    const color = getPercentileColor(percentile);
-    return `<span style="color: ${color}; font-weight: 600;">${percentile}<sup>th</sup> pct</span>`;
-}
-
-function getPercentileColor(percentile) {
-    if (percentile >= 90) return '#a855f7';
-    if (percentile >= 70) return 'var(--success-color)';
-    if (percentile >= 40) return '#facc15';
-    return 'var(--danger-color)';
-}
 
 // ============================================================================
 // HEADER

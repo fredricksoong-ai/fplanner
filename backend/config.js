@@ -20,29 +20,6 @@ export const SERVER = {
 };
 
 // ============================================================================
-// AWS S3 CONFIGURATION
-// ============================================================================
-
-export const S3 = {
-  ENABLED: process.env.AWS_S3_ENABLED === 'true',
-  BUCKET: process.env.AWS_S3_BUCKET || 'fplanner-cache',
-  REGION: process.env.AWS_REGION || 'us-east-1',
-  ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID || '',
-  SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY || '',
-  CACHE_KEY: 'cache-backup.json', // S3 object key for cache file
-};
-
-// ============================================================================
-// MONGODB CONFIGURATION
-// ============================================================================
-
-export const MONGO = {
-  ENABLED: process.env.MONGO_ENABLED === 'true',
-  CONNECTION_STRING: process.env.MONGO_CONNECTION_STRING || '',
-  DATABASE_NAME: process.env.MONGO_DATABASE_NAME || 'fplanner',
-};
-
-// ============================================================================
 // API ENDPOINTS
 // ============================================================================
 

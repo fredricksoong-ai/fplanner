@@ -30,10 +30,8 @@ import fplRoutes from './routes/fplRoutes.js';
 import teamRoutes from './routes/teamRoutes.js';
 import leagueRoutes from './routes/leagueRoutes.js';
 import aiRoutes from './routes/aiRoutes.js';
-import plannerRoutes from './routes/plannerRoutes.js';
 import historyRoutes from './routes/historyRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
-import { startCohortScheduler } from './services/cohortScheduler.js';
 
 // Logger
 import logger from './logger.js';
@@ -146,9 +144,6 @@ app.use('/', leagueRoutes);
 // AI Routes (/api/ai-insights)
 app.use('/', aiRoutes);
 
-// Planner Routes (/api/planner/*)
-app.use('/', plannerRoutes);
-
 // History Routes (/api/history/*)
 app.use('/', historyRoutes);
 
@@ -234,7 +229,7 @@ function enforceRenderPortBinding() {
 // ============================================================================
 
 (async () => {
-  // Load cache from S3/disk before starting server
+  // Load cache from disk before starting server
   await loadCacheFromDisk();
 
   // Initialize cache persistence (auto-save and graceful shutdown)
@@ -244,9 +239,6 @@ function enforceRenderPortBinding() {
   warmCachesOnStartup()
     .catch(err => {
       logger.warn(`⚠️ Cache warmup encountered an error: ${err.message}`);
-    })
-    .finally(() => {
-      startCohortScheduler();
     });
 
   // Ensure platform-provided port binding is respected (Render)
