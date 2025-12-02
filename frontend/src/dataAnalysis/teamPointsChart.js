@@ -63,17 +63,22 @@ export async function initializeTeamPointsChart(containerId, teamHistory, curren
     (gw.points || 0) < (worst.points || 0) ? gw : worst
   );
 
-  // Calculate FPL GW averages and cumulative
+  // Calculate FPL GW averages
   const fplGWaverages = sortedHistory.map(gw => {
     const event = getGameweekEvent(gw.event);
     return event?.average_entry_score || 0;
   });
   
-  // Calculate cumulative FPL average
-  let cumulativeFPLAvg = 0;
-  const cumulativeFPLAverages = fplGWaverages.map(avg => {
-    cumulativeFPLAvg += avg;
-    return cumulativeFPLAvg;
+  // Calculate cumulative FPL average starting from your first GW total
+  // This shows what your cumulative would be if you scored FPL GW average each week
+  const firstGW = sortedHistory[0];
+  const firstGWTotal = firstGW.total_points;
+  const cumulativeFPLAverages = sortedHistory.map((gw, idx) => {
+    if (idx === 0) {
+      return firstGWTotal; // Start from your actual first GW total
+    }
+    // Add FPL GW average for each subsequent GW
+    return firstGWTotal + fplGWaverages.slice(1, idx + 1).reduce((sum, avg) => sum + avg, 0);
   });
 
 
