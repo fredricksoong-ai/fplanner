@@ -263,9 +263,17 @@ export function parseGeminiResponse(geminiData, gameweek, page) {
           logger.warn(`   ⚠️ "${category}": Only ${insightCount} insights (expected 3)`);
         }
         // Ensure each insight is a string and trim to reasonable length
+        // Handle both object format { insight: "..." } and direct string format
         validatedCategories[category] = categories[category]
           .slice(0, 3)  // Take first 3 insights
-          .map(insight => String(insight || '').substring(0, 300));
+          .map(insight => {
+            // If insight is an object with an 'insight' property, extract it
+            if (typeof insight === 'object' && insight !== null && insight.insight) {
+              return String(insight.insight || '').substring(0, 300);
+            }
+            // Otherwise, treat as string
+            return String(insight || '').substring(0, 300);
+          });
       } else {
         // Fallback if category missing
         logger.warn(`   ⚠️ "${category}": Using fallback messages (category missing or invalid)`);
