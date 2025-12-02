@@ -133,16 +133,17 @@ export async function initializeTeamPointsChart(containerId, teamHistory, curren
       return 6; // Regular dots
     },
     lineStyle: {
-      color: CHART_COLOR,
+      color: CHART_COLOR, // Purple line
       width: 3
     },
     itemStyle: function(params) {
-      if (!params.data) return {};
+      if (!params.data) return { color: CHART_COLOR };
       const data = params.data;
+      // Use purple for all points, but larger/bordered for best/worst
       return {
-        color: data.isBest ? BEST_COLOR : (data.isWorst ? WORST_COLOR : CHART_COLOR),
+        color: CHART_COLOR, // Always purple for consistency with legend
         borderWidth: data.isBest || data.isWorst ? 3 : 0,
-        borderColor: getComputedStyle(document.documentElement).getPropertyValue('--bg-secondary').trim() || '#1e293b'
+        borderColor: data.isBest ? BEST_COLOR : (data.isWorst ? WORST_COLOR : CHART_COLOR)
       };
     },
     emphasis: {
@@ -201,6 +202,7 @@ export async function initializeTeamPointsChart(containerId, teamHistory, curren
 
 
   const option = {
+    color: [CHART_COLOR, '#64748b'], // Explicit colors: purple for Cumulative, gray for FPL Average
     grid: {
       left: '10%',
       right: '8%',
@@ -236,42 +238,40 @@ export async function initializeTeamPointsChart(containerId, teamHistory, curren
         return [x - tooltipWidth / 2, y - tooltipHeight - 10];
       },
       formatter: function(params) {
-        let result = `<strong>${params[0].axisValue}</strong><br/>`;
+        // Get the first param to determine which GW we're hovering over
+        const firstParam = params[0];
+        const idx = firstParam.dataIndex;
+        const gw = sortedHistory[idx];
+        const gwLabel = firstParam.axisValue;
         
-        params.forEach(param => {
-          if (param.seriesName === 'Cumulative Points') {
-            if (param.data && param.data.value !== null) {
-              const idx = param.dataIndex;
-              const gw = sortedHistory[idx];
-              result += `${param.marker} Total: <strong>${gw.total_points}</strong> pts<br/>`;
-              // Include GW points in tooltip (removed from bars)
-              result += `GW Points: <strong>${param.data.gwPoints || 0}</strong> pts`;
-              const vsAvg = param.data.gwPoints > avgGWPoints ? '+' : '';
-              const diff = (param.data.gwPoints - avgGWPoints).toFixed(1);
-              result += ` (${vsAvg}${diff} vs avg)<br/>`;
-              if (gw.overall_rank) {
-                result += `Rank: <strong>${gw.overall_rank.toLocaleString()}</strong><br/>`;
-              }
-              if (param.data.isBest) {
-                result += `<span style="color: ${BEST_COLOR}; font-weight: 600;">⭐ Best GW!</span><br/>`;
-              }
-              if (param.data.isWorst) {
-                result += `<span style="color: ${WORST_COLOR}; font-weight: 600;">⚠️ Worst GW</span><br/>`;
-              }
-            }
-          } else if (param.seriesName === 'FPL Average') {
-            if (param.data && param.data.value !== null) {
-              const idx = param.dataIndex;
-              const fplAvg = cumulativeFPLAverages[idx];
-              const actual = cumulativePoints[idx];
-              const diff = actual - fplAvg;
-              const diffText = diff > 0 ? `+${diff.toFixed(0)}` : diff.toFixed(0);
-              const gwAvg = fplGWaverages[idx];
-              result += `${param.marker} FPL Avg: <strong>${fplAvg.toFixed(0)}</strong> pts (GW avg: ${gwAvg.toFixed(1)})<br/>`;
-              result += `Your Total: <strong>${actual}</strong> pts (${diffText} vs FPL avg)<br/>`;
-            }
-          }
-        });
+        // Get your data
+        const yourTotal = cumulativePoints[idx];
+        const yourGWPoints = gwPoints[idx];
+        const yourRank = gw.overall_rank;
+        
+        // Get FPL average data
+        const fplTotal = cumulativeFPLAverages[idx];
+        const fplGWAvg = fplGWaverages[idx];
+        
+        // Calculate differences
+        const totalDiff = yourTotal - fplTotal;
+        const gwDiff = yourGWPoints - fplGWAvg;
+        const totalDiffText = totalDiff > 0 ? `+${totalDiff.toFixed(0)}` : totalDiff.toFixed(0);
+        const gwDiffText = gwDiff > 0 ? `+${gwDiff.toFixed(0)}` : gwDiff.toFixed(0);
+        
+        // Build cleaner tooltip format
+        let result = `<strong>${gwLabel}</strong><br/>`;
+        result += `<br/>`;
+        result += `<strong>Your Team:</strong><br/>`;
+        result += `- Total: <strong>${yourTotal}</strong> pts (${totalDiffText})<br/>`;
+        result += `- GW: <strong>${yourGWPoints}</strong> pts (${gwDiffText})<br/>`;
+        if (yourRank) {
+          result += `- Rank: <strong>${yourRank.toLocaleString()}</strong><br/>`;
+        }
+        result += `<br/>`;
+        result += `<strong>FPL Average:</strong><br/>`;
+        result += `- Total: <strong>${fplTotal.toFixed(0)}</strong> pts<br/>`;
+        result += `- GW: <strong>${fplGWAvg.toFixed(1)}</strong> pts<br/>`;
         
         return result;
       }
