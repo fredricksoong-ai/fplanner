@@ -3,7 +3,7 @@
 // Pre-aggregates player history data across all gameweeks for efficient querying
 // ============================================================================
 
-import s3Storage from './s3Storage.js';
+import mongoStorage from './mongoStorage.js';
 import { getLatestFinishedGameweek } from './gameweekUtils.js';
 import { fetchElementSummary } from './fplService.js';
 import logger from '../logger.js';
@@ -33,11 +33,11 @@ export async function aggregatePlayerHistory(options = {}) {
   const playerDataMap = new Map(); // playerId -> Map<gameweek, data>
 
   // Step 1: Load all gameweek data and collect player IDs
-  logger.log(`📦 Loading gameweek data from S3...`);
+  logger.log(`📦 Loading gameweek data from MongoDB...`);
   for (let gw = fromGW; gw <= toGW; gw++) {
     try {
-      const picksData = await s3Storage.loadGameweekFromS3(gw, 'picks');
-      const bootstrapData = await s3Storage.loadGameweekFromS3(gw, 'bootstrap');
+      const picksData = await mongoStorage.loadGameweekFromMongo(gw, 'picks');
+      const bootstrapData = await mongoStorage.loadGameweekFromMongo(gw, 'bootstrap');
 
       if (!picksData || !picksData.buckets) {
         logger.warn(`⚠️ GW${gw}: No picks data available, skipping`);
@@ -191,7 +191,7 @@ export async function aggregatePlayerHistory(options = {}) {
           gameweeks
         };
 
-        const saved = await s3Storage.saveAggregatedPlayerHistory(playerId, aggregatedData);
+        const saved = await mongoStorage.saveAggregatedPlayerHistory(playerId, aggregatedData);
         if (saved) {
           aggregatedCount++;
         } else {
@@ -228,6 +228,6 @@ export async function aggregatePlayerHistory(options = {}) {
  * @returns {Promise<boolean>} True if aggregated data exists
  */
 export async function hasAggregatedPlayerHistory(playerId) {
-  return await s3Storage.hasAggregatedPlayerHistory(playerId);
+  return await mongoStorage.hasAggregatedPlayerHistory(playerId);
 }
 

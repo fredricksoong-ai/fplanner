@@ -7,7 +7,7 @@ import express from 'express';
 import { getCohortMetrics, computeCohortMetrics } from '../services/cohortService.js';
 import { isValidGameweek } from '../config.js';
 import { getLatestFinishedGameweek } from '../services/gameweekUtils.js';
-import s3Storage from '../services/s3Storage.js';
+import mongoStorage from '../services/mongoStorage.js';
 import { fetchElementSummary } from '../services/fplService.js';
 import logger from '../logger.js';
 
@@ -131,7 +131,7 @@ router.get('/api/history/gameweek/:gw/picks', async (req, res) => {
   }
 
   try {
-    const picksData = await s3Storage.loadGameweekFromS3(gameweek, 'picks');
+    const picksData = await mongoStorage.loadGameweekFromMongo(gameweek, 'picks');
 
     if (!picksData) {
       return res.status(404).json({
@@ -167,7 +167,7 @@ router.get('/api/history/player/:playerId/ownership', async (req, res) => {
 
   try {
     // Try to load from aggregated data first (much more efficient)
-    const aggregatedData = await s3Storage.loadAggregatedPlayerHistory(playerId);
+    const aggregatedData = await mongoStorage.loadAggregatedPlayerHistory(playerId);
     if (aggregatedData && aggregatedData.gameweeks && aggregatedData.gameweeks.length > 0) {
       logger.log(`✅ Using aggregated data for player ${playerId}`);
       return res.json({
@@ -228,7 +228,7 @@ router.get('/api/history/player/:playerId/ownership', async (req, res) => {
     for (let gw = 1; gw <= latestFinished; gw++) {
       try {
         const picksData = await s3Storage.loadGameweekFromS3(gw, 'picks');
-        const bootstrapData = await s3Storage.loadGameweekFromS3(gw, 'bootstrap');
+        const bootstrapData = await mongoStorage.loadGameweekFromMongo(gw, 'bootstrap');
 
         if (picksData && picksData.buckets) {
           const gwOwnership = { gameweek: gw };
@@ -322,7 +322,7 @@ router.get('/api/history/gameweek/:gw/captains', async (req, res) => {
   }
 
   try {
-    const picksData = await s3Storage.loadGameweekFromS3(gameweek, 'picks');
+    const picksData = await mongoStorage.loadGameweekFromMongo(gameweek, 'picks');
 
     if (!picksData || !picksData.buckets) {
       return res.status(404).json({

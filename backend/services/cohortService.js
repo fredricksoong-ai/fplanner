@@ -18,7 +18,7 @@ import {
 } from './cacheManager.js';
 import { getLatestFinishedGameweek, isGameweekCompleted } from './gameweekUtils.js';
 import { calculateTeamMetricsFromPicks, metricKeys } from './teamMetrics.js';
-import s3Storage from './s3Storage.js';
+import mongoStorage from './mongoStorage.js';
 import logger from '../logger.js';
 
 const OVERALL_LEAGUE_ID = 314;
@@ -54,14 +54,14 @@ export async function getCohortMetrics(gameweek = getLatestFinishedGameweek(), o
     return cached;
   }
 
-  // Step 2: For completed GWs, try loading from S3 archive
+  // Step 2: For completed GWs, try loading from MongoDB archive
   const isCompleted = isGameweekCompleted(targetGameweek);
   if (isCompleted && !options.force) {
-    const archived = await s3Storage.loadGameweekFromS3(targetGameweek, 'cohorts');
+    const archived = await mongoStorage.loadGameweekFromMongo(targetGameweek, 'cohorts');
     if (archived) {
       // Update in-memory cache with archived data
       updateCohortCache(targetGameweek, archived);
-      logger.log(`✅ GW${targetGameweek} cohorts restored from S3 archive`);
+      logger.log(`✅ GW${targetGameweek} cohorts restored from MongoDB archive`);
       return archived;
     }
   }
@@ -73,15 +73,15 @@ export async function getCohortMetrics(gameweek = getLatestFinishedGameweek(), o
   // Update in-memory cache with cohort metrics only
   updateCohortCache(targetGameweek, cohorts);
 
-  // Step 4: Archive all data types to S3 if gameweek is completed
-  if (isCompleted && s3Storage.isEnabled()) {
-    logger.log(`📦 Archiving GW${targetGameweek} complete dataset to S3...`);
+  // Step 4: Archive all data types to MongoDB if gameweek is completed
+  if (isCompleted && mongoStorage.isEnabled()) {
+    logger.log(`📦 Archiving GW${targetGameweek} complete dataset to MongoDB...`);
 
     // Archive cohorts
-    await s3Storage.archiveGameweekToS3(targetGameweek, 'cohorts', cohorts);
+    await mongoStorage.archiveGameweekToMongo(targetGameweek, 'cohorts', cohorts);
 
     // Archive picks
-    await s3Storage.archiveGameweekToS3(targetGameweek, 'picks', picks);
+    await mongoStorage.archiveGameweekToMongo(targetGameweek, 'picks', picks);
 
     // Archive bootstrap snapshot (player prices, ownership, form)
     if (cache.bootstrap?.data) {
@@ -92,7 +92,7 @@ export async function getCohortMetrics(gameweek = getLatestFinishedGameweek(), o
         teams: cache.bootstrap.data.teams,
         events: cache.bootstrap.data.events
       };
-      await s3Storage.archiveGameweekToS3(targetGameweek, 'bootstrap', bootstrapSnapshot);
+      await mongoStorage.archiveGameweekToMongo(targetGameweek, 'bootstrap', bootstrapSnapshot);
     }
 
     // Archive GitHub snapshot (enriched metrics)
@@ -104,10 +104,10 @@ export async function getCohortMetrics(gameweek = getLatestFinishedGameweek(), o
         seasonStats: cache.github.data.seasonStats,
         currentGWStats: cache.github.data.currentGWStats
       };
-      await s3Storage.archiveGameweekToS3(targetGameweek, 'github', githubSnapshot);
+      await mongoStorage.archiveGameweekToMongo(targetGameweek, 'github', githubSnapshot);
     }
 
-    logger.log(`✅ GW${targetGameweek} complete dataset archived to S3`);
+    logger.log(`✅ GW${targetGameweek} complete dataset archived to MongoDB`);
   }
 
   return cohorts;

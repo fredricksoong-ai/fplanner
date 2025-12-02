@@ -33,6 +33,16 @@ export const S3 = {
 };
 
 // ============================================================================
+// MONGODB CONFIGURATION
+// ============================================================================
+
+export const MONGO = {
+  ENABLED: process.env.MONGO_ENABLED === 'true',
+  CONNECTION_STRING: process.env.MONGO_CONNECTION_STRING || '',
+  DATABASE_NAME: process.env.MONGO_DATABASE_NAME || 'fplanner',
+};
+
+// ============================================================================
 // API ENDPOINTS
 // ============================================================================
 
