@@ -28,6 +28,7 @@
     "express-rate-limit": "^8.2.1",
     "helmet": "^8.1.0",
     "jsonrepair": "^3.13.1",
+    "mongodb": "^6.3.0",
     "papaparse": "^5.4.1"
   },
   "engines": {

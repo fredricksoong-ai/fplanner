@@ -4,9 +4,9 @@
 // ============================================================================
 
 import fs from 'fs';
-import { SERVER, TTL, S3 } from '../config.js';
+import { SERVER, TTL, S3, MONGO } from '../config.js';
 import logger from '../logger.js';
-import s3Storage from './s3Storage.js';
+import mongoStorage from './mongoStorage.js';
 
 // ============================================================================
 // CACHE STATE
@@ -509,13 +509,26 @@ export async function loadCacheFromDisk() {
   let backup = null;
   let source = null;
 
-  // Try S3 first if enabled
-  if (S3.ENABLED && s3Storage.isEnabled()) {
-    backup = await s3Storage.loadCacheFromS3();
-    if (backup) source = 'S3';
+  // Try MongoDB first if enabled
+  if (MONGO.ENABLED && mongoStorage.isEnabled()) {
+    backup = await mongoStorage.loadCacheFromMongo();
+    if (backup) source = 'MongoDB';
   }
 
-  // Fallback to local file if S3 failed or disabled
+  // Fallback to S3 if MongoDB not available (for backwards compatibility)
+  if (!backup && S3.ENABLED) {
+    try {
+      const s3Storage = await import('./s3Storage.js');
+      if (s3Storage.default.isEnabled()) {
+        backup = await s3Storage.default.loadCacheFromS3();
+        if (backup) source = 'S3';
+      }
+    } catch (err) {
+      // S3 not available, continue to local file
+    }
+  }
+
+  // Fallback to local file if MongoDB/S3 failed or disabled
   if (!backup && fs.existsSync(SERVER.CACHE_BACKUP_PATH)) {
     try {
       backup = JSON.parse(fs.readFileSync(SERVER.CACHE_BACKUP_PATH, 'utf8'));
@@ -616,9 +629,21 @@ export async function saveCacheToDisk() {
       logger.error('❌ Failed to backup cache to local disk:', err.message);
     }
 
-    // Save to S3 if enabled
-    if (S3.ENABLED && s3Storage.isEnabled()) {
-      await s3Storage.saveCacheToS3(serializable);
+    // Save to MongoDB if enabled
+    if (MONGO.ENABLED && mongoStorage.isEnabled()) {
+      await mongoStorage.saveCacheToMongo(serializable);
+    }
+
+    // Also save to S3 if enabled (for backwards compatibility during migration)
+    if (S3.ENABLED) {
+      try {
+        const s3Storage = await import('./s3Storage.js');
+        if (s3Storage.default.isEnabled()) {
+          await s3Storage.default.saveCacheToS3(serializable);
+        }
+      } catch (err) {
+        // S3 not available, ignore
+      }
     }
   } catch (err) {
     logger.error('❌ Failed to backup cache:', err.message);
@@ -644,12 +669,14 @@ export function initializeCachePersistence() {
   process.on('SIGTERM', async () => {
     logger.log('🛑 SIGTERM received, saving cache...');
     await saveCacheToDisk();
+    await mongoStorage.closeMongoConnection();
     process.exit(0);
   });
 
   process.on('SIGINT', async () => {
     logger.log('🛑 SIGINT received, saving cache...');
     await saveCacheToDisk();
+    await mongoStorage.closeMongoConnection();
     process.exit(0);
   });
 }
