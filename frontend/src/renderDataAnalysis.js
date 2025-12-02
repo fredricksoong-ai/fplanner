@@ -62,6 +62,7 @@ import { renderHiddenGems as renderHiddenGemsModule } from './dataAnalysis/hidde
 import { renderTransferTargets as renderTransferTargetsModule } from './dataAnalysis/transferTargets.js';
 import { renderTeamAnalysis as renderTeamAnalysisModule } from './dataAnalysis/teamAnalysis.js';
 import { renderChartsSkeleton, initializeChartsTab } from './dataAnalysis/chartsTab.js';
+import { renderTeamOverview as renderTeamOverviewModule } from './dataAnalysis/teamOverview.js';
 import { getMyPlayerIdSet } from './utils/myPlayers.js';
 import { isWishlisted } from './wishlist/store.js';
 import { buildManagerSnapshot } from './aiManagerSnapshot.js';
@@ -144,6 +145,7 @@ export function renderDataAnalysis(subTab = 'overview', position = 'all') {
                     const segStyles = getSegmentedControlStyles(isDarkMode(), isMobile);
                     const tabs = [
                         { id: 'overview', label: 'Overview' },
+                        { id: 'greatest-hits', label: 'Greatest Hits' },
                         { id: 'hidden-gems', label: 'Hidden Gems' },
                         { id: 'transfer-targets', label: 'Transfers' },
                         { id: 'team-analysis', label: 'Teams' },
@@ -214,7 +216,9 @@ export function renderDataAnalysis(subTab = 'overview', position = 'all') {
 
     let contentHTML = '';
     if (subTab === 'overview') {
-        contentHTML = renderAnalysisOverview(position);
+        contentHTML = renderTeamOverview(position);
+    } else if (subTab === 'greatest-hits') {
+        contentHTML = renderGreatestHits(position);
     } else if (subTab === 'hidden-gems') {
         contentHTML = renderHiddenGems(position);
     } else if (subTab === 'transfer-targets') {
@@ -224,7 +228,7 @@ export function renderDataAnalysis(subTab = 'overview', position = 'all') {
     } else if (subTab === 'charts') {
         contentHTML = renderChartsSkeleton(position);
     } else {
-        contentHTML = renderAnalysisOverview(position);
+        contentHTML = renderTeamOverview(position);
     }
 
     const containerPadding = isMobile ? 'padding: 0.75rem;' : 'padding: 2rem;';
@@ -359,8 +363,17 @@ export function renderDataAnalysis(subTab = 'overview', position = 'all') {
     }
 }
 
-function renderAnalysisOverview(position = 'all') {
+function renderGreatestHits(position = 'all') {
     return renderAnalysisOverviewModule(
+        position,
+        renderSectionHeader,
+        renderPositionSpecificTableMobile,
+        renderPositionSpecificTable
+    );
+}
+
+function renderTeamOverview(position = 'all') {
+    return renderTeamOverviewModule(
         position,
         renderSectionHeader,
         renderPositionSpecificTableMobile,
@@ -1316,8 +1329,8 @@ function getPlayerBadgesMarkup(isMyPlayer, isWishlisted, fontSize = '0.75rem') {
  * Load AI insights for current tab
  */
 async function loadAIInsightsForTab(tab, position) {
-    // Only load AI insights for Overview tab
-    if (tab !== 'overview') {
+    // Only load AI insights for Greatest Hits tab
+    if (tab !== 'greatest-hits') {
         // Clear AI insights container for other tabs
         const container = document.getElementById('ai-insights-container');
         if (container) {
@@ -1433,7 +1446,7 @@ async function loadAIInsightsForTab(tab, position) {
     // Build context for AI
     const context = {
         page: 'data-analysis',
-        tab: 'overview',  // Always overview for AI insights
+        tab: 'greatest-hits',  // Always greatest-hits for AI insights
         position: position,
         gameweek: currentGW,
         data: contextData
