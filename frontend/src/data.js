@@ -55,8 +55,6 @@ let playersCacheKey = null;
 /** Team data cache (teamId -> { data, timestamp }) */
 const teamCache = new Map();
 const TEAM_CACHE_TTL = 2 * 60 * 1000; // 2 minutes
-const plannerCohortCache = new Map();
-const COHORT_CACHE_TTL = 2 * 60 * 60 * 1000; // 2 hours
 
 /** Auto-refresh interval in milliseconds (2 minutes) */
 const AUTO_REFRESH_INTERVAL = 2 * 60 * 1000;
@@ -516,42 +514,6 @@ export function invalidateTeamCache(teamId) {
     }
 }
 
-function getPlannerCohortCache(gameweek) {
-    const cached = plannerCohortCache.get(String(gameweek));
-    if (!cached) return null;
-    if ((Date.now() - cached.timestamp) > COHORT_CACHE_TTL) {
-        plannerCohortCache.delete(String(gameweek));
-        return null;
-    }
-    return cached.data;
-}
-
-function setPlannerCohortCache(gameweek, data) {
-    plannerCohortCache.set(String(gameweek), {
-        data,
-        timestamp: Date.now()
-    });
-}
-
-export async function loadPlannerCohorts(gameweek) {
-    if (!gameweek) {
-        throw new Error('Gameweek is required for cohort comparisons');
-    }
-
-    const cached = getPlannerCohortCache(gameweek);
-    if (cached) {
-        return cached;
-    }
-
-    const response = await fetch(`${API_BASE}/planner/cohorts?gw=${gameweek}`);
-    if (!response.ok) {
-        throw new Error('Failed to load planner cohort data');
-    }
-
-    const data = await response.json();
-    setPlannerCohortCache(gameweek, data);
-    return data;
-}
 
 export async function loadMyTeam(teamId, options = {}) {
     const { forceRefresh = false } = options;

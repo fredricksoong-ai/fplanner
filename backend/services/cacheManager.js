@@ -4,9 +4,8 @@
 // ============================================================================
 
 import fs from 'fs';
-import { SERVER, TTL, S3, MONGO } from '../config.js';
+import { SERVER, TTL } from '../config.js';
 import logger from '../logger.js';
-import mongoStorage from './mongoStorage.js';
 
 // ============================================================================
 // CACHE STATE
@@ -41,10 +40,6 @@ export let cache = {
     cacheHits: 0,
     cacheMisses: 0,
     lastFetch: null
-  },
-  cohorts: {
-    // Map of `${gameweek}` -> { data, timestamp }
-    entries: new Map()
   }
 };
 
@@ -360,44 +355,6 @@ export function clearTeamCaches() {
 }
 
 // ============================================================================
-// COHORT CACHE
-// ============================================================================
-
-/**
- * Get cached cohort metrics for a specific gameweek
- * @param {number|string} gameweek - Gameweek number
- * @returns {Object|null} Cached cohort data
- */
-export function getCachedCohortMetrics(gameweek) {
-  if (!gameweek && gameweek !== 0) return null;
-  const key = String(gameweek);
-  const cached = cache.cohorts.entries.get(key);
-  return cached ? cached.data : null;
-}
-
-/**
- * Update cohort cache for a gameweek
- * @param {number|string} gameweek - Gameweek number
- * @param {Object} data - Cohort metrics payload
- */
-export function updateCohortCache(gameweek, data) {
-  if (!gameweek && gameweek !== 0) return;
-  const key = String(gameweek);
-  cache.cohorts.entries.set(key, {
-    data,
-    timestamp: Date.now()
-  });
-}
-
-/**
- * Clear all cached cohort data (e.g., when forcing recompute)
- */
-export function clearCohortCache() {
-  cache.cohorts.entries.clear();
-  logger.log('🗑️ Cohort cache cleared');
-}
-
-// ============================================================================
 // LIVE DATA CACHE
 // ============================================================================
 
@@ -503,33 +460,14 @@ export function getCacheStats() {
 // ============================================================================
 
 /**
- * Load cache from disk backup or S3 (async)
+ * Load cache from disk backup (async)
  */
 export async function loadCacheFromDisk() {
   let backup = null;
   let source = null;
 
-  // Try MongoDB first if enabled
-  if (MONGO.ENABLED && mongoStorage.isEnabled()) {
-    backup = await mongoStorage.loadCacheFromMongo();
-    if (backup) source = 'MongoDB';
-  }
-
-  // Fallback to S3 if MongoDB not available (for backwards compatibility)
-  if (!backup && S3.ENABLED) {
-    try {
-      const s3Storage = await import('./s3Storage.js');
-      if (s3Storage.default.isEnabled()) {
-        backup = await s3Storage.default.loadCacheFromS3();
-        if (backup) source = 'S3';
-      }
-    } catch (err) {
-      // S3 not available, continue to local file
-    }
-  }
-
-  // Fallback to local file if MongoDB/S3 failed or disabled
-  if (!backup && fs.existsSync(SERVER.CACHE_BACKUP_PATH)) {
+  // Try local file backup
+  if (fs.existsSync(SERVER.CACHE_BACKUP_PATH)) {
     try {
       backup = JSON.parse(fs.readFileSync(SERVER.CACHE_BACKUP_PATH, 'utf8'));
       source = 'local file';
@@ -559,7 +497,7 @@ export async function loadCacheFromDisk() {
     cache.stats = backup.stats || { totalFetches: 0, cacheHits: 0, cacheMisses: 0, lastFetch: null };
 
     // Restore team caches from arrays back to Maps (if present in old backups)
-    // Note: New backups don't include teams/cohorts/live to save memory
+    // Note: New backups don't include teams/live to save memory
     if (backup.teams) {
       cache.teams.entries = new Map(backup.teams.entries || []);
       cache.teams.picks = new Map(backup.teams.picks || []);
@@ -567,12 +505,6 @@ export async function loadCacheFromDisk() {
       // Initialize empty if not in backup (new format)
       cache.teams.entries = new Map();
       cache.teams.picks = new Map();
-    }
-
-    if (backup.cohorts) {
-      cache.cohorts.entries = new Map(backup.cohorts.entries || []);
-    } else {
-      cache.cohorts.entries = new Map();
     }
 
     // Restore live cache from arrays back to Map (if present in old backups)
@@ -594,21 +526,20 @@ export async function loadCacheFromDisk() {
 }
 
 /**
- * Save cache to disk and S3 (async)
+ * Save cache to disk (async)
  * Only saves essential data to avoid memory issues - excludes large transient caches
  */
 export async function saveCacheToDisk() {
   try {
     // Only save essential, non-transient data to avoid memory issues
-    // Exclude: teams, cohorts, live (these are transient and can be refetched)
+    // Exclude: teams, live (these are transient and can be refetched)
     const serializable = {
       bootstrap: cache.bootstrap,
       fixtures: cache.fixtures,
       github: cache.github,
       stats: cache.stats
-      // NOTE: Excluding teams, cohorts, and live caches to prevent OOM
+      // NOTE: Excluding teams and live caches to prevent OOM
       // - teams: Can be refetched from API
-      // - cohorts: Already archived to S3 per-gameweek
       // - live: Transient data, not needed on restart
     };
 
@@ -621,29 +552,12 @@ export async function saveCacheToDisk() {
       return;
     }
 
-    // Save to local file (always, for redundancy)
+    // Save to local file
     try {
       fs.writeFileSync(SERVER.CACHE_BACKUP_PATH, JSON.stringify(serializable, null, 2));
       logger.log('💾 Cache backed up to local disk');
     } catch (err) {
       logger.error('❌ Failed to backup cache to local disk:', err.message);
-    }
-
-    // Save to MongoDB if enabled
-    if (MONGO.ENABLED && mongoStorage.isEnabled()) {
-      await mongoStorage.saveCacheToMongo(serializable);
-    }
-
-    // Also save to S3 if enabled (for backwards compatibility during migration)
-    if (S3.ENABLED) {
-      try {
-        const s3Storage = await import('./s3Storage.js');
-        if (s3Storage.default.isEnabled()) {
-          await s3Storage.default.saveCacheToS3(serializable);
-        }
-      } catch (err) {
-        // S3 not available, ignore
-      }
     }
   } catch (err) {
     logger.error('❌ Failed to backup cache:', err.message);
@@ -669,14 +583,12 @@ export function initializeCachePersistence() {
   process.on('SIGTERM', async () => {
     logger.log('🛑 SIGTERM received, saving cache...');
     await saveCacheToDisk();
-    await mongoStorage.closeMongoConnection();
     process.exit(0);
   });
 
   process.on('SIGINT', async () => {
     logger.log('🛑 SIGINT received, saving cache...');
     await saveCacheToDisk();
-    await mongoStorage.closeMongoConnection();
     process.exit(0);
   });
 }

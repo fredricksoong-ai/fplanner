@@ -3,13 +3,12 @@
  */
 
 import { sharedState } from '../sharedState.js';
-import { loadLeagueStandings, loadMyTeam, loadPlannerCohorts } from '../data.js';
+import { loadLeagueStandings, loadMyTeam } from '../data.js';
 import { calculateTeamMetrics } from './metrics.js';
 
 const MAX_LEAGUE_ENTRIES = 50;
 const CACHE_TTL = 4 * 60 * 60 * 1000; // 4 hours
 const METRIC_KEYS = ['avgPPM', 'avgFDR', 'avgForm', 'expectedPoints', 'avgOwnership', 'avgXGI'];
-const COHORT_UI_CACHE_TTL = 60 * 60 * 1000; // 1 hour
 
 function getPreferredLeagueId(teamId) {
     if (sharedState.activeLeagueTab) {
@@ -177,92 +176,4 @@ export async function getLeagueComparisonMetrics(teamId, userMetrics, gameweek) 
     };
 }
 
-function getCachedCohortEntry(gameweek) {
-    const cached = sharedState.cohortMetricsCache.get(gameweek);
-    if (!cached) return null;
-    if (!cached.timestamp || (Date.now() - cached.timestamp) > COHORT_UI_CACHE_TTL) {
-        sharedState.cohortMetricsCache.delete(gameweek);
-        return null;
-    }
-    return cached;
-}
-
-export async function getCohortComparisonMetrics(userMetrics, gameweek) {
-    if (!gameweek || !userMetrics) {
-        return null;
-    }
-
-    let cached = getCachedCohortEntry(gameweek);
-    if (!cached) {
-        const data = await loadPlannerCohorts(gameweek);
-        cached = { ...data };
-        if (!cached.timestamp) {
-            cached.timestamp = Date.now();
-        }
-        sharedState.cohortMetricsCache.set(gameweek, cached);
-    }
-
-    if (!cached?.buckets) {
-        return null;
-    }
-
-    const bucketsArray = Object.values(cached.buckets).filter(bucket => bucket.sampleSize > 0);
-
-    if (bucketsArray.length === 0) {
-        return null;
-    }
-
-    // Find Top 10k bucket to use as reference distribution
-    const top10kBucket = bucketsArray.find(b => b.key === 'top10k');
-
-    if (!top10kBucket || !top10kBucket.distributions) {
-        // Fallback to original behavior if Top 10k not available
-        const buckets = bucketsArray.map(bucket => ({
-            key: bucket.key,
-            label: bucket.label,
-            sampleSize: bucket.sampleSize,
-            maxRank: bucket.maxRank,
-            averages: bucket.averages,
-            percentiles: computePercentiles(userMetrics, bucket.distributions)
-        }));
-
-        return {
-            gameweek: cached.gameweek,
-            updatedAt: cached.timestamp,
-            buckets
-        };
-    }
-
-    // Use Top 10k distribution as reference for all percentile calculations
-    const referenceDistributions = top10kBucket.distributions;
-
-    // Compute user's percentiles vs Top 10k
-    console.log('=== USER TEAM vs TOP 10k ===');
-    const userPercentiles = computePercentiles(userMetrics, referenceDistributions, true);
-
-    // Compute each cohort's average percentiles vs Top 10k
-    const buckets = bucketsArray.map(bucket => {
-        console.log(`\n=== ${bucket.label.toUpperCase()} AVERAGE vs TOP 10k ===`);
-        const cohortPercentiles = computePercentiles(bucket.averages, referenceDistributions, true);
-
-        return {
-            key: bucket.key,
-            label: bucket.label,
-            sampleSize: bucket.sampleSize,
-            maxRank: bucket.maxRank,
-            averages: bucket.averages,
-            percentiles: cohortPercentiles,
-            // Keep original percentiles for backward compatibility
-            originalPercentiles: computePercentiles(userMetrics, bucket.distributions)
-        };
-    });
-
-    return {
-        gameweek: cached.gameweek,
-        updatedAt: cached.timestamp,
-        buckets,
-        userPercentiles, // User's percentiles vs Top 10k reference
-        referenceDistribution: 'top10k' // Indicates which cohort is the reference
-    };
-}
 
