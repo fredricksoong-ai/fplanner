@@ -248,6 +248,8 @@ export async function initializeTeamPointsChart(containerId, teamHistory, curren
         const yourTotal = cumulativePoints[idx];
         const yourGWPoints = gwPoints[idx];
         const yourRank = gw.overall_rank;
+        const isBest = gw.event === bestGW.event;
+        const isWorst = gw.event === worstGW.event;
         
         // Get FPL average data
         const fplTotal = cumulativeFPLAverages[idx];
@@ -259,19 +261,30 @@ export async function initializeTeamPointsChart(containerId, teamHistory, curren
         const totalDiffText = totalDiff > 0 ? `+${totalDiff.toFixed(0)}` : totalDiff.toFixed(0);
         const gwDiffText = gwDiff > 0 ? `+${gwDiff.toFixed(0)}` : gwDiff.toFixed(0);
         
-        // Build cleaner tooltip format
+        // Get markers with colors
+        const yourMarker = params.find(p => p.seriesName === 'Cumulative Points')?.marker || '●';
+        const fplMarker = params.find(p => p.seriesName === 'FPL Average')?.marker || '●';
+        
+        // Build compact tooltip format
         let result = `<strong>${gwLabel}</strong><br/>`;
+        
+        // Best/Worst GW banner
+        if (isBest) {
+          result += `<span style="color: ${BEST_COLOR}; font-weight: 600;">⭐ Best GW!</span><br/>`;
+        } else if (isWorst) {
+          result += `<span style="color: ${WORST_COLOR}; font-weight: 600;">⚠️ Worst GW</span><br/>`;
+        }
+        
         result += `<br/>`;
-        result += `<strong>Your Team:</strong><br/>`;
-        result += `- Total: <strong>${yourTotal}</strong> pts (${totalDiffText})<br/>`;
+        result += `${yourMarker} Total: <strong>${yourTotal}</strong> pts (${totalDiffText})<br/>`;
         result += `- GW: <strong>${yourGWPoints}</strong> pts (${gwDiffText})<br/>`;
         if (yourRank) {
           result += `- Rank: <strong>${yourRank.toLocaleString()}</strong><br/>`;
         }
         result += `<br/>`;
-        result += `<strong>FPL Average:</strong><br/>`;
+        result += `${fplMarker} FPL Average:<br/>`;
         result += `- Total: <strong>${fplTotal.toFixed(0)}</strong> pts<br/>`;
-        result += `- GW: <strong>${fplGWAvg.toFixed(1)}</strong> pts<br/>`;
+        result += `- GW: <strong>${Math.round(fplGWAvg)}</strong> pts<br/>`;
         
         return result;
       }
