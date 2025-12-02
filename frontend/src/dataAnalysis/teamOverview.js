@@ -109,14 +109,17 @@ export function renderTeamOverview(
                     ">
                         Season Progress
                     </h3>
-                    <div id="team-points-chart" style="width: 100%; height: 300px;"></div>
+                    <div id="team-points-chart" style="width: 100%; height: 350px;"></div>
                     <div style="
                         font-size: 0.65rem;
                         color: var(--text-tertiary);
                         margin-top: 0.5rem;
                         text-align: center;
+                        line-height: 1.4;
                     ">
-                        Cumulative points across gameweeks
+                        <div>📊 Cumulative points (purple line) • GW-by-GW points (bars)</div>
+                        <div>📈 Expected forecast (green dashed) • Average trend (orange dashed)</div>
+                        <div>⭐ Best/Worst GWs highlighted</div>
                     </div>
                 </div>
             </div>
@@ -350,6 +353,7 @@ function renderSquadHealthCards(benchPoints, avgPPM, avgOwnership, avgFDR, highR
 export function initializeTeamOverviewChart() {
     const teamData = sharedState?.myTeamData;
     const teamHistory = teamData?.teamHistory?.current || [];
+    const currentPicks = teamData?.picks?.picks || null;
     
     if (teamHistory.length > 0) {
         // Dispose existing chart
@@ -358,10 +362,10 @@ export function initializeTeamOverviewChart() {
             teamPointsChartInstance = null;
         }
         
-        // Initialize new chart
+        // Initialize new chart with current picks for expected points calculation
         setTimeout(async () => {
             try {
-                teamPointsChartInstance = await initializeTeamPointsChart('team-points-chart', teamHistory);
+                teamPointsChartInstance = await initializeTeamPointsChart('team-points-chart', teamHistory, currentPicks);
             } catch (err) {
                 console.error('Failed to initialize team points chart:', err);
             }
