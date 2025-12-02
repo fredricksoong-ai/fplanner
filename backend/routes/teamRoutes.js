@@ -214,7 +214,11 @@ router.get('/api/team/:teamId', async (req, res) => {
       gwStatus: gwStatus,
       isLive: gwStatus === GW_STATUS.LIVE,
       liveTimestamp: liveData ? new Date().toISOString() : null,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      // Add team history for GW-by-GW chart
+      teamHistory: teamHistory ? {
+        current: teamHistory.current || [] // Array of {event, points, total_points, overall_rank, ...}
+      } : null
     };
 
     logger.log(`✅ Team data ready (GW ${gwStatus})`);

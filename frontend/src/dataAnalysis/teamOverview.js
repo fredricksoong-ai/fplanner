@@ -12,6 +12,9 @@ import {
     calculateBenchPoints,
     calculateSquadAverages
 } from '../myTeam/teamSummaryHelpers.js';
+import { initializeTeamPointsChart, disposeTeamPointsChart } from './teamPointsChart.js';
+
+let teamPointsChartInstance = null;
 
 /**
  * Render Team Overview tab - personalized stats for user's team
@@ -84,12 +87,52 @@ export function renderTeamOverview(
     // Differentials in squad (< 15% owned)
     const differentials = filteredPlayers.filter(p => parseFloat(p.selected_by_percent || 0) < 15);
 
+    // Get team history for chart
+    const teamHistory = teamData?.teamHistory?.current || [];
+
     return `
         <div>
-            <!-- Squad Health Summary Cards -->
+            <!-- Team Points Chart (replaces Summary Cards) -->
+            ${teamHistory.length > 0 ? `
             <div style="margin-bottom: 2rem;">
-                ${renderSquadHealthCards(benchPoints, avgPPM, avgOwnership, avgFDR, highRiskCount, avgMinPercent)}
+                <div style="
+                    background: var(--bg-secondary);
+                    border-radius: 0.75rem;
+                    padding: 1rem;
+                    margin-bottom: 1rem;
+                ">
+                    <h3 style="
+                        font-size: 0.85rem;
+                        font-weight: 700;
+                        color: var(--text-primary);
+                        margin: 0 0 0.75rem 0;
+                    ">
+                        Season Progress
+                    </h3>
+                    <div id="team-points-chart" style="width: 100%; height: 300px;"></div>
+                    <div style="
+                        font-size: 0.65rem;
+                        color: var(--text-tertiary);
+                        margin-top: 0.5rem;
+                        text-align: center;
+                    ">
+                        Cumulative points across gameweeks
+                    </div>
+                </div>
             </div>
+            ` : `
+            <div style="
+                background: var(--bg-secondary);
+                border-radius: 0.75rem;
+                padding: 1.5rem;
+                margin-bottom: 2rem;
+                text-align: center;
+                color: var(--text-secondary);
+            ">
+                <i class="fas fa-chart-line" style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5;"></i>
+                <p style="font-size: 0.85rem; margin: 0;">Team history data not available</p>
+            </div>
+            `}
 
             <!-- Section 1: Top Performers This GW -->
             <div style="margin-bottom: 3rem;">
@@ -299,4 +342,39 @@ function renderSquadHealthCards(benchPoints, avgPPM, avgOwnership, avgFDR, highR
             </div>
         </div>
     `;
+}
+
+/**
+ * Initialize chart after render
+ */
+export function initializeTeamOverviewChart() {
+    const teamData = sharedState?.myTeamData;
+    const teamHistory = teamData?.teamHistory?.current || [];
+    
+    if (teamHistory.length > 0) {
+        // Dispose existing chart
+        if (teamPointsChartInstance) {
+            disposeTeamPointsChart(teamPointsChartInstance);
+            teamPointsChartInstance = null;
+        }
+        
+        // Initialize new chart
+        setTimeout(async () => {
+            try {
+                teamPointsChartInstance = await initializeTeamPointsChart('team-points-chart', teamHistory);
+            } catch (err) {
+                console.error('Failed to initialize team points chart:', err);
+            }
+        }, 100);
+    }
+}
+
+/**
+ * Cleanup chart on unmount
+ */
+export function cleanupTeamOverviewChart() {
+    if (teamPointsChartInstance) {
+        disposeTeamPointsChart(teamPointsChartInstance);
+        teamPointsChartInstance = null;
+    }
 }

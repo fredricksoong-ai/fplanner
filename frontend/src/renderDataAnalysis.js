@@ -62,7 +62,7 @@ import { renderHiddenGems as renderHiddenGemsModule } from './dataAnalysis/hidde
 import { renderTransferTargets as renderTransferTargetsModule } from './dataAnalysis/transferTargets.js';
 import { renderTeamAnalysis as renderTeamAnalysisModule } from './dataAnalysis/teamAnalysis.js';
 import { renderChartsSkeleton, initializeChartsTab } from './dataAnalysis/chartsTab.js';
-import { renderTeamOverview as renderTeamOverviewModule } from './dataAnalysis/teamOverview.js';
+import { renderTeamOverview as renderTeamOverviewModule, initializeTeamOverviewChart, cleanupTeamOverviewChart } from './dataAnalysis/teamOverview.js';
 import { getMyPlayerIdSet } from './utils/myPlayers.js';
 import { isWishlisted } from './wishlist/store.js';
 import { buildManagerSnapshot } from './aiManagerSnapshot.js';
@@ -122,6 +122,12 @@ export function setPriceRange(range) {
 export function renderDataAnalysis(subTab = 'overview', position = 'all') {
     const container = document.getElementById('app-container');
     analysisState.position = position;
+    
+    // Cleanup previous chart if switching tabs
+    if (activeAnalysisTab !== subTab && activeAnalysisTab === 'overview') {
+        cleanupTeamOverviewChart();
+    }
+    
     activeAnalysisTab = subTab;
     const isMobile = isMobileDevice();
 
@@ -360,6 +366,13 @@ export function renderDataAnalysis(subTab = 'overview', position = 'all') {
 
     if (subTab === 'charts') {
         initializeChartsTab(position);
+    }
+
+    // Initialize team points chart if on overview tab
+    if (subTab === 'overview') {
+        setTimeout(() => {
+            initializeTeamOverviewChart();
+        }, 200);
     }
 }
 
