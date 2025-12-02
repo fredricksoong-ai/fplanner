@@ -76,16 +76,6 @@ export async function initializeTeamPointsChart(containerId, teamHistory, curren
     return cumulativeFPLAvg;
   });
 
-  // Calculate pace indicators
-  const recentGWs = 5; // Look at last 5 GWs for recent pace
-  const recentGWPoints = gwPoints.slice(-recentGWs);
-  const recentAvg = recentGWPoints.length > 0 
-    ? recentGWPoints.reduce((sum, pts) => sum + pts, 0) / recentGWPoints.length 
-    : avgGWPoints;
-  
-  // Determine if pace is improving or declining
-  const paceComparison = recentAvg - avgGWPoints;
-  const isAccelerating = paceComparison > 0;
 
   // Theme detection
   const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
@@ -204,58 +194,13 @@ export async function initializeTeamPointsChart(containerId, teamHistory, curren
     z: 4
   });
 
-  // 3. Recent pace line (shows if you're keeping pace or slowing down)
-  // Calculate what cumulative would be if you kept your recent pace
-  const firstGW = sortedHistory[0];
-  const recentPaceData = sortedHistory.map((gw, idx) => {
-    if (idx < sortedHistory.length - recentGWs) {
-      // For early GWs, use overall average
-      return firstGW.total_points + (avgGWPoints * idx);
-    } else {
-      // For recent GWs, project using recent pace
-      const earlyGWs = sortedHistory.length - recentGWs;
-      const earlyTotal = firstGW.total_points + (avgGWPoints * earlyGWs);
-      const recentOffset = idx - earlyGWs;
-      return earlyTotal + (recentAvg * recentOffset);
-    }
-  });
-  
-  const paceColor = isAccelerating ? '#10b981' : '#ef4444'; // Green if accelerating, red if slowing
-  const paceLabel = isAccelerating 
-    ? `Recent Pace (${recentAvg.toFixed(1)} pts/GW - Accelerating)` 
-    : `Recent Pace (${recentAvg.toFixed(1)} pts/GW - Slowing)`;
-  
-  series.push({
-    name: paceLabel,
-    type: 'line',
-    data: recentPaceData.map(total => ({ value: total })),
-    lineStyle: {
-      color: paceColor,
-      type: 'dashed',
-      width: 2,
-      opacity: 0.6
-    },
-    symbol: 'none',
-    tooltip: {
-      show: true,
-      formatter: function(params) {
-        const idx = params.dataIndex;
-        const actual = cumulativePoints[idx];
-        const projected = recentPaceData[idx];
-        const diff = actual - projected;
-        const diffText = diff > 0 ? `+${diff.toFixed(0)}` : diff.toFixed(0);
-        return `${params.seriesName}<br/>Projected: ${projected.toFixed(0)} pts<br/>Actual: ${actual} pts (${diffText})`;
-      }
-    },
-    z: 5
-  });
 
   const option = {
     grid: {
       left: '10%',
       right: '8%',
-      top: '10%',
-      bottom: '18%', // More space for bottom legend
+      top: '18%', // Space for top legend
+      bottom: '12%',
       containLabel: false
     },
     tooltip: {
@@ -265,6 +210,25 @@ export async function initializeTeamPointsChart(containerId, teamHistory, curren
       textStyle: {
         color: textColor,
         fontSize: 12
+      },
+      confine: true, // Keep tooltip within chart area
+      position: function(point, params, dom, rect, size) {
+        // Position tooltip to avoid being cut off on left side
+        const [x, y] = point;
+        const [width, height] = size.viewSize;
+        const tooltipWidth = size.contentSize[0];
+        const tooltipHeight = size.contentSize[1];
+        
+        // If tooltip would be cut off on left, position it to the right of cursor
+        if (x < tooltipWidth) {
+          return [x + 20, y];
+        }
+        // If tooltip would be cut off on right, position it to the left
+        if (x + tooltipWidth > width) {
+          return [x - tooltipWidth - 20, y];
+        }
+        // Default: position above cursor
+        return [x - tooltipWidth / 2, y - tooltipHeight - 10];
       },
       formatter: function(params) {
         let result = `<strong>${params[0].axisValue}</strong><br/>`;
@@ -301,26 +265,14 @@ export async function initializeTeamPointsChart(containerId, teamHistory, curren
               result += `${param.marker} FPL Avg: <strong>${fplAvg.toFixed(0)}</strong> pts (GW avg: ${gwAvg.toFixed(1)})<br/>`;
               result += `Your Total: <strong>${actual}</strong> pts (${diffText} vs FPL avg)<br/>`;
             }
-          } else if (param.seriesName === paceLabel) {
-            if (param.data && param.data.value !== null) {
-              const idx = param.dataIndex;
-              const actual = cumulativePoints[idx];
-              const projected = recentPaceData[idx];
-              const diff = actual - projected;
-              const diffText = diff > 0 ? `+${diff.toFixed(0)}` : diff.toFixed(0);
-              result += `${param.marker} ${param.seriesName}<br/>`;
-              result += `Projected: <strong>${projected.toFixed(0)}</strong> pts<br/>`;
-              result += `Actual: <strong>${actual}</strong> pts (${diffText})<br/>`;
-            }
-          }
         });
         
         return result;
       }
     },
     legend: {
-      data: ['Cumulative Points', 'FPL Average', paceLabel],
-      bottom: 10,
+      data: ['Cumulative Points', 'FPL Average'],
+      top: 5,
       left: 'center',
       textStyle: {
         color: textColor,
@@ -329,7 +281,7 @@ export async function initializeTeamPointsChart(containerId, teamHistory, curren
       icon: 'roundRect',
       itemWidth: 20,
       itemHeight: 3,
-      itemGap: 15
+      itemGap: 12
     },
     xAxis: {
       type: 'category',

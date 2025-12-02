@@ -110,17 +110,6 @@ export function renderTeamOverview(
                         Season Progress
                     </h3>
                     <div id="team-points-chart" style="width: 100%; height: 350px;"></div>
-                    <div style="
-                        font-size: 0.65rem;
-                        color: var(--text-tertiary);
-                        margin-top: 0.5rem;
-                        text-align: center;
-                        line-height: 1.4;
-                    ">
-                        <div>📊 Cumulative points (purple line) • GW-by-GW points (bars)</div>
-                        <div>📈 Expected forecast (green dashed) • Average trend (orange dashed)</div>
-                        <div>⭐ Best/Worst GWs highlighted</div>
-                    </div>
                 </div>
             </div>
             ` : `
