@@ -562,19 +562,19 @@ export function updateNavTeamWidget(teamData) {
     const rankIndicator = calculateRankIndicator(team.id, overallRankNum, previousGWRank);
     const gwIndicator = calculateGWIndicator(gwRankNum, overallRankNum);
 
-    // Build widget HTML - simple single line matching countdown timer style
+    // Build widget HTML - simple single line matching countdown timer style exactly
     widget.innerHTML = `
         <div style="
             display: flex;
             align-items: center;
             gap: 0.5rem;
-            padding: 0.5rem 0.75rem;
+            padding: 0.5rem 1rem;
             background: rgba(255,255,255,0.1);
             border-radius: 0.5rem;
             font-size: 0.75rem;
             white-space: nowrap;
         ">
-            <span><span style="color: ${rankIndicator.color};">${overallRank}</span> • <span style="color: ${gwIndicator.color};">${gwRank}</span></span>
+            <span><span style="color: ${rankIndicator.color};">${overallRank} ${rankIndicator.chevron}</span> • <span style="color: ${gwIndicator.color};">${gwRank} ${gwIndicator.chevron}</span></span>
         </div>
     `;
 
