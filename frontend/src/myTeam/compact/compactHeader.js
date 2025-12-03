@@ -264,7 +264,7 @@ export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = fa
             "
         >
             <div style="display: flex; justify-content: space-between; align-items: stretch; gap: 0.5rem;">
-                <div style="flex: 1; display: flex; flex-direction: column; gap: 0.4rem;">
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 0.2rem;">
                     <div style="display: flex; align-items: center; gap: 0.4rem;">
                         <button
                             id="change-team-btn"
