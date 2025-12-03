@@ -562,54 +562,19 @@ export function updateNavTeamWidget(teamData) {
     const rankIndicator = calculateRankIndicator(team.id, overallRankNum, previousGWRank);
     const gwIndicator = calculateGWIndicator(gwRankNum, overallRankNum);
 
-    // Build widget HTML
+    // Build widget HTML - simple single line matching countdown timer style
     widget.innerHTML = `
         <div style="
             display: flex;
-            flex-direction: column;
-            gap: 0.15rem;
-            padding: 0.4rem 0.75rem;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
             background: rgba(255,255,255,0.1);
             border-radius: 0.5rem;
-            font-size: 0.65rem;
-            line-height: 1.1;
-            min-width: 0;
-            max-width: 140px;
+            font-size: 0.75rem;
+            white-space: nowrap;
         ">
-            <div style="
-                font-size: 0.75rem;
-                font-weight: 700;
-                color: white;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-            ">
-                ${escapeHtml(teamName)}
-            </div>
-            <div style="
-                display: flex;
-                align-items: center;
-                gap: 0.3rem;
-                color: white;
-                font-weight: 600;
-            ">
-                <span>${totalPoints.toLocaleString()}</span>
-                <span style="color: rgba(255,255,255,0.5);">•</span>
-                <span style="color: ${pointsColor}; font-weight: 700;">${gwPoints}</span>
-            </div>
-            <div style="
-                display: flex;
-                align-items: center;
-                gap: 0.3rem;
-                color: white;
-                font-weight: 600;
-            ">
-                <span>OR: ${overallRank}</span>
-                <span style="color: ${rankIndicator.color}; font-size: 0.7rem;">${rankIndicator.chevron}</span>
-                <span style="color: rgba(255,255,255,0.5);">•</span>
-                <span>GW: ${gwRank}</span>
-                <span style="color: ${gwIndicator.color}; font-size: 0.7rem;">${gwIndicator.chevron}</span>
-            </div>
+            <span>OR: ${overallRank} <span style="color: ${rankIndicator.color};">${rankIndicator.chevron}</span> / GW: ${gwRank} <span style="color: ${gwIndicator.color};">${gwIndicator.chevron}</span></span>
         </div>
     `;
 

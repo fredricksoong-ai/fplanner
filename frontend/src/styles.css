@@ -402,11 +402,19 @@ body {
     align-items: center;
   }
 
-  /* Team widget styling */
+  /* Team widget styling - matches countdown timer exactly */
   #nav-team-widget {
     display: flex !important;
     align-items: center;
     z-index: 2;
+  }
+
+  /* Ensure both widgets have same height */
+  #nav-team-widget > div,
+  #gw-countdown {
+    min-height: 32px;
+    display: flex;
+    align-items: center;
   }
 
   nav > div > div:last-child {
