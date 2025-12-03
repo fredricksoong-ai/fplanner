@@ -224,9 +224,9 @@ export async function initializePlayerPerformanceTrellis(containerId, players, c
         const col = index % effectiveCols;
         
         const left = col * gridWidth + gridGap;
-        const top = row * gridHeight + 6; // 6% for player name label
+        const top = row * gridHeight + 1; // 1% for player name label
         const width = gridWidth - (2 * gridGap);
-        const height = gridHeight - 6 - gridGap; // Optimized space usage
+        const height = gridHeight - 1 - gridGap; // Optimized space usage
 
         // Create grid for this player with optimized padding
         grids.push({
@@ -326,11 +326,39 @@ export async function initializePlayerPerformanceTrellis(containerId, players, c
                 color: positionColor
             },
             tooltip: {
-                trigger: 'item',
+                trigger: 'axis',
+                confine: true,
+                backgroundColor: tooltipBg,
+                borderColor: gridColor,
+                textStyle: { color: textColor, fontSize: 11 },
+                position: function(point, params, dom, rect, size) {
+                    const [x, y] = point;
+                    const [width, height] = size.viewSize;
+                    const tooltipWidth = size.contentSize[0];
+                    const tooltipHeight = size.contentSize[1];
+                    
+                    if (x < tooltipWidth) {
+                        return [x + 20, y];
+                    }
+                    if (x + tooltipWidth > width) {
+                        return [x - tooltipWidth - 20, y];
+                    }
+                    return [x - tooltipWidth / 2, y - tooltipHeight - 10];
+                },
                 formatter: function(params) {
-                    const gwIndex = params.dataIndex;
+                    // params is an array for axis trigger - filter to get only the points series
+                    const pointsParam = Array.isArray(params) 
+                        ? params.find(p => p.seriesName && p.seriesName.includes('Points')) || params[0]
+                        : params;
+                    
+                    const gwIndex = pointsParam.dataIndex;
                     const gw = allGameweeks[gwIndex];
-                    const points = params.value;
+                    const points = pointsParam.value;
+                    
+                    if (points === null || points === undefined) {
+                        return '';
+                    }
+                    
                     const oppInfo = getGWOpponent(player.team, gw);
                     const venue = oppInfo.isHome ? 'H' : 'A';
                     
@@ -341,10 +369,7 @@ export async function initializePlayerPerformanceTrellis(containerId, players, c
                             vs ${oppInfo.name} (${venue})
                         </div>
                     `;
-                },
-                backgroundColor: tooltipBg,
-                borderColor: gridColor,
-                textStyle: { color: textColor, fontSize: 11 }
+                }
             },
             z: 10
         });
@@ -383,9 +408,9 @@ export async function initializePlayerPerformanceTrellis(containerId, players, c
             // Using percentage-based coordinates like text labels
             const borderOpacity = 0.4;
             const borderLeft = col * gridWidth + gridGap;
-            const borderTop = row * gridHeight + 6;
+            const borderTop = row * gridHeight + 1;
             const borderWidthPct = gridWidth - 2 * gridGap;
-            const borderHeightPct = gridHeight - 6 - gridGap;
+            const borderHeightPct = gridHeight - 1 - gridGap;
             
             graphics.push({
                 type: 'rect',
@@ -432,12 +457,27 @@ export async function initializePlayerPerformanceTrellis(containerId, players, c
             series: series,
             graphic: graphics.length > 0 ? graphics : undefined,
             tooltip: {
-                trigger: 'item',
+                trigger: 'axis',
+                confine: true,
                 backgroundColor: tooltipBg,
                 borderColor: gridColor,
                 textStyle: {
                     color: textColor,
                     fontSize: 11
+                },
+                position: function(point, params, dom, rect, size) {
+                    const [x, y] = point;
+                    const [width, height] = size.viewSize;
+                    const tooltipWidth = size.contentSize[0];
+                    const tooltipHeight = size.contentSize[1];
+                    
+                    if (x < tooltipWidth) {
+                        return [x + 20, y];
+                    }
+                    if (x + tooltipWidth > width) {
+                        return [x - tooltipWidth - 20, y];
+                    }
+                    return [x - tooltipWidth / 2, y - tooltipHeight - 10];
                 }
             }
         };
