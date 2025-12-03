@@ -574,7 +574,7 @@ export function updateNavTeamWidget(teamData) {
             font-size: 0.75rem;
             white-space: nowrap;
         ">
-            <span>${overallRank} <span style="color: ${rankIndicator.color};">${rankIndicator.chevron}</span> • ${gwRank} <span style="color: ${gwIndicator.color};">${gwIndicator.chevron}</span></span>
+            <span><span style="color: ${rankIndicator.color};">${overallRank}</span> • <span style="color: ${gwIndicator.color};">${gwRank}</span></span>
         </div>
     `;
 
