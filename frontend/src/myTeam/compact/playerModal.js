@@ -647,6 +647,11 @@ export async function showPlayerModal(playerId, myTeamState = null, options = {}
     // Calculate points breakdown - always pass liveStats if available, it takes priority
     const pointsBreakdown = calculateGWPointsBreakdown(player, liveStats, hasLiveStats ? {} : gwStats);
     
+    // Get actual stat values for display in labels
+    const stats = liveStats || gwStats || {};
+    const goalsCount = stats.goals_scored || 0;
+    const assistsCount = stats.assists || 0;
+    
     const xG = gwStats.expected_goals ? parseFloat(gwStats.expected_goals).toFixed(2) : '0.00';
     const xA = gwStats.expected_assists ? parseFloat(gwStats.expected_assists).toFixed(2) : '0.00';
 
@@ -689,6 +694,8 @@ export async function showPlayerModal(playerId, myTeamState = null, options = {}
         gwPoints,
         minutes: minutes ?? 0,
         bps,
+        goalsCount,
+        assistsCount,
         xG,
         xA,
         pointsBreakdown,
@@ -811,7 +818,7 @@ function showLoadingModal(player, team, position, price) {
 function buildModalHTML(data) {
     const {
         player, team, position, price, currentGW,
-        gwPoints, minutes, bps, xG, xA,
+        gwPoints, minutes, bps, goalsCount, assistsCount, xG, xA,
         pointsBreakdown,
         ownership, leagueOwnership, past3GW, upcomingFixtures, isLive,
         risks, comparisonPlayers,
@@ -881,7 +888,7 @@ function buildModalHTML(data) {
             "
             title="${guillotineActive ? 'Remove from La Guillotine' : 'Add to La Guillotine'}"
         >
-            <i class="fas fa-times-circle"></i>
+            <i class="fas fa-cut"></i>
         </button>
     ` : '';
 
@@ -908,9 +915,21 @@ function buildModalHTML(data) {
             const pointColor = isPositive ? '#22c55e' : '#ef4444';
             const prefix = isPositive ? '+' : '';
             
+            // Add count in parentheses for specific stats
+            let labelWithCount = item.label;
+            if (key === 'minutes' && minutes > 0) {
+                labelWithCount = `Minutes (${minutes})`;
+            } else if (key === 'goals' && goalsCount > 0) {
+                labelWithCount = `Goals (${goalsCount})`;
+            } else if (key === 'assists' && assistsCount > 0) {
+                labelWithCount = `Assists (${assistsCount})`;
+            } else if (key === 'bonus' && bps > 0) {
+                labelWithCount = `Bonus (${bps})`;
+            }
+            
             gwStatsHTML += `
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span style="color: var(--text-secondary);">${item.label}</span>
+                    <span style="color: var(--text-secondary);">${labelWithCount}</span>
                     <span style="color: ${pointColor}; font-weight: 600;">${prefix}${item.points}</span>
                 </div>
             `;
@@ -923,41 +942,17 @@ function buildModalHTML(data) {
         `;
     }
     
-    // Add supporting stats at bottom (minutes, BPS, xG/xA)
-    if (minutes > 0 || bps > 0 || parseFloat(xG) > 0 || parseFloat(xA) > 0) {
+    // Add xG/xA at bottom (minutes and BPS removed since they're now in labels)
+    if (parseFloat(xG) > 0 || parseFloat(xA) > 0) {
         gwStatsHTML += `
                 </div>
                 <div style="margin-top: 0.25rem; padding-top: 0.25rem; border-top: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 0.15rem; font-size: 0.6rem; color: var(--text-secondary);">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>xG/xA</span>
+                        <span style="font-weight: 500;">${xG}/${xA}</span>
+                    </div>
+                </div>
         `;
-        
-        if (minutes > 0) {
-            gwStatsHTML += `
-                <div style="display: flex; justify-content: space-between;">
-                    <span>Minutes</span>
-                    <span style="font-weight: 500;">${minutes}</span>
-                </div>
-            `;
-        }
-        
-        if (bps > 0) {
-            gwStatsHTML += `
-                <div style="display: flex; justify-content: space-between;">
-                    <span>BPS</span>
-                    <span style="font-weight: 500;">${bps}</span>
-                </div>
-            `;
-        }
-        
-        if (parseFloat(xG) > 0 || parseFloat(xA) > 0) {
-            gwStatsHTML += `
-                <div style="display: flex; justify-content: space-between;">
-                    <span>xG/xA</span>
-                    <span style="font-weight: 500;">${xG}/${xA}</span>
-                </div>
-            `;
-        }
-        
-        gwStatsHTML += `</div>`;
     } else {
         gwStatsHTML += `</div>`;
     }
@@ -1719,7 +1714,7 @@ function updateGuillotineButtonState(button, active) {
     button.style.color = active ? '#ef4444' : 'var(--text-secondary)';
     const icon = button.querySelector('i');
     if (icon) {
-        icon.className = 'fas fa-times-circle';
+        icon.className = 'fas fa-cut';
     }
 }
 
