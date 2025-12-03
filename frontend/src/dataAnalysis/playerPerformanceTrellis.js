@@ -483,12 +483,13 @@ export async function initializePlayerPerformanceTrellis(containerId, players, c
             const labelTop = row * gridHeight + 0.5;
             
             // Place colored trend indicator chevron BEFORE the player name
+            // Add a space after the chevron for natural spacing
             graphics.push({
                 type: 'text',
                 left: `${labelLeft}%`,
                 top: `${labelTop}%`,
                 style: {
-                    text: trend.indicator,
+                    text: `${trend.indicator} `, // Space after chevron
                     fill: trend.color,
                     fontSize: 9,
                     fontWeight: 'bold'
@@ -496,9 +497,10 @@ export async function initializePlayerPerformanceTrellis(containerId, players, c
                 z: 101
             });
             
-            // Position player name label after the chevron (with small gap)
+            // Position player name label after the chevron
+            // Account for chevron character + space width, with extra buffer to prevent overlap
             const nameText = `${player.web_name} - ${position}`;
-            const nameLeft = labelLeft + 1.5; // Gap after chevron (1.5% for chevron + space)
+            const nameLeft = labelLeft + 2.5; // Extra buffer to ensure no overlap (chevron + space + padding)
             
             graphics.push({
                 type: 'text',
