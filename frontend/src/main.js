@@ -568,7 +568,7 @@ export function updateNavTeamWidget(teamData) {
             display: flex;
             align-items: center;
             gap: 0.5rem;
-            padding: 0.5rem 1rem;
+            padding: 0.5rem 0.5rem;
             background: rgba(255,255,255,0.1);
             border-radius: 0.5rem;
             font-size: 0.75rem;
