@@ -14,6 +14,7 @@ import {
 } from '../myTeam/teamSummaryHelpers.js';
 import { initializeTeamPointsChart, disposeTeamPointsChart } from './teamPointsChart.js';
 import { initializePlayerPerformanceTrellis, disposePlayerPerformanceTrellis } from './playerPerformanceTrellis.js';
+import { getSegmentedControlStyles } from '../styles/mobileDesignSystem.js';
 
 let teamPointsChartInstance = null;
 let playerPerformanceTrellisInstance = null;
@@ -128,7 +129,7 @@ export function renderTeamOverview(
             </div>
             `}
 
-            <!-- Player Performance Trellis Chart -->
+            <!-- Player Performance Charts (Tabbed by Position) -->
             ${myPlayers.length > 0 ? `
             <div style="margin-bottom: 2rem;">
                 <div style="
@@ -145,7 +146,111 @@ export function renderTeamOverview(
                     ">
                         Player Performance Tracker
                     </h3>
-                    <div id="player-performance-trellis-chart" style="width: 100%; height: 800px;"></div>
+                    
+                    <!-- Position Tabs -->
+                    <div id="player-performance-tabs" style="margin-bottom: 1rem;">
+                        ${(() => {
+                            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                            const isMobile = isMobileDevice();
+                            const segStyles = getSegmentedControlStyles(isDark, isMobile);
+                            
+                            // Count players by position to determine which tabs to show
+                            const posMap = { 'GKP': 1, 'DEF': 2, 'MID': 3, 'FWD': 4 };
+                            const positionCounts = { gkp: 0, def: 0, mid: 0, fwd: 0 };
+                            myPlayers.forEach(p => {
+                                if (p.element_type === 1) positionCounts.gkp++;
+                                else if (p.element_type === 2) positionCounts.def++;
+                                else if (p.element_type === 3) positionCounts.mid++;
+                                else if (p.element_type === 4) positionCounts.fwd++;
+                            });
+                            
+                            const positions = [
+                                { id: 'gkp', label: 'GKP', count: positionCounts.gkp },
+                                { id: 'def', label: 'DEF', count: positionCounts.def },
+                                { id: 'mid', label: 'MID', count: positionCounts.mid },
+                                { id: 'fwd', label: 'FWD', count: positionCounts.fwd }
+                            ].filter(pos => pos.count > 0); // Only show tabs for positions with players
+                            
+                            if (positions.length === 0) return '';
+                            
+                            const containerStyle = Object.entries(segStyles.container)
+                                .map(([k, v]) => `${k.replace(/[A-Z]/g, m => '-' + m.toLowerCase())}: ${v}`)
+                                .join('; ');
+                            
+                            return `
+                                <div style="${containerStyle}">
+                                    ${positions.map((pos, index) => {
+                                        const isActive = index === 0;
+                                        const buttonStyle = Object.entries({
+                                            ...segStyles.button,
+                                            ...(isActive ? segStyles.activeButton : {})
+                                        })
+                                        .map(([k, v]) => `${k.replace(/[A-Z]/g, m => '-' + m.toLowerCase())}: ${v}`)
+                                        .join('; ');
+                                        
+                                        return `
+                                            <button
+                                                class="player-performance-tab-btn"
+                                                data-position="${pos.id}"
+                                                data-active="${isActive}"
+                                                style="${buttonStyle}"
+                                                onmousedown="this.style.transform='scale(0.95)'"
+                                                onmouseup="this.style.transform='scale(1)'"
+                                                onmouseleave="this.style.transform='scale(1)'"
+                                                ontouchstart="this.style.transform='scale(0.95)'"
+                                                ontouchend="this.style.transform='scale(1)'"
+                                            >
+                                                ${pos.label} (${pos.count})
+                                            </button>
+                                        `;
+                                    }).join('')}
+                                </div>
+                            `;
+                        })()}
+                    </div>
+                    
+                    <!-- Chart Containers (one per position, only active one visible) -->
+                    ${(() => {
+                        const posMap = { 'GKP': 1, 'DEF': 2, 'MID': 3, 'FWD': 4 };
+                        const positionCounts = { gkp: 0, def: 0, mid: 0, fwd: 0 };
+                        myPlayers.forEach(p => {
+                            if (p.element_type === 1) positionCounts.gkp++;
+                            else if (p.element_type === 2) positionCounts.def++;
+                            else if (p.element_type === 3) positionCounts.mid++;
+                            else if (p.element_type === 4) positionCounts.fwd++;
+                        });
+                        
+                        const positionTitles = {
+                            gkp: 'Goalkeepers',
+                            def: 'Defenders',
+                            mid: 'Midfielders',
+                            fwd: 'Forwards'
+                        };
+                        
+                        const positions = ['gkp', 'def', 'mid', 'fwd'];
+                        let firstVisible = true;
+                        
+                        return positions.map(pos => {
+                            const hasPlayers = positionCounts[pos] > 0;
+                            const display = hasPlayers && firstVisible ? 'block' : 'none';
+                            if (display === 'block') firstVisible = false;
+                            
+                            return hasPlayers ? `
+                                <div id="player-performance-${pos}-chart-wrapper" style="display: ${display};">
+                                    <h4 style="
+                                        font-size: 0.8rem;
+                                        font-weight: 600;
+                                        color: var(--text-primary);
+                                        margin: 0 0 0.5rem 0;
+                                        opacity: 0.8;
+                                    ">
+                                        ${positionTitles[pos]} (${positionCounts[pos]})
+                                    </h4>
+                                    <div id="player-performance-${pos}-chart" class="player-performance-chart-container" style="width: 100%; height: 400px;"></div>
+                                </div>
+                            ` : '';
+                        }).filter(Boolean).join('');
+                    })()}
                 </div>
             </div>
             ` : ''}
@@ -386,9 +491,9 @@ export function initializeTeamOverviewChart() {
         }, 100);
     }
 
-    // Initialize Player Performance Trellis Chart
+    // Initialize Player Performance Charts (4 position charts)
     if (currentPicks && currentPicks.length > 0) {
-        // Dispose existing trellis chart
+        // Dispose existing charts
         if (playerPerformanceTrellisInstance) {
             disposePlayerPerformanceTrellis(playerPerformanceTrellisInstance);
             playerPerformanceTrellisInstance = null;
@@ -409,16 +514,64 @@ export function initializeTeamOverviewChart() {
             setTimeout(async () => {
                 try {
                     playerPerformanceTrellisInstance = await initializePlayerPerformanceTrellis(
-                        'player-performance-trellis-chart',
+                        'player-performance-chart',
                         allPlayers,
                         currentGW
                     );
+                    
+                    // Setup tab switching
+                    setupPlayerPerformanceTabs();
                 } catch (err) {
-                    console.error('Failed to initialize player performance trellis chart:', err);
+                    console.error('Failed to initialize player performance charts:', err);
                 }
             }, 200);
         }
     }
+}
+
+/**
+ * Setup tab switching for player performance charts
+ */
+function setupPlayerPerformanceTabs() {
+    const tabButtons = document.querySelectorAll('.player-performance-tab-btn');
+    
+    if (tabButtons.length === 0) {
+        return;
+    }
+    
+    tabButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const targetPosition = btn.dataset.position;
+            
+            // Update button states
+            tabButtons.forEach(b => {
+                const isActive = b.dataset.position === targetPosition;
+                b.dataset.active = isActive;
+                
+                // Update styles based on active state
+                const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                const isMobile = isMobileDevice();
+                const segStyles = getSegmentedControlStyles(isDark, isMobile);
+                const buttonStyle = isActive ? segStyles.activeButton : segStyles.button;
+                
+                Object.entries(buttonStyle).forEach(([key, value]) => {
+                    const cssKey = key.replace(/[A-Z]/g, m => '-' + m.toLowerCase());
+                    b.style.setProperty(cssKey, value);
+                });
+            });
+            
+            // Show/hide chart wrappers
+            const allWrappers = document.querySelectorAll('[id^="player-performance-"][id$="-chart-wrapper"]');
+            allWrappers.forEach(wrapper => {
+                const wrapperPosition = wrapper.id.replace('player-performance-', '').replace('-chart-wrapper', '');
+                if (wrapperPosition === targetPosition) {
+                    wrapper.style.display = 'block';
+                } else {
+                    wrapper.style.display = 'none';
+                }
+            });
+        });
+    });
 }
 
 /**
