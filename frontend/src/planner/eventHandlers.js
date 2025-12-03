@@ -81,6 +81,7 @@ export function attachReplacementPageListeners() {
 export function attachPlannerListeners() {
     const playerRows = document.querySelectorAll('.planner-player-row');
     const wishlistRows = document.querySelectorAll('.planner-wishlist-row');
+    const guillotineRows = document.querySelectorAll('.planner-guillotine-row');
     const myTeamState = sharedState.getTeamState();
 
     playerRows.forEach(row => {
@@ -109,6 +110,21 @@ export function attachPlannerListeners() {
         row.style.cursor = 'pointer';
         row.addEventListener('click', () => {
             showPlayerModal(playerId, myTeamState);
+        });
+    });
+
+    guillotineRows.forEach(row => {
+        const playerId = parseInt(row.dataset.playerId);
+        if (!playerId) return;
+        row.style.cursor = 'pointer';
+        row.addEventListener('click', () => {
+            showPlayerModal(playerId, myTeamState, {
+                primaryAction: {
+                    label: 'Replace',
+                    color: 'var(--accent-color)',
+                    onClick: () => handlePlayerClick(playerId)
+                }
+            });
         });
     });
 

@@ -13,8 +13,10 @@ import {
     calculateSquadAverages
 } from '../myTeam/teamSummaryHelpers.js';
 import { initializeTeamPointsChart, disposeTeamPointsChart } from './teamPointsChart.js';
+import { initializePlayerPerformanceTrellis, disposePlayerPerformanceTrellis } from './playerPerformanceTrellis.js';
 
 let teamPointsChartInstance = null;
+let playerPerformanceTrellisInstance = null;
 
 /**
  * Render Team Overview tab - personalized stats for user's team
@@ -125,6 +127,28 @@ export function renderTeamOverview(
                 <p style="font-size: 0.85rem; margin: 0;">Team history data not available</p>
             </div>
             `}
+
+            <!-- Player Performance Trellis Chart -->
+            ${myPlayers.length > 0 ? `
+            <div style="margin-bottom: 2rem;">
+                <div style="
+                    background: var(--bg-secondary);
+                    border-radius: 0.75rem;
+                    padding: 1rem;
+                    margin-bottom: 1rem;
+                ">
+                    <h3 style="
+                        font-size: 0.85rem;
+                        font-weight: 700;
+                        color: var(--text-primary);
+                        margin: 0 0 0.75rem 0;
+                    ">
+                        Player Performance Tracker
+                    </h3>
+                    <div id="player-performance-trellis-chart" style="width: 100%; height: 800px;"></div>
+                </div>
+            </div>
+            ` : ''}
 
             <!-- Section 1: Top Performers This GW -->
             <div style="margin-bottom: 3rem;">
@@ -343,6 +367,7 @@ export function initializeTeamOverviewChart() {
     const teamData = sharedState?.myTeamData;
     const teamHistory = teamData?.teamHistory?.current || [];
     const currentPicks = teamData?.picks?.picks || null;
+    const currentGW = getCurrentGW();
     
     if (teamHistory.length > 0) {
         // Dispose existing chart
@@ -360,6 +385,40 @@ export function initializeTeamOverviewChart() {
             }
         }, 100);
     }
+
+    // Initialize Player Performance Trellis Chart
+    if (currentPicks && currentPicks.length > 0) {
+        // Dispose existing trellis chart
+        if (playerPerformanceTrellisInstance) {
+            disposePlayerPerformanceTrellis(playerPerformanceTrellisInstance);
+            playerPerformanceTrellisInstance = null;
+        }
+
+        // Get full player data for all 15 players
+        const allPlayers = currentPicks.map(pick => {
+            const player = getPlayerById(pick.element);
+            return player ? {
+                ...player,
+                position: pick.position,
+                is_captain: pick.is_captain,
+                is_vice_captain: pick.is_vice_captain
+            } : null;
+        }).filter(p => p && p.id);
+
+        if (allPlayers.length > 0) {
+            setTimeout(async () => {
+                try {
+                    playerPerformanceTrellisInstance = await initializePlayerPerformanceTrellis(
+                        'player-performance-trellis-chart',
+                        allPlayers,
+                        currentGW
+                    );
+                } catch (err) {
+                    console.error('Failed to initialize player performance trellis chart:', err);
+                }
+            }, 200);
+        }
+    }
 }
 
 /**
@@ -369,5 +428,9 @@ export function cleanupTeamOverviewChart() {
     if (teamPointsChartInstance) {
         disposeTeamPointsChart(teamPointsChartInstance);
         teamPointsChartInstance = null;
+    }
+    if (playerPerformanceTrellisInstance) {
+        disposePlayerPerformanceTrellis(playerPerformanceTrellisInstance);
+        playerPerformanceTrellisInstance = null;
     }
 }
