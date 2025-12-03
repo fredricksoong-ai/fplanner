@@ -19,6 +19,7 @@ import {
 import { getFixtures, getGWOpponent, getMatchStatus } from '../../fixtures.js';
 import { calculateStatusColor } from './compactStyleHelpers.js';
 import { isWishlisted } from '../../wishlist/store.js';
+import { isGuillotined } from '../../guillotine/store.js';
 
 /**
  * Render comprehensive team table with horizontal scroll
@@ -149,15 +150,17 @@ function renderTeamSection(players, gwNumber, isLive, next5GWs, activeGW, sectio
         const isCaptain = pick.is_captain;
         const isViceCaptain = pick.is_vice_captain;
         const isWishlistedPlayer = isWishlisted(player.id);
+        const isGuillotinedPlayer = isGuillotined(player.id);
 
         // Captain badge
         let captainBadge = '';
         if (isCaptain) captainBadge = ' <span style="color: var(--text-primary); font-weight: 700; font-size: 0.6rem;">(C)</span>';
         if (isViceCaptain) captainBadge = ' <span style="color: var(--text-primary); font-weight: 700; font-size: 0.6rem;">(VC)</span>';
 
-        // Player badges (⭐ for wishlisted only - no 👤 needed since all are my players on Team page)
+        // Player badges (⭐ for wishlisted, 🔪 for guillotined - no 👤 needed since all are my players on Team page)
         const badges = [];
         if (isWishlistedPlayer) badges.push('⭐️');
+        if (isGuillotinedPlayer) badges.push('🔪');
         const badgeMarkup = badges.length > 0 ? ` <span style="font-size: 0.65rem;">${badges.join(' ')}</span>` : '';
 
         html += `

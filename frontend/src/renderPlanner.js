@@ -394,10 +394,8 @@ function renderGuillotineSection(entries = [], gwNumber = currentGW) {
         const formStyle = getHeatmapStyle(formHeatmap);
         const fdrColor = avgFDRValue <= 2.5 ? 'var(--success-color)' : avgFDRValue <= 3.5 ? '#eab308' : 'var(--danger-color)';
 
-        // Badges: 🔪 for guillotine, 👤 if in my team (should always be true for guillotine)
-        const isMyPlayer = myPlayerIds.has(player.id);
+        // Badges: 🔪 for guillotine (no 👤 needed since all are my players)
         const badges = [];
-        if (isMyPlayer) badges.push('👤');
         badges.push('🔪');
         const badgeMarkup = badges.length > 0 ? ` <span style="font-size: 0.65rem;">${badges.join(' ')}</span>` : '';
 
@@ -474,7 +472,6 @@ function renderGuillotineSection(entries = [], gwNumber = currentGW) {
             border-radius: 0.75rem;
             margin-bottom: 1rem;
             box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-            border-left: 3px solid var(--accent-color);
         ">
             <div style="padding: 0.75rem 1rem; display: flex; justify-content: space-between; align-items: center;">
                 <h2 style="font-size: 0.85rem; font-weight: 700; margin: 0; color: var(--text-primary);">La Guillotine</h2>

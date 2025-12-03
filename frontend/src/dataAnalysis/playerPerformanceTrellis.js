@@ -224,17 +224,20 @@ export async function initializePlayerPerformanceTrellis(containerId, players, c
         const col = index % effectiveCols;
         
         const left = col * gridWidth + gridGap;
-        const top = row * gridHeight + 10; // 10% for title
+        const top = row * gridHeight + 6; // 6% for player name label
         const width = gridWidth - (2 * gridGap);
-        const height = gridHeight - 10 - gridGap; // Leave space for title and gap
+        const height = gridHeight - 6 - gridGap; // Optimized space usage
 
-        // Create grid for this player
+        // Create grid for this player with optimized padding
         grids.push({
             left: `${left}%`,
             top: `${top}%`,
             width: `${width}%`,
             height: `${height}%`,
-            containLabel: false
+            containLabel: false,
+            // Add padding for better Y-axis spacing
+            right: '2%',
+            bottom: '8%'
         });
 
         // Create X-axis (only show labels on bottom row)
@@ -261,16 +264,19 @@ export async function initializePlayerPerformanceTrellis(containerId, players, c
             }
         });
 
-        // Create Y-axis (shared scale)
+        // Create Y-axis (shared scale) - expanded for better visibility
+        // Add padding to Y-axis to give more breathing room
+        const yAxisPadding = maxScore * 0.1; // 10% padding
         yAxes.push({
             gridIndex: index,
             type: 'value',
             min: 0,
-            max: maxScore,
+            max: maxScore + yAxisPadding,
             axisLabel: {
                 show: col === 0, // Only show on leftmost column
                 color: textColor,
-                fontSize: 8
+                fontSize: 9,
+                margin: 8 // Add margin for better spacing
             },
             axisLine: {
                 show: false
@@ -365,17 +371,45 @@ export async function initializePlayerPerformanceTrellis(containerId, players, c
             });
         });
 
-        // Add player name labels using graphic components positioned absolutely
-        const graphics = validPlayerData.map(({ player }, index) => {
+        // Add player name labels and borders using graphic components
+        const graphics = [];
+        
+        validPlayerData.forEach(({ player }, index) => {
             const row = Math.floor(index / effectiveCols);
             const col = index % effectiveCols;
             const position = getPositionShort(player);
             
-            // Position label at top-left of each grid
-            const labelLeft = col * gridWidth + gridGap + 2;
-            const labelTop = row * gridHeight + 2;
+            // Add light border rectangle around each chart
+            // Using percentage-based coordinates like text labels
+            const borderOpacity = 0.4;
+            const borderLeft = col * gridWidth + gridGap;
+            const borderTop = row * gridHeight + 6;
+            const borderWidthPct = gridWidth - 2 * gridGap;
+            const borderHeightPct = gridHeight - 6 - gridGap;
             
-            return {
+            graphics.push({
+                type: 'rect',
+                left: `${borderLeft}%`,
+                top: `${borderTop}%`,
+                shape: {
+                    width: `${borderWidthPct}%`,
+                    height: `${borderHeightPct}%`
+                },
+                style: {
+                    fill: 'transparent',
+                    stroke: gridColor,
+                    lineWidth: 1,
+                    opacity: borderOpacity
+                },
+                z: 50,
+                silent: true
+            });
+            
+            // Position label at top-left of each grid - optimized spacing
+            const labelLeft = col * gridWidth + gridGap + 1.5;
+            const labelTop = row * gridHeight + 1;
+            
+            graphics.push({
                 type: 'text',
                 left: `${labelLeft}%`,
                 top: `${labelTop}%`,
@@ -386,7 +420,7 @@ export async function initializePlayerPerformanceTrellis(containerId, players, c
                     fontWeight: 'bold'
                 },
                 z: 100
-            };
+            });
         });
 
         const option = {
