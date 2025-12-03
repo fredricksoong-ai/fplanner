@@ -6,7 +6,7 @@
 import { getPlayerById, getActiveGW } from '../../data.js';
 import { getPositionShort, escapeHtml } from '../../utils.js';
 import { getGWOpponent } from '../../fixtures.js';
-import { calculateGWPointsBreakdown } from './playerModal.js';
+import { calculateGWPointsBreakdown, showPlayerModal } from './playerModal.js';
 
 let echarts = null; // Lazy-loaded ECharts instance
 let currentChart = null; // Current chart instance for cleanup
@@ -188,7 +188,7 @@ function packCirclesInRow(circles, rowWidth, rowCenterY) {
  * @param {boolean} isLive - Whether gameweek is live
  * @returns {string} HTML for bubble formation section
  */
-export async function renderCompactBubbleFormation(players, gwNumber, isLive) {
+export async function renderCompactBubbleFormation(players, gwNumber, isLive, myTeamState = null) {
     // Filter to starting 11 only (positions 1-11)
     const starters = players.filter(p => p.position <= 11).sort((a, b) => a.position - b.position);
     
@@ -299,7 +299,7 @@ export async function renderCompactBubbleFormation(players, gwNumber, isLive) {
  * @param {number} gwNumber - Gameweek number
  * @param {boolean} isLive - Whether gameweek is live
  */
-export async function initBubbleFormationChart(players, gwNumber, isLive) {
+export async function initBubbleFormationChart(players, gwNumber, isLive, myTeamState = null) {
     // Wait for DOM to be ready
     await new Promise(resolve => setTimeout(resolve, 100));
     
@@ -475,74 +475,7 @@ export async function initBubbleFormationChart(players, gwNumber, isLive) {
             inverse: true
         },
         tooltip: {
-            trigger: 'item',
-            backgroundColor: 'rgba(0, 0, 0, 0.9)',
-            borderColor: '#3a3530',
-            borderWidth: 1,
-            textStyle: {
-                color: '#d4d0c8',
-                fontSize: 11
-            },
-            appendToBody: true, // Render tooltip outside chart container to avoid clipping
-            confine: false, // Allow tooltip to move outside chart bounds
-            position: function(point, params, dom, rect, size) {
-                // Position tooltip to avoid screen edges
-                const [x, y] = point;
-                const [width, height] = size.viewSize;
-                const tooltipWidth = size.contentSize[0] || 200;
-                const tooltipHeight = size.contentSize[1] || 150;
-                
-                let posX = x + 15;
-                let posY = y - 15;
-                
-                // Adjust if too close to right edge
-                if (posX + tooltipWidth > width - 15) {
-                    posX = x - tooltipWidth - 15;
-                }
-                
-                // Adjust if too close to bottom edge
-                if (posY + tooltipHeight > height - 15) {
-                    posY = height - tooltipHeight - 15;
-                }
-                
-                // Adjust if too close to top edge
-                if (posY < 15) {
-                    posY = 15;
-                }
-                
-                // Adjust if too close to left edge
-                if (posX < 15) {
-                    posX = 15;
-                }
-                
-                return [posX, posY];
-            },
-            formatter: function(params) {
-                const { player, pick, liveStats, gwStats, gwPoints, minutes, ownership, gwNumber, activeGW } = params.data.playerData;
-                const captainText = pick.is_captain ? ' (C)' : (pick.is_vice_captain ? ' (VC)' : '');
-                
-                const opponent = getGWOpponent(player.team, activeGW);
-                const opponentBadge = renderOpponentBadgeForTooltip(opponent);
-                
-                // Get supporting stats
-                const bps = liveStats?.bps ?? gwStats.bps ?? 0;
-                const xG = gwStats.expected_goals ? parseFloat(gwStats.expected_goals).toFixed(2) : '0.00';
-                const xA = gwStats.expected_assists ? parseFloat(gwStats.expected_assists).toFixed(2) : '0.00';
-                
-                // Format GW stats using same format as player modal
-                const gwStatsHTML = formatGWStatsForTooltip(player, liveStats, gwStats, gwPoints, minutes, bps, xG, xA);
-                
-                return `<strong>${escapeHtml(player.web_name)}${captainText}</strong> (${getPositionShort(player)})<br/>
-                        vs. ${opponentBadge}<br/>
-                        <br/>
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem; padding-bottom: 0.25rem; border-bottom: 1px solid var(--border-color);">
-                            <span style="color: var(--text-secondary); font-weight: 600;">Total Points</span>
-                            <span style="font-weight: 700; font-size: 0.8rem;">${gwPoints}</span>
-                        </div>
-                        <div style="display: flex; flex-direction: column; gap: 0.15rem; font-size: 0.65rem;">
-                            ${gwStatsHTML}
-                        </div>`;
-            }
+            show: false // Disable tooltip - we'll use player modal instead
         },
         series: [{
             type: 'scatter',
@@ -563,6 +496,16 @@ export async function initBubbleFormationChart(players, gwNumber, isLive) {
     // Initialize chart
     currentChart = echarts.init(chartDom);
     currentChart.setOption(option);
+
+    // Add click event listener to open player modal
+    currentChart.on('click', function(params) {
+        if (params.data && params.data.playerData) {
+            const { player } = params.data.playerData;
+            if (player && player.id) {
+                showPlayerModal(player.id, myTeamState);
+            }
+        }
+    });
 
     // Resize handler
     const resizeHandler = () => {

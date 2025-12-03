@@ -527,7 +527,7 @@ export async function renderMyTeam(teamData, subTab = 'overview') {
                 const { picks, gameweek } = teamData;
                 const allPlayers = picks.picks.sort((a, b) => a.position - b.position);
                 const isLive = isGameweekLive(gameweek);
-                await initBubbleFormationChart(allPlayers, gameweek, isLive);
+                await initBubbleFormationChart(allPlayers, gameweek, isLive, myTeamState);
             } else if (subTab === 'fixtures') {
                 attachMobileFixtureRowListeners();
                 attachHeaderScrollEffect(); // Apply frosted glass on scroll
@@ -847,7 +847,7 @@ async function renderTeamOverviewTab(teamData) {
         const isLive = isGameweekLive(gameweek);
 
         // Mobile ultra-compact layout
-        const bubbleFormationHTML = await renderCompactBubbleFormation(allPlayers, gameweek, isLive);
+        const bubbleFormationHTML = await renderCompactBubbleFormation(allPlayers, gameweek, isLive, myTeamState);
         
         return `
             ${renderCompactHeader(teamData, gameweek, isAutoRefreshActive())}
