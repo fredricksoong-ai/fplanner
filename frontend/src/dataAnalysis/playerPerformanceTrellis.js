@@ -134,6 +134,51 @@ function getMaxSingleWeekScore(playerData) {
 }
 
 /**
+ * Calculate player trend based on recent vs earlier performance
+ * @param {Array} history - Array of {gameweek, gw_points, ...}
+ * @param {number} currentGW - Current gameweek
+ * @returns {Object} {direction: 'up'|'down'|'stable', indicator: '▲'|'▼'|'➡', color: string}
+ */
+function calculatePlayerTrend(history, currentGW) {
+    if (!history || history.length < 6) {
+        // Not enough data to determine trend
+        return { direction: 'stable', indicator: '➡', color: '#9CA3AF' };
+    }
+
+    // Sort by gameweek
+    const sorted = [...history]
+        .filter(h => h.gameweek && h.gameweek <= currentGW)
+        .sort((a, b) => b.gameweek - a.gameweek); // Most recent first
+
+    if (sorted.length < 6) {
+        return { direction: 'stable', indicator: '➡', color: '#9CA3AF' };
+    }
+
+    // Compare last 3 gameweeks vs previous 3 gameweeks
+    const recentGWs = sorted.slice(0, 3); // Last 3
+    const earlierGWs = sorted.slice(3, 6); // Previous 3
+
+    const recentAvg = recentGWs.reduce((sum, h) => sum + (h.gw_points || 0), 0) / recentGWs.length;
+    const earlierAvg = earlierGWs.reduce((sum, h) => sum + (h.gw_points || 0), 0) / earlierGWs.length;
+
+    // Calculate percentage change
+    if (earlierAvg === 0) {
+        return { direction: 'stable', indicator: '➡', color: '#9CA3AF' };
+    }
+
+    const change = ((recentAvg - earlierAvg) / earlierAvg) * 100;
+    const threshold = 10; // 10% change threshold
+
+    if (change > threshold) {
+        return { direction: 'up', indicator: '▲', color: '#10B981' }; // Green
+    } else if (change < -threshold) {
+        return { direction: 'down', indicator: '▼', color: '#EF4444' }; // Red
+    } else {
+        return { direction: 'stable', indicator: '➡', color: '#FBBF24' }; // Yellow/Amber
+    }
+}
+
+/**
  * Initialize Player Performance Trellis Chart
  * @param {string} containerId - DOM element ID
  * @param {Array} players - Array of 15 player objects
@@ -224,9 +269,9 @@ export async function initializePlayerPerformanceTrellis(containerId, players, c
         const col = index % effectiveCols;
         
         const left = col * gridWidth + gridGap;
-        const top = row * gridHeight + 1; // 1% for player name label
+        const top = row * gridHeight + 2; // 2% for player name label
         const width = gridWidth - (2 * gridGap);
-        const height = gridHeight - 1 - gridGap; // Optimized space usage
+        const height = gridHeight - 2 - gridGap; // Optimized space usage
 
         // Create grid for this player with optimized padding
         grids.push({
@@ -399,18 +444,21 @@ export async function initializePlayerPerformanceTrellis(containerId, players, c
         // Add player name labels and borders using graphic components
         const graphics = [];
         
-        validPlayerData.forEach(({ player }, index) => {
+        validPlayerData.forEach(({ player, history }, index) => {
             const row = Math.floor(index / effectiveCols);
             const col = index % effectiveCols;
             const position = getPositionShort(player);
+            
+            // Calculate player trend
+            const trend = calculatePlayerTrend(history, currentGW);
             
             // Add light border rectangle around each chart
             // Using percentage-based coordinates like text labels
             const borderOpacity = 0.4;
             const borderLeft = col * gridWidth + gridGap;
-            const borderTop = row * gridHeight + 1;
+            const borderTop = row * gridHeight + 2;
             const borderWidthPct = gridWidth - 2 * gridGap;
-            const borderHeightPct = gridHeight - 1 - gridGap;
+            const borderHeightPct = gridHeight - 2 - gridGap;
             
             graphics.push({
                 type: 'rect',
@@ -432,8 +480,9 @@ export async function initializePlayerPerformanceTrellis(containerId, players, c
             
             // Position label at top-left of each grid - optimized spacing
             const labelLeft = col * gridWidth + gridGap + 1.5;
-            const labelTop = row * gridHeight + 1;
+            const labelTop = row * gridHeight + 0.5;
             
+            // Create player name label
             graphics.push({
                 type: 'text',
                 left: `${labelLeft}%`,
@@ -445,6 +494,23 @@ export async function initializePlayerPerformanceTrellis(containerId, players, c
                     fontWeight: 'bold'
                 },
                 z: 100
+            });
+            
+            // Add colored trend indicator chevron right after the label
+            // Approximate position: each character is roughly 0.5% width
+            const textLength = player.web_name.length + position.length + 3; // +3 for " - "
+            const chevronLeft = labelLeft + (textLength * 0.5);
+            graphics.push({
+                type: 'text',
+                left: `${chevronLeft}%`,
+                top: `${labelTop}%`,
+                style: {
+                    text: trend.indicator,
+                    fill: trend.color,
+                    fontSize: 9,
+                    fontWeight: 'bold'
+                },
+                z: 101
             });
         });
 
