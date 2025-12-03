@@ -377,6 +377,35 @@ body {
     font-size: 1.25rem !important;
   }
 
+  /* Mobile header layout: left space for future widget, centered logo */
+  nav > div {
+    justify-content: center !important;
+    position: relative;
+  }
+
+  nav > div > div:first-child {
+    position: absolute;
+    left: 0;
+  }
+
+  nav > div > div:last-child {
+    position: absolute;
+    right: 0;
+  }
+
+  /* Show logo image on mobile, hide text */
+  #nav-brand h1 {
+    display: none !important;
+  }
+
+  #nav-brand img {
+    display: block !important;
+    width: 48px !important;
+    height: 48px !important;
+    border-radius: 50% !important;
+    object-fit: cover !important;
+  }
+
 
   /* Hide full countdown text on very small screens */
   @media (max-width: 380px) {
