@@ -360,8 +360,8 @@ body {
 
   /* Compact header on mobile with safe area support */
   nav {
-    padding: 0.75rem 1rem !important;
-    padding-top: calc(0.75rem + env(safe-area-inset-top)) !important;
+    padding: 0.5rem 1rem !important;
+    padding-top: calc(0.5rem + env(safe-area-inset-top)) !important;
     margin-top: calc(-1 * env(safe-area-inset-top)) !important;
     position: relative;
     z-index: 900;
@@ -381,7 +381,7 @@ body {
   nav > div {
     justify-content: space-between !important;
     position: relative;
-    min-height: 48px;
+    min-height: 40px;
     align-items: center !important;
   }
 
@@ -412,13 +412,13 @@ body {
 
   #nav-brand img {
     display: block !important;
-    width: 48px !important;
-    height: 48px !important;
+    width: 40px !important;
+    height: 40px !important;
     border-radius: 50% !important;
     object-fit: cover !important;
     object-position: center !important;
     /* Crop more aggressively to remove white space */
-    transform: scale(1.15) !important;
+    transform: scale(1.3) !important;
   }
 
 
