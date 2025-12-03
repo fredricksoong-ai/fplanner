@@ -334,7 +334,7 @@ async function fetchPlayerHistory(playerId) {
  * @param {Object} gwStats - GitHub GW stats (if GW is finished)
  * @returns {Object} Points breakdown object with all components
  */
-function calculateGWPointsBreakdown(player, liveStats, gwStats) {
+export function calculateGWPointsBreakdown(player, liveStats, gwStats) {
     const position = getPositionShort(player);
     const positionType = player.element_type; // 1=GKP, 2=DEF, 3=MID, 4=FWD
     
