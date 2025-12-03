@@ -358,7 +358,7 @@ function renderGuillotineSection(entries = [], gwNumber = currentGW) {
                 border-radius: 0.75rem;
                 padding: 0.75rem 1rem;
                 margin-bottom: 1rem;
-                border-left: 3px solid #ef4444;
+                border-left: 3px solid var(--accent-color);
             ">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
                     <h2 style="font-size: 0.85rem; font-weight: 700; margin: 0; color: var(--text-primary);">La Guillotine</h2>
@@ -474,7 +474,7 @@ function renderGuillotineSection(entries = [], gwNumber = currentGW) {
             border-radius: 0.75rem;
             margin-bottom: 1rem;
             box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-            border-left: 3px solid #ef4444;
+            border-left: 3px solid var(--accent-color);
         ">
             <div style="padding: 0.75rem 1rem; display: flex; justify-content: space-between; align-items: center;">
                 <h2 style="font-size: 0.85rem; font-weight: 700; margin: 0; color: var(--text-primary);">La Guillotine</h2>
