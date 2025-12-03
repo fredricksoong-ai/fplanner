@@ -514,7 +514,7 @@ export function initializeTeamOverviewChart() {
             setTimeout(async () => {
                 try {
                     playerPerformanceTrellisInstance = await initializePlayerPerformanceTrellis(
-                        'player-performance-chart',
+                        'player-performance',
                         allPlayers,
                         currentGW
                     );
@@ -560,12 +560,18 @@ function setupPlayerPerformanceTabs() {
                 });
             });
             
-            // Show/hide chart wrappers
+            // Show/hide chart wrappers and resize visible chart
             const allWrappers = document.querySelectorAll('[id^="player-performance-"][id$="-chart-wrapper"]');
             allWrappers.forEach(wrapper => {
                 const wrapperPosition = wrapper.id.replace('player-performance-', '').replace('-chart-wrapper', '');
                 if (wrapperPosition === targetPosition) {
                     wrapper.style.display = 'block';
+                    // Resize chart after making it visible
+                    setTimeout(() => {
+                        if (playerPerformanceTrellisInstance && playerPerformanceTrellisInstance[targetPosition]) {
+                            playerPerformanceTrellisInstance[targetPosition].resize();
+                        }
+                    }, 100);
                 } else {
                     wrapper.style.display = 'none';
                 }

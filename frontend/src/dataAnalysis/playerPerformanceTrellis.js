@@ -227,9 +227,16 @@ async function createPositionChart(containerId, posType, playersInPosition, allG
     const chartDom = document.getElementById(containerId);
 
     if (!chartDom) {
-        console.error(`Chart container #${containerId} not found`);
+        console.error(`Chart container #${containerId} not found. Available containers:`, 
+            Array.from(document.querySelectorAll('[id^="player-performance"]')).map(el => el.id));
         return null;
     }
+
+    console.log(`Found container #${containerId}, dimensions:`, {
+        width: chartDom.offsetWidth,
+        height: chartDom.offsetHeight,
+        visible: chartDom.offsetParent !== null
+    });
 
     // Dispose existing chart if any
     const existingChart = echarts.getInstanceByDom(chartDom);
@@ -485,6 +492,7 @@ async function createPositionChart(containerId, posType, playersInPosition, allG
     };
 
     chart.setOption(option);
+    console.log(`Chart created successfully for position ${posType} in container #${containerId}`);
 
     // Handle window resize
     const resizeHandler = () => {
@@ -537,8 +545,10 @@ export async function initializePlayerPerformanceTrellis(baseContainerId, player
 
         // GKP Chart
         if (groupedPlayers[1] && groupedPlayers[1].length > 0) {
+            const containerId = `${baseContainerId}-gkp-chart`;
+            console.log(`Creating GKP chart in container: #${containerId}`);
             chartInstances.gkp = await createPositionChart(
-                `${baseContainerId}-gkp`,
+                containerId,
                 1,
                 groupedPlayers[1],
                 allGameweeks,
@@ -548,8 +558,10 @@ export async function initializePlayerPerformanceTrellis(baseContainerId, player
 
         // DEF Chart
         if (groupedPlayers[2] && groupedPlayers[2].length > 0) {
+            const containerId = `${baseContainerId}-def-chart`;
+            console.log(`Creating DEF chart in container: #${containerId}`);
             chartInstances.def = await createPositionChart(
-                `${baseContainerId}-def`,
+                containerId,
                 2,
                 groupedPlayers[2],
                 allGameweeks,
@@ -559,8 +571,10 @@ export async function initializePlayerPerformanceTrellis(baseContainerId, player
 
         // MID Chart
         if (groupedPlayers[3] && groupedPlayers[3].length > 0) {
+            const containerId = `${baseContainerId}-mid-chart`;
+            console.log(`Creating MID chart in container: #${containerId}`);
             chartInstances.mid = await createPositionChart(
-                `${baseContainerId}-mid`,
+                containerId,
                 3,
                 groupedPlayers[3],
                 allGameweeks,
@@ -570,8 +584,10 @@ export async function initializePlayerPerformanceTrellis(baseContainerId, player
 
         // FWD Chart
         if (groupedPlayers[4] && groupedPlayers[4].length > 0) {
+            const containerId = `${baseContainerId}-fwd-chart`;
+            console.log(`Creating FWD chart in container: #${containerId}`);
             chartInstances.fwd = await createPositionChart(
-                `${baseContainerId}-fwd`,
+                containerId,
                 4,
                 groupedPlayers[4],
                 allGameweeks,
