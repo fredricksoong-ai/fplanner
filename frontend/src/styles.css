@@ -403,10 +403,6 @@ body {
     left: 50% !important;
     transform: translateX(-50%) !important;
     z-index: 1;
-    overflow: hidden !important;
-    border-radius: 50% !important;
-    width: 40px !important;
-    height: 40px !important;
   }
 
   /* Show logo image on mobile, hide text */
@@ -416,11 +412,8 @@ body {
 
   #nav-brand img {
     display: block !important;
-    /* Make image larger than container to crop borders */
-    width: 60px !important;
-    height: 60px !important;
-    /* Position it centered within the 40px circular container */
-    margin: -10px !important;
+    width: 40px !important;
+    height: 40px !important;
     border-radius: 50% !important;
     object-fit: cover !important;
     object-position: center !important;
