@@ -479,6 +479,11 @@ export function renderMyTeam(teamData, subTab = 'overview') {
     myTeamState.currentTab = subTab;
     sharedState.updateTeamData(teamData);
 
+    // Update nav team widget
+    if (window.updateNavTeamWidget) {
+        window.updateNavTeamWidget(teamData);
+    }
+
     // Setup auto-refresh for live GW
     setupTeamAutoRefresh();
 

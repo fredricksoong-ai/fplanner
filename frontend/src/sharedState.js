@@ -79,5 +79,10 @@ export const sharedState = {
         } catch (err) {
             console.warn('Failed to cache team data for reuse', err);
         }
+
+        // Update nav team widget if available
+        if (typeof window !== 'undefined' && window.updateNavTeamWidget) {
+            window.updateNavTeamWidget(teamData);
+        }
     }
 };

@@ -4,7 +4,7 @@
 // ============================================================================
 
 import './styles.css';
-import { loadFPLData, loadMyTeam, refreshData, currentGW, loadEnrichedBootstrap } from './data.js';
+import { loadFPLData, loadMyTeam, refreshData, currentGW, loadEnrichedBootstrap, getGameweekEvent, getActiveGW } from './data.js';
 import { escapeHtml } from './utils.js';
 import {
     updateOwnershipThreshold as updateAnalysisOwnership,
@@ -13,6 +13,8 @@ import {
     setPriceRange
 } from './renderDataAnalysis.js';
 import { initMobileNav, updateMobileNav } from './mobileNav.js';
+import { calculateRankIndicator, calculateGWIndicator } from './myTeam/compact/compactStyleHelpers.js';
+import { sharedState } from './sharedState.js';
 
 // ============================================================================
 // STATE MANAGEMENT
@@ -342,6 +344,27 @@ async function initializeApp() {
 
         startCountdown();
 
+        // Expose updateNavTeamWidget globally
+        if (typeof window !== 'undefined') {
+            window.updateNavTeamWidget = updateNavTeamWidget;
+            
+            // Update widget if team data already exists (e.g., from cache)
+            if (sharedState.myTeamData) {
+                updateNavTeamWidget(sharedState.myTeamData);
+            }
+            
+            // Handle window resize to show/hide widget
+            let resizeTimeout;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(() => {
+                    // Re-update widget on resize to handle mobile/desktop switch
+                    if (sharedState.myTeamData) {
+                        updateNavTeamWidget(sharedState.myTeamData);
+                    }
+                }, 250);
+            });
+        }
 
         // Parse URL hash for initial page
         const hash = window.location.hash.slice(1); // Remove #
@@ -468,6 +491,129 @@ function setupNavigation() {
     });
 
     updateNavLinks();
+}
+
+// ============================================================================
+// NAV TEAM WIDGET
+// Updates the team info widget in the navigation bar
+// ============================================================================
+
+/**
+ * Calculate color for GW points based on difference from average
+ * @param {number} points - User's GW points
+ * @param {number} average - GW average points
+ * @returns {string} Color hex code
+ */
+function calculatePointsColor(points, average) {
+    if (!average || average === 0) return 'white';
+
+    const diff = points - average;
+
+    if (diff >= 15) return '#9333ea'; // Exceptional - Purple
+    if (diff >= 5) return '#22c55e';  // Above average - Green
+    if (diff >= -4) return '#eab308'; // On average - Yellow
+    return '#ef4444';                 // Below average - Red
+}
+
+/**
+ * Update the navigation team widget with team data
+ * @param {Object} teamData - Team data with picks and team info
+ */
+export function updateNavTeamWidget(teamData) {
+    const widget = document.getElementById('nav-team-widget');
+    if (!widget) return;
+
+    // Only show on mobile
+    const isMobile = window.innerWidth <= 767;
+    if (!isMobile) {
+        widget.style.display = 'none';
+        return;
+    }
+
+    if (!teamData || !teamData.team || !teamData.picks) {
+        widget.style.display = 'none';
+        return;
+    }
+
+    const { picks, team } = teamData;
+    const entry = picks.entry_history;
+
+    // Get data
+    const teamName = team.name || 'My Team';
+    const totalPoints = team.summary_overall_points || 0;
+    const overallRankNum = team.summary_overall_rank || 0;
+    const gwRankNum = team.summary_event_rank || 0;
+    const overallRank = overallRankNum ? overallRankNum.toLocaleString() : 'N/A';
+    const gwRank = gwRankNum ? gwRankNum.toLocaleString() : 'N/A';
+
+    // Calculate GW points
+    let gwPoints = entry?.points ?? 0;
+
+    // Get current gameweek
+    const gwNumber = teamData.gameweek || currentGW || getActiveGW();
+
+    // Get GW average for color coding
+    const gwEvent = getGameweekEvent(gwNumber);
+    const gwAverage = gwEvent?.average_entry_score || 0;
+    const pointsColor = calculatePointsColor(gwPoints, gwAverage);
+
+    // Calculate rank indicators
+    const previousGWRank = entry?.previous_gw_rank || null;
+    const rankIndicator = calculateRankIndicator(team.id, overallRankNum, previousGWRank);
+    const gwIndicator = calculateGWIndicator(gwRankNum, overallRankNum);
+
+    // Build widget HTML
+    widget.innerHTML = `
+        <div style="
+            display: flex;
+            flex-direction: column;
+            gap: 0.15rem;
+            padding: 0.4rem 0.75rem;
+            background: rgba(255,255,255,0.1);
+            border-radius: 0.5rem;
+            font-size: 0.65rem;
+            line-height: 1.1;
+            min-width: 0;
+            max-width: 140px;
+        ">
+            <div style="
+                font-size: 0.75rem;
+                font-weight: 700;
+                color: white;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            ">
+                ${escapeHtml(teamName)}
+            </div>
+            <div style="
+                display: flex;
+                align-items: center;
+                gap: 0.3rem;
+                color: white;
+                font-weight: 600;
+            ">
+                <span>${totalPoints.toLocaleString()}</span>
+                <span style="color: rgba(255,255,255,0.5);">•</span>
+                <span style="color: ${pointsColor}; font-weight: 700;">${gwPoints}</span>
+            </div>
+            <div style="
+                display: flex;
+                align-items: center;
+                gap: 0.3rem;
+                color: white;
+                font-weight: 600;
+            ">
+                <span>OR: ${overallRank}</span>
+                <span style="color: ${rankIndicator.color}; font-size: 0.7rem;">${rankIndicator.chevron}</span>
+                <span style="color: rgba(255,255,255,0.5);">•</span>
+                <span>GW: ${gwRank}</span>
+                <span style="color: ${gwIndicator.color}; font-size: 0.7rem;">${gwIndicator.chevron}</span>
+            </div>
+        </div>
+    `;
+
+    widget.style.display = 'flex';
 }
 
 // ============================================================================

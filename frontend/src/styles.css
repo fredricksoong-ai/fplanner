@@ -399,6 +399,14 @@ body {
     flex: 1;
     display: flex;
     justify-content: flex-start;
+    align-items: center;
+  }
+
+  /* Team widget styling */
+  #nav-team-widget {
+    display: flex !important;
+    align-items: center;
+    z-index: 2;
   }
 
   nav > div > div:last-child {
