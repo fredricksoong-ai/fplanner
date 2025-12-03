@@ -7,16 +7,166 @@ import { getPlayerById, getActiveGW } from '../../data.js';
 import { getPositionShort, escapeHtml } from '../../utils.js';
 import { getGWOpponent } from '../../fixtures.js';
 
+// Import calculateGWPointsBreakdown from player modal
+function calculateGWPointsBreakdown(player, liveStats, gwStats) {
+    const positionType = player.element_type; // 1=GKP, 2=DEF, 3=MID, 4=FWD
+    const stats = liveStats || gwStats || {};
+    const minutes = stats.minutes || 0;
+    
+    const breakdown = {};
+    
+    // [Minutes] Appearance points: 1pt (<60min), 2pts (60+min)
+    if (minutes > 0) {
+        breakdown.minutes = {
+            label: 'Minutes',
+            value: minutes >= 60 ? 2 : 1,
+            points: minutes >= 60 ? 2 : 1
+        };
+    }
+    
+    // [Goals] Goal points: position_multiplier × goals_scored
+    const goals = stats.goals_scored || 0;
+    if (goals > 0) {
+        const goalMultiplier = positionType === 1 ? 10 : (positionType === 2 ? 6 : (positionType === 3 ? 5 : 4));
+        breakdown.goals = {
+            label: 'Goals',
+            value: goals,
+            points: goals * goalMultiplier
+        };
+    }
+    
+    // [Assists] Assist points: assists × 3
+    const assists = stats.assists || 0;
+    if (assists > 0) {
+        breakdown.assists = {
+            label: 'Assists',
+            value: assists,
+            points: assists * 3
+        };
+    }
+    
+    // [Clean Sheet] Clean sheet points: position_multiplier × clean_sheets
+    const cleanSheets = stats.clean_sheets || 0;
+    if (cleanSheets > 0 && (positionType === 1 || positionType === 2)) {
+        const csMultiplier = positionType === 1 ? 4 : 4; // Both GK and DEF get 4
+        breakdown.cleanSheets = {
+            label: 'Clean Sheets',
+            value: cleanSheets,
+            points: cleanSheets * csMultiplier
+        };
+    }
+    
+    // [Goals Conceded] For GK/DEF: -1 per 2 goals conceded
+    if (positionType === 1 || positionType === 2) {
+        const goalsConceded = stats.goals_conceded || 0;
+        if (goalsConceded > 0) {
+            const concededPoints = Math.floor(goalsConceded / 2) * -1;
+            if (concededPoints < 0) {
+                breakdown.goalsConceded = {
+                    label: 'Goals Conceded',
+                    value: goalsConceded,
+                    points: concededPoints
+                };
+            }
+        }
+    }
+    
+    // [Saves] For GK: 1pt per 3 saves
+    if (positionType === 1) {
+        const saves = stats.saves || 0;
+        if (saves > 0) {
+            const savesPoints = Math.floor(saves / 3);
+            if (savesPoints > 0) {
+                breakdown.saves = {
+                    label: 'Saves',
+                    value: saves,
+                    points: savesPoints
+                };
+            }
+        }
+    }
+    
+    // [Penalties Saved] For GK: 5pts per penalty saved
+    if (positionType === 1) {
+        const penaltiesSaved = stats.penalties_saved || 0;
+        if (penaltiesSaved > 0) {
+            breakdown.penaltiesSaved = {
+                label: 'Penalties Saved',
+                value: penaltiesSaved,
+                points: penaltiesSaved * 5
+            };
+        }
+    }
+    
+    // [Penalties Missed] -2pts per penalty missed
+    const penaltiesMissed = stats.penalties_missed || 0;
+    if (penaltiesMissed > 0) {
+        breakdown.penaltiesMissed = {
+            label: 'Penalties Missed',
+            value: penaltiesMissed,
+            points: penaltiesMissed * -2
+        };
+    }
+    
+    // [Yellow Cards] Yellow cards: yellow_cards × -1
+    const yellowCards = stats.yellow_cards || 0;
+    if (yellowCards > 0) {
+        breakdown.yellowCards = {
+            label: 'Yellow Cards',
+            value: yellowCards,
+            points: yellowCards * -1
+        };
+    }
+    
+    // [Red Cards] Red cards: red_cards × -3
+    const redCards = stats.red_cards || 0;
+    if (redCards > 0) {
+        breakdown.redCards = {
+            label: 'Red Cards',
+            value: redCards,
+            points: redCards * -3
+        };
+    }
+    
+    // [Own Goal] Own goals: own_goals × -2
+    const ownGoals = stats.own_goals || 0;
+    if (ownGoals > 0) {
+        breakdown.ownGoal = {
+            label: 'Own Goal',
+            value: ownGoals,
+            points: ownGoals * -2
+        };
+    }
+    
+    // [Bonus] Bonus points: bonus or provisional_bonus (1-3 points)
+    const bonus = liveStats?.provisional_bonus ?? liveStats?.bonus ?? stats.bonus ?? 0;
+    if (bonus > 0) {
+        breakdown.bonus = {
+            label: 'Bonus',
+            value: bonus,
+            points: bonus
+        };
+    }
+    
+    return breakdown;
+}
+
 let echarts = null; // Lazy-loaded ECharts instance
 let currentChart = null; // Current chart instance for cleanup
 
 /**
- * Get points color based on GW points
+ * Get points color based on GW points and minutes
  * @param {number} gwPoints - GW points
+ * @param {number} minutes - Minutes played
  * @returns {string} Color with opacity
  */
-function getPointsColor(gwPoints) {
-    // Lighter opacity shades
+function getPointsColor(gwPoints, minutes) {
+    // Grey for players who haven't played yet (0 pts and 0 minutes)
+    if (gwPoints === 0 && minutes <= 0) {
+        return 'rgba(156, 163, 175, 0.5)'; // Grey - yet to play
+    }
+    
+    // Lighter opacity shades for players who have played
     if (gwPoints >= 12) return 'rgba(168, 85, 247, 0.5)'; // Purple - excellent
     if (gwPoints >= 8) return 'rgba(34, 197, 94, 0.5)';  // Green - good
     if (gwPoints >= 5) return 'rgba(251, 191, 36, 0.5)';  // Yellow - average
@@ -49,39 +199,68 @@ function getFontSize(bubbleSize) {
 }
 
 /**
- * Format GW stats for tooltip
+ * Format GW stats breakdown for tooltip (matching player modal format)
  * @param {Object} player - Player object
  * @param {Object} liveStats - Live stats
  * @param {Object} gwStats - GW stats
- * @returns {string} Formatted stats string
+ * @param {number} gwPoints - GW points
+ * @param {number} minutes - Minutes played
+ * @param {number} bps - BPS
+ * @param {string} xG - Expected goals
+ * @param {string} xA - Expected assists
+ * @returns {string} Formatted HTML for stats
  */
-function formatGWStats(player, liveStats, gwStats) {
-    const stats = liveStats || gwStats || {};
-    const statsList = [];
+function formatGWStatsForTooltip(player, liveStats, gwStats, gwPoints, minutes, bps, xG, xA) {
+    const pointsBreakdown = calculateGWPointsBreakdown(player, liveStats, gwStats);
+    const breakdownItems = Object.entries(pointsBreakdown);
     
-    if (stats.minutes > 0) {
-        statsList.push(`Mins: ${stats.minutes}`);
+    let html = '';
+    
+    // Points breakdown
+    if (breakdownItems.length > 0) {
+        breakdownItems.forEach(([key, item]) => {
+            const isPositive = item.points > 0;
+            const pointColor = isPositive ? '#22c55e' : '#ef4444';
+            const prefix = isPositive ? '+' : '';
+            
+            html += `<div style="display: flex; justify-content: space-between; font-size: 0.65rem;">
+                <span style="color: var(--text-secondary);">${item.label}</span>
+                <span style="color: ${pointColor}; font-weight: 600;">${prefix}${item.points}</span>
+            </div>`;
+        });
+    } else {
+        html += `<div style="color: var(--text-secondary); font-size: 0.6rem;">No stats available yet</div>`;
     }
-    if (stats.goals_scored > 0) {
-        statsList.push(`⚽ ${stats.goals_scored}`);
-    }
-    if (stats.assists > 0) {
-        statsList.push(`🎯 ${stats.assists}`);
-    }
-    if (stats.bonus > 0 || stats.provisional_bonus > 0) {
-        const bonus = stats.provisional_bonus ?? stats.bonus ?? 0;
-        if (bonus > 0) {
-            statsList.push(`⭐ ${bonus}`);
+    
+    // Supporting stats (minutes, BPS, xG/xA)
+    if (minutes > 0 || bps > 0 || parseFloat(xG) > 0 || parseFloat(xA) > 0) {
+        html += `<div style="margin-top: 0.25rem; padding-top: 0.25rem; border-top: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 0.15rem; font-size: 0.6rem; color: var(--text-secondary);">`;
+        
+        if (minutes > 0) {
+            html += `<div style="display: flex; justify-content: space-between;">
+                <span>Minutes</span>
+                <span style="font-weight: 500;">${minutes}</span>
+            </div>`;
         }
-    }
-    if (stats.clean_sheets > 0 && (player.element_type === 1 || player.element_type === 2)) {
-        statsList.push(`🧤 CS`);
-    }
-    if (stats.bps > 0) {
-        statsList.push(`BPS: ${stats.bps}`);
+        
+        if (bps > 0) {
+            html += `<div style="display: flex; justify-content: space-between;">
+                <span>BPS</span>
+                <span style="font-weight: 500;">${bps}</span>
+            </div>`;
+        }
+        
+        if (parseFloat(xG) > 0 || parseFloat(xA) > 0) {
+            html += `<div style="display: flex; justify-content: space-between;">
+                <span>xG/xA</span>
+                <span style="font-weight: 500;">${xG}/${xA}</span>
+            </div>`;
+        }
+        
+        html += `</div>`;
     }
     
-    return statsList.length > 0 ? statsList.join(' • ') : 'No stats';
+    return html;
 }
 
 /**
@@ -168,13 +347,13 @@ export async function renderCompactBubbleFormation(players, gwNumber, isLive) {
             margin-bottom: 1rem;
             border: 1px solid var(--border-color);
         ">
-            <div style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600; margin-bottom: 0.5rem;">
-                Team Formation This GW ⚽
-            </div>
-            
-            <div id="bubble-formation-chart" style="width: 100%; height: 450px; margin-top: 0.5rem;"></div>
+            <div id="bubble-formation-chart" style="width: 100%; height: 450px;"></div>
             
             <div style="display: flex; gap: 1rem; margin-top: 0.75rem; font-size: 0.65rem; color: var(--text-secondary); flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 0.3rem;">
+                    <div style="width: 12px; height: 12px; border-radius: 50%; background: rgba(156, 163, 175, 0.5);"></div>
+                    <span>Yet to play</span>
+                </div>
                 <div style="display: flex; align-items: center; gap: 0.3rem;">
                     <div style="width: 12px; height: 12px; border-radius: 50%; background: rgba(239, 68, 68, 0.5);"></div>
                     <span>0-4 pts</span>
@@ -191,11 +370,6 @@ export async function renderCompactBubbleFormation(players, gwNumber, isLive) {
                     <div style="width: 12px; height: 12px; border-radius: 50%; background: rgba(168, 85, 247, 0.5);"></div>
                     <span>12+ pts</span>
                 </div>
-            </div>
-            
-            <div style="font-size: 0.65rem; color: var(--text-secondary); margin-top: 0.5rem; text-align: center; font-style: italic;">
-                💡 Bubble size = Ownership (bigger = rarer pick)<br>
-                Color = GW Points | Tap bubbles for details
             </div>
         </div>
     `;
@@ -248,7 +422,7 @@ export async function initBubbleFormationChart(players, gwNumber, isLive) {
     const containerWidth = 100;
     const containerHeight = 100;
     const numRows = 4;
-    const rowHeight = containerHeight / numRows;
+    const rowHeight = containerHeight / (numRows + 0.5); // Reduced spacing between rows
     const rowWidth = containerWidth;
     
     const allNodes = [];
@@ -281,6 +455,14 @@ export async function initBubbleFormationChart(players, gwNumber, isLive) {
             let gwPoints = liveStats?.total_points ?? 
                          (hasGWStats ? gwStats.total_points : (player.event_points || 0));
             
+            // Get minutes
+            let minutes = 0;
+            if (liveStats?.minutes !== null && liveStats?.minutes !== undefined) {
+                minutes = liveStats.minutes;
+            } else if (hasGWStats && gwStats.minutes !== null && gwStats.minutes !== undefined) {
+                minutes = gwStats.minutes;
+            }
+            
             if (pick.is_captain) {
                 gwPoints = gwPoints * 2;
             }
@@ -294,6 +476,7 @@ export async function initBubbleFormationChart(players, gwNumber, isLive) {
                 liveStats,
                 gwStats,
                 gwPoints,
+                minutes,
                 ownership,
                 radius: bubbleSize / 2,
                 size: bubbleSize
@@ -304,9 +487,9 @@ export async function initBubbleFormationChart(players, gwNumber, isLive) {
         packCirclesInRow(circles, rowWidth, rowCenterY);
 
         circles.forEach(circle => {
-            const { pick, player, liveStats, gwStats, gwPoints, ownership, size } = circle;
+            const { pick, player, liveStats, gwStats, gwPoints, minutes, ownership, size } = circle;
             const fontSize = getFontSize(size);
-            const pointsColor = getPointsColor(gwPoints);
+            const pointsColor = getPointsColor(gwPoints, minutes);
 
             let labelText = escapeHtml(player.web_name);
             if (pick.is_captain) {
@@ -342,6 +525,7 @@ export async function initBubbleFormationChart(players, gwNumber, isLive) {
                     liveStats,
                     gwStats,
                     gwPoints,
+                    minutes,
                     ownership,
                     gwNumber,
                     activeGW
@@ -376,26 +560,70 @@ export async function initBubbleFormationChart(players, gwNumber, isLive) {
             trigger: 'item',
             backgroundColor: 'rgba(0, 0, 0, 0.9)',
             borderColor: '#3a3530',
+            borderWidth: 1,
             textStyle: {
                 color: '#d4d0c8',
                 fontSize: 11
             },
+            appendToBody: true, // Render tooltip outside chart container to avoid clipping
+            confine: false, // Allow tooltip to move outside chart bounds
+            position: function(point, params, dom, rect, size) {
+                // Position tooltip to avoid screen edges
+                const [x, y] = point;
+                const [width, height] = size.viewSize;
+                const tooltipWidth = size.contentSize[0] || 200;
+                const tooltipHeight = size.contentSize[1] || 150;
+                
+                let posX = x + 15;
+                let posY = y - 15;
+                
+                // Adjust if too close to right edge
+                if (posX + tooltipWidth > width - 15) {
+                    posX = x - tooltipWidth - 15;
+                }
+                
+                // Adjust if too close to bottom edge
+                if (posY + tooltipHeight > height - 15) {
+                    posY = height - tooltipHeight - 15;
+                }
+                
+                // Adjust if too close to top edge
+                if (posY < 15) {
+                    posY = 15;
+                }
+                
+                // Adjust if too close to left edge
+                if (posX < 15) {
+                    posX = 15;
+                }
+                
+                return [posX, posY];
+            },
             formatter: function(params) {
-                const { player, pick, liveStats, gwStats, gwPoints, ownership, gwNumber, activeGW } = params.data.playerData;
+                const { player, pick, liveStats, gwStats, gwPoints, minutes, ownership, gwNumber, activeGW } = params.data.playerData;
                 const captainText = pick.is_captain ? ' (C)' : (pick.is_vice_captain ? ' (VC)' : '');
                 
                 const opponent = getGWOpponent(player.team, activeGW);
                 const opponentBadge = renderOpponentBadgeForTooltip(opponent);
                 
-                const gwStatsText = formatGWStats(player, liveStats, gwStats);
+                // Get supporting stats
+                const bps = liveStats?.bps ?? gwStats.bps ?? 0;
+                const xG = gwStats.expected_goals ? parseFloat(gwStats.expected_goals).toFixed(2) : '0.00';
+                const xA = gwStats.expected_assists ? parseFloat(gwStats.expected_assists).toFixed(2) : '0.00';
+                
+                // Format GW stats using same format as player modal
+                const gwStatsHTML = formatGWStatsForTooltip(player, liveStats, gwStats, gwPoints, minutes, bps, xG, xA);
                 
                 return `<strong>${escapeHtml(player.web_name)}${captainText}</strong> (${getPositionShort(player)})<br/>
                         vs. ${opponentBadge}<br/>
                         <br/>
-                        <strong>GW ${gwNumber} Points: ${gwPoints}</strong><br/>
-                        <br/>
-                        <strong>GW Stats:</strong><br/>
-                        ${gwStatsText}`;
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem; padding-bottom: 0.25rem; border-bottom: 1px solid var(--border-color);">
+                            <span style="color: var(--text-secondary); font-weight: 600;">Total Points</span>
+                            <span style="font-weight: 700; font-size: 0.8rem;">${gwPoints}</span>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 0.15rem; font-size: 0.65rem;">
+                            ${gwStatsHTML}
+                        </div>`;
             }
         },
         series: [{
