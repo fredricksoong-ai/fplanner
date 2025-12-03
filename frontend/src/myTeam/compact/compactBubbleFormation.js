@@ -6,150 +6,7 @@
 import { getPlayerById, getActiveGW } from '../../data.js';
 import { getPositionShort, escapeHtml } from '../../utils.js';
 import { getGWOpponent } from '../../fixtures.js';
-
-// Import calculateGWPointsBreakdown from player modal
-function calculateGWPointsBreakdown(player, liveStats, gwStats) {
-    const positionType = player.element_type; // 1=GKP, 2=DEF, 3=MID, 4=FWD
-    const stats = liveStats || gwStats || {};
-    const minutes = stats.minutes || 0;
-    
-    const breakdown = {};
-    
-    // [Minutes] Appearance points: 1pt (<60min), 2pts (60+min)
-    if (minutes > 0) {
-        breakdown.minutes = {
-            label: 'Minutes',
-            value: minutes >= 60 ? 2 : 1,
-            points: minutes >= 60 ? 2 : 1
-        };
-    }
-    
-    // [Goals] Goal points: position_multiplier × goals_scored
-    const goals = stats.goals_scored || 0;
-    if (goals > 0) {
-        const goalMultiplier = positionType === 1 ? 10 : (positionType === 2 ? 6 : (positionType === 3 ? 5 : 4));
-        breakdown.goals = {
-            label: 'Goals',
-            value: goals,
-            points: goals * goalMultiplier
-        };
-    }
-    
-    // [Assists] Assist points: assists × 3
-    const assists = stats.assists || 0;
-    if (assists > 0) {
-        breakdown.assists = {
-            label: 'Assists',
-            value: assists,
-            points: assists * 3
-        };
-    }
-    
-    // [Clean Sheet] Clean sheet points: position_multiplier × clean_sheets
-    const cleanSheets = stats.clean_sheets || 0;
-    if (cleanSheets > 0 && (positionType === 1 || positionType === 2)) {
-        const csMultiplier = positionType === 1 ? 4 : 4; // Both GK and DEF get 4
-        breakdown.cleanSheets = {
-            label: 'Clean Sheets',
-            value: cleanSheets,
-            points: cleanSheets * csMultiplier
-        };
-    }
-    
-    // [Goals Conceded] For GK/DEF: -1 per 2 goals conceded
-    if (positionType === 1 || positionType === 2) {
-        const goalsConceded = stats.goals_conceded || 0;
-        if (goalsConceded > 0) {
-            const concededPoints = Math.floor(goalsConceded / 2) * -1;
-            if (concededPoints < 0) {
-                breakdown.goalsConceded = {
-                    label: 'Goals Conceded',
-                    value: goalsConceded,
-                    points: concededPoints
-                };
-            }
-        }
-    }
-    
-    // [Saves] For GK: 1pt per 3 saves
-    if (positionType === 1) {
-        const saves = stats.saves || 0;
-        if (saves > 0) {
-            const savesPoints = Math.floor(saves / 3);
-            if (savesPoints > 0) {
-                breakdown.saves = {
-                    label: 'Saves',
-                    value: saves,
-                    points: savesPoints
-                };
-            }
-        }
-    }
-    
-    // [Penalties Saved] For GK: 5pts per penalty saved
-    if (positionType === 1) {
-        const penaltiesSaved = stats.penalties_saved || 0;
-        if (penaltiesSaved > 0) {
-            breakdown.penaltiesSaved = {
-                label: 'Penalties Saved',
-                value: penaltiesSaved,
-                points: penaltiesSaved * 5
-            };
-        }
-    }
-    
-    // [Penalties Missed] -2pts per penalty missed
-    const penaltiesMissed = stats.penalties_missed || 0;
-    if (penaltiesMissed > 0) {
-        breakdown.penaltiesMissed = {
-            label: 'Penalties Missed',
-            value: penaltiesMissed,
-            points: penaltiesMissed * -2
-        };
-    }
-    
-    // [Yellow Cards] Yellow cards: yellow_cards × -1
-    const yellowCards = stats.yellow_cards || 0;
-    if (yellowCards > 0) {
-        breakdown.yellowCards = {
-            label: 'Yellow Cards',
-            value: yellowCards,
-            points: yellowCards * -1
-        };
-    }
-    
-    // [Red Cards] Red cards: red_cards × -3
-    const redCards = stats.red_cards || 0;
-    if (redCards > 0) {
-        breakdown.redCards = {
-            label: 'Red Cards',
-            value: redCards,
-            points: redCards * -3
-        };
-    }
-    
-    // [Own Goal] Own goals: own_goals × -2
-    const ownGoals = stats.own_goals || 0;
-    if (ownGoals > 0) {
-        breakdown.ownGoal = {
-            label: 'Own Goal',
-            value: ownGoals,
-            points: ownGoals * -2
-        };
-    }
-    
-    // [Bonus] Bonus points: bonus or provisional_bonus (1-3 points)
-    const bonus = liveStats?.provisional_bonus ?? liveStats?.bonus ?? stats.bonus ?? 0;
-    if (bonus > 0) {
-        breakdown.bonus = {
-            label: 'Bonus',
-            value: bonus,
-            points: bonus
-        };
-    }
-    
-    return breakdown;
-}
+import { calculateGWPointsBreakdown } from './playerModal.js';
 
 let echarts = null; // Lazy-loaded ECharts instance
 let currentChart = null; // Current chart instance for cleanup
@@ -166,11 +23,11 @@ function getPointsColor(gwPoints, minutes) {
         return 'rgba(156, 163, 175, 0.5)'; // Grey - yet to play
     }
     
-    // Lighter opacity shades for players who have played
-    if (gwPoints >= 12) return 'rgba(168, 85, 247, 0.5)'; // Purple - excellent
-    if (gwPoints >= 8) return 'rgba(34, 197, 94, 0.5)';  // Green - good
-    if (gwPoints >= 5) return 'rgba(251, 191, 36, 0.5)';  // Yellow - average
-    return 'rgba(239, 68, 68, 0.5)'; // Red - poor
+    // Updated color scheme
+    if (gwPoints >= 14) return 'rgba(168, 85, 247, 0.5)'; // Purple - excellent (14+)
+    if (gwPoints >= 9) return 'rgba(34, 197, 94, 0.5)';  // Green - good (9-13)
+    if (gwPoints >= 4) return 'rgba(251, 191, 36, 0.5)';  // Yellow - average (4-8)
+    return 'rgba(239, 68, 68, 0.5)'; // Red - poor (0-3)
 }
 
 /**
@@ -347,7 +204,7 @@ export async function renderCompactBubbleFormation(players, gwNumber, isLive) {
             margin-bottom: 1rem;
             border: 1px solid var(--border-color);
         ">
-            <div id="bubble-formation-chart" style="width: 100%; height: 450px;"></div>
+            <div id="bubble-formation-chart" style="width: 100%; height: 350px;"></div>
             
             <div style="display: flex; gap: 1rem; margin-top: 0.75rem; font-size: 0.65rem; color: var(--text-secondary); flex-wrap: wrap;">
                 <div style="display: flex; align-items: center; gap: 0.3rem;">
@@ -356,19 +213,19 @@ export async function renderCompactBubbleFormation(players, gwNumber, isLive) {
                 </div>
                 <div style="display: flex; align-items: center; gap: 0.3rem;">
                     <div style="width: 12px; height: 12px; border-radius: 50%; background: rgba(239, 68, 68, 0.5);"></div>
-                    <span>0-4 pts</span>
+                    <span>0-3 pts</span>
                 </div>
                 <div style="display: flex; align-items: center; gap: 0.3rem;">
                     <div style="width: 12px; height: 12px; border-radius: 50%; background: rgba(251, 191, 36, 0.5);"></div>
-                    <span>5-7 pts</span>
+                    <span>4-8 pts</span>
                 </div>
                 <div style="display: flex; align-items: center; gap: 0.3rem;">
                     <div style="width: 12px; height: 12px; border-radius: 50%; background: rgba(34, 197, 94, 0.5);"></div>
-                    <span>8-11 pts</span>
+                    <span>9-13 pts</span>
                 </div>
                 <div style="display: flex; align-items: center; gap: 0.3rem;">
                     <div style="width: 12px; height: 12px; border-radius: 50%; background: rgba(168, 85, 247, 0.5);"></div>
-                    <span>12+ pts</span>
+                    <span>14+ pts</span>
                 </div>
             </div>
         </div>
@@ -422,8 +279,11 @@ export async function initBubbleFormationChart(players, gwNumber, isLive) {
     const containerWidth = 100;
     const containerHeight = 100;
     const numRows = 4;
-    const rowHeight = containerHeight / (numRows + 0.5); // Reduced spacing between rows
+    // Tighter spacing: use more of the container height, less wasted space
+    const rowHeight = containerHeight / (numRows + 0.2); // Even tighter spacing
     const rowWidth = containerWidth;
+    // Adjust starting position to reduce top gap
+    const topOffset = 2; // Start slightly lower
     
     const allNodes = [];
     let rowIndex = 0;
@@ -483,7 +343,7 @@ export async function initBubbleFormationChart(players, gwNumber, isLive) {
             };
         }).filter(Boolean);
 
-        const rowCenterY = (rowIndex + 0.5) * rowHeight;
+        const rowCenterY = topOffset + (rowIndex + 0.5) * rowHeight;
         packCirclesInRow(circles, rowWidth, rowCenterY);
 
         circles.forEach(circle => {
@@ -540,8 +400,8 @@ export async function initBubbleFormationChart(players, gwNumber, isLive) {
         grid: {
             left: '2%',
             right: '2%',
-            top: '2%',
-            bottom: '2%'
+            top: '1%', // Reduced top margin
+            bottom: '1%' // Reduced bottom margin
         },
         xAxis: {
             type: 'value',

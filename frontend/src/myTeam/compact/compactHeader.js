@@ -264,7 +264,7 @@ export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = fa
             "
         >
             <div style="display: flex; justify-content: space-between; align-items: stretch; gap: 0.5rem;">
-                <div style="flex: 1; display: grid; gap: 0.2rem;">
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 0.4rem;">
                     <div style="display: flex; align-items: center; gap: 0.4rem;">
                         <button
                             id="change-team-btn"
@@ -289,20 +289,20 @@ export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = fa
                         </div>
                     </div>
 
-                    <div style="font-size: 0.7rem; color: var(--text-secondary);">
+                    <div style="font-size: 0.7rem; color: var(--text-secondary); line-height: 1.4;">
                         GW FDR: ${gwFDR !== null ? gwFDR.toFixed(1) : 'N/A'}
                     </div>
 
-                    <div style="font-size: 0.7rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.3rem;">
+                    <div style="font-size: 0.7rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.3rem; line-height: 1.4;">
                         <span>GW Expected Pts: ${expectedPoints !== null ? Math.round(expectedPoints) : 'N/A'}</span>
                         ${expectedBadge.text ? `<span style="display: inline-block; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem; background: ${expectedBadge.background}; color: ${expectedBadge.color};">${expectedBadge.text}</span>` : ''}
                     </div>
 
-                    <div style="font-size: 0.7rem; color: var(--text-secondary);">
+                    <div style="font-size: 0.7rem; color: var(--text-secondary); line-height: 1.4;">
                         No. of Players Played: ${playersPlayed}
                     </div>
 
-                    <div style="font-size: 0.7rem; color: var(--text-secondary);">
+                    <div style="font-size: 0.7rem; color: var(--text-secondary); line-height: 1.4;">
                         Squad Value: £${squadValue}m + £${bank}m
                     </div>
 
@@ -310,7 +310,7 @@ export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = fa
                         id="transfers-row"
                         data-team-id="${team.id}"
                         data-transfer-cost="${transferCost}"
-                        style="font-size: 0.7rem; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; gap: 0.25rem; user-select: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation;"
+                        style="font-size: 0.7rem; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; gap: 0.25rem; user-select: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation; line-height: 1.4;"
                     >
                         <span>Transfers: ${freeTransfers}${transferCost > 0 ? ` <span style="color: #ef4444;">(-${transferCost} pts)</span>` : ''}</span>
                         <i class="fas fa-chevron-down" id="transfers-chevron" style="font-size: 0.55rem; transition: transform 0.2s; pointer-events: none;"></i>
