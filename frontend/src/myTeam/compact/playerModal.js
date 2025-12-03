@@ -16,6 +16,7 @@ import { getMatchStatus } from '../../fixtures.js';
 import { analyzePlayerRisks } from '../../risk.js';
 import { renderOpponentBadge } from './compactStyleHelpers.js';
 import { isWishlisted, toggleWishlist } from '../../wishlist/store.js';
+import { isGuillotined, toggleGuillotine } from '../../guillotine/store.js';
 import { getMyPlayerIdSet } from '../../utils/myPlayers.js';
 import { loadECharts } from '../../charts/chartHelpers.js';
 
@@ -675,6 +676,8 @@ export async function showPlayerModal(playerId, myTeamState = null, options = {}
     const isMyPlayer = myPlayerIds.has(playerId);
     const canWishlist = !isMyPlayer;
     const wishlistActive = canWishlist && isWishlisted(playerId);
+    const canGuillotine = isMyPlayer;
+    const guillotineActive = canGuillotine && isGuillotined(playerId);
 
     // Build modal HTML
     const modalHTML = buildModalHTML({
@@ -699,6 +702,8 @@ export async function showPlayerModal(playerId, myTeamState = null, options = {}
         actionConfig: options.primaryAction || null,
         canWishlist,
         wishlistActive,
+        canGuillotine,
+        guillotineActive,
         historicalData
     });
 
@@ -709,6 +714,7 @@ export async function showPlayerModal(playerId, myTeamState = null, options = {}
         attachModalListeners({
             actionConfig: options.primaryAction || null,
             wishlistConfig: canWishlist ? { playerId, isActive: wishlistActive } : null,
+            guillotineConfig: canGuillotine ? { playerId, isActive: guillotineActive } : null,
             playerId,
             historicalData
         });
@@ -812,6 +818,8 @@ function buildModalHTML(data) {
         actionConfig,
         canWishlist = false,
         wishlistActive = false,
+        canGuillotine = false,
+        guillotineActive = false,
         historicalData = null
     } = data;
 
@@ -853,6 +861,27 @@ function buildModalHTML(data) {
             title="${wishlistActive ? 'Remove from wishlist' : 'Add to wishlist'}"
         >
             <i class="${wishlistActive ? 'fas' : 'far'} fa-star"></i>
+        </button>
+    ` : '';
+
+    const guillotineButtonHTML = canGuillotine ? `
+        <button
+            id="player-modal-guillotine-btn"
+            data-active="${guillotineActive ? 'true' : 'false'}"
+            style="
+                background: transparent;
+                border: none;
+                cursor: pointer;
+                color: ${guillotineActive ? '#ef4444' : 'var(--text-secondary)'};
+                font-size: 1.1rem;
+                padding: 0.15rem;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            "
+            title="${guillotineActive ? 'Remove from La Guillotine' : 'Add to La Guillotine'}"
+        >
+            <i class="fas fa-cut"></i>
         </button>
     ` : '';
 
@@ -1189,6 +1218,7 @@ function buildModalHTML(data) {
                         ${riskHTML}
                     </div>
                     <div style="display: flex; align-items: center; gap: 0.35rem;">
+                        ${guillotineButtonHTML}
                         ${wishlistButtonHTML}
                         <button
                             id="close-player-modal"
@@ -1576,10 +1606,11 @@ async function initializePlayerCharts(historicalData) {
 let modalClickHandlerAttached = false;
 
 function attachModalListeners(config = {}) {
-    const { actionConfig = null, wishlistConfig = null, playerId = null, historicalData = null } = config;
+    const { actionConfig = null, wishlistConfig = null, guillotineConfig = null, playerId = null, historicalData = null } = config;
     const modal = document.getElementById('player-modal');
     const primaryBtn = document.getElementById('player-modal-primary-btn');
     const wishlistBtn = document.getElementById('player-modal-wishlist-btn');
+    const guillotineBtn = document.getElementById('player-modal-guillotine-btn');
 
     // Attach modal click handler (close button and backdrop) - only once
     if (modal && !modalClickHandlerAttached) {
@@ -1630,6 +1661,12 @@ function attachModalListeners(config = {}) {
         });
     }
 
+    if (guillotineBtn && guillotineConfig) {
+        guillotineBtn.addEventListener('click', () => {
+            const nextState = toggleGuillotine(guillotineConfig.playerId);
+            updateGuillotineButtonState(guillotineBtn, !!nextState);
+        });
+    }
 
     // Tab switching
     const tabButtons = document.querySelectorAll('.player-modal-tab-btn');
@@ -1675,6 +1712,15 @@ function updateWishlistButtonState(button, active) {
     const icon = button.querySelector('i');
     if (icon) {
         icon.className = `${active ? 'fas' : 'far'} fa-star`;
+    }
+}
+
+function updateGuillotineButtonState(button, active) {
+    button.dataset.active = active ? 'true' : 'false';
+    button.style.color = active ? '#ef4444' : 'var(--text-secondary)';
+    const icon = button.querySelector('i');
+    if (icon) {
+        icon.className = 'fas fa-cut';
     }
 }
 
