@@ -881,7 +881,7 @@ function buildModalHTML(data) {
             "
             title="${guillotineActive ? 'Remove from La Guillotine' : 'Add to La Guillotine'}"
         >
-            <i class="fas fa-cut"></i>
+            <i class="fas fa-times-circle"></i>
         </button>
     ` : '';
 
@@ -1719,7 +1719,7 @@ function updateGuillotineButtonState(button, active) {
     button.style.color = active ? '#ef4444' : 'var(--text-secondary)';
     const icon = button.querySelector('i');
     if (icon) {
-        icon.className = 'fas fa-cut';
+        icon.className = 'fas fa-times-circle';
     }
 }
 
