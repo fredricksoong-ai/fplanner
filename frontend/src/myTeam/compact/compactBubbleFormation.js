@@ -12,22 +12,89 @@ let echarts = null; // Lazy-loaded ECharts instance
 let currentChart = null; // Current chart instance for cleanup
 
 /**
- * Get points color based on GW points and minutes
+ * Get points color and text color based on GW points and minutes
+ * Uses heatmap colors matching player table badges for consistency
  * @param {number} gwPoints - GW points
  * @param {number} minutes - Minutes played
- * @returns {string} Color with opacity
+ * @returns {Object} Object with bgColor and textColor
  */
-function getPointsColor(gwPoints, minutes) {
+function getPointsColors(gwPoints, minutes) {
+    // Check if dark mode
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    
     // Grey for players who haven't played yet (0 pts and 0 minutes)
     if (gwPoints === 0 && minutes <= 0) {
-        return 'rgba(156, 163, 175, 0.5)'; // Grey - yet to play
+        if (isDark) {
+            return {
+                bgColor: '#3a3530', // Darker grey background for better visibility
+                textColor: '#d4d0c8' // Lighter text for readability
+            };
+        } else {
+            return {
+                bgColor: '#e4e1e4', // Light grey background
+                textColor: '#52505a' // Dark grey text
+            };
+        }
     }
     
-    // Updated color scheme
-    if (gwPoints >= 14) return 'rgba(168, 85, 247, 0.5)'; // Purple - excellent (14+)
-    if (gwPoints >= 9) return 'rgba(34, 197, 94, 0.5)';  // Green - good (9-13)
-    if (gwPoints >= 4) return 'rgba(251, 191, 36, 0.5)';  // Yellow - average (4-8)
-    return 'rgba(239, 68, 68, 0.5)'; // Red - poor (0-3)
+    // Use heatmap colors matching player table badges
+    if (gwPoints >= 14) {
+        // Purple - excellent (14+) - matching league page purple
+        if (isDark) {
+            return {
+                bgColor: '#6b2d8b', // Rich purple background
+                textColor: '#e9d5ff' // Light purple text
+            };
+        } else {
+            return {
+                bgColor: '#9333ea', // Purple background
+                textColor: '#faf5ff' // Very light purple/white text
+            };
+        }
+    }
+    
+    if (gwPoints >= 9) {
+        // Green - good (9-13) - using dark green heatmap
+        if (isDark) {
+            return {
+                bgColor: '#2e4a3a', // Dark green background (heat-dark-green-bg)
+                textColor: '#a8e8b8' // Light green text (heat-dark-green-text)
+            };
+        } else {
+            return {
+                bgColor: '#bbf7d0', // Light green background (heat-dark-green-bg)
+                textColor: '#14532d' // Dark green text (heat-dark-green-text)
+            };
+        }
+    }
+    
+    if (gwPoints >= 4) {
+        // Yellow - average (4-8) - using yellow heatmap
+        if (isDark) {
+            return {
+                bgColor: '#4a3f28', // Dark yellow background (heat-yellow-bg)
+                textColor: '#e8cf88' // Light yellow text (heat-yellow-text)
+            };
+        } else {
+            return {
+                bgColor: '#fef9c3', // Light yellow background (heat-yellow-bg)
+                textColor: '#854d0e' // Dark yellow text (heat-yellow-text)
+            };
+        }
+    }
+    
+    // Red - poor (0-3) - using red heatmap
+    if (isDark) {
+        return {
+            bgColor: '#4a2828', // Dark red background (heat-red-bg)
+            textColor: '#e89999' // Light red text (heat-red-text)
+        };
+    } else {
+        return {
+            bgColor: '#fee2e2', // Light red background (heat-red-bg)
+            textColor: '#991b1b' // Dark red text (heat-red-text)
+        };
+    }
 }
 
 /**
@@ -282,8 +349,9 @@ export async function renderCompactBubbleFormation(players, gwNumber, isLive, my
                             width: 12px; 
                             height: 12px; 
                             border-radius: 50%; 
-                            background: rgba(156, 163, 175, 0.5);
-                            box-shadow: 0 0 4px rgba(156, 163, 175, 0.3);
+                            background: var(--heat-gray-bg);
+                            border: 1px solid var(--heat-gray-text);
+                            box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
                         "></div>
                         <span>Yet to play</span>
                     </div>
@@ -292,8 +360,9 @@ export async function renderCompactBubbleFormation(players, gwNumber, isLive, my
                             width: 12px; 
                             height: 12px; 
                             border-radius: 50%; 
-                            background: rgba(239, 68, 68, 0.5);
-                            box-shadow: 0 0 4px rgba(239, 68, 68, 0.3);
+                            background: var(--heat-red-bg);
+                            border: 1px solid var(--heat-red-text);
+                            box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
                         "></div>
                         <span>0-3 pts</span>
                     </div>
@@ -302,8 +371,9 @@ export async function renderCompactBubbleFormation(players, gwNumber, isLive, my
                             width: 12px; 
                             height: 12px; 
                             border-radius: 50%; 
-                            background: rgba(251, 191, 36, 0.5);
-                            box-shadow: 0 0 4px rgba(251, 191, 36, 0.3);
+                            background: var(--heat-yellow-bg);
+                            border: 1px solid var(--heat-yellow-text);
+                            box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
                         "></div>
                         <span>4-8 pts</span>
                     </div>
@@ -312,8 +382,9 @@ export async function renderCompactBubbleFormation(players, gwNumber, isLive, my
                             width: 12px; 
                             height: 12px; 
                             border-radius: 50%; 
-                            background: rgba(34, 197, 94, 0.5);
-                            box-shadow: 0 0 4px rgba(34, 197, 94, 0.3);
+                            background: var(--heat-dark-green-bg);
+                            border: 1px solid var(--heat-dark-green-text);
+                            box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
                         "></div>
                         <span>9-13 pts</span>
                     </div>
@@ -322,8 +393,9 @@ export async function renderCompactBubbleFormation(players, gwNumber, isLive, my
                             width: 12px; 
                             height: 12px; 
                             border-radius: 50%; 
-                            background: rgba(168, 85, 247, 0.5);
-                            box-shadow: 0 0 4px rgba(168, 85, 247, 0.3);
+                            background: #9333ea;
+                            border: 1px solid #e9d5ff;
+                            box-shadow: 0 0 4px rgba(147, 51, 234, 0.3);
                         "></div>
                         <span>14+ pts</span>
                     </div>
@@ -450,7 +522,7 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
         circles.forEach(circle => {
             const { pick, player, liveStats, gwStats, gwPoints, minutes, ownership, size } = circle;
             const fontSize = getFontSize(size);
-            const pointsColor = getPointsColor(gwPoints, minutes);
+            const colors = getPointsColors(gwPoints, minutes);
 
             // Just the player name, no (C) or (VC) labels
             const labelText = escapeHtml(player.web_name);
@@ -461,10 +533,10 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
                 symbolSize: size,
                 symbol: 'circle',
                 itemStyle: {
-                    color: pointsColor,
-                    opacity: 0.5,
-                    // White borders for captain/vice captain - visible against dark background
-                    borderColor: pick.is_captain ? 'rgba(255, 255, 255, 0.9)' : (pick.is_vice_captain ? 'rgba(255, 255, 255, 0.7)' : 'rgba(255, 255, 255, 0.2)'),
+                    color: colors.bgColor,
+                    opacity: 1, // Full opacity for better visibility
+                    // White borders for captain/vice captain - visible against colored backgrounds
+                    borderColor: pick.is_captain ? 'rgba(255, 255, 255, 0.9)' : (pick.is_vice_captain ? 'rgba(255, 255, 255, 0.7)' : 'rgba(255, 255, 255, 0.3)'),
                     borderWidth: pick.is_captain ? 4 : (pick.is_vice_captain ? 2.5 : 2),
                     shadowBlur: 0
                 },
@@ -473,9 +545,9 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
                     formatter: labelText,
                     fontSize: fontSize,
                     fontWeight: 'bold',
-                    color: '#fff',
-                    textBorderColor: 'rgba(0, 0, 0, 0.6)',
-                    textBorderWidth: 1.5
+                    color: colors.textColor, // Use matching text color from heatmap
+                    textBorderColor: 'rgba(0, 0, 0, 0.4)', // Subtle border for readability
+                    textBorderWidth: 1
                 },
                 playerData: {
                     player,
