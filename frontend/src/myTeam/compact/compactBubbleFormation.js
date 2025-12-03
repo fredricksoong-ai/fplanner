@@ -204,7 +204,10 @@ export async function renderCompactBubbleFormation(players, gwNumber, isLive) {
                 rgba(25, 25, 30, 0.95) 100%
             );
             border-radius: 0.75rem;
-            padding: 1rem;
+            padding-top: 0px !important;
+            padding-right: 1rem;
+            padding-bottom: 4px !important;
+            padding-left: 1rem;
             margin-bottom: 1rem;
             border: 1px solid rgba(255, 255, 255, 0.08);
             box-shadow: 
@@ -340,8 +343,8 @@ export async function initBubbleFormationChart(players, gwNumber, isLive) {
     // Tighter spacing: use more of the container height, less wasted space
     const rowHeight = containerHeight / (numRows + 0.2); // Even tighter spacing
     const rowWidth = containerWidth;
-    // Adjust starting position to reduce top gap
-    const topOffset = 2; // Start slightly lower
+    // Adjust starting position to reduce top gap further
+    const topOffset = 0.5; // Start much closer to top
     
     const allNodes = [];
     let rowIndex = 0;
@@ -422,7 +425,7 @@ export async function initBubbleFormationChart(players, gwNumber, isLive) {
                     opacity: 0.5,
                     // White borders for captain/vice captain - visible against dark background
                     borderColor: pick.is_captain ? 'rgba(255, 255, 255, 0.9)' : (pick.is_vice_captain ? 'rgba(255, 255, 255, 0.7)' : 'rgba(255, 255, 255, 0.2)'),
-                    borderWidth: pick.is_captain ? 4 : (pick.is_vice_captain ? 3.5 : 2),
+                    borderWidth: pick.is_captain ? 4 : (pick.is_vice_captain ? 2.5 : 2),
                     shadowBlur: 0
                 },
                 label: {
