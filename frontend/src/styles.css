@@ -403,6 +403,14 @@ body {
     left: 50% !important;
     transform: translateX(-50%) !important;
     z-index: 1;
+    /* Container for circular crop */
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 50% !important;
+    overflow: hidden !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
   }
 
   /* Show logo image on mobile, hide text */
@@ -412,11 +420,11 @@ body {
 
   #nav-brand img {
     display: block !important;
-    width: 40px !important;
-    height: 40px !important;
-    border-radius: 50% !important;
+    /* Make image slightly larger to fill circle completely */
+    width: 100% !important;
+    height: 100% !important;
     object-fit: cover !important;
-    object-position: center !important;
+    object-position: center center !important;
   }
 
 
