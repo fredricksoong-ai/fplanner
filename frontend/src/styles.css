@@ -379,18 +379,30 @@ body {
 
   /* Mobile header layout: left space for future widget, centered logo */
   nav > div {
-    justify-content: center !important;
+    justify-content: space-between !important;
     position: relative;
+    min-height: 48px;
+    align-items: center !important;
   }
 
   nav > div > div:first-child {
-    position: absolute;
-    left: 0;
+    flex: 1;
+    display: flex;
+    justify-content: flex-start;
   }
 
   nav > div > div:last-child {
-    position: absolute;
-    right: 0;
+    flex: 1;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  /* Center the logo */
+  #nav-brand {
+    position: absolute !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    z-index: 1;
   }
 
   /* Show logo image on mobile, hide text */
@@ -404,6 +416,9 @@ body {
     height: 48px !important;
     border-radius: 50% !important;
     object-fit: cover !important;
+    object-position: center !important;
+    /* Crop more aggressively to remove white space */
+    transform: scale(1.15) !important;
   }
 
 
