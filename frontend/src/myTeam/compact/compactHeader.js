@@ -3,7 +3,7 @@
 // Team info, GW points, rank, and captain/vice info for mobile view
 // ============================================================================
 
-import { getPlayerById, loadTransferHistory, getActiveGW, getGameweekEvent } from '../../data.js';
+import { getPlayerById, loadTransferHistory, getActiveGW, getGameweekEvent, getAllPlayers } from '../../data.js';
 import { escapeHtml } from '../../utils.js';
 import { getGWOpponent } from '../../fixtures.js';
 import {
@@ -80,6 +80,94 @@ function calculatePointsColor(points, average) {
 }
 
 /**
+ * Count players who have played (minutes > 0)
+ * @param {Object} teamData - Team data with picks
+ * @returns {number} Number of players who have played
+ */
+function countPlayersPlayed(teamData) {
+    if (!teamData || !teamData.picks || !teamData.picks.picks) return 0;
+
+    const activeChip = teamData.picks?.active_chip;
+    const isBenchBoost = activeChip === 'bboost' || activeChip === 'benchboost';
+
+    let played = 0;
+    teamData.picks.picks.forEach(pick => {
+        // Only count starting 11 unless Bench Boost is active
+        if (!isBenchBoost && pick.position > 11) {
+            return;
+        }
+
+        // Check minutes from live_stats first
+        const minutes = pick.live_stats?.minutes;
+        if (minutes !== null && minutes !== undefined && minutes > 0) {
+            played++;
+        } else {
+            // Fallback: check if player has points (indicates they played)
+            const player = getPlayerById(pick.element);
+            if (player && (player.event_points > 0 || (player.live_stats && player.live_stats.total_points > 0))) {
+                played++;
+            }
+        }
+    });
+
+    return played;
+}
+
+/**
+ * Calculate GW expected points (try ep_this first, fallback to ep_next)
+ * @param {Object} teamData - Team data with picks
+ * @returns {number|null} Expected points or null if unavailable
+ */
+function calculateGWExpectedPoints(teamData) {
+    if (!teamData || !teamData.picks || !teamData.picks.picks) return null;
+
+    // Get starting 11 only
+    const starting11 = teamData.picks.picks
+        .filter(p => p.position <= 11)
+        .map(pick => getPlayerById(pick.element))
+        .filter(Boolean);
+
+    if (starting11.length === 0) return null;
+
+    let totalXPts = 0;
+    let hasEpThis = false;
+
+    starting11.forEach(player => {
+        // Try ep_this first
+        const epThis = player.ep_this ? parseFloat(player.ep_this) : null;
+        if (epThis !== null) {
+            totalXPts += epThis;
+            hasEpThis = true;
+        } else {
+            // Fallback to ep_next
+            totalXPts += parseFloat(player.ep_next) || 0;
+        }
+    });
+
+    return totalXPts > 0 ? totalXPts : null;
+}
+
+/**
+ * Get Over/Under/On badge for expected points comparison
+ * @param {number} actualPoints - Actual GW points
+ * @param {number} expectedPoints - Expected GW points
+ * @returns {Object} Badge text and color
+ */
+function getExpectedPointsBadge(actualPoints, expectedPoints) {
+    if (expectedPoints === null || expectedPoints === 0) {
+        return { text: '', color: '' };
+    }
+
+    if (actualPoints > expectedPoints) {
+        return { text: 'Over', color: '#22c55e' }; // Green
+    } else if (actualPoints < expectedPoints) {
+        return { text: 'Under', color: '#ef4444' }; // Red
+    } else {
+        return { text: 'On', color: '#eab308' }; // Yellow
+    }
+}
+
+/**
  * Render ultra-compact header with team info and GW card
  * @param {Object} teamData - Team data with picks and team info
  * @param {number} gwNumber - Current gameweek number
@@ -95,10 +183,6 @@ export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = fa
     let gwPoints = entry?.points ?? 0;
 
     const totalPoints = team.summary_overall_points || 0;
-    const overallRankNum = team.summary_overall_rank || 0;
-    const gwRankNum = team.summary_event_rank || 0;
-    const overallRank = overallRankNum ? overallRankNum.toLocaleString() : 'N/A';
-    const gwRank = gwRankNum ? gwRankNum.toLocaleString() : 'N/A';
 
     // Team value and bank from entry_history (GW-specific)
     const teamValue = ((entry.value || 0) / 10).toFixed(1);
@@ -107,16 +191,12 @@ export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = fa
     const freeTransfers = entry.event_transfers || 0;
     const transferCost = entry.event_transfers_cost || 0;
 
-    // Calculate rank indicator (chevron) using helper
-    // Use previous_gw_rank from entry_history if available (from history endpoint)
-    const previousGWRank = entry.previous_gw_rank || null;
-    const rankIndicator = calculateRankIndicator(team.id, overallRankNum, previousGWRank);
+    // Count players played
+    const playersPlayed = countPlayersPlayed(teamData);
 
-    // Get captain and vice captain info
-    const { captainInfo, viceInfo } = getCaptainViceInfo(picks.picks, gwNumber);
-
-    // Calculate GW indicator (chevron) using helper
-    const gwIndicator = calculateGWIndicator(gwRankNum, overallRankNum);
+    // Calculate GW expected points
+    const expectedPoints = calculateGWExpectedPoints(teamData);
+    const expectedBadge = getExpectedPointsBadge(gwPoints, expectedPoints);
 
     // Get GW average from event data
     const gwEvent = getGameweekEvent(gwNumber);
@@ -176,19 +256,15 @@ export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = fa
                     </div>
 
                     <div style="font-size: 0.7rem; color: var(--text-secondary);">
-                        Overall Points: ${totalPoints.toLocaleString()}
-                    </div>
-
-                    <div style="font-size: 0.7rem; color: var(--text-secondary);">
-                        Overall Rank: ${overallRank} <span style="color: ${rankIndicator.color};">${rankIndicator.chevron}</span>
-                    </div>
-
-                    <div style="font-size: 0.7rem; color: var(--text-secondary);">
-                        GW Rank: ${gwRank} <span style="color: ${gwIndicator.color};">${gwIndicator.chevron}</span>
-                    </div>
-
-                    <div style="font-size: 0.7rem; color: var(--text-secondary);">
                         Squad Value: £${squadValue}m + £${bank}m
+                    </div>
+
+                    <div style="font-size: 0.7rem; color: var(--text-secondary);">
+                        No. of Players Played: ${playersPlayed}
+                    </div>
+
+                    <div style="font-size: 0.7rem; color: var(--text-secondary);">
+                        GW Expected Pts: ${expectedPoints !== null ? Math.round(expectedPoints) : 'N/A'}${expectedBadge.text ? ` <span style="color: ${expectedBadge.color}; font-weight: 600;">${expectedBadge.text}</span>` : ''}
                     </div>
 
                     <div
@@ -218,18 +294,30 @@ export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = fa
                         justify-content: right;
                         box-shadow: ${getShadow('low')};
                     ">
-                        <div style="font-size: 2rem; font-weight: 800; color: ${pointsColor}; line-height: 1;">
-                            ${gwPoints}
-                        </div>
-                        <div style="font-size: 0.6rem; color: var(--text-secondary); margin-top: 0.1rem; font-weight: 600;">
-                            GW ${gwNumber}${isLive ? ' <span style="color: #ef4444; animation: pulse 2s infinite;">⚽ LIVE</span>' : ''}
-                        </div>
-                        ${gwAverage > 0 ? `
-                            <div style="font-size: 0.55rem; color: var(--text-secondary); margin-top: 0.1rem;">
-                                Avg: ${gwAverage}
+                        <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                            <div style="font-size: 2rem; font-weight: 800; color: ${pointsColor}; line-height: 1;">
+                                ${gwPoints}
                             </div>
+                            <div style="font-size: 2rem; font-weight: 800; color: var(--text-primary); line-height: 1;">
+                                ${totalPoints.toLocaleString()}
+                            </div>
+                        </div>
+                        <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-top: 0.1rem;">
+                            <div style="font-size: 0.6rem; color: var(--text-secondary); font-weight: 600;">
+                                GW ${gwNumber}
+                            </div>
+                            ${gwAverage > 0 ? `
+                                <div style="font-size: 0.55rem; color: var(--text-secondary);">
+                                    Avg: ${gwAverage}
+                                </div>
+                            ` : ''}
+                        </div>
+                        ${isLive ? `
+                            <div style="font-size: 0.6rem; color: #ef4444; margin-top: 0.1rem; animation: pulse 2s infinite; font-weight: 600;">
+                                ⚽ LIVE
+                            </div>
+                            <style>@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }</style>
                         ` : ''}
-                        ${isLive ? '<style>@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }</style>' : ''}
                         ${isAutoRefreshActive ? `
                             <div style="display: flex; align-items: center; justify-content: center; gap: 0.25rem; margin-top: 0.3rem; font-size: 0.6rem; color: var(--text-secondary);">
                                 <i class="fas fa-sync-alt fa-spin" style="font-size: 0.55rem; color: #00ff88;"></i>

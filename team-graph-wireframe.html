@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Bubble Formation - FPL Position Layout</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #1a1815;
+            --bg-secondary: #2a2522;
+            --text-primary: #d4d0c8;
+            --text-secondary: #9b968e;
+            --border-color: #3a3530;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            padding: 1rem;
+        }
+
+        .mobile-container {
+            max-width: 420px;
+            margin: 0 auto;
+        }
+
+        .section {
+            background: var(--bg-secondary);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .section-title {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .score-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .gw-points {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: #a855f7;
+        }
+
+        #bubble-container {
+            width: 100%;
+            height: 450px;
+            margin-top: 0.5rem;
+            position: relative;
+        }
+
+        .legend {
+            display: flex;
+            gap: 1rem;
+            margin-top: 0.75rem;
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .player-table-placeholder {
+            font-size: 0.65rem;
+            padding: 1rem;
+            text-align: center;
+            color: var(--text-secondary);
+            background: rgba(168, 85, 247, 0.1);
+            border-radius: 0.5rem;
+        }
+
+        .hint {
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+            text-align: center;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="mobile-container">
+        <!-- SCORE CARD -->
+        <div class="section">
+            <div class="section-title">Current Gameweek</div>
+            <div class="score-card">
+                <div>
+                    <div class="gw-points">67</div>
+                    <div style="font-size: 0.7rem; color: var(--text-secondary);">GW 14 Points</div>
+                </div>
+                <div style="text-align: right; font-size: 0.7rem; color: var(--text-secondary);">
+                    <div>Rank: 245,123</div>
+                    <div>Avg: 52 pts</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BUBBLE FORMATION - NEW! -->
+        <div class="section">
+            <div class="section-title">Team Formation This GW ⚽</div>
+
+            <div id="bubble-container"></div>
+
+            <div class="legend" id="legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #ef4444;"></div>
+                    <span>0-4 pts</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #fbbf24;"></div>
+                    <span>5-7 pts</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #22c55e;"></div>
+                    <span>8-11 pts</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #a855f7;"></div>
+                    <span>12+ pts</span>
+                </div>
+            </div>
+
+            <div class="hint">
+                💡 Bubble size = Ownership (bigger = rarer pick)<br>
+                Color = GW Points | Tap bubbles for details
+            </div>
+        </div>
+
+        <!-- PLAYER TABLE -->
+        <div class="section">
+            <div class="section-title">Player Details</div>
+            <div class="player-table-placeholder">
+                📋 Detailed player table here<br>
+                (Existing horizontal scroll table)
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sample team data with FPL position numbers (1-15) and GW points
+        // Position: 1=GK, 2-4=DEF, 5-8=MID, 9-11=FWD, 12-15=Bench
+        const teamData = [
+            // Starting 11
+            { name: 'Raya', pos: 'GKP', fplPosition: 1, gwPoints: 6, minutes: 90, ownership: 35.2, isCaptain: false, isViceCaptain: false, team: 1, opponent: 'ARS (H)', goals: 0, assists: 0, bonus: 0, bps: 12, cleanSheets: 1 },
+            { name: 'Gabriel', pos: 'DEF', fplPosition: 2, gwPoints: 8, minutes: 90, ownership: 28.5, isCaptain: false, isViceCaptain: false, team: 1, opponent: 'ARS (H)', goals: 0, assists: 0, bonus: 1, bps: 18, cleanSheets: 1 },
+            { name: 'Saliba', pos: 'DEF', fplPosition: 3, gwPoints: 7, minutes: 90, ownership: 24.1, isCaptain: false, isViceCaptain: false, team: 1, opponent: 'ARS (H)', goals: 0, assists: 0, bonus: 0, bps: 15, cleanSheets: 1 },
+            { name: 'Pedro P', pos: 'DEF', fplPosition: 4, gwPoints: 5, minutes: 78, ownership: 15.8, isCaptain: false, isViceCaptain: false, team: 1, opponent: 'ARS (H)', goals: 0, assists: 0, bonus: 0, bps: 10, cleanSheets: 0 },
+            { name: 'Salah', pos: 'MID', fplPosition: 5, gwPoints: 16, minutes: 90, ownership: 65.4, isCaptain: true, isViceCaptain: false, team: 10, opponent: 'MCI (A)', goals: 2, assists: 0, bonus: 3, bps: 32, cleanSheets: 0 },
+            { name: 'Palmer', pos: 'MID', fplPosition: 6, gwPoints: 10, minutes: 82, ownership: 52.1, isCaptain: false, isViceCaptain: false, team: 5, opponent: 'BHA (H)', goals: 1, assists: 1, bonus: 2, bps: 24, cleanSheets: 0 },
+            { name: 'Saka', pos: 'MID', fplPosition: 7, gwPoints: 8, minutes: 85, ownership: 48.3, isCaptain: false, isViceCaptain: true, team: 1, opponent: 'ARS (H)', goals: 1, assists: 0, bonus: 1, bps: 20, cleanSheets: 0 },
+            { name: 'Mbeumo', pos: 'MID', fplPosition: 8, gwPoints: 3, minutes: 90, ownership: 18.9, isCaptain: false, isViceCaptain: false, team: 4, opponent: 'NEW (A)', goals: 0, assists: 0, bonus: 0, bps: 8, cleanSheets: 0 },
+            { name: 'Haaland', pos: 'FWD', fplPosition: 9, gwPoints: 4, minutes: 88, ownership: 72.3, isCaptain: false, isViceCaptain: false, team: 11, opponent: 'LIV (A)', goals: 0, assists: 0, bonus: 0, bps: 10, cleanSheets: 0 },
+            { name: 'Watkins', pos: 'FWD', fplPosition: 10, gwPoints: 6, minutes: 76, ownership: 23.7, isCaptain: false, isViceCaptain: false, team: 2, opponent: 'TOT (H)', goals: 0, assists: 1, bonus: 0, bps: 14, cleanSheets: 0 },
+            { name: 'Robinson', pos: 'DEF', fplPosition: 11, gwPoints: 2, minutes: 45, ownership: 12.3, isCaptain: false, isViceCaptain: false, team: 3, opponent: 'CHE (A)', goals: 0, assists: 0, bonus: 0, bps: 5, cleanSheets: 0 }
+        ];
+
+        const currentGW = 14; // Current gameweek
+
+        function getPointsColor(gwPoints) {
+            // Lighter opacity shades
+            if (gwPoints >= 12) return 'rgba(168, 85, 247, 0.5)'; // Purple - excellent (lighter)
+            if (gwPoints >= 8) return 'rgba(34, 197, 94, 0.5)';  // Green - good (lighter)
+            if (gwPoints >= 5) return 'rgba(251, 191, 36, 0.5)';  // Yellow - average (lighter)
+            return 'rgba(239, 68, 68, 0.5)'; // Red - poor (lighter)
+        }
+
+        function calculateBubbleSize(ownership) {
+            // Inverse ownership: lower ownership = bigger bubble (rarer = more prominent)
+            const minSize = 30;
+            const maxSize = 70;
+            const size = maxSize - (ownership / 100) * (maxSize - minSize);
+            return Math.max(minSize, Math.min(maxSize, size));
+        }
+
+        function getFontSize(bubbleSize) {
+            if (bubbleSize >= 60) return 10;
+            if (bubbleSize >= 50) return 9;
+            if (bubbleSize >= 40) return 8;
+            return 7;
+        }
+
+        // Format GW stats for tooltip
+        function formatGWStats(player) {
+            const stats = [];
+            
+            if (player.minutes > 0) {
+                stats.push(`Mins: ${player.minutes}`);
+            }
+            if (player.goals > 0) {
+                stats.push(`⚽ ${player.goals}`);
+            }
+            if (player.assists > 0) {
+                stats.push(`🎯 ${player.assists}`);
+            }
+            if (player.bonus > 0) {
+                stats.push(`⭐ ${player.bonus}`);
+            }
+            if (player.cleanSheets > 0 && (player.pos === 'GKP' || player.pos === 'DEF')) {
+                stats.push(`🧤 CS`);
+            }
+            if (player.bps > 0) {
+                stats.push(`BPS: ${player.bps}`);
+            }
+            
+            return stats.length > 0 ? stats.join(' • ') : 'No stats';
+        }
+
+        // Pack circles in a row (touching each other - NO gaps)
+        function packCirclesInRow(circles, rowWidth, rowCenterY) {
+            const totalDiameter = circles.reduce((sum, c) => sum + c.radius * 2, 0);
+            const availableWidth = rowWidth * 0.95;
+            
+            let scale = 1;
+            if (totalDiameter > availableWidth) {
+                scale = availableWidth / totalDiameter;
+            }
+            
+            let currentX = (100 - (totalDiameter * scale / rowWidth * 100)) / 2 * rowWidth / 100;
+            
+            circles.forEach(circle => {
+                const scaledRadius = circle.radius * scale;
+                circle.x = currentX + scaledRadius;
+                circle.y = rowCenterY;
+                currentX += scaledRadius * 2;
+            });
+            
+            return circles;
+        }
+
+        function initBubbleChart() {
+            const chartDom = document.getElementById('bubble-container');
+            const myChart = echarts.init(chartDom);
+
+            const positionGroups = {
+                gk: teamData.filter(p => p.fplPosition === 1),
+                def: teamData.filter(p => p.fplPosition >= 2 && p.fplPosition <= 4),
+                mid: teamData.filter(p => p.fplPosition >= 5 && p.fplPosition <= 8),
+                fwd: teamData.filter(p => p.fplPosition >= 9 && p.fplPosition <= 11)
+            };
+
+            const containerWidth = 100;
+            const containerHeight = 100;
+            const numRows = 4;
+            const rowHeight = containerHeight / numRows;
+            const rowWidth = containerWidth;
+            
+            const allNodes = [];
+            let rowIndex = 0;
+
+            const groups = [
+                { key: 'gk', players: positionGroups.gk },
+                { key: 'def', players: positionGroups.def },
+                { key: 'mid', players: positionGroups.mid },
+                { key: 'fwd', players: positionGroups.fwd }
+            ];
+
+            groups.forEach(group => {
+                const players = group.players;
+                if (players.length === 0) {
+                    rowIndex++;
+                    return;
+                }
+
+                const sortedPlayers = [...players].sort((a, b) => a.fplPosition - b.fplPosition);
+
+                const circles = sortedPlayers.map(p => {
+                    const bubbleSize = calculateBubbleSize(p.ownership);
+                    return {
+                        player: p,
+                        radius: bubbleSize / 2,
+                        size: bubbleSize
+                    };
+                });
+
+                const rowCenterY = (rowIndex + 0.5) * rowHeight;
+                packCirclesInRow(circles, rowWidth, rowCenterY);
+
+                circles.forEach(circle => {
+                    const p = circle.player;
+                    const bubbleSize = circle.size;
+                    const fontSize = getFontSize(bubbleSize);
+                    const pointsColor = getPointsColor(p.gwPoints);
+
+                    // Format label with captain/vice captain badges
+                    let labelText = p.name;
+                    if (p.isCaptain) {
+                        labelText = `${p.name}\n(C)`;
+                    } else if (p.isViceCaptain) {
+                        labelText = `${p.name}\n(VC)`;
+                    }
+
+                    allNodes.push({
+                        name: p.name,
+                        value: [circle.x, circle.y, p.gwPoints],
+                        symbolSize: bubbleSize,
+                        symbol: 'circle',
+                        itemStyle: {
+                            color: pointsColor, // Lighter opacity color
+                            opacity: 0.5, // Lighter opacity
+                            borderColor: p.isCaptain ? '#a855f7' : (p.isViceCaptain ? '#8b5cf6' : 'rgba(255, 255, 255, 0.2)'),
+                            borderWidth: p.isCaptain ? 3 : (p.isViceCaptain ? 2.5 : 2),
+                            shadowBlur: 0
+                        },
+                        label: {
+                            show: true,
+                            formatter: labelText,
+                            fontSize: fontSize,
+                            fontWeight: 'bold',
+                            color: '#fff',
+                            textBorderColor: 'rgba(0, 0, 0, 0.6)', // Lighter border, no shadow
+                            textBorderWidth: 1.5
+                            // Removed textShadowBlur and textShadowColor
+                        },
+                        playerData: p
+                    });
+                });
+
+                rowIndex++;
+            });
+
+            const option = {
+                grid: {
+                    left: '2%',
+                    right: '2%',
+                    top: '2%',
+                    bottom: '2%'
+                },
+                xAxis: {
+                    type: 'value',
+                    show: false,
+                    min: 0,
+                    max: 100
+                },
+                yAxis: {
+                    type: 'value',
+                    show: false,
+                    min: 0,
+                    max: 100,
+                    inverse: true
+                },
+                tooltip: {
+                    trigger: 'item',
+                    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                    borderColor: '#3a3530',
+                    textStyle: {
+                        color: '#d4d0c8',
+                        fontSize: 11
+                    },
+                    formatter: function(params) {
+                        const p = params.data.playerData;
+                        const captainText = p.isCaptain ? ' (C)' : (p.isViceCaptain ? ' (VC)' : '');
+                        const gwStats = formatGWStats(p);
+                        
+                        return `<strong>${p.name}${captainText}</strong> (${p.pos})<br/>
+                                vs. <strong>${p.opponent}</strong><br/>
+                                <br/>
+                                <strong>GW ${currentGW} Points: ${p.gwPoints}</strong><br/>
+                                <br/>
+                                <strong>GW Stats:</strong><br/>
+                                ${gwStats}`;
+                    }
+                },
+                series: [{
+                    type: 'scatter',
+                    data: allNodes,
+                    symbolSize: function(data) {
+                        return data[2];
+                    },
+                    label: {
+                        show: true,
+                        position: 'inside'
+                    },
+                    emphasis: {
+                        scale: true
+                    }
+                }]
+            };
+
+            // Fix: Store the actual bubble size in the value array
+            allNodes.forEach(node => {
+                node.value[2] = node.symbolSize;
+            });
+
+            myChart.setOption(option);
+        }
+
+        // Initial render
+        initBubbleChart();
+
+        // Resize handler
+        window.addEventListener('resize', () => {
+            const chartDom = document.getElementById('bubble-container');
+            const myChart = echarts.getInstanceByDom(chartDom);
+            if (myChart) {
+                myChart.resize();
+            }
+        });
+    </script>
+</body>
+</html>
