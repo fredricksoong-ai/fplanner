@@ -20,6 +20,7 @@ import {
     calculatePlayerBgColor
 } from './compactStyleHelpers.js';
 import { isWishlisted } from '../../wishlist/store.js';
+import { isGuillotined } from '../../guillotine/store.js';
 
 /**
  * Render compact player row with ownership and transfer momentum
@@ -34,14 +35,16 @@ export function renderCompactPlayerRow(pick, player, gwNumber) {
     const isBench = pick.position > 11;
     const isMyPlayer = true; // Always true for My Team page
     const isWishlistedPlayer = isWishlisted(player.id);
+    const isGuillotinedPlayer = isGuillotined(player.id);
 
     let captainBadge = '';
     if (isCaptain) captainBadge = ' <span style="color: var(--text-primary); font-weight: 700; font-size: 0.7rem;">(C)</span>';
     if (isVice) captainBadge = ' <span style="color: var(--text-primary); font-weight: 700; font-size: 0.7rem;">(VC)</span>';
 
-    // Player badges (⭐ for wishlisted only - no 👤 needed since all are my players on Team page)
+    // Player badges (⭐ for wishlisted, 🔪 for guillotined - no 👤 needed since all are my players on Team page)
     const badges = [];
     if (isWishlistedPlayer) badges.push('⭐️');
+    if (isGuillotinedPlayer) badges.push('🔪');
     const badgeMarkup = badges.length > 0 ? ` <span style="font-size: 0.65rem;">${badges.join(' ')}</span>` : '';
 
     const gwOpp = getGWOpponent(player.team, gwNumber);
