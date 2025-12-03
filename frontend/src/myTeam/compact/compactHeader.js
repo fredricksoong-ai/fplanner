@@ -151,19 +151,19 @@ function calculateGWExpectedPoints(teamData) {
  * Get Over/Under/On badge for expected points comparison
  * @param {number} actualPoints - Actual GW points
  * @param {number} expectedPoints - Expected GW points
- * @returns {Object} Badge text and color
+ * @returns {Object} Badge text, background color, and text color
  */
 function getExpectedPointsBadge(actualPoints, expectedPoints) {
     if (expectedPoints === null || expectedPoints === 0) {
-        return { text: '', color: '' };
+        return { text: '', background: '', color: '' };
     }
 
     if (actualPoints > expectedPoints) {
-        return { text: 'Over', color: '#22c55e' }; // Green
+        return { text: 'Over', background: 'rgba(34, 197, 94, 0.2)', color: '#22c55e' }; // Green
     } else if (actualPoints < expectedPoints) {
-        return { text: 'Under', color: '#ef4444' }; // Red
+        return { text: 'Under', background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444' }; // Red
     } else {
-        return { text: 'On', color: '#eab308' }; // Yellow
+        return { text: 'On', background: 'rgba(234, 179, 8, 0.2)', color: '#eab308' }; // Yellow
     }
 }
 
@@ -259,14 +259,6 @@ export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = fa
                         Squad Value: £${squadValue}m + £${bank}m
                     </div>
 
-                    <div style="font-size: 0.7rem; color: var(--text-secondary);">
-                        No. of Players Played: ${playersPlayed}
-                    </div>
-
-                    <div style="font-size: 0.7rem; color: var(--text-secondary);">
-                        GW Expected Pts: ${expectedPoints !== null ? Math.round(expectedPoints) : 'N/A'}${expectedBadge.text ? ` <span style="color: ${expectedBadge.color}; font-weight: 600;">${expectedBadge.text}</span>` : ''}
-                    </div>
-
                     <div
                         id="transfers-row"
                         data-team-id="${team.id}"
@@ -275,6 +267,15 @@ export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = fa
                     >
                         <span>Transfers: ${freeTransfers}${transferCost > 0 ? ` <span style="color: #ef4444;">(-${transferCost} pts)</span>` : ''}</span>
                         <i class="fas fa-chevron-down" id="transfers-chevron" style="font-size: 0.55rem; transition: transform 0.2s; pointer-events: none;"></i>
+                    </div>
+
+                    <div style="font-size: 0.7rem; color: var(--text-secondary);">
+                        No. of Players Played: ${playersPlayed}
+                    </div>
+
+                    <div style="font-size: 0.7rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.3rem;">
+                        <span>GW Expected Pts: ${expectedPoints !== null ? Math.round(expectedPoints) : 'N/A'}</span>
+                        ${expectedBadge.text ? `<span style="display: inline-block; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem; background: ${expectedBadge.background}; color: ${expectedBadge.color};">${expectedBadge.text}</span>` : ''}
                     </div>
                     <div id="transfers-details" style="display: none; font-size: 0.65rem; padding-top: 0.25rem; margin-top: 0.25rem; border-top: 1px dashed var(--border-color);">
                         <div style="color: var(--text-secondary); text-align: center;">Loading transfers...</div>
@@ -298,7 +299,8 @@ export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = fa
                             <div style="font-size: 2rem; font-weight: 800; color: ${pointsColor}; line-height: 1;">
                                 ${gwPoints}
                             </div>
-                            <div style="font-size: 2rem; font-weight: 800; color: var(--text-primary); line-height: 1;">
+                            <span style="color: var(--text-secondary);">•</span>
+                            <div style="font-size: 2rem; font-weight: 800; color: var(--text-secondary); line-height: 1;">
                                 ${totalPoints.toLocaleString()}
                             </div>
                         </div>
@@ -317,12 +319,6 @@ export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = fa
                                 ⚽ LIVE
                             </div>
                             <style>@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }</style>
-                        ` : ''}
-                        ${isAutoRefreshActive ? `
-                            <div style="display: flex; align-items: center; justify-content: center; gap: 0.25rem; margin-top: 0.3rem; font-size: 0.6rem; color: var(--text-secondary);">
-                                <i class="fas fa-sync-alt fa-spin" style="font-size: 0.55rem; color: #00ff88;"></i>
-                                <span>Auto-refreshing</span>
-                            </div>
                         ` : ''}
                         ${leagueInfo}
                     </div>
