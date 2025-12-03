@@ -401,6 +401,7 @@ body {
     justify-content: flex-start;
     align-items: center;
     padding-right: 1rem;
+    padding-left: 0.5rem;
   }
 
   /* Team widget styling - matches countdown timer exactly */
@@ -423,6 +424,7 @@ body {
     display: flex;
     justify-content: flex-end;
     padding-left: 1rem;
+    padding-right: 0.5rem;
   }
 
   /* Center the logo */
