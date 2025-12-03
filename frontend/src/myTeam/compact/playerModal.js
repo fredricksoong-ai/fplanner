@@ -1218,8 +1218,7 @@ function buildModalHTML(data) {
                         ${riskHTML}
                     </div>
                     <div style="display: flex; align-items: center; gap: 0.35rem;">
-                        ${guillotineButtonHTML}
-                        ${wishlistButtonHTML}
+                        ${guillotineButtonHTML || wishlistButtonHTML}
                         <button
                             id="close-player-modal"
                             style="
