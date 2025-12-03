@@ -155,6 +155,7 @@ function renderOpponentBadgeForTooltip(opponent) {
 
 /**
  * Pack circles in a row (touching each other - NO gaps)
+ * Centers the row so that the middle bubble(s) align with x=50 across all rows
  * @param {Array} circles - Array of circle objects with radius
  * @param {number} rowWidth - Row width in percentage
  * @param {number} rowCenterY - Row center Y position
@@ -169,8 +170,47 @@ function packCirclesInRow(circles, rowWidth, rowCenterY) {
         scale = availableWidth / totalDiameter;
     }
     
-    let currentX = (100 - (totalDiameter * scale / rowWidth * 100)) / 2 * rowWidth / 100;
+    // Calculate total width after scaling
+    const scaledTotalWidth = totalDiameter * scale;
     
+    // Center point is always at x = 50 (middle of container)
+    const centerX = 50;
+    
+    // For odd number of bubbles: center the middle bubble at x=50
+    // For even number of bubbles: center the touch point between the two middle bubbles at x=50
+    const numCircles = circles.length;
+    const isOdd = numCircles % 2 === 1;
+    
+    let startX;
+    if (isOdd) {
+        // Odd (1, 3, 5 bubbles): center the middle bubble at centerX
+        const middleIndex = Math.floor(numCircles / 2);
+        let xOffset = 0;
+        
+        // Calculate offset to position middle bubble's center at centerX
+        for (let i = 0; i < middleIndex; i++) {
+            xOffset += circles[i].radius * 2 * scale;
+        }
+        // Add half the middle bubble's diameter to get to its center
+        xOffset += circles[middleIndex].radius * scale;
+        
+        startX = centerX - xOffset;
+    } else {
+        // Even (2, 4 bubbles): center the touch point between the two middle bubbles at centerX
+        const leftMiddleIndex = numCircles / 2 - 1;
+        let xOffset = 0;
+        
+        // Calculate offset to position the right edge of left middle bubble at centerX
+        // (This is where it touches the right middle bubble)
+        for (let i = 0; i <= leftMiddleIndex; i++) {
+            xOffset += circles[i].radius * 2 * scale;
+        }
+        
+        startX = centerX - xOffset;
+    }
+    
+    // Position all bubbles starting from startX
+    let currentX = startX;
     circles.forEach(circle => {
         const scaledRadius = circle.radius * scale;
         circle.x = currentX + scaledRadius;
