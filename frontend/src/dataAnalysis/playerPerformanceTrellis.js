@@ -482,44 +482,10 @@ export async function initializePlayerPerformanceTrellis(containerId, players, c
             const labelLeft = col * gridWidth + gridGap + 1.5;
             const labelTop = row * gridHeight + 0.5;
             
-            // Create player name label - include chevron inline with proper spacing
-            // We'll use a single text element with the chevron, positioned after name
-            const nameText = `${player.web_name} - ${position}`;
-            const fullLabelText = `${nameText} ${trend.indicator}`;
-            
-            // Calculate where to split for color coding
-            // Use a fixed maximum width estimate for the name portion
-            // Most player names + position = 10-18 characters, use 15 as average
-            const avgNameWidth = 15 * 0.6; // ~9% at 0.6% per character
-            
-            // First render the name text
+            // Place colored trend indicator chevron BEFORE the player name
             graphics.push({
                 type: 'text',
                 left: `${labelLeft}%`,
-                top: `${labelTop}%`,
-                style: {
-                    text: nameText,
-                    fill: textColor,
-                    fontSize: 9,
-                    fontWeight: 'bold'
-                },
-                z: 100
-            });
-            
-            // Calculate chevron position - adaptive based on name length but with sensible bounds
-            // Estimate: at fontSize 9, in a grid cell (~31% wide), characters are roughly 0.6-0.7% wide
-            // Use actual name length for better positioning, but cap at reasonable max
-            const nameLength = nameText.length;
-            const charWidthPercent = 0.65; // Conservative estimate
-            const baseOffset = nameLength * charWidthPercent;
-            // Cap the offset between 7% (short names) and 12% (long names) for reliability
-            const chevronOffset = Math.max(7, Math.min(12, baseOffset));
-            const chevronLeft = labelLeft + chevronOffset + 0.2; // Small gap after name
-            
-            // Then render the colored chevron
-            graphics.push({
-                type: 'text',
-                left: `${chevronLeft}%`,
                 top: `${labelTop}%`,
                 style: {
                     text: trend.indicator,
@@ -528,6 +494,23 @@ export async function initializePlayerPerformanceTrellis(containerId, players, c
                     fontWeight: 'bold'
                 },
                 z: 101
+            });
+            
+            // Position player name label after the chevron (with small gap)
+            const nameText = `${player.web_name} - ${position}`;
+            const nameLeft = labelLeft + 1.5; // Gap after chevron (1.5% for chevron + space)
+            
+            graphics.push({
+                type: 'text',
+                left: `${nameLeft}%`,
+                top: `${labelTop}%`,
+                style: {
+                    text: nameText,
+                    fill: textColor,
+                    fontSize: 9,
+                    fontWeight: 'bold'
+                },
+                z: 100
             });
         });
 
