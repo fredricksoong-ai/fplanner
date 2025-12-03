@@ -10,3 +10,4 @@ export { renderCompactTeamList } from './myTeam/compact/compactTeamList.js';
 export { renderMatchSchedule } from './myTeam/compact/compactSchedule.js';
 export { showPlayerModal, closePlayerModal } from './myTeam/compact/playerModal.js';
 export { attachPlayerRowListeners } from './myTeam/compact/compactEventHandlers.js';
+export { renderCompactBubbleFormation, initBubbleFormationChart } from './myTeam/compact/compactBubbleFormation.js';

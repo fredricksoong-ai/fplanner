@@ -121,7 +121,9 @@ import {
     attachPlayerRowListeners,
     attachTransferListeners,
     attachHeaderScrollEffect,
-    showPlayerModal
+    showPlayerModal,
+    renderCompactBubbleFormation,
+    initBubbleFormationChart
 } from './renderMyTeamCompact.js';
 
 import {
@@ -443,7 +445,7 @@ window.handleTeamRefresh = handleTeamRefresh;
  * @param {Object} teamData - Team data from API (can be null for fixtures tab)
  * @param {string} subTab - Current sub-tab ('overview', 'leagues', or 'fixtures')
  */
-export function renderMyTeam(teamData, subTab = 'overview') {
+export async function renderMyTeam(teamData, subTab = 'overview') {
     const container = document.getElementById('app-container');
     
     // Special case: fixtures tab can render without team data
@@ -510,16 +512,22 @@ export function renderMyTeam(teamData, subTab = 'overview') {
         } else if (subTab === 'fixtures') {
             contentHTML = renderMobileFixturesTab();
         } else {
-            contentHTML = renderTeamOverviewTab(teamData);
+            contentHTML = await renderTeamOverviewTab(teamData);
         }
         container.innerHTML = contentHTML;
 
         // Attach event listeners based on tab
-        requestAnimationFrame(() => {
+        requestAnimationFrame(async () => {
             if (subTab === 'overview') {
                 attachPlayerRowListeners(myTeamState);
                 attachTransferListeners();
                 attachHeaderScrollEffect(); // Apply frosted glass on scroll
+                
+                // Initialize bubble formation chart
+                const { picks, gameweek } = teamData;
+                const allPlayers = picks.picks.sort((a, b) => a.position - b.position);
+                const isLive = isGameweekLive(gameweek);
+                await initBubbleFormationChart(allPlayers, gameweek, isLive);
             } else if (subTab === 'fixtures') {
                 attachMobileFixtureRowListeners();
                 attachHeaderScrollEffect(); // Apply frosted glass on scroll
@@ -630,7 +638,7 @@ export function renderMyTeam(teamData, subTab = 'overview') {
 
         // Render content based on current tab
         if (subTab === 'overview') {
-            contentHTML = renderTeamOverviewTab(teamData);
+            contentHTML = await renderTeamOverviewTab(teamData);
         } else if (subTab === 'leagues') {
             contentHTML = renderLeaguesTab(teamData);
         } else if (subTab === 'fixtures') {
@@ -822,7 +830,7 @@ export function renderMyTeam(teamData, subTab = 'overview') {
 /**
  * Render Team Overview tab content
  */
-function renderTeamOverviewTab(teamData) {
+async function renderTeamOverviewTab(teamData) {
     const { picks, gameweek } = teamData;
 
     // Sort players by position order
@@ -839,8 +847,11 @@ function renderTeamOverviewTab(teamData) {
         const isLive = isGameweekLive(gameweek);
 
         // Mobile ultra-compact layout
+        const bubbleFormationHTML = await renderCompactBubbleFormation(allPlayers, gameweek, isLive);
+        
         return `
             ${renderCompactHeader(teamData, gameweek, isAutoRefreshActive())}
+            ${bubbleFormationHTML}
             ${renderCompactTeamList(allPlayers, gameweek, isLive)}
             ${renderMatchSchedule(allPlayers, gameweek)}
         `;
