@@ -500,7 +500,7 @@ export async function initializePlayerPerformanceTrellis(containerId, players, c
             // Position player name label after the chevron
             // Account for chevron character + space width, with extra buffer to prevent overlap
             const nameText = `${player.web_name} - ${position}`;
-            const nameLeft = labelLeft + 2.5; // Extra buffer to ensure no overlap (chevron + space + padding)
+            const nameLeft = labelLeft + 3.5; // Increased spacing for better breathing room (chevron + space + padding)
             
             graphics.push({
                 type: 'text',
