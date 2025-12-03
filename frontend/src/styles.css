@@ -377,6 +377,32 @@ body {
     font-size: 1.25rem !important;
   }
 
+  /* Logo sizing for mobile */
+  nav img[alt="FPLanner"] {
+    height: 2rem !important;
+    width: 2rem !important;
+    border-radius: 50% !important;
+    object-fit: cover !important;
+  }
+
+  /* Center logo on mobile */
+  nav > div {
+    position: relative !important;
+  }
+
+  /* Center the logo container on mobile */
+  nav > div > div:first-child {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    justify-content: center !important;
+  }
+
+  /* Keep countdown on the right */
+  nav > div > div:last-child {
+    margin-left: auto;
+  }
+
 
   /* Hide full countdown text on very small screens */
   @media (max-width: 380px) {
