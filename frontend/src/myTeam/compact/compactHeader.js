@@ -114,6 +114,37 @@ function countPlayersPlayed(teamData) {
 }
 
 /**
+ * Calculate GW FDR (average fixture difficulty for current GW)
+ * @param {Object} teamData - Team data with picks
+ * @param {number} gwNumber - Current gameweek number
+ * @returns {number|null} Average FDR or null if unavailable
+ */
+function calculateGWFDR(teamData, gwNumber) {
+    if (!teamData || !teamData.picks || !teamData.picks.picks) return null;
+
+    // Get starting 11 only
+    const starting11 = teamData.picks.picks
+        .filter(p => p.position <= 11)
+        .map(pick => getPlayerById(pick.element))
+        .filter(Boolean);
+
+    if (starting11.length === 0) return null;
+
+    let totalFDR = 0;
+    let count = 0;
+
+    starting11.forEach(player => {
+        const oppInfo = getGWOpponent(player.team, gwNumber);
+        if (oppInfo && oppInfo.difficulty) {
+            totalFDR += oppInfo.difficulty;
+            count++;
+        }
+    });
+
+    return count > 0 ? totalFDR / count : null;
+}
+
+/**
  * Calculate GW expected points (try ep_this first, fallback to ep_next)
  * @param {Object} teamData - Team data with picks
  * @returns {number|null} Expected points or null if unavailable
@@ -191,12 +222,15 @@ export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = fa
     const freeTransfers = entry.event_transfers || 0;
     const transferCost = entry.event_transfers_cost || 0;
 
-    // Count players played
-    const playersPlayed = countPlayersPlayed(teamData);
+    // Calculate GW FDR
+    const gwFDR = calculateGWFDR(teamData, gwNumber);
 
     // Calculate GW expected points
     const expectedPoints = calculateGWExpectedPoints(teamData);
     const expectedBadge = getExpectedPointsBadge(gwPoints, expectedPoints);
+
+    // Count players played
+    const playersPlayed = countPlayersPlayed(teamData);
 
     // Get GW average from event data
     const gwEvent = getGameweekEvent(gwNumber);
@@ -256,6 +290,19 @@ export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = fa
                     </div>
 
                     <div style="font-size: 0.7rem; color: var(--text-secondary);">
+                        GW FDR: ${gwFDR !== null ? gwFDR.toFixed(1) : 'N/A'}
+                    </div>
+
+                    <div style="font-size: 0.7rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.3rem;">
+                        <span>GW Expected Pts: ${expectedPoints !== null ? Math.round(expectedPoints) : 'N/A'}</span>
+                        ${expectedBadge.text ? `<span style="display: inline-block; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem; background: ${expectedBadge.background}; color: ${expectedBadge.color};">${expectedBadge.text}</span>` : ''}
+                    </div>
+
+                    <div style="font-size: 0.7rem; color: var(--text-secondary);">
+                        No. of Players Played: ${playersPlayed}
+                    </div>
+
+                    <div style="font-size: 0.7rem; color: var(--text-secondary);">
                         Squad Value: £${squadValue}m + £${bank}m
                     </div>
 
@@ -267,15 +314,6 @@ export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = fa
                     >
                         <span>Transfers: ${freeTransfers}${transferCost > 0 ? ` <span style="color: #ef4444;">(-${transferCost} pts)</span>` : ''}</span>
                         <i class="fas fa-chevron-down" id="transfers-chevron" style="font-size: 0.55rem; transition: transform 0.2s; pointer-events: none;"></i>
-                    </div>
-
-                    <div style="font-size: 0.7rem; color: var(--text-secondary);">
-                        No. of Players Played: ${playersPlayed}
-                    </div>
-
-                    <div style="font-size: 0.7rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.3rem;">
-                        <span>GW Expected Pts: ${expectedPoints !== null ? Math.round(expectedPoints) : 'N/A'}</span>
-                        ${expectedBadge.text ? `<span style="display: inline-block; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem; background: ${expectedBadge.background}; color: ${expectedBadge.color};">${expectedBadge.text}</span>` : ''}
                     </div>
                     <div id="transfers-details" style="display: none; font-size: 0.65rem; padding-top: 0.25rem; margin-top: 0.25rem; border-top: 1px dashed var(--border-color);">
                         <div style="color: var(--text-secondary); text-align: center;">Loading transfers...</div>
@@ -300,7 +338,7 @@ export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = fa
                                 ${gwPoints}
                             </div>
                             <span style="color: var(--text-secondary);">•</span>
-                            <div style="font-size: 2rem; font-weight: 800; color: var(--text-secondary); line-height: 1;">
+                            <div style="font-size: 1.5rem; font-weight: 800; color: var(--text-secondary); line-height: 1;">
                                 ${totalPoints.toLocaleString()}
                             </div>
                         </div>
