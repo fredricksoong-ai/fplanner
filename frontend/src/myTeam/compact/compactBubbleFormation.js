@@ -198,34 +198,92 @@ export async function renderCompactBubbleFormation(players, gwNumber, isLive) {
 
     return `
         <div style="
-            background: var(--bg-secondary);
+            background: linear-gradient(135deg, 
+                rgba(30, 30, 30, 0.95) 0%, 
+                rgba(20, 20, 25, 0.98) 50%,
+                rgba(25, 25, 30, 0.95) 100%
+            );
             border-radius: 0.75rem;
             padding: 1rem;
             margin-bottom: 1rem;
-            border: 1px solid var(--border-color);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 
+                0 4px 6px -1px rgba(0, 0, 0, 0.3),
+                0 2px 4px -1px rgba(0, 0, 0, 0.2),
+                inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+            position: relative;
+            overflow: hidden;
         ">
-            <div id="bubble-formation-chart" style="width: 100%; height: 350px;"></div>
+            <!-- Subtle pattern overlay -->
+            <div style="
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background-image: 
+                    radial-gradient(circle at 20% 50%, rgba(168, 85, 247, 0.03) 0%, transparent 50%),
+                    radial-gradient(circle at 80% 80%, rgba(34, 197, 94, 0.03) 0%, transparent 50%),
+                    radial-gradient(circle at 40% 20%, rgba(251, 191, 36, 0.02) 0%, transparent 50%);
+                pointer-events: none;
+                z-index: 0;
+            "></div>
             
-            <div style="display: flex; gap: 1rem; margin-top: 0.75rem; font-size: 0.65rem; color: var(--text-secondary); flex-wrap: wrap;">
-                <div style="display: flex; align-items: center; gap: 0.3rem;">
-                    <div style="width: 12px; height: 12px; border-radius: 50%; background: rgba(156, 163, 175, 0.5);"></div>
-                    <span>Yet to play</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 0.3rem;">
-                    <div style="width: 12px; height: 12px; border-radius: 50%; background: rgba(239, 68, 68, 0.5);"></div>
-                    <span>0-3 pts</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 0.3rem;">
-                    <div style="width: 12px; height: 12px; border-radius: 50%; background: rgba(251, 191, 36, 0.5);"></div>
-                    <span>4-8 pts</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 0.3rem;">
-                    <div style="width: 12px; height: 12px; border-radius: 50%; background: rgba(34, 197, 94, 0.5);"></div>
-                    <span>9-13 pts</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 0.3rem;">
-                    <div style="width: 12px; height: 12px; border-radius: 50%; background: rgba(168, 85, 247, 0.5);"></div>
-                    <span>14+ pts</span>
+            <!-- Content wrapper -->
+            <div style="position: relative; z-index: 1;">
+                <div id="bubble-formation-chart" style="width: 100%; height: 350px;"></div>
+                
+                <div style="display: flex; gap: 1rem; margin-top: 0.75rem; font-size: 0.65rem; color: var(--text-secondary); flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 0.3rem;">
+                        <div style="
+                            width: 12px; 
+                            height: 12px; 
+                            border-radius: 50%; 
+                            background: rgba(156, 163, 175, 0.5);
+                            box-shadow: 0 0 4px rgba(156, 163, 175, 0.3);
+                        "></div>
+                        <span>Yet to play</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.3rem;">
+                        <div style="
+                            width: 12px; 
+                            height: 12px; 
+                            border-radius: 50%; 
+                            background: rgba(239, 68, 68, 0.5);
+                            box-shadow: 0 0 4px rgba(239, 68, 68, 0.3);
+                        "></div>
+                        <span>0-3 pts</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.3rem;">
+                        <div style="
+                            width: 12px; 
+                            height: 12px; 
+                            border-radius: 50%; 
+                            background: rgba(251, 191, 36, 0.5);
+                            box-shadow: 0 0 4px rgba(251, 191, 36, 0.3);
+                        "></div>
+                        <span>4-8 pts</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.3rem;">
+                        <div style="
+                            width: 12px; 
+                            height: 12px; 
+                            border-radius: 50%; 
+                            background: rgba(34, 197, 94, 0.5);
+                            box-shadow: 0 0 4px rgba(34, 197, 94, 0.3);
+                        "></div>
+                        <span>9-13 pts</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.3rem;">
+                        <div style="
+                            width: 12px; 
+                            height: 12px; 
+                            border-radius: 50%; 
+                            background: rgba(168, 85, 247, 0.5);
+                            box-shadow: 0 0 4px rgba(168, 85, 247, 0.3);
+                        "></div>
+                        <span>14+ pts</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -351,12 +409,8 @@ export async function initBubbleFormationChart(players, gwNumber, isLive) {
             const fontSize = getFontSize(size);
             const pointsColor = getPointsColor(gwPoints, minutes);
 
-            let labelText = escapeHtml(player.web_name);
-            if (pick.is_captain) {
-                labelText = `${escapeHtml(player.web_name)}\n(C)`;
-            } else if (pick.is_vice_captain) {
-                labelText = `${escapeHtml(player.web_name)}\n(VC)`;
-            }
+            // Just the player name, no (C) or (VC) labels
+            const labelText = escapeHtml(player.web_name);
 
             allNodes.push({
                 name: player.web_name,
@@ -366,8 +420,9 @@ export async function initBubbleFormationChart(players, gwNumber, isLive) {
                 itemStyle: {
                     color: pointsColor,
                     opacity: 0.5,
-                    borderColor: pick.is_captain ? '#a855f7' : (pick.is_vice_captain ? '#8b5cf6' : 'rgba(255, 255, 255, 0.2)'),
-                    borderWidth: pick.is_captain ? 3 : (pick.is_vice_captain ? 2.5 : 2),
+                    // White borders for captain/vice captain - visible against dark background
+                    borderColor: pick.is_captain ? 'rgba(255, 255, 255, 0.9)' : (pick.is_vice_captain ? 'rgba(255, 255, 255, 0.7)' : 'rgba(255, 255, 255, 0.2)'),
+                    borderWidth: pick.is_captain ? 4 : (pick.is_vice_captain ? 3.5 : 2),
                     shadowBlur: 0
                 },
                 label: {
