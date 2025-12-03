@@ -335,6 +335,16 @@ body {
   }
 }
 
+/* Base nav-brand styles for desktop */
+#nav-brand {
+  display: flex;
+  align-items: center;
+}
+
+#nav-brand img {
+  display: none;
+}
+
 /* Mobile navigation styles */
 @media (max-width: 767px) {
   /* Stack navigation vertically on mobile */
