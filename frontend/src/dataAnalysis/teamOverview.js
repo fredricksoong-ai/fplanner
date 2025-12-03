@@ -13,10 +13,10 @@ import {
     calculateSquadAverages
 } from '../myTeam/teamSummaryHelpers.js';
 import { initializeTeamPointsChart, disposeTeamPointsChart } from './teamPointsChart.js';
-import { initializePlayerPerformanceTrellis, disposePlayerPerformanceTrellis } from './playerPerformanceTrellis.js';
+import { initializePlayerPerformanceChart, disposePlayerPerformanceChart } from './playerPerformanceChart.js';
 
 let teamPointsChartInstance = null;
-let playerPerformanceTrellisInstance = null;
+let playerPerformanceChartInstance = null;
 
 /**
  * Render Team Overview tab - personalized stats for user's team
@@ -128,7 +128,7 @@ export function renderTeamOverview(
             </div>
             `}
 
-            <!-- Player Performance Trellis Chart -->
+            <!-- Player Performance Chart -->
             ${myPlayers.length > 0 ? `
             <div style="margin-bottom: 2rem;">
                 <div style="
@@ -145,7 +145,7 @@ export function renderTeamOverview(
                     ">
                         Player Performance Tracker
                     </h3>
-                    <div id="player-performance-trellis-chart" style="width: 100%; height: 800px;"></div>
+                    <div id="player-performance-chart" style="width: 100%; height: 400px;"></div>
                 </div>
             </div>
             ` : ''}
@@ -386,12 +386,12 @@ export function initializeTeamOverviewChart() {
         }, 100);
     }
 
-    // Initialize Player Performance Trellis Chart
+    // Initialize Player Performance Chart
     if (currentPicks && currentPicks.length > 0) {
-        // Dispose existing trellis chart
-        if (playerPerformanceTrellisInstance) {
-            disposePlayerPerformanceTrellis(playerPerformanceTrellisInstance);
-            playerPerformanceTrellisInstance = null;
+        // Dispose existing chart
+        if (playerPerformanceChartInstance) {
+            disposePlayerPerformanceChart(playerPerformanceChartInstance);
+            playerPerformanceChartInstance = null;
         }
 
         // Get full player data for all 15 players
@@ -408,13 +408,13 @@ export function initializeTeamOverviewChart() {
         if (allPlayers.length > 0) {
             setTimeout(async () => {
                 try {
-                    playerPerformanceTrellisInstance = await initializePlayerPerformanceTrellis(
-                        'player-performance-trellis-chart',
+                    playerPerformanceChartInstance = await initializePlayerPerformanceChart(
+                        'player-performance-chart',
                         allPlayers,
                         currentGW
                     );
                 } catch (err) {
-                    console.error('Failed to initialize player performance trellis chart:', err);
+                    console.error('Failed to initialize player performance chart:', err);
                 }
             }, 200);
         }
@@ -429,8 +429,8 @@ export function cleanupTeamOverviewChart() {
         disposeTeamPointsChart(teamPointsChartInstance);
         teamPointsChartInstance = null;
     }
-    if (playerPerformanceTrellisInstance) {
-        disposePlayerPerformanceTrellis(playerPerformanceTrellisInstance);
-        playerPerformanceTrellisInstance = null;
+    if (playerPerformanceChartInstance) {
+        disposePlayerPerformanceChart(playerPerformanceChartInstance);
+        playerPerformanceChartInstance = null;
     }
 }

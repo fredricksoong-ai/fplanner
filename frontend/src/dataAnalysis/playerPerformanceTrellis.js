@@ -1,6 +1,6 @@
 /**
- * Player Performance Trellis Chart
- * Shows weekly points performance for all 15 players in a trellis plot (small multiples)
+ * Player Performance Charts
+ * Shows weekly points performance for all 15 players in 4 separate charts (one per position)
  */
 
 import { loadECharts } from '../charts/chartHelpers.js';
@@ -14,6 +14,20 @@ const POSITION_COLORS = {
     2: '#00BCD4', // DEF - Cyan/Blue
     3: '#4CAF50', // MID - Green
     4: '#F44336'  // FWD - Red
+};
+
+const POSITION_NAMES = {
+    1: 'GKP',
+    2: 'DEF',
+    3: 'MID',
+    4: 'FWD'
+};
+
+const POSITION_TITLES = {
+    1: 'Goalkeepers',
+    2: 'Defenders',
+    3: 'Midfielders',
+    4: 'Forwards'
 };
 
 /**
@@ -112,7 +126,7 @@ function getAllGameweeks(playerData, currentGW) {
 }
 
 /**
- * Get maximum single-week score across all players
+ * Get maximum single-week score across players in a position group
  * @param {Array} playerData - Array of {player, history, avgPPG}
  * @returns {number} Maximum points in a single gameweek
  */
@@ -134,34 +148,375 @@ function getMaxSingleWeekScore(playerData) {
 }
 
 /**
- * Initialize Player Performance Trellis Chart
+ * Group players by position
+ * @param {Array} playerData - Array of {player, history, avgPPG}
+ * @returns {Object} Grouped by position: { 1: [...], 2: [...], etc. }
+ */
+function groupPlayersByPosition(playerData) {
+    const grouped = { 1: [], 2: [], 3: [], 4: [] };
+    
+    playerData.forEach(({ player, history, avgPPG }) => {
+        const posType = player.element_type;
+        if (grouped[posType]) {
+            grouped[posType].push({ player, history, avgPPG });
+        }
+    });
+    
+    return grouped;
+}
+
+/**
+ * Get top and bottom performers from latest gameweek within a position group
+ * @param {Array} playerData - Array of {player, history, avgPPG} for a position
+ * @param {Array} allGameweeks - Array of gameweek numbers
+ * @returns {Object} { topPlayers: Set<playerId>, bottomPlayers: Set<playerId>, latestGW: number }
+ */
+function getTopBottomPerformersInPosition(playerData, allGameweeks) {
+    if (!allGameweeks || allGameweeks.length === 0) {
+        return { topPlayers: new Set(), bottomPlayers: new Set(), latestGW: null };
+    }
+    
+    const latestGW = Math.max(...allGameweeks);
+    
+    // Get points for latest gameweek for each player in this position
+    const playerPoints = playerData
+        .map(({ player, history }) => {
+            const entry = history.find(h => h.gameweek === latestGW);
+            return {
+                playerId: player.id,
+                player,
+                points: entry ? (entry.gw_points || 0) : 0,
+                playerName: player.web_name
+            };
+        })
+        .filter(p => p.points >= 0); // Include all players (even 0 points)
+    
+    if (playerPoints.length === 0) {
+        return { topPlayers: new Set(), bottomPlayers: new Set(), latestGW };
+    }
+    
+    // Sort by points (descending)
+    playerPoints.sort((a, b) => b.points - a.points);
+    
+    // Get top 3 and bottom 3 within this position
+    const top3 = playerPoints.slice(0, 3).map(p => p.playerId);
+    const bottom3 = playerPoints.slice(-3).map(p => p.playerId);
+    
+    return {
+        topPlayers: new Set(top3),
+        bottomPlayers: new Set(bottom3),
+        latestGW
+    };
+}
+
+/**
+ * Create a single position chart
  * @param {string} containerId - DOM element ID
- * @param {Array} players - Array of 15 player objects
+ * @param {number} posType - Position type (1=GKP, 2=DEF, 3=MID, 4=FWD)
+ * @param {Array} playersInPosition - Array of {player, history, avgPPG} for this position
+ * @param {Array} allGameweeks - All gameweeks with data
  * @param {number} currentGW - Current gameweek
  * @returns {Promise<Object>} ECharts instance
  */
-export async function initializePlayerPerformanceTrellis(containerId, players, currentGW) {
+async function createPositionChart(containerId, posType, playersInPosition, allGameweeks, currentGW) {
+    if (!playersInPosition || playersInPosition.length === 0) {
+        return null;
+    }
+
+    const echarts = await loadECharts();
+    const chartDom = document.getElementById(containerId);
+
+    if (!chartDom) {
+        console.error(`Chart container #${containerId} not found. Available containers:`, 
+            Array.from(document.querySelectorAll('[id^="player-performance"]')).map(el => el.id));
+        return null;
+    }
+
+    console.log(`Found container #${containerId}, dimensions:`, {
+        width: chartDom.offsetWidth,
+        height: chartDom.offsetHeight,
+        visible: chartDom.offsetParent !== null
+    });
+
+    // Dispose existing chart if any
+    const existingChart = echarts.getInstanceByDom(chartDom);
+    if (existingChart) {
+        existingChart.dispose();
+    }
+
+    const chart = echarts.init(chartDom);
+
+    // Get max score for this position group
+    const maxScore = getMaxSingleWeekScore(playersInPosition);
+    
+    // Get top/bottom performers within this position
+    const { topPlayers, bottomPlayers, latestGW } = getTopBottomPerformersInPosition(playersInPosition, allGameweeks);
+
+    // Theme detection
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const textColor = isDark ? '#e5e7eb' : '#374151';
+    const gridColor = isDark ? '#334155' : '#e5e7eb';
+    const tooltipBg = isDark ? 'rgba(0, 0, 0, 0.85)' : 'rgba(255, 255, 255, 0.95)';
+
+    const positionColor = POSITION_COLORS[posType] || '#9E9E9E';
+    const positionTitle = POSITION_TITLES[posType] || 'Players';
+    const positionName = POSITION_NAMES[posType] || '';
+
+    // Create series array
+    const series = [];
+
+    // Add each player's line
+    playersInPosition.forEach(({ player, history, avgPPG }, playerIndex) => {
+        const position = getPositionShort(player);
+        
+        // Prepare data for this player
+        const pointsData = allGameweeks.map(gw => {
+            const entry = history.find(h => h.gameweek === gw);
+            return entry ? (entry.gw_points || 0) : null;
+        });
+
+        // Check if this player should have a label (within position group)
+        const isTopPerformer = topPlayers.has(player.id);
+        const isBottomPerformer = bottomPlayers.has(player.id);
+        const showLabel = isTopPerformer || isBottomPerformer;
+        
+        // Find the last data point for label positioning
+        let lastDataIndex = pointsData.length - 1;
+        while (lastDataIndex >= 0 && pointsData[lastDataIndex] === null) {
+            lastDataIndex--;
+        }
+        
+        const lastPoints = lastDataIndex >= 0 ? pointsData[lastDataIndex] : 0;
+
+        // Vary opacity slightly to distinguish players
+        const opacity = 0.8 - (playerIndex * 0.1);
+        const lineOpacity = Math.max(0.5, opacity);
+
+        // Main points line series
+        series.push({
+            name: player.web_name,
+            type: 'line',
+            data: pointsData,
+            smooth: false,
+            symbol: 'circle',
+            symbolSize: 5,
+            lineStyle: {
+                color: positionColor,
+                width: 2,
+                opacity: lineOpacity
+            },
+            itemStyle: {
+                color: positionColor,
+                opacity: lineOpacity
+            },
+            markPoint: (showLabel && lastDataIndex >= 0 && latestGW) ? {
+                symbol: 'none',
+                label: {
+                    show: true,
+                    formatter: player.web_name,
+                    fontSize: 10,
+                    fontWeight: 'bold',
+                    color: positionColor,
+                    backgroundColor: isDark ? 'rgba(0, 0, 0, 0.85)' : 'rgba(255, 255, 255, 0.95)',
+                    padding: [4, 8],
+                    borderRadius: 4,
+                    borderColor: positionColor,
+                    borderWidth: 1.5,
+                    position: isTopPerformer ? 'top' : 'bottom',
+                    offset: isTopPerformer ? [0, -10] : [0, 10]
+                },
+                data: [{
+                    name: 'Latest',
+                    coord: [lastDataIndex, lastPoints],
+                    value: lastPoints
+                }],
+                tooltip: {
+                    show: false
+                }
+            } : undefined,
+            z: 10
+        });
+
+        // Average PPG trend line
+        const avgData = allGameweeks.map(gw => {
+            const avg = avgPPG.get(gw);
+            return avg !== undefined ? avg : null;
+        });
+
+        series.push({
+            name: `${player.web_name} - Avg`,
+            type: 'line',
+            data: avgData,
+            smooth: false,
+            symbol: 'none',
+            lineStyle: {
+                color: positionColor,
+                type: 'dashed',
+                width: 1,
+                opacity: Math.max(0.3, lineOpacity * 0.5)
+            },
+            tooltip: {
+                show: false
+            },
+            z: 5
+        });
+    });
+
+    // Y-axis padding
+    const yAxisPadding = maxScore * 0.1;
+
+    const option = {
+        backgroundColor: 'transparent',
+        textStyle: { color: textColor },
+        grid: {
+            left: '10%',
+            right: '8%',
+            top: '18%',
+            bottom: '12%',
+            containLabel: false
+        },
+        tooltip: {
+            trigger: 'axis',
+            backgroundColor: tooltipBg,
+            borderColor: gridColor,
+            textStyle: {
+                color: textColor,
+                fontSize: 12
+            },
+            confine: true,
+            position: function(point, params, dom, rect, size) {
+                // Position tooltip to avoid being cut off
+                const [x, y] = point;
+                const [width, height] = size.viewSize;
+                const tooltipWidth = size.contentSize[0];
+                const tooltipHeight = size.contentSize[1];
+                
+                // If tooltip would be cut off on left, position it to the right of cursor
+                if (x < tooltipWidth) {
+                    return [x + 20, y];
+                }
+                // If tooltip would be cut off on right, position it to the left
+                if (x + tooltipWidth > width) {
+                    return [x - tooltipWidth - 20, y];
+                }
+                // Default: position above cursor
+                return [x - tooltipWidth / 2, y - tooltipHeight - 10];
+            },
+            formatter: function(params) {
+                // Axis-based tooltip shows all players at this gameweek
+                const firstParam = params[0];
+                const idx = firstParam.dataIndex;
+                const gw = allGameweeks[idx];
+                const gwLabel = `GW${gw}`;
+                
+                let result = `<strong>${gwLabel}</strong><br/>`;
+                
+                // Show all players' points for this gameweek
+                params.forEach(param => {
+                    // Skip average lines in tooltip
+                    if (param.seriesName && param.seriesName.endsWith(' - Avg')) {
+                        return;
+                    }
+                    
+                    const points = param.value;
+                    if (points !== null && points !== undefined) {
+                        const player = playersInPosition.find(({ player }) => player.web_name === param.seriesName);
+                        if (player) {
+                            const oppInfo = getGWOpponent(player.player.team, gw);
+                            const venue = oppInfo.isHome ? 'H' : 'A';
+                            const position = getPositionShort(player.player);
+                            
+                            result += `<span style="color: ${positionColor};">●</span> ${param.seriesName} (${position}): <strong>${points}</strong> pts vs ${oppInfo.name} (${venue})<br/>`;
+                        }
+                    }
+                });
+                
+                return result;
+            }
+        },
+        xAxis: {
+            type: 'category',
+            data: allGameweeks.map(gw => `GW${gw}`),
+            axisLabel: {
+                color: isDark ? '#94a3b8' : '#64748b',
+                fontSize: 11,
+                interval: Math.max(0, Math.floor(allGameweeks.length / 10))
+            },
+            axisLine: {
+                lineStyle: {
+                    color: gridColor
+                }
+            },
+            axisTick: {
+                show: true,
+                alignWithLabel: true,
+                lineStyle: {
+                    color: gridColor,
+                    opacity: 0.3
+                },
+                length: 4
+            },
+            splitLine: {
+                show: true,
+                lineStyle: {
+                    color: gridColor,
+                    type: 'dashed',
+                    opacity: 0.2
+                }
+            }
+        },
+        yAxis: {
+            type: 'value',
+            min: 0,
+            max: maxScore + yAxisPadding,
+            axisLabel: {
+                color: isDark ? '#94a3b8' : '#64748b',
+                fontSize: 11,
+                formatter: '{value}'
+            },
+            splitLine: {
+                lineStyle: {
+                    color: gridColor,
+                    type: 'dashed',
+                    opacity: 0.2
+                }
+            },
+            axisLine: {
+                show: false
+            },
+            axisTick: {
+                show: false
+            }
+        },
+        series: series
+    };
+
+    chart.setOption(option);
+    console.log(`Chart created successfully for position ${posType} in container #${containerId}`);
+
+    // Handle window resize
+    const resizeHandler = () => {
+        chart.resize();
+    };
+    window.addEventListener('resize', resizeHandler);
+    chart._resizeHandler = resizeHandler;
+
+    return chart;
+}
+
+/**
+ * Initialize Player Performance Charts (4 separate charts by position)
+ * @param {string} baseContainerId - Base container ID prefix
+ * @param {Array} players - Array of 15 player objects
+ * @param {number} currentGW - Current gameweek
+ * @returns {Promise<Object>} Object with chart instances: { gkp: chart, def: chart, mid: chart, fwd: chart }
+ */
+export async function initializePlayerPerformanceTrellis(baseContainerId, players, currentGW) {
     try {
         if (!players || players.length === 0) {
-            console.error('No players provided for trellis chart');
+            console.error('No players provided for player performance charts');
             return null;
         }
-
-        const echarts = await loadECharts();
-        const chartDom = document.getElementById(containerId);
-
-        if (!chartDom) {
-            console.error(`Chart container #${containerId} not found`);
-            return null;
-        }
-
-        // Dispose existing chart if any
-        const existingChart = echarts.getInstanceByDom(chartDom);
-        if (existingChart) {
-            existingChart.dispose();
-        }
-
-        const chart = echarts.init(chartDom);
 
         // Prepare player data
         const playerData = await preparePlayerHistoryData(players);
@@ -170,306 +525,96 @@ export async function initializePlayerPerformanceTrellis(containerId, players, c
         const validPlayerData = playerData.filter(pd => pd.history && pd.history.length > 0);
         
         if (validPlayerData.length === 0) {
-            // Show empty state message
-            chart.setOption({
-                graphic: [{
-                    type: 'text',
-                    left: 'center',
-                    top: 'center',
-                    style: {
-                        text: 'No player history data available',
-                        fill: '#64748b',
-                        fontSize: 14
-                    }
-                }]
-            });
-            return chart;
+            console.warn('No player history data available');
+            return null;
         }
 
-        // Get all gameweeks and max score
+        // Get all gameweeks
         const allGameweeks = getAllGameweeks(validPlayerData, currentGW);
-        const maxScore = getMaxSingleWeekScore(validPlayerData);
-
-        // Theme detection
-        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-        const textColor = isDark ? '#e5e7eb' : '#374151';
-        const gridColor = isDark ? '#334155' : '#e5e7eb';
-        const tooltipBg = isDark ? 'rgba(0, 0, 0, 0.85)' : 'rgba(255, 255, 255, 0.95)';
-
-        // Calculate grid layout: 3 columns × 5 rows (15 players)
-        const cols = 3;
-        const rows = 5;
-        const totalPlayers = validPlayerData.length;
         
-        // Responsive: adjust columns for mobile
-        const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
-        const effectiveCols = isMobile ? 2 : cols;
-        const effectiveRows = Math.ceil(totalPlayers / effectiveCols);
-
-        // Grid dimensions (as percentage)
-        const gridWidth = 100 / effectiveCols;
-        const gridHeight = 100 / effectiveRows;
-        
-        // Padding between grids
-        const gridGap = 1; // 1% gap between charts
-
-        // Create grids for each player
-        const grids = [];
-        const xAxes = [];
-        const yAxes = [];
-        const series = [];
-
-        validPlayerData.forEach(({ player, history, avgPPG }, index) => {
-        const row = Math.floor(index / effectiveCols);
-        const col = index % effectiveCols;
-        
-        const left = col * gridWidth + gridGap;
-        const top = row * gridHeight + 6; // 6% for player name label
-        const width = gridWidth - (2 * gridGap);
-        const height = gridHeight - 6 - gridGap; // Optimized space usage
-
-        // Create grid for this player with optimized padding
-        grids.push({
-            left: `${left}%`,
-            top: `${top}%`,
-            width: `${width}%`,
-            height: `${height}%`,
-            containLabel: false,
-            // Add padding for better Y-axis spacing
-            right: '2%',
-            bottom: '8%'
-        });
-
-        // Create X-axis (only show labels on bottom row)
-        const showXAxisLabels = row === effectiveRows - 1;
-        xAxes.push({
-            gridIndex: index,
-            type: 'category',
-            data: allGameweeks.map(gw => `GW${gw}`),
-            axisLabel: {
-                show: showXAxisLabels,
-                color: textColor,
-                fontSize: 8,
-                interval: Math.max(0, Math.floor(allGameweeks.length / 5)) // Show every Nth label
-            },
-            axisLine: {
-                show: showXAxisLabels,
-                lineStyle: { color: gridColor, opacity: 0.3 }
-            },
-            axisTick: {
-                show: false
-            },
-            splitLine: {
-                show: false
-            }
-        });
-
-        // Create Y-axis (shared scale) - expanded for better visibility
-        // Add padding to Y-axis to give more breathing room
-        const yAxisPadding = maxScore * 0.1; // 10% padding
-        yAxes.push({
-            gridIndex: index,
-            type: 'value',
-            min: 0,
-            max: maxScore + yAxisPadding,
-            axisLabel: {
-                show: col === 0, // Only show on leftmost column
-                color: textColor,
-                fontSize: 9,
-                margin: 8 // Add margin for better spacing
-            },
-            axisLine: {
-                show: false
-            },
-            axisTick: {
-                show: false
-            },
-            splitLine: {
-                show: col === 0, // Only show on leftmost column
-                lineStyle: {
-                    color: gridColor,
-                    type: 'dashed',
-                    opacity: 0.2
-                }
-            }
-        });
-
-        // Prepare data for this player
-        const pointsData = allGameweeks.map(gw => {
-            const entry = history.find(h => h.gameweek === gw);
-            return entry ? (entry.gw_points || 0) : null;
-        });
-
-        const avgData = allGameweeks.map(gw => {
-            const avg = avgPPG.get(gw);
-            return avg !== undefined ? avg : null;
-        });
-
-        const positionColor = POSITION_COLORS[player.element_type] || '#9E9E9E';
-        const position = getPositionShort(player);
-
-        // Main points line series
-        series.push({
-            name: `${player.web_name} - Points`,
-            type: 'line',
-            xAxisIndex: index,
-            yAxisIndex: index,
-            data: pointsData,
-            smooth: false,
-            symbol: 'circle',
-            symbolSize: 4,
-            lineStyle: {
-                color: positionColor,
-                width: 2
-            },
-            itemStyle: {
-                color: positionColor
-            },
-            tooltip: {
-                trigger: 'item',
-                formatter: function(params) {
-                    const gwIndex = params.dataIndex;
-                    const gw = allGameweeks[gwIndex];
-                    const points = params.value;
-                    const oppInfo = getGWOpponent(player.team, gw);
-                    const venue = oppInfo.isHome ? 'H' : 'A';
-                    
-                    return `
-                        <div style="padding: 4px;">
-                            <strong>${player.web_name} (${position})</strong><br/>
-                            GW${gw}: <strong>${points}</strong> pts<br/>
-                            vs ${oppInfo.name} (${venue})
-                        </div>
-                    `;
-                },
-                backgroundColor: tooltipBg,
-                borderColor: gridColor,
-                textStyle: { color: textColor, fontSize: 11 }
-            },
-            z: 10
-        });
-
-        // Average PPG trend line
-        series.push({
-            name: `${player.web_name} - Avg PPG`,
-            type: 'line',
-            xAxisIndex: index,
-            yAxisIndex: index,
-            data: avgData,
-            smooth: false,
-            symbol: 'none',
-            lineStyle: {
-                color: positionColor,
-                type: 'dashed',
-                width: 1,
-                opacity: 0.5
-            },
-            tooltip: {
-                show: false
-            },
-            z: 5
-            });
-        });
-
-        // Add player name labels and borders using graphic components
-        const graphics = [];
-        
-        validPlayerData.forEach(({ player }, index) => {
-            const row = Math.floor(index / effectiveCols);
-            const col = index % effectiveCols;
-            const position = getPositionShort(player);
-            
-            // Add light border rectangle around each chart
-            // Using percentage-based coordinates like text labels
-            const borderOpacity = 0.4;
-            const borderLeft = col * gridWidth + gridGap;
-            const borderTop = row * gridHeight + 6;
-            const borderWidthPct = gridWidth - 2 * gridGap;
-            const borderHeightPct = gridHeight - 6 - gridGap;
-            
-            graphics.push({
-                type: 'rect',
-                left: `${borderLeft}%`,
-                top: `${borderTop}%`,
-                shape: {
-                    width: `${borderWidthPct}%`,
-                    height: `${borderHeightPct}%`
-                },
-                style: {
-                    fill: 'transparent',
-                    stroke: gridColor,
-                    lineWidth: 1,
-                    opacity: borderOpacity
-                },
-                z: 50,
-                silent: true
-            });
-            
-            // Position label at top-left of each grid - optimized spacing
-            const labelLeft = col * gridWidth + gridGap + 1.5;
-            const labelTop = row * gridHeight + 1;
-            
-            graphics.push({
-                type: 'text',
-                left: `${labelLeft}%`,
-                top: `${labelTop}%`,
-                style: {
-                    text: `${player.web_name} - ${position}`,
-                    fill: textColor,
-                    fontSize: 9,
-                    fontWeight: 'bold'
-                },
-                z: 100
-            });
-        });
-
-        const option = {
-            backgroundColor: 'transparent',
-            textStyle: { color: textColor },
-            grid: grids,
-            xAxis: xAxes,
-            yAxis: yAxes,
-            series: series,
-            graphic: graphics.length > 0 ? graphics : undefined,
-            tooltip: {
-                trigger: 'item',
-                backgroundColor: tooltipBg,
-                borderColor: gridColor,
-                textStyle: {
-                    color: textColor,
-                    fontSize: 11
-                }
-            }
-        };
-
-        chart.setOption(option);
-
-        // Handle window resize
-        const resizeHandler = () => {
-            chart.resize();
-        };
-        window.addEventListener('resize', resizeHandler);
-        chart._resizeHandler = resizeHandler;
-
-        return chart;
-    } catch (err) {
-        console.error('Failed to initialize player performance trellis chart:', err);
-        const chartDom = document.getElementById(containerId);
-        if (chartDom) {
-            chartDom.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">Error loading chart. Please try again.</div>';
+        if (allGameweeks.length === 0) {
+            console.warn('No gameweek data available');
+            return null;
         }
+
+        // Group players by position
+        const groupedPlayers = groupPlayersByPosition(validPlayerData);
+
+        // Create charts for each position
+        const chartInstances = {};
+
+        // GKP Chart
+        if (groupedPlayers[1] && groupedPlayers[1].length > 0) {
+            const containerId = `${baseContainerId}-gkp-chart`;
+            console.log(`Creating GKP chart in container: #${containerId}`);
+            chartInstances.gkp = await createPositionChart(
+                containerId,
+                1,
+                groupedPlayers[1],
+                allGameweeks,
+                currentGW
+            );
+        }
+
+        // DEF Chart
+        if (groupedPlayers[2] && groupedPlayers[2].length > 0) {
+            const containerId = `${baseContainerId}-def-chart`;
+            console.log(`Creating DEF chart in container: #${containerId}`);
+            chartInstances.def = await createPositionChart(
+                containerId,
+                2,
+                groupedPlayers[2],
+                allGameweeks,
+                currentGW
+            );
+        }
+
+        // MID Chart
+        if (groupedPlayers[3] && groupedPlayers[3].length > 0) {
+            const containerId = `${baseContainerId}-mid-chart`;
+            console.log(`Creating MID chart in container: #${containerId}`);
+            chartInstances.mid = await createPositionChart(
+                containerId,
+                3,
+                groupedPlayers[3],
+                allGameweeks,
+                currentGW
+            );
+        }
+
+        // FWD Chart
+        if (groupedPlayers[4] && groupedPlayers[4].length > 0) {
+            const containerId = `${baseContainerId}-fwd-chart`;
+            console.log(`Creating FWD chart in container: #${containerId}`);
+            chartInstances.fwd = await createPositionChart(
+                containerId,
+                4,
+                groupedPlayers[4],
+                allGameweeks,
+                currentGW
+            );
+        }
+
+        return chartInstances;
+    } catch (err) {
+        console.error('Failed to initialize player performance charts:', err);
         return null;
     }
 }
 
 /**
- * Cleanup chart instance
+ * Cleanup chart instances
  */
-export function disposePlayerPerformanceTrellis(chart) {
-    if (!chart) return;
-    if (chart._resizeHandler) {
-        window.removeEventListener('resize', chart._resizeHandler);
-        delete chart._resizeHandler;
-    }
-    chart.dispose();
+export function disposePlayerPerformanceTrellis(chartInstances) {
+    if (!chartInstances) return;
+    
+    Object.values(chartInstances).forEach(chart => {
+        if (chart && chart._resizeHandler) {
+            window.removeEventListener('resize', chart._resizeHandler);
+            delete chart._resizeHandler;
+        }
+        if (chart) {
+            chart.dispose();
+        }
+    });
 }
