@@ -325,7 +325,7 @@ export async function renderCompactBubbleFormation(players, gwNumber, isLive, my
             position: relative;
             overflow: hidden;
         ">
-            <!-- Subtle pattern overlay with football pitch effect -->
+            <!-- Football pitch pattern overlay - made very visible first -->
             <div style="
                 position: absolute;
                 top: 0;
@@ -333,24 +333,23 @@ export async function renderCompactBubbleFormation(players, gwNumber, isLive, my
                 right: 0;
                 bottom: 0;
                 background-image: 
-                    /* Checkered pattern for subtle pitch effect - more visible */
+                    /* Checkered pattern for pitch effect - very visible */
                     repeating-linear-gradient(
                         0deg,
                         transparent,
-                        transparent 15px,
-                        rgba(0, 0, 0, 0.04) 15px,
-                        rgba(0, 0, 0, 0.04) 30px
+                        transparent 20px,
+                        rgba(0, 0, 0, 0.15) 20px,
+                        rgba(0, 0, 0, 0.15) 40px
                     ),
                     repeating-linear-gradient(
                         90deg,
                         transparent,
-                        transparent 15px,
-                        rgba(0, 0, 0, 0.04) 15px,
-                        rgba(0, 0, 0, 0.04) 30px
+                        transparent 20px,
+                        rgba(0, 0, 0, 0.15) 20px,
+                        rgba(0, 0, 0, 0.15) 40px
                     );
                 pointer-events: none;
                 z-index: 0;
-                opacity: 0.6;
             "></div>
             <!-- Original radial gradients overlay -->
             <div style="
