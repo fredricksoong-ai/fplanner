@@ -6,6 +6,7 @@
 import { getPlayerById } from '../../data.js';
 import { getFixtures } from '../../fixtures.js';
 import { getTeamShortName } from '../../utils.js';
+import { getGlassmorphism, getShadow, getMobileBorderRadius } from '../../styles/mobileDesignSystem.js';
 
 /**
  * Render match schedule section (collapsible)
@@ -34,6 +35,12 @@ export function renderMatchSchedule(players, gwNumber) {
 
     // Sort by kickoff time
     squadFixtures.sort((a, b) => new Date(a.kickoff_time) - new Date(b.kickoff_time));
+
+    // Get glassmorphism effects
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const glassEffect = getGlassmorphism(isDark, 'light');
+    const shadow = getShadow('low');
+    const radius = getMobileBorderRadius('medium');
 
     const fixturesHtml = squadFixtures.map(fixture => {
         const homeTeam = getTeamShortName(fixture.team_h);
@@ -66,11 +73,15 @@ export function renderMatchSchedule(players, gwNumber) {
     }).join('');
 
     return `
-        <div>
+        <div style="margin-bottom: 0.5rem;">
             <details style="
-                background: var(--bg-secondary);
-                border-radius: 0;
+                backdrop-filter: ${glassEffect.backdropFilter};
+                -webkit-backdrop-filter: ${glassEffect.WebkitBackdropFilter};
+                background: ${glassEffect.background};
+                border: ${glassEffect.border};
+                border-radius: ${radius};
                 overflow: hidden;
+                box-shadow: ${shadow};
             ">
                 <summary style="
                     padding: 0.5rem 0.75rem;
