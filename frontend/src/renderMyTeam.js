@@ -851,9 +851,11 @@ async function renderTeamOverviewTab(teamData) {
         
         return `
             ${renderCompactHeader(teamData, gameweek, isAutoRefreshActive())}
-            ${bubbleFormationHTML}
-            ${renderCompactTeamList(allPlayers, gameweek, isLive)}
-            ${renderMatchSchedule(allPlayers, gameweek)}
+            <div style="padding: 0.75rem;">
+                ${bubbleFormationHTML}
+                ${renderCompactTeamList(allPlayers, gameweek, isLive)}
+                ${renderMatchSchedule(allPlayers, gameweek)}
+            </div>
         `;
     } else {
         // Desktop layout (original)
