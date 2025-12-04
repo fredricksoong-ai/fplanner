@@ -325,7 +325,7 @@ export async function renderCompactBubbleFormation(players, gwNumber, isLive, my
             position: relative;
             overflow: hidden;
         ">
-            <!-- Football pitch pattern overlay - made very visible first -->
+            <!-- Football pitch pattern overlay - using white lines for better visibility on dark gradient -->
             <div style="
                 position: absolute;
                 top: 0;
@@ -333,20 +333,20 @@ export async function renderCompactBubbleFormation(players, gwNumber, isLive, my
                 right: 0;
                 bottom: 0;
                 background-image: 
-                    /* Checkered pattern for pitch effect - very visible */
+                    /* Checkered pattern for pitch effect - using white for better visibility on dark gradient */
                     repeating-linear-gradient(
                         0deg,
                         transparent,
                         transparent 20px,
-                        rgba(0, 0, 0, 0.15) 20px,
-                        rgba(0, 0, 0, 0.15) 40px
+                        rgba(255, 255, 255, 0.08) 20px,
+                        rgba(255, 255, 255, 0.08) 40px
                     ),
                     repeating-linear-gradient(
                         90deg,
                         transparent,
                         transparent 20px,
-                        rgba(0, 0, 0, 0.15) 20px,
-                        rgba(0, 0, 0, 0.15) 40px
+                        rgba(255, 255, 255, 0.08) 20px,
+                        rgba(255, 255, 255, 0.08) 40px
                     );
                 pointer-events: none;
                 z-index: 0;
@@ -564,8 +564,8 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
                     color: colors.bgColor,
                     opacity: 1, // Full opacity for better visibility
                     // White borders for captain/vice captain - visible against colored backgrounds
-                    borderColor: pick.is_captain ? 'rgba(255, 255, 255, 0.9)' : (pick.is_vice_captain ? 'rgba(255, 255, 255, 0.7)' : 'rgba(255, 255, 255, 0.3)'),
-                    borderWidth: pick.is_captain ? 4 : (pick.is_vice_captain ? 2.5 : 2),
+                    borderColor: pick.is_captain ? 'rgba(255, 255, 255, 0.7)' : (pick.is_vice_captain ? 'rgba(255, 255, 255, 0.7)' : 'rgba(255, 255, 255, 0.3)'),
+                    borderWidth: pick.is_captain ? 3 : (pick.is_vice_captain ? 2.5 : 2),
                     shadowBlur: 0
                 },
                 label: {
