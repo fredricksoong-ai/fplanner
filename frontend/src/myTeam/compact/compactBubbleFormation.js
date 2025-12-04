@@ -39,15 +39,15 @@ function getPointsColors(gwPoints, minutes) {
     
     // Use heatmap colors matching player table badges
     if (gwPoints >= 14) {
-        // Purple - excellent (14+) - matching league page purple
+        // Purple - excellent (14+) - matching league page purple (#9333ea)
         if (isDark) {
             return {
-                bgColor: '#6b2d8b', // Rich purple background
+                bgColor: '#6d28d9', // Darker purple for dark mode (darker shade of #9333ea)
                 textColor: '#e9d5ff' // Light purple text
             };
         } else {
             return {
-                bgColor: '#9333ea', // Purple background
+                bgColor: '#9333ea', // Same purple as leagues page
                 textColor: '#faf5ff' // Very light purple/white text
             };
         }
@@ -324,7 +324,7 @@ export async function renderCompactBubbleFormation(players, gwNumber, isLive, my
             position: relative;
             overflow: hidden;
         ">
-            <!-- Subtle pattern overlay -->
+            <!-- Subtle pattern overlay with football pitch effect -->
             <div style="
                 position: absolute;
                 top: 0;
@@ -332,6 +332,22 @@ export async function renderCompactBubbleFormation(players, gwNumber, isLive, my
                 right: 0;
                 bottom: 0;
                 background-image: 
+                    /* Checkered pattern for subtle pitch effect */
+                    repeating-linear-gradient(
+                        0deg,
+                        transparent,
+                        transparent 20px,
+                        rgba(0, 0, 0, 0.02) 20px,
+                        rgba(0, 0, 0, 0.02) 40px
+                    ),
+                    repeating-linear-gradient(
+                        90deg,
+                        transparent,
+                        transparent 20px,
+                        rgba(0, 0, 0, 0.02) 20px,
+                        rgba(0, 0, 0, 0.02) 40px
+                    ),
+                    /* Original radial gradients */
                     radial-gradient(circle at 20% 50%, rgba(168, 85, 247, 0.03) 0%, transparent 50%),
                     radial-gradient(circle at 80% 80%, rgba(34, 197, 94, 0.03) 0%, transparent 50%),
                     radial-gradient(circle at 40% 20%, rgba(251, 191, 36, 0.02) 0%, transparent 50%);
@@ -341,9 +357,8 @@ export async function renderCompactBubbleFormation(players, gwNumber, isLive, my
             
             <!-- Content wrapper -->
             <div style="position: relative; z-index: 1;">
-                <div id="bubble-formation-chart" style="width: 100%; height: 350px;"></div>
-                
-                <div style="display: flex; gap: 1rem; margin-top: 0.75rem; font-size: 0.65rem; color: var(--text-secondary); flex-wrap: wrap;">
+                <!-- Legend moved to top -->
+                <div style="display: flex; gap: 1rem; margin-bottom: 0.75rem; font-size: 0.65rem; color: var(--text-secondary); flex-wrap: wrap;">
                     <div style="display: flex; align-items: center; gap: 0.3rem;">
                         <div style="
                             width: 12px; 
@@ -400,6 +415,8 @@ export async function renderCompactBubbleFormation(players, gwNumber, isLive, my
                         <span>14+ pts</span>
                     </div>
                 </div>
+                
+                <div id="bubble-formation-chart" style="width: 100%; height: 350px;"></div>
             </div>
         </div>
     `;
