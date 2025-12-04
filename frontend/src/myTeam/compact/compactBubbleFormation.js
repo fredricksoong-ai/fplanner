@@ -42,12 +42,12 @@ function getPointsColors(gwPoints, minutes) {
         // Purple - excellent (14+) - custom purple tone
         if (isDark) {
             return {
-                bgColor: '#8B5A9B', // Purple background
+                bgColor: '#7B4B8A', // Purple background
                 textColor: '#D4A8E0' // Light purple text
             };
         } else {
             return {
-                bgColor: '#8B5A9B', // Purple background
+                bgColor: '#7B4B8A', // Purple background
                 textColor: '#D4A8E0' // Light purple text
             };
         }
@@ -393,9 +393,9 @@ export async function renderCompactBubbleFormation(players, gwNumber, isLive, my
                             width: 12px; 
                             height: 12px; 
                             border-radius: 50%; 
-                            background: #8B5A9B;
+                            background: #7B4B8A;
                             border: 1px solid #D4A8E0;
-                            box-shadow: 0 0 4px rgba(139, 90, 155, 0.3);
+                            box-shadow: 0 0 4px rgba(123, 75, 138, 0.3);
                         "></div>
                         <span>14+ pts</span>
                     </div>
