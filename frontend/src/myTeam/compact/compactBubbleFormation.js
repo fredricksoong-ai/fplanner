@@ -41,14 +41,15 @@ function getPointsColors(gwPoints, minutes) {
     if (gwPoints >= 14) {
         // Purple - excellent (14+) - matching league page purple
         // League page uses: bgColor = 'rgba(147, 51, 234, 0.15)', textColor = '#9333ea'
+        // For solid bubbles, use full opacity purple background
         if (isDark) {
             return {
-                bgColor: 'rgba(147, 51, 234, 0.15)', // Semi-transparent purple matching league page
+                bgColor: '#9333ea', // Solid purple (no opacity) matching other bubbles
                 textColor: '#9333ea' // Purple text matching league page
             };
         } else {
             return {
-                bgColor: 'rgba(147, 51, 234, 0.15)', // Same for light mode
+                bgColor: '#9333ea', // Solid purple (no opacity) matching other bubbles
                 textColor: '#9333ea' // Purple text matching league page
             };
         }
@@ -189,6 +190,43 @@ function formatGWStatsForTooltip(player, liveStats, gwStats, gwPoints, minutes, 
 }
 
 /**
+ * Generate emoji badges for GW stats (hierarchy: ⭐⚽️🎯🧤)
+ * Returns array of emoji objects with count for proper rendering
+ * @param {Object} player - Player object
+ * @param {Object} liveStats - Live stats
+ * @param {Object} gwStats - GW stats
+ * @returns {Array} Array of emoji objects {emoji, count}
+ */
+function generateEmojiBadges(player, liveStats, gwStats) {
+    const stats = liveStats || gwStats || {};
+    const positionType = player.element_type; // 1=GKP, 2=DEF, 3=MID, 4=FWD
+    
+    // Get stats
+    const bonus = liveStats?.provisional_bonus ?? liveStats?.bonus ?? stats.bonus ?? 0;
+    const goals = stats.goals_scored || 0;
+    const assists = stats.assists || 0;
+    const cleanSheets = stats.clean_sheets || 0;
+    
+    const badges = [];
+    
+    // Hierarchy: ⭐⚽️🎯🧤 (left to right)
+    if (bonus > 0) {
+        badges.push({ emoji: '⭐', count: bonus });
+    }
+    if (goals > 0) {
+        badges.push({ emoji: '⚽️', count: goals });
+    }
+    if (assists > 0) {
+        badges.push({ emoji: '🎯', count: assists });
+    }
+    if (cleanSheets > 0 && (positionType === 1 || positionType === 2)) {
+        badges.push({ emoji: '🧤', count: cleanSheets });
+    }
+    
+    return badges;
+}
+
+/**
  * Render opponent badge for tooltip (matching player table style)
  * @param {Object} opponent - Opponent object from getGWOpponent
  * @returns {string} HTML for opponent badge
@@ -325,33 +363,7 @@ export async function renderCompactBubbleFormation(players, gwNumber, isLive, my
             position: relative;
             overflow: hidden;
         ">
-            <!-- Football pitch pattern overlay - using white lines for better visibility on dark gradient -->
-            <div style="
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background-image: 
-                    /* Checkered pattern for pitch effect - using white for better visibility on dark gradient */
-                    repeating-linear-gradient(
-                        0deg,
-                        transparent,
-                        transparent 20px,
-                        rgba(255, 255, 255, 0.08) 20px,
-                        rgba(255, 255, 255, 0.08) 40px
-                    ),
-                    repeating-linear-gradient(
-                        90deg,
-                        transparent,
-                        transparent 20px,
-                        rgba(255, 255, 255, 0.08) 20px,
-                        rgba(255, 255, 255, 0.08) 40px
-                    );
-                pointer-events: none;
-                z-index: 0;
-            "></div>
-            <!-- Original radial gradients overlay -->
+            <!-- Subtle pattern overlay -->
             <div style="
                 position: absolute;
                 top: 0;
@@ -554,6 +566,53 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
 
             // Just the player name, no (C) or (VC) labels
             const labelText = escapeHtml(player.web_name);
+            
+            // Generate emoji badges for GW stats (hierarchy: ⭐⚽️🎯🧤)
+            const emojiBadges = generateEmojiBadges(player, liveStats, gwStats);
+            
+            // Calculate emoji size based on bubble size
+            const emojiSize = Math.max(10, Math.min(16, size * 0.25));
+            
+            // Build label formatter with emojis if they exist
+            let labelFormatter = labelText;
+            let richTextConfig = {};
+            
+            if (emojiBadges.length > 0) {
+                // Build emoji string with overlap effect
+                let emojiString = '';
+                let emojiIndex = 0;
+                emojiBadges.forEach(badge => {
+                    for (let i = 0; i < badge.count; i++) {
+                        const styleKey = `emoji${emojiIndex}`;
+                        const overlap = emojiIndex > 0 ? -emojiSize * 0.12 : 0; // 12% overlap for subsequent emojis
+                        emojiString += `{${styleKey}|${badge.emoji}}`;
+                        richTextConfig[styleKey] = {
+                            fontSize: emojiSize,
+                            padding: [0, overlap, 0, 0]
+                        };
+                        emojiIndex++;
+                    }
+                });
+                
+                labelFormatter = `{name|${labelText}}\n{badges|${emojiString}}`;
+                richTextConfig.name = {
+                    fontSize: fontSize,
+                    fontWeight: 'bold',
+                    color: colors.textColor,
+                    textBorderColor: 'rgba(0, 0, 0, 0.4)',
+                    textBorderWidth: 1,
+                    align: 'center',
+                    verticalAlign: 'middle',
+                    lineHeight: fontSize * 1.2
+                };
+                richTextConfig.badges = {
+                    fontSize: emojiSize,
+                    align: 'right',
+                    verticalAlign: 'bottom',
+                    padding: [0, size * 0.12, size * 0.12, 0],
+                    lineHeight: emojiSize
+                };
+            }
 
             allNodes.push({
                 name: player.web_name,
@@ -570,12 +629,14 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
                 },
                 label: {
                     show: true,
-                    formatter: labelText,
+                    formatter: labelFormatter,
+                    rich: Object.keys(richTextConfig).length > 0 ? richTextConfig : undefined,
                     fontSize: fontSize,
                     fontWeight: 'bold',
                     color: colors.textColor, // Use matching text color from heatmap
                     textBorderColor: 'rgba(0, 0, 0, 0.4)', // Subtle border for readability
-                    textBorderWidth: 1
+                    textBorderWidth: 1,
+                    position: 'inside'
                 },
                 playerData: {
                     player,
