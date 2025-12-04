@@ -41,16 +41,15 @@ function getPointsColors(gwPoints, minutes) {
     if (gwPoints >= 14) {
         // Purple - excellent (14+) - matching league page purple
         // League page uses: bgColor = 'rgba(147, 51, 234, 0.15)', textColor = '#9333ea'
-        // For bubbles: use rgba background, #faf5ff text
         if (isDark) {
             return {
                 bgColor: 'rgba(147, 51, 234, 0.15)', // Semi-transparent purple matching league page
-                textColor: '#faf5ff' // Very light purple/white text
+                textColor: '#9333ea' // Purple text matching league page
             };
         } else {
             return {
                 bgColor: 'rgba(147, 51, 234, 0.15)', // Same for light mode
-                textColor: '#faf5ff' // Very light purple/white text
+                textColor: '#9333ea' // Purple text matching league page
             };
         }
     }
@@ -421,8 +420,8 @@ export async function renderCompactBubbleFormation(players, gwNumber, isLive, my
                             width: 12px; 
                             height: 12px; 
                             border-radius: 50%; 
-                            background: #9333ea;
-                            border: 1px solid #e9d5ff;
+                            background: rgba(147, 51, 234, 0.15);
+                            border: 1px solid #9333ea;
                             box-shadow: 0 0 4px rgba(147, 51, 234, 0.3);
                         "></div>
                         <span>14+ pts</span>
