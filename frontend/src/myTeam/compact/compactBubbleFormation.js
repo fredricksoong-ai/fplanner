@@ -345,59 +345,74 @@ export async function renderCompactBubbleFormation(players, gwNumber, isLive, my
             <!-- Content wrapper -->
             <div style="position: relative; z-index: 1;">
                 <!-- Legend moved to top -->
-                <div style="display: flex; gap: 1rem; margin-bottom: 0.75rem; font-size: 0.65rem; color: var(--text-secondary); flex-wrap: wrap;">
-                    <div style="display: flex; align-items: center; gap: 0.3rem;">
+                <div style="
+                    display: flex; 
+                    gap: 0.75rem; 
+                    margin-bottom: 0.75rem; 
+                    font-size: 0.6rem; 
+                    color: var(--text-secondary); 
+                    flex-wrap: nowrap;
+                    overflow-x: auto;
+                    -webkit-overflow-scrolling: touch;
+                    padding-bottom: 0.25rem;
+                ">
+                    <div style="display: flex; align-items: center; gap: 0.3rem; white-space: nowrap; flex-shrink: 0;">
                         <div style="
-                            width: 12px; 
-                            height: 12px; 
+                            width: 10px; 
+                            height: 10px; 
                             border-radius: 50%; 
                             background: var(--heat-gray-bg);
                             border: 1px solid var(--heat-gray-text);
                             box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+                            flex-shrink: 0;
                         "></div>
                         <span>Yet to play</span>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 0.3rem;">
+                    <div style="display: flex; align-items: center; gap: 0.3rem; white-space: nowrap; flex-shrink: 0;">
                         <div style="
-                            width: 12px; 
-                            height: 12px; 
+                            width: 10px; 
+                            height: 10px; 
                             border-radius: 50%; 
                             background: var(--heat-red-bg);
                             border: 1px solid var(--heat-red-text);
                             box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+                            flex-shrink: 0;
                         "></div>
                         <span>0-3 pts</span>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 0.3rem;">
+                    <div style="display: flex; align-items: center; gap: 0.3rem; white-space: nowrap; flex-shrink: 0;">
                         <div style="
-                            width: 12px; 
-                            height: 12px; 
+                            width: 10px; 
+                            height: 10px; 
                             border-radius: 50%; 
                             background: var(--heat-yellow-bg);
                             border: 1px solid var(--heat-yellow-text);
                             box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+                            flex-shrink: 0;
                         "></div>
                         <span>4-8 pts</span>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 0.3rem;">
+                    <div style="display: flex; align-items: center; gap: 0.3rem; white-space: nowrap; flex-shrink: 0;">
                         <div style="
-                            width: 12px; 
-                            height: 12px; 
+                            width: 10px; 
+                            height: 10px; 
                             border-radius: 50%; 
                             background: var(--heat-dark-green-bg);
                             border: 1px solid var(--heat-dark-green-text);
                             box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+                            flex-shrink: 0;
                         "></div>
                         <span>9-13 pts</span>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 0.3rem;">
+                    <div style="display: flex; align-items: center; gap: 0.3rem; white-space: nowrap; flex-shrink: 0;">
                         <div style="
-                            width: 12px; 
-                            height: 12px; 
+                            width: 10px; 
+                            height: 10px; 
                             border-radius: 50%; 
                             background: #7B4B8A;
                             border: 1px solid #D4A8E0;
                             box-shadow: 0 0 4px rgba(123, 75, 138, 0.3);
+                            flex-shrink: 0;
                         "></div>
                         <span>14+ pts</span>
                     </div>
