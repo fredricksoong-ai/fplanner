@@ -25,7 +25,8 @@ function isDarkMode() {
 }
 
 /**
- * Apply frosted glass effect to header on scroll
+ * Apply frosted glass effect to header on scroll (enhanced shadow on scroll)
+ * Header now always has glass effect, but shadow intensifies on scroll
  */
 export function attachHeaderScrollEffect() {
     const header = document.getElementById('compact-header');
@@ -33,25 +34,20 @@ export function attachHeaderScrollEffect() {
 
     const handleScroll = () => {
         const scrollY = window.scrollY || window.pageYOffset;
-        const threshold = 10; // Start applying effect after scrolling 10px
+        const threshold = 10; // Start intensifying shadow after scrolling 10px
 
         if (scrollY > threshold) {
-            const glass = getGlassmorphism(isDarkMode(), 'light');
+            // Intensify shadow on scroll for more depth
+            const shadowMedium = getShadow('medium');
             const duration = getAnimationDuration('fast');
             const curve = getAnimationCurve('standard');
 
-            header.style.backdropFilter = glass.backdropFilter;
-            header.style.webkitBackdropFilter = glass.WebkitBackdropFilter;
-            header.style.background = glass.background;
-            header.style.borderBottom = `1px solid ${glass.border.split(' ').pop()}`;
+            header.style.boxShadow = shadowMedium;
             header.style.transition = `all ${duration} ${curve}`;
-            header.style.boxShadow = getShadow('low');
         } else {
-            header.style.backdropFilter = 'none';
-            header.style.webkitBackdropFilter = 'none';
-            header.style.background = 'var(--bg-primary)';
-            header.style.borderBottom = '2px solid var(--border-color)';
-            header.style.boxShadow = 'none';
+            // Lighter shadow when at top
+            const shadowLow = getShadow('low');
+            header.style.boxShadow = shadowLow;
         }
     };
 
@@ -266,11 +262,15 @@ export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = fa
             style="
                 position: sticky;
                 top: calc(3.5rem + env(safe-area-inset-top)); /* Keeps this box sticky just below the top app bar */
-                background: var(--bg-primary);
+                backdrop-filter: ${glassEffectLight.backdropFilter};
+                -webkit-backdrop-filter: ${glassEffectLight.WebkitBackdropFilter};
+                background: ${glassEffectLight.background};
+                border-bottom: ${glassEffectLight.border};
                 z-index: 100;
                 padding: 0.5rem 0;
-                border-bottom: 2px solid var(--border-color);
                 margin: 0;
+                box-shadow: ${shadowLow};
+                transition: all ${animationDuration} ${animationCurve};
             "
         >
             <div style="display: flex; justify-content: space-between; align-items: stretch; gap: 0.5rem;">
