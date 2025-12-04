@@ -40,10 +40,12 @@ function getPointsColors(gwPoints, minutes) {
     // Use heatmap colors matching player table badges
     if (gwPoints >= 14) {
         // Purple - excellent (14+) - matching league page purple (#9333ea)
+        // League page uses: textColor = '#9333ea', bgColor = 'rgba(147, 51, 234, 0.15)'
+        // For solid bubble backgrounds, we use #9333ea directly
         if (isDark) {
             return {
-                bgColor: '#6d28d9', // Darker purple for dark mode (darker shade of #9333ea)
-                textColor: '#e9d5ff' // Light purple text
+                bgColor: '#9333ea', // Same purple as leagues page (rgb(147, 51, 234))
+                textColor: '#faf5ff' // Very light purple/white text for contrast
             };
         } else {
             return {
@@ -311,7 +313,7 @@ export async function renderCompactBubbleFormation(players, gwNumber, isLive, my
                 rgba(25, 25, 30, 0.95) 100%
             );
             border-radius: 0.75rem;
-            padding-top: 0px !important;
+            padding-top: 1rem !important;
             padding-right: 1rem;
             padding-bottom: 4px !important;
             padding-left: 1rem;
@@ -332,22 +334,33 @@ export async function renderCompactBubbleFormation(players, gwNumber, isLive, my
                 right: 0;
                 bottom: 0;
                 background-image: 
-                    /* Checkered pattern for subtle pitch effect */
+                    /* Checkered pattern for subtle pitch effect - more visible */
                     repeating-linear-gradient(
                         0deg,
                         transparent,
-                        transparent 20px,
-                        rgba(0, 0, 0, 0.02) 20px,
-                        rgba(0, 0, 0, 0.02) 40px
+                        transparent 15px,
+                        rgba(0, 0, 0, 0.04) 15px,
+                        rgba(0, 0, 0, 0.04) 30px
                     ),
                     repeating-linear-gradient(
                         90deg,
                         transparent,
-                        transparent 20px,
-                        rgba(0, 0, 0, 0.02) 20px,
-                        rgba(0, 0, 0, 0.02) 40px
-                    ),
-                    /* Original radial gradients */
+                        transparent 15px,
+                        rgba(0, 0, 0, 0.04) 15px,
+                        rgba(0, 0, 0, 0.04) 30px
+                    );
+                pointer-events: none;
+                z-index: 0;
+                opacity: 0.6;
+            "></div>
+            <!-- Original radial gradients overlay -->
+            <div style="
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background-image: 
                     radial-gradient(circle at 20% 50%, rgba(168, 85, 247, 0.03) 0%, transparent 50%),
                     radial-gradient(circle at 80% 80%, rgba(34, 197, 94, 0.03) 0%, transparent 50%),
                     radial-gradient(circle at 40% 20%, rgba(251, 191, 36, 0.02) 0%, transparent 50%);
