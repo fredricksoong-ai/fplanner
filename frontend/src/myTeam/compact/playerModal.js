@@ -742,6 +742,10 @@ function showLoadingModal(player, team, position, price) {
     const radius = getMobileBorderRadius('xlarge');
     const animationCurve = getAnimationCurve('decelerate');
     const animationDuration = getAnimationDuration('modal');
+    
+    // Get glassmorphism for modal content
+    const isDark = isDarkMode();
+    const glassEffect = getGlassmorphism(isDark, 'heavy');
 
     const loadingHTML = `
         <div id="player-modal" style="
@@ -751,8 +755,8 @@ function showLoadingModal(player, team, position, price) {
             right: 0;
             bottom: 0;
             background: rgba(0,0,0,0.4);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
             z-index: 10000;
             display: flex;
             align-items: center;
@@ -761,7 +765,10 @@ function showLoadingModal(player, team, position, price) {
             animation: fadeIn ${animationDuration} ${animationCurve};
         ">
             <div style="
-                background: var(--bg-primary);
+                backdrop-filter: ${glassEffect.backdropFilter};
+                -webkit-backdrop-filter: ${glassEffect.WebkitBackdropFilter};
+                background: ${glassEffect.background};
+                border: ${glassEffect.border};
                 border-radius: ${radius};
                 max-width: 500px;
                 width: 100%;
@@ -1162,6 +1169,10 @@ function buildModalHTML(data) {
     const radius = getMobileBorderRadius('xlarge');
     const animationCurve = getAnimationCurve('decelerate');
     const animationDuration = getAnimationDuration('modal');
+    
+    // Get glassmorphism for modal content
+    const isDark = isDarkMode();
+    const glassEffect = getGlassmorphism(isDark, 'heavy');
 
     return `
         <div style="
@@ -1171,8 +1182,8 @@ function buildModalHTML(data) {
             right: 0;
             bottom: 0;
             background: rgba(0,0,0,0.4);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
             z-index: 10000;
             display: flex;
             align-items: center;
@@ -1181,7 +1192,10 @@ function buildModalHTML(data) {
             animation: fadeIn ${animationDuration} ${animationCurve};
         ">
             <div style="
-                background: var(--bg-primary);
+                backdrop-filter: ${glassEffect.backdropFilter};
+                -webkit-backdrop-filter: ${glassEffect.WebkitBackdropFilter};
+                background: ${glassEffect.background};
+                border: ${glassEffect.border};
                 border-radius: ${radius};
                 max-width: 500px;
                 width: 100%;

@@ -9,6 +9,7 @@ import { renderTeamComparison } from './teamComparison.js';
 import { shouldUseMobileLayout } from '../renderMyTeamMobile.js';
 import { getGWOpponent, getMatchStatus, calculateFixtureDifficulty } from '../fixtures.js';
 import { renderOpponentBadge, calculateStatusColor, calculatePlayerBgColor } from './compact/compactStyleHelpers.js';
+import { getGlassmorphism, getShadow, getMobileBorderRadius } from '../styles/mobileDesignSystem.js';
 
 /**
  * Calculate live team points from cached team data
@@ -1285,6 +1286,12 @@ function renderMobileRivalModal(rivalTeamData, myTeamState = null) {
         `;
     };
 
+    // Get glassmorphism effects
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const glassEffect = getGlassmorphism(isDark, 'heavy');
+    const shadow = getShadow('modal');
+    const radius = getMobileBorderRadius('xlarge');
+
     return `
         <div class="rival-modal-overlay" style="
             position: fixed;
@@ -1292,7 +1299,9 @@ function renderMobileRivalModal(rivalTeamData, myTeamState = null) {
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.85);
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
             z-index: 2000;
             overflow-y: auto;
         ">
@@ -1306,10 +1315,14 @@ function renderMobileRivalModal(rivalTeamData, myTeamState = null) {
             ">
                 <!-- Header -->
                 <div style="
-                    background: var(--bg-primary);
+                    backdrop-filter: ${glassEffect.backdropFilter};
+                    -webkit-backdrop-filter: ${glassEffect.WebkitBackdropFilter};
+                    background: ${glassEffect.background};
+                    border: ${glassEffect.border};
                     padding: 1rem;
-                    border-radius: 12px 12px 0 0;
-                    border-bottom: 2px solid var(--border-color);
+                    border-radius: ${radius} ${radius} 0 0;
+                    border-bottom: ${glassEffect.border};
+                    box-shadow: ${shadow};
                 ">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
                         <h3 class="heading-section" style="margin: 0;">
@@ -1347,7 +1360,16 @@ function renderMobileRivalModal(rivalTeamData, myTeamState = null) {
                 </div>
 
                 <!-- Team List -->
-                <div style="background: var(--bg-primary); padding: 0; border-radius: 0 0 12px 12px;">
+                <div style="
+                    backdrop-filter: ${glassEffect.backdropFilter};
+                    -webkit-backdrop-filter: ${glassEffect.WebkitBackdropFilter};
+                    background: ${glassEffect.background};
+                    border: ${glassEffect.border};
+                    border-top: none;
+                    padding: 0; 
+                    border-radius: 0 0 ${radius} ${radius};
+                    box-shadow: ${shadow};
+                ">
                     <!-- Column Headers - matching Team table -->
                     <div class="mobile-table-header mobile-table-team" style="padding: 0.5rem;">
                         <div>Player</div>
