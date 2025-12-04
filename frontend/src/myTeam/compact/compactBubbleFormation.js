@@ -39,17 +39,17 @@ function getPointsColors(gwPoints, minutes) {
     
     // Use heatmap colors matching player table badges
     if (gwPoints >= 14) {
-        // Purple - excellent (14+) - matching league page purple (#9333ea)
-        // League page uses: textColor = '#9333ea', bgColor = 'rgba(147, 51, 234, 0.15)'
-        // For solid bubble backgrounds, we use #9333ea directly
+        // Purple - excellent (14+) - matching league page purple
+        // League page uses: bgColor = 'rgba(147, 51, 234, 0.15)', textColor = '#9333ea'
+        // For bubbles: use rgba background, #faf5ff text
         if (isDark) {
             return {
-                bgColor: '#9333ea', // Same purple as leagues page (rgb(147, 51, 234))
-                textColor: '#faf5ff' // Very light purple/white text for contrast
+                bgColor: 'rgba(147, 51, 234, 0.15)', // Semi-transparent purple matching league page
+                textColor: '#faf5ff' // Very light purple/white text
             };
         } else {
             return {
-                bgColor: '#9333ea', // Same purple as leagues page
+                bgColor: 'rgba(147, 51, 234, 0.15)', // Same for light mode
                 textColor: '#faf5ff' // Very light purple/white text
             };
         }
