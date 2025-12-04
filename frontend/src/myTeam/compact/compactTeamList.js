@@ -20,6 +20,7 @@ import { getFixtures, getGWOpponent, getMatchStatus } from '../../fixtures.js';
 import { calculateStatusColor } from './compactStyleHelpers.js';
 import { isWishlisted } from '../../wishlist/store.js';
 import { isGuillotined } from '../../guillotine/store.js';
+import { getGlassmorphism, getShadow, getMobileBorderRadius } from '../../styles/mobileDesignSystem.js';
 
 /**
  * Render comprehensive team table with horizontal scroll
@@ -35,12 +36,22 @@ export function renderCompactTeamList(players, gwNumber, isLive) {
     const activeGW = getActiveGW();
     const next5GWs = [activeGW + 1, activeGW + 2, activeGW + 3, activeGW + 4, activeGW + 5];
 
+    // Get glassmorphism effects
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const glassEffect = getGlassmorphism(isDark, 'medium');
+    const shadow = getShadow('low');
+    const radius = getMobileBorderRadius('large');
+
     return `
         <div style="
-            background: var(--bg-secondary);
-            border-radius: 8px;
+            backdrop-filter: ${glassEffect.backdropFilter};
+            -webkit-backdrop-filter: ${glassEffect.WebkitBackdropFilter};
+            background: ${glassEffect.background};
+            border: ${glassEffect.border};
+            border-radius: ${radius};
             overflow: hidden;
             margin-bottom: 0.5rem;
+            box-shadow: ${shadow};
         ">
             <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
                 <table style="width: 100%; font-size: 0.7rem; border-collapse: collapse;">

@@ -11,7 +11,7 @@ import {
     calculateRankIndicator,
     calculateGWIndicator
 } from './compactStyleHelpers.js';
-import { getGlassmorphism, getShadow, getAnimationCurve, getAnimationDuration } from '../../styles/mobileDesignSystem.js';
+import { getGlassmorphism, getShadow, getAnimationCurve, getAnimationDuration, getMobileBorderRadius } from '../../styles/mobileDesignSystem.js';
 
 // Cache for transfer history
 let transferHistoryCache = new Map();
@@ -237,6 +237,16 @@ export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = fa
     const gwAverage = gwEvent?.average_entry_score || 0;
     const pointsColor = calculatePointsColor(gwPoints, gwAverage);
 
+    // Get glassmorphism effects for components
+    const isDark = isDarkMode();
+    const glassEffectLight = getGlassmorphism(isDark, 'light');
+    const shadowLow = getShadow('low');
+    const shadowMedium = getShadow('medium');
+    const animationDuration = getAnimationDuration('fast');
+    const animationCurve = getAnimationCurve('standard');
+    const springCurve = getAnimationCurve('spring');
+    const borderRadius = getMobileBorderRadius('medium');
+
     // Get selected league info
     const selectedLeagueId = localStorage.getItem(`fpl_selected_league_${team.id}`);
     let leagueInfo = '';
@@ -269,16 +279,19 @@ export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = fa
                         <button
                             id="change-team-btn"
                             style="
-                                background: transparent;
-                                border: 1px solid var(--border-color);
-                                border-radius: 0.5rem;
+                                backdrop-filter: ${glassEffectLight.backdropFilter};
+                                -webkit-backdrop-filter: ${glassEffectLight.WebkitBackdropFilter};
+                                background: ${glassEffectLight.background};
+                                border: ${glassEffectLight.border};
+                                border-radius: ${borderRadius};
                                 padding: 0.2rem 0.35rem;
                                 color: var(--text-secondary);
                                 cursor: pointer;
                                 display: flex;
                                 align-items: center;
                                 justify-content: center;
-                                transition: all 0.2s;
+                                transition: all ${animationDuration} ${springCurve};
+                                box-shadow: ${shadowLow};
                             "
                             title="Change Team"
                         >
@@ -322,16 +335,19 @@ export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = fa
 
                 <div style="display: flex; align-items: stretch;">
                     <div id="gw-points-card" style="
-                        background: var(--bg-primary);
-                        border: 1px solid var(--border-color);
-                        border-radius: 0.5rem;
+                        backdrop-filter: ${glassEffectLight.backdropFilter};
+                        -webkit-backdrop-filter: ${glassEffectLight.WebkitBackdropFilter};
+                        background: ${glassEffectLight.background};
+                        border: ${glassEffectLight.border};
+                        border-radius: ${borderRadius};
                         padding: 0.3rem 0.6rem;
                         text-align: center;
                         min-width: 175px;
                         display: flex;
                         flex-direction: column;
                         justify-content: right;
-                        box-shadow: ${getShadow('low')};
+                        box-shadow: ${shadowLow};
+                        transition: all ${animationDuration} ${animationCurve};
                     ">
                         <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
                             <div style="font-size: 2rem; font-weight: 800; color: ${pointsColor}; line-height: 1;">

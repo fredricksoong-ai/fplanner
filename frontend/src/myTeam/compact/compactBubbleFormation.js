@@ -7,6 +7,7 @@ import { getPlayerById, getActiveGW } from '../../data.js';
 import { getPositionShort, escapeHtml } from '../../utils.js';
 import { getGWOpponent } from '../../fixtures.js';
 import { calculateGWPointsBreakdown, showPlayerModal } from './playerModal.js';
+import { getGlassmorphism, getShadow, getMobileBorderRadius } from '../../styles/mobileDesignSystem.js';
 
 let echarts = null; // Lazy-loaded ECharts instance
 let currentChart = null; // Current chart instance for cleanup
@@ -304,28 +305,29 @@ export async function renderCompactBubbleFormation(players, gwNumber, isLive, my
         return '';
     }
 
+    // Get glassmorphism effects (adaptive to light/dark mode)
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const glassEffect = getGlassmorphism(isDark, 'medium');
+    const shadow = getShadow('medium');
+    const radius = getMobileBorderRadius('large');
+
     return `
         <div style="
-            background: linear-gradient(135deg, 
-                rgba(30, 30, 30, 0.95) 0%, 
-                rgba(20, 20, 25, 0.98) 50%,
-                rgba(25, 25, 30, 0.95) 100%
-            );
-            border-radius: 0.75rem;
+            backdrop-filter: ${glassEffect.backdropFilter};
+            -webkit-backdrop-filter: ${glassEffect.WebkitBackdropFilter};
+            background: ${glassEffect.background};
+            border: ${glassEffect.border};
+            border-radius: ${radius};
             padding-top: 1rem !important;
             padding-right: 1rem;
             padding-bottom: 4px !important;
             padding-left: 1rem;
             margin-bottom: 1rem;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 
-                0 4px 6px -1px rgba(0, 0, 0, 0.3),
-                0 2px 4px -1px rgba(0, 0, 0, 0.2),
-                inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+            box-shadow: ${shadow};
             position: relative;
             overflow: hidden;
         ">
-            <!-- Subtle pattern overlay -->
+            <!-- Subtle pattern overlay (adaptive opacity) -->
             <div style="
                 position: absolute;
                 top: 0;
@@ -333,9 +335,9 @@ export async function renderCompactBubbleFormation(players, gwNumber, isLive, my
                 right: 0;
                 bottom: 0;
                 background-image: 
-                    radial-gradient(circle at 20% 50%, rgba(168, 85, 247, 0.03) 0%, transparent 50%),
-                    radial-gradient(circle at 80% 80%, rgba(34, 197, 94, 0.03) 0%, transparent 50%),
-                    radial-gradient(circle at 40% 20%, rgba(251, 191, 36, 0.02) 0%, transparent 50%);
+                    radial-gradient(circle at 20% 50%, rgba(168, 85, 247, ${isDark ? '0.03' : '0.015'}) 0%, transparent 50%),
+                    radial-gradient(circle at 80% 80%, rgba(34, 197, 94, ${isDark ? '0.03' : '0.015'}) 0%, transparent 50%),
+                    radial-gradient(circle at 40% 20%, rgba(251, 191, 36, ${isDark ? '0.02' : '0.01'}) 0%, transparent 50%);
                 pointer-events: none;
                 z-index: 0;
             "></div>
@@ -536,11 +538,14 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
                 symbol: 'circle',
                 itemStyle: {
                     color: colors.bgColor,
-                    opacity: 1, // Full opacity for better visibility
-                    // White borders for captain/vice captain - visible against colored backgrounds
-                    borderColor: pick.is_captain ? 'rgba(255, 255, 255, 0.7)' : (pick.is_vice_captain ? 'rgba(255, 255, 255, 0.7)' : 'rgba(255, 255, 255, 0.3)'),
-                    borderWidth: pick.is_captain ? 3 : (pick.is_vice_captain ? 2.5 : 2),
-                    shadowBlur: 0
+                    opacity: 0.95, // Slight transparency for subtle glass-like effect
+                    // Softer borders with glass-like appearance
+                    borderColor: pick.is_captain ? 'rgba(255, 255, 255, 0.6)' : (pick.is_vice_captain ? 'rgba(255, 255, 255, 0.5)' : 'rgba(255, 255, 255, 0.25)'),
+                    borderWidth: pick.is_captain ? 2.5 : (pick.is_vice_captain ? 2 : 1.5),
+                    // Subtle shadow for depth
+                    shadowBlur: pick.is_captain ? 8 : (pick.is_vice_captain ? 6 : 4),
+                    shadowColor: 'rgba(0, 0, 0, 0.15)',
+                    shadowOffsetY: 2
                 },
                 label: {
                     show: true,
