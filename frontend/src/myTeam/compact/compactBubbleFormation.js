@@ -395,8 +395,8 @@ export async function renderCompactBubbleFormation(players, gwNumber, isLive, my
                             width: 12px; 
                             height: 12px; 
                             border-radius: 50%; 
-                            background: rgba(147, 51, 234, 0.15);
-                            border: 1px solid #9333ea;
+                            background: #9333ea;
+                            border: 1px solid #faf5ff;
                             box-shadow: 0 0 4px rgba(147, 51, 234, 0.3);
                         "></div>
                         <span>14+ pts</span>
