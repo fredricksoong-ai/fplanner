@@ -126,6 +126,8 @@ import {
     initBubbleFormationChart
 } from './renderMyTeamCompact.js';
 
+import { renderFixturesTicker } from './myTeam/compact/compactFixturesTicker.js';
+
 import {
     showRefreshToast,
     showWarningToast
@@ -851,6 +853,7 @@ async function renderTeamOverviewTab(teamData) {
         
         return `
             ${renderCompactHeader(teamData, gameweek, isAutoRefreshActive())}
+            ${renderFixturesTicker()}
             <div style="padding: 0.75rem;">
                 ${bubbleFormationHTML}
                 ${renderCompactTeamList(allPlayers, gameweek, isLive)}
