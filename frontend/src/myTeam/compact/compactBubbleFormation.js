@@ -298,8 +298,9 @@ function packCirclesInRow(circles, rowWidth, rowCenterY) {
  * @returns {string} HTML for bubble formation section
  */
 export async function renderCompactBubbleFormation(players, gwNumber, isLive, myTeamState = null) {
-    // Filter to starting 11 only (positions 1-11)
+    // Filter to starting 11 (positions 1-11) and bench (positions 12-15)
     const starters = players.filter(p => p.position <= 11).sort((a, b) => a.position - b.position);
+    const bench = players.filter(p => p.position > 11 && p.position <= 15).sort((a, b) => a.position - b.position);
     
     if (starters.length === 0) {
         return '';
@@ -470,7 +471,7 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
 
     const containerWidth = 100;
     const containerHeight = 100;
-    const numRows = 4;
+    const numRows = 5; // 4 for starters + 1 for bench
     // Tighter spacing: use more of the container height, less wasted space
     const rowHeight = containerHeight / (numRows + 0.2); // Even tighter spacing
     const rowWidth = containerWidth;
@@ -587,6 +588,101 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
 
         rowIndex++;
     });
+    
+    // Calculate separator line Y position (between FWD row and bench row)
+    let separatorY = null;
+    if (bench.length > 0) {
+        // Position the separator line at the boundary between FWD row and bench row
+        // After processing FWD, rowIndex is 4, so separator is at the top of bench row
+        separatorY = topOffset + rowIndex * rowHeight;
+    }
+    
+    // Add bench players as a single row (left to right by position)
+    if (bench.length > 0) {
+        const benchCircles = bench.map(pick => {
+            const player = getPlayerById(pick.element);
+            if (!player) return null;
+
+            const hasGWStats = player.github_gw && player.github_gw.gw === gwNumber;
+            const liveStats = player.live_stats;
+            const gwStats = (!isLive || !liveStats) && hasGWStats ? player.github_gw : {};
+
+            let gwPoints = liveStats?.total_points ?? 
+                         (hasGWStats ? gwStats.total_points : (player.event_points || 0));
+            
+            // Get minutes
+            let minutes = 0;
+            if (liveStats?.minutes !== null && liveStats?.minutes !== undefined) {
+                minutes = liveStats.minutes;
+            } else if (hasGWStats && gwStats.minutes !== null && gwStats.minutes !== undefined) {
+                minutes = gwStats.minutes;
+            }
+
+            const ownership = parseFloat(player.selected_by_percent) || 0;
+            const bubbleSize = calculateBubbleSize(ownership);
+
+            return {
+                pick,
+                player,
+                liveStats,
+                gwStats,
+                gwPoints,
+                minutes,
+                ownership,
+                radius: bubbleSize / 2,
+                size: bubbleSize
+            };
+        }).filter(Boolean);
+
+        const benchRowCenterY = topOffset + (rowIndex + 0.5) * rowHeight;
+        packCirclesInRow(benchCircles, rowWidth, benchRowCenterY);
+
+        benchCircles.forEach(circle => {
+            const { pick, player, liveStats, gwStats, gwPoints, minutes, ownership, size } = circle;
+            const fontSize = getFontSize(size);
+            const colors = getPointsColors(gwPoints, minutes);
+
+            // Just the player name, no (C) or (VC) labels
+            const labelText = escapeHtml(player.web_name);
+
+            allNodes.push({
+                name: player.web_name,
+                value: [circle.x, circle.y, size],
+                symbolSize: size,
+                symbol: 'circle',
+                itemStyle: {
+                    color: colors.bgColor,
+                    opacity: 0.7, // Lower opacity for bench players
+                    // Softer borders for bench
+                    borderColor: 'rgba(255, 255, 255, 0.2)',
+                    borderWidth: 1.5,
+                    shadowBlur: 3,
+                    shadowColor: 'rgba(0, 0, 0, 0.1)',
+                    shadowOffsetY: 1
+                },
+                label: {
+                    show: true,
+                    formatter: labelText,
+                    fontSize: fontSize,
+                    fontWeight: 'bold',
+                    color: colors.textColor,
+                    textBorderColor: 'rgba(0, 0, 0, 0.4)',
+                    textBorderWidth: 1
+                },
+                playerData: {
+                    player,
+                    pick,
+                    liveStats,
+                    gwStats,
+                    gwPoints,
+                    minutes,
+                    ownership,
+                    gwNumber,
+                    activeGW
+                }
+            });
+        });
+    }
 
     const option = {
         grid: {
@@ -623,7 +719,19 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
             },
             emphasis: {
                 scale: true
-            }
+            },
+            markLine: separatorY !== null ? {
+                silent: true,
+                symbol: 'none',
+                lineStyle: {
+                    color: 'rgba(255, 255, 255, 0.15)',
+                    width: 1,
+                    type: 'dashed'
+                },
+                data: [{
+                    yAxis: separatorY
+                }]
+            } : undefined
         }]
     };
 

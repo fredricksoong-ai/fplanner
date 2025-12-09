@@ -511,16 +511,20 @@ export function showFixtureStatsModal(fixtureId) {
 export function attachFixtureTickerListeners() {
     // Retry mechanism in case DOM isn't ready yet
     const tryAttach = (attempt = 0) => {
+        console.log(`🔍 Attempting to attach fixture ticker listeners (attempt ${attempt + 1})...`);
         const container = document.querySelector('.fixtures-ticker-container');
         if (!container) {
+            console.log(`⚠️ Container not found on attempt ${attempt + 1}`);
             if (attempt < 5) {
                 // Retry after a short delay
                 setTimeout(() => tryAttach(attempt + 1), 100);
             } else {
-                console.warn('Fixture ticker container not found after retries');
+                console.warn('❌ Fixture ticker container not found after retries');
             }
             return;
         }
+        
+        console.log('✅ Container found:', container);
 
         // Check if listeners already attached
         if (container.hasAttribute('data-ticker-listeners-attached')) {
@@ -529,17 +533,38 @@ export function attachFixtureTickerListeners() {
 
         container.setAttribute('data-ticker-listeners-attached', 'true');
 
+        console.log('✅ Fixture ticker listeners attached. Container found:', container);
+        console.log('Fixture cards found:', container.querySelectorAll('.fixture-card-ticker').length);
+
         container.addEventListener('click', (e) => {
+            console.log('🔍 Click detected on:', e.target);
+            console.log('🔍 Click target class:', e.target.className);
+            
             const fixtureCard = e.target.closest('.fixture-card-ticker');
-            if (!fixtureCard) return;
+            console.log('🔍 Fixture card found:', fixtureCard);
+            
+            if (!fixtureCard) {
+                console.log('❌ No fixture card found for click');
+                return;
+            }
 
             const canExpand = fixtureCard.getAttribute('data-can-expand') === 'true';
-            if (!canExpand) return;
+            console.log('🔍 Can expand:', canExpand);
+            
+            if (!canExpand) {
+                console.log('❌ Fixture card is not expandable');
+                return;
+            }
 
             const fixtureId = fixtureCard.getAttribute('data-fixture-id');
-            if (!fixtureId) return;
+            console.log('🔍 Fixture ID:', fixtureId);
+            
+            if (!fixtureId) {
+                console.log('❌ No fixture ID found');
+                return;
+            }
 
-            console.log('Opening fixture modal for:', fixtureId);
+            console.log('✅ Opening fixture modal for:', fixtureId);
             showFixtureStatsModal(parseInt(fixtureId));
         });
 
