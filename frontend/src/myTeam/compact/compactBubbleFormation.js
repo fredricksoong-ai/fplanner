@@ -647,9 +647,9 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
 
             // Position bench row below separator with gap
             const benchRowCenterY = separatorY + benchGap + rowHeight / 2;
-        packCirclesInRow(benchCircles, rowWidth, benchRowCenterY);
+            packCirclesInRow(benchCircles, rowWidth, benchRowCenterY);
 
-        benchCircles.forEach(circle => {
+            benchCircles.forEach(circle => {
             const { pick, player, liveStats, gwStats, gwPoints, minutes, ownership, size } = circle;
             const fontSize = getFontSize(size);
             const colors = getPointsColors(gwPoints, minutes);
@@ -693,6 +693,7 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
                 }
             });
         });
+        }
     }
 
     // Debug: Check if we have nodes
