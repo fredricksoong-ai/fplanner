@@ -348,6 +348,7 @@ export async function renderCompactBubbleFormation(players, gwNumber, isLive, my
                 <!-- Legend moved to top -->
                 <div style="
                     display: flex; 
+                    justify-content: center;
                     gap: 0.75rem; 
                     margin-bottom: 0.75rem; 
                     font-size: 0.6rem; 
@@ -472,12 +473,15 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
 
     const containerWidth = 100;
     const containerHeight = 100;
-    const numRows = 5; // 4 for starters + 1 for bench
+    const numRows = 4; // 4 for starters (bench will be positioned separately)
     // Tighter spacing: use more of the container height, less wasted space
     const rowHeight = containerHeight / (numRows + 0.2); // Even tighter spacing
     const rowWidth = containerWidth;
     // Adjust starting position to reduce top gap further
     const topOffset = 0.5; // Start much closer to top
+    // Extra spacing for separator and bench
+    const separatorGap = rowHeight * 0.3; // Gap between FWD and separator
+    const benchGap = rowHeight * 0.3; // Gap between separator and bench
     
     const allNodes = [];
     let rowIndex = 0;
@@ -600,9 +604,9 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
     // Calculate separator line Y position (between FWD row and bench row)
     let separatorY = null;
     if (bench.length > 0) {
-        // Position the separator line at the boundary between FWD row and bench row
-        // After processing FWD, rowIndex is 4, so separator is at the top of bench row
-        separatorY = topOffset + rowIndex * rowHeight;
+        // Position the separator line with gap after FWD row
+        // After processing FWD, rowIndex is 4, so separator is below FWD with gap
+        separatorY = topOffset + rowIndex * rowHeight + separatorGap;
     }
     
     // Add bench players as a single row (left to right by position)
@@ -646,7 +650,8 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
             return;
         }
 
-        const benchRowCenterY = topOffset + (rowIndex + 0.5) * rowHeight;
+        // Position bench row below separator with gap
+        const benchRowCenterY = separatorY + benchGap + rowHeight / 2;
         packCirclesInRow(benchCircles, rowWidth, benchRowCenterY);
 
         benchCircles.forEach(circle => {

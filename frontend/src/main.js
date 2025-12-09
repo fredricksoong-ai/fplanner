@@ -560,54 +560,8 @@ export async function updateNavTeamWidget(teamData) {
     const animationDuration = getAnimationDuration('fast');
     const springCurve = getAnimationCurve('spring');
 
-    // Build team info HTML
-    teamInfo.innerHTML = `
-        <button
-            id="nav-change-team-btn"
-            style="
-                backdrop-filter: ${glassEffect.backdropFilter};
-                -webkit-backdrop-filter: ${glassEffect.WebkitBackdropFilter};
-                background: ${glassEffect.background};
-                border: ${glassEffect.border};
-                border-radius: ${radius};
-                padding: 0.2rem 0.35rem;
-                color: white;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                transition: all ${animationDuration} ${springCurve};
-                box-shadow: ${shadow};
-            "
-            title="Change Team"
-        >
-            <i class="fas fa-exchange-alt" style="font-size: 0.7rem;"></i>
-        </button>
-        <div style="display: flex; flex-direction: column; gap: 0.1rem;">
-            <div style="font-size: 1rem; font-weight: 700; color: white; line-height: 1.2;">
-                ${escapeHtml(teamName)}
-            </div>
-            <div style="font-size: 0.7rem; color: rgba(255, 255, 255, 0.8); line-height: 1.2;">
-                (£${squadValue}m + £${bank}m)
-            </div>
-        </div>
-    `;
-
-    teamInfo.style.display = 'flex';
-    
-    // Add click handler for change team button
-    const changeTeamBtn = document.getElementById('nav-change-team-btn');
-    if (changeTeamBtn) {
-        // Remove existing listeners
-        const newBtn = changeTeamBtn.cloneNode(true);
-        changeTeamBtn.parentNode.replaceChild(newBtn, changeTeamBtn);
-        
-        newBtn.addEventListener('click', () => {
-            if (window.resetMyTeam) {
-                window.resetMyTeam();
-            }
-        });
-    }
+    // Hide team info in app header (moved to compact header)
+    teamInfo.style.display = 'none';
 }
 
 // ============================================================================
