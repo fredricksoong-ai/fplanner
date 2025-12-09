@@ -123,7 +123,7 @@ function getFixtureTopPerformers(fixture, gameweek, isLive) {
  * @param {Object} fplBootstrap - Bootstrap data for team names
  * @returns {string} HTML for player stats section
  */
-function renderFixturePlayerStats(fixture, gameweek, isLive, isFinished, isDesktop, fplBootstrap) {
+export function renderFixturePlayerStats(fixture, gameweek, isLive, isFinished, isDesktop, fplBootstrap) {
     // Only show for finished or live fixtures
     if (!isFinished && !isLive) {
         return '';
