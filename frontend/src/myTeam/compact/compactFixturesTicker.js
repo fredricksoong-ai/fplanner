@@ -113,6 +113,11 @@ function getFixtureState(fixture) {
  * @returns {string} HTML for fixture card
  */
 function renderFixtureCard(fixture, fplBootstrap, isLast = false) {
+    // Safety check for teams array
+    if (!fplBootstrap?.teams || !Array.isArray(fplBootstrap.teams)) {
+        return '';
+    }
+
     const homeTeam = fplBootstrap.teams.find(t => t.id === fixture.team_h);
     const awayTeam = fplBootstrap.teams.find(t => t.id === fixture.team_a);
 
@@ -187,23 +192,34 @@ function renderFixtureCard(fixture, fplBootstrap, isLast = false) {
  * @returns {string} HTML for fixtures ticker
  */
 export function renderFixturesTicker() {
-    const fplFixtures = getFixturesData();
-    const fplBootstrap = getBootstrapData();
-    const currentGW = getActiveGW();
+    try {
+        const fplFixtures = getFixturesData; // This is a variable, not a function
+        const fplBootstrap = getBootstrapData; // This is a variable, not a function
+        const currentGW = getActiveGW();
 
-    if (!fplFixtures || !fplBootstrap || !currentGW) {
-        return '';
-    }
+        if (!fplFixtures || !fplBootstrap || !currentGW) {
+            return '';
+        }
 
-    // Determine which GW to show
-    const currentEvent = fplBootstrap.events.find(e => e.id === currentGW);
-    const isCurrentGWFinished = currentEvent?.finished || false;
-    const targetGW = isCurrentGWFinished ? currentGW + 1 : currentGW;
+        // Check if events array exists
+        if (!fplBootstrap.events || !Array.isArray(fplBootstrap.events)) {
+            return '';
+        }
 
-    // Get fixtures for target GW
-    // Include fixtures with event matching targetGW
-    // Include postponed fixtures (event === null) if they're for the target GW
-    let fixtures = fplFixtures.filter(f => f.event === targetGW);
+        // Check if fixtures is an array
+        if (!Array.isArray(fplFixtures)) {
+            return '';
+        }
+
+        // Determine which GW to show
+        const currentEvent = fplBootstrap.events.find(e => e.id === currentGW);
+        const isCurrentGWFinished = currentEvent?.finished || false;
+        const targetGW = isCurrentGWFinished ? currentGW + 1 : currentGW;
+
+        // Get fixtures for target GW
+        // Include fixtures with event matching targetGW
+        // Include postponed fixtures (event === null) if they're for the target GW
+        let fixtures = fplFixtures.filter(f => f.event === targetGW);
 
     // Sort chronologically (postponed fixtures without kickoff_time go to end)
     fixtures.sort((a, b) => {
@@ -269,7 +285,12 @@ export function renderFixturesTicker() {
             .fixtures-ticker-container::-webkit-scrollbar {
                 display: none; /* Chrome/Safari */
             }
-        </style>
+            </style>
     `;
+    } catch (error) {
+        console.error('Error rendering fixtures ticker:', error);
+        // Return empty string on error to prevent breaking the page
+        return '';
+    }
 }
 
