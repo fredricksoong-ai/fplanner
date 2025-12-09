@@ -126,7 +126,7 @@ import {
     initBubbleFormationChart
 } from './renderMyTeamCompact.js';
 
-import { renderFixturesTicker } from './myTeam/compact/compactFixturesTicker.js';
+import { renderFixturesTicker, attachFixtureTickerListeners } from './myTeam/compact/compactFixturesTicker.js';
 
 import {
     showRefreshToast,
@@ -524,6 +524,9 @@ export async function renderMyTeam(teamData, subTab = 'overview') {
                 attachPlayerRowListeners(myTeamState);
                 attachTransferListeners();
                 attachHeaderScrollEffect(); // Apply frosted glass on scroll
+                
+                // Attach fixture ticker listeners
+                attachFixtureTickerListeners();
                 
                 // Initialize bubble formation chart
                 const { picks, gameweek } = teamData;
