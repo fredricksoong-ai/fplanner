@@ -110,9 +110,10 @@ function getFixtureState(fixture) {
  * @param {Object} fixture - Fixture object
  * @param {Object} fplBootstrap - Bootstrap data
  * @param {boolean} isLast - Whether this is the last fixture card
+ * @param {boolean} isEven - Whether this is an even-indexed fixture (for alternating backgrounds)
  * @returns {string} HTML for fixture card
  */
-function renderFixtureCard(fixture, fplBootstrap, isLast = false) {
+function renderFixtureCard(fixture, fplBootstrap, isLast = false, isEven = false) {
     // Safety check for teams array
     if (!fplBootstrap?.teams || !Array.isArray(fplBootstrap.teams)) {
         return '';
@@ -129,11 +130,19 @@ function renderFixtureCard(fixture, fplBootstrap, isLast = false) {
     const awayShort = getTeamShortName(awayTeam);
     const state = getFixtureState(fixture);
 
+    // Apply alternating background only for non-live fixtures
+    // Live fixtures keep their red background
+    let finalBgColor = state.bgColor;
+    if (state.bgColor === 'transparent') {
+        // Apply subtle alternating background for non-live fixtures
+        finalBgColor = isEven ? 'rgba(255, 255, 255, 0.02)' : 'transparent';
+    }
+
     return `
         <div class="fixture-card" style="
             min-width: 55px;
             flex-shrink: 0;
-            background: ${state.bgColor};
+            background: ${finalBgColor};
             border-radius: 0.4rem;
             padding: 0.25rem 0.2rem;
             display: grid;
@@ -157,7 +166,7 @@ function renderFixtureCard(fixture, fplBootstrap, isLast = false) {
                 font-weight: ${state.fontWeight || '600'};
                 color: ${state.textColor};
                 opacity: ${state.opacity};
-                text-align: right;
+                text-align: left;
                 line-height: 1.1;
             ">
                 ${state.homeDisplay}
@@ -177,7 +186,7 @@ function renderFixtureCard(fixture, fplBootstrap, isLast = false) {
                 font-weight: ${state.fontWeight || '600'};
                 color: ${state.textColor};
                 opacity: ${state.opacity};
-                text-align: right;
+                text-align: left;
                 line-height: 1.1;
             ">
                 ${state.awayDisplay}
@@ -256,7 +265,8 @@ export function renderFixturesTicker() {
     const fixtureCards = fixtures
         .map((fixture, index) => {
             const isLast = index === fixtures.length - 1;
-            return renderFixtureCard(fixture, fplBootstrap, isLast);
+            const isEven = index % 2 === 0;
+            return renderFixtureCard(fixture, fplBootstrap, isLast, isEven);
         })
         .join('');
 
