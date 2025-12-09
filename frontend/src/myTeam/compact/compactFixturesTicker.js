@@ -146,7 +146,7 @@ function renderFixtureCard(fixture, fplBootstrap, isLast = false, isEven = false
         cardBackground = 'rgba(239, 68, 68, 0.1)';
     } else {
         // Apply alternating for all non-live fixtures (upcoming, finished, postponed)
-        cardBackground = isEven ? 'rgba(255, 255, 255, 1)' : 'rgba(255, 255, 255, 0.2)';
+        cardBackground = isEven ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.2)';
     }
 
     return `
