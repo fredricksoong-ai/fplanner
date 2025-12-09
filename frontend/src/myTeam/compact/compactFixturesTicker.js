@@ -94,8 +94,8 @@ function getFixtureState(fixture) {
         
         return {
             state: 'UPCOMING',
-            homeDisplay: day,
-            awayDisplay: time,
+            homeDisplay: day,  // Day on home team line
+            awayDisplay: time,  // Time on away team line
             homeScore: null,
             awayScore: null,
             bgColor: 'transparent',
@@ -131,56 +131,36 @@ function renderFixtureCard(fixture, fplBootstrap, isLast = false) {
 
     return `
         <div class="fixture-card" style="
-            min-width: 70px;
+            min-width: 55px;
             flex-shrink: 0;
             background: ${state.bgColor};
-            border-radius: 0.5rem;
-            padding: 0.4rem 0.3rem;
+            border-radius: 0.4rem;
+            padding: 0.25rem 0.2rem;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 0.2rem;
+            gap: 0.1rem;
             ${!isLast ? 'border-right: 1px solid var(--border-color);' : ''}
         ">
             <div style="
-                font-size: 0.65rem;
+                font-size: 0.5rem;
                 font-weight: 600;
                 color: ${state.textColor};
                 opacity: ${state.opacity};
                 text-align: center;
-                line-height: 1.2;
+                line-height: 1.1;
             ">
-                ${homeShort}
+                ${homeShort} ${state.homeDisplay}
             </div>
             <div style="
-                font-size: 0.75rem;
-                font-weight: ${state.fontWeight || '600'};
-                color: ${state.textColor};
-                opacity: ${state.opacity};
-                text-align: center;
-                line-height: 1.2;
-            ">
-                ${state.homeDisplay}
-            </div>
-            <div style="
-                font-size: 0.65rem;
+                font-size: 0.5rem;
                 font-weight: 600;
                 color: ${state.textColor};
                 opacity: ${state.opacity};
                 text-align: center;
-                line-height: 1.2;
+                line-height: 1.1;
             ">
-                ${awayShort}
-            </div>
-            <div style="
-                font-size: 0.75rem;
-                font-weight: ${state.fontWeight || '600'};
-                color: ${state.textColor};
-                opacity: ${state.opacity};
-                text-align: center;
-                line-height: 1.2;
-            ">
-                ${state.awayDisplay}
+                ${awayShort} ${state.awayDisplay}
             </div>
         </div>
     `;
@@ -265,7 +245,7 @@ export function renderFixturesTicker() {
             width: 100%;
             background: var(--bg-secondary);
             border-bottom: 1px solid var(--border-color);
-            padding: 0.5rem 0;
+            padding: 0.4rem 0;
             overflow-x: auto;
             overflow-y: hidden;
             -webkit-overflow-scrolling: touch;
