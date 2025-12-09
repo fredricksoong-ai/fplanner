@@ -15,9 +15,7 @@
         <!-- Navigation -->
         <nav style="background: var(--bg-secondary); color: white; padding: 1rem 2rem; box-shadow: 0 2px 8px var(--shadow);">
             <div style="max-width: 1400px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center;">
-                <div style="display: flex; align-items: center; gap: 2rem;">
-                    <!-- Team Info Widget (mobile only) -->
-                    <div id="nav-team-widget" style="display: none;"></div>
+                <div style="display: flex; align-items: center; gap: 1rem; flex: 1;">
                     <!-- Logo/Brand -->
                     <div id="nav-brand">
                         <h1 style="font-size: 1.5rem; font-weight: 700; margin: 0; letter-spacing: -0.02em;">
@@ -25,6 +23,12 @@
                         </h1>
                         <img id="logo-image" src="/logo.png" alt="FPLanner Logo" style="display: none;">
                     </div>
+                    <!-- Team Info (mobile only) -->
+                    <div id="nav-team-info" style="display: none; align-items: center; gap: 0.5rem; flex: 1;">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                    <!-- Team Info Widget (mobile only) - deprecated, keeping for backwards compatibility -->
+                    <div id="nav-team-widget" style="display: none;"></div>
                     <div id="nav-links" style="display: flex; gap: 1rem;">
                         <!-- Navigation links will be inserted here -->
                     </div>

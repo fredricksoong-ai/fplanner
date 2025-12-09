@@ -455,6 +455,7 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
 
     // Rebuild data (same logic as render function)
     const starters = players.filter(p => p.position <= 11).sort((a, b) => a.position - b.position);
+    const bench = players.filter(p => p.position > 11 && p.position <= 15).sort((a, b) => a.position - b.position);
     
     if (starters.length === 0) {
         return;
@@ -499,7 +500,10 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
 
         const circles = sortedPlayers.map(pick => {
             const player = getPlayerById(pick.element);
-            if (!player) return null;
+            if (!player) {
+                console.warn(`Player not found for element ID: ${pick.element}`);
+                return null;
+            }
 
             const hasGWStats = player.github_gw && player.github_gw.gw === gwNumber;
             const liveStats = player.live_stats;
@@ -536,6 +540,11 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
             };
         }).filter(Boolean);
 
+        if (circles.length === 0) {
+            rowIndex++;
+            return;
+        }
+
         const rowCenterY = topOffset + (rowIndex + 0.5) * rowHeight;
         packCirclesInRow(circles, rowWidth, rowCenterY);
 
@@ -549,8 +558,7 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
 
             allNodes.push({
                 name: player.web_name,
-                value: [circle.x, circle.y, size],
-                symbolSize: size,
+                value: [circle.x, circle.y, size], // [x, y, size] format for scatter plot
                 symbol: 'circle',
                 itemStyle: {
                     color: colors.bgColor,
@@ -634,6 +642,10 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
             };
         }).filter(Boolean);
 
+        if (benchCircles.length === 0) {
+            return;
+        }
+
         const benchRowCenterY = topOffset + (rowIndex + 0.5) * rowHeight;
         packCirclesInRow(benchCircles, rowWidth, benchRowCenterY);
 
@@ -647,8 +659,7 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
 
             allNodes.push({
                 name: player.web_name,
-                value: [circle.x, circle.y, size],
-                symbolSize: size,
+                value: [circle.x, circle.y, size], // [x, y, size] format for scatter plot
                 symbol: 'circle',
                 itemStyle: {
                     color: colors.bgColor,
@@ -684,6 +695,12 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
         });
     }
 
+    // Debug: Check if we have nodes
+    if (allNodes.length === 0) {
+        console.warn('No nodes to render in bubble formation chart');
+        return;
+    }
+
     const option = {
         grid: {
             left: '2%',
@@ -711,11 +728,16 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
             type: 'scatter',
             data: allNodes,
             symbolSize: function(data) {
-                return data[2];
-            },
-            label: {
-                show: true,
-                position: 'inside'
+                // For scatter plots, symbolSize function receives the data array [x, y, size]
+                // or the value property if it's an object
+                if (Array.isArray(data)) {
+                    return data[2] || 20;
+                }
+                // If it's an object with value property
+                if (data && data.value && Array.isArray(data.value)) {
+                    return data.value[2] || 20;
+                }
+                return 20;
             },
             emphasis: {
                 scale: true

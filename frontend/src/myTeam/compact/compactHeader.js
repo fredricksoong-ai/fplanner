@@ -233,6 +233,17 @@ export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = fa
     const gwAverage = gwEvent?.average_entry_score || 0;
     const pointsColor = calculatePointsColor(gwPoints, gwAverage);
 
+    // Get overall and GW ranks
+    const overallRankNum = team.summary_overall_rank || 0;
+    const gwRankNum = team.summary_event_rank || 0;
+    const overallRank = overallRankNum ? overallRankNum.toLocaleString() : 'N/A';
+    const gwRank = gwRankNum ? gwRankNum.toLocaleString() : 'N/A';
+    
+    // Calculate rank indicators
+    const previousGWRank = entry?.previous_gw_rank || null;
+    const rankIndicator = calculateRankIndicator(team.id, overallRankNum, previousGWRank);
+    const gwIndicator = calculateGWIndicator(gwRankNum, overallRankNum);
+
     // Get glassmorphism effects for components
     const isDark = isDarkMode();
     const glassEffectLight = getGlassmorphism(isDark, 'light');
@@ -275,49 +286,15 @@ export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = fa
         >
             <div style="display: flex; justify-content: space-between; align-items: stretch; gap: 0.5rem;">
                 <div style="flex: 1; display: flex; flex-direction: column; gap: 0.2rem;">
-                    <div style="display: flex; align-items: center; gap: 0.4rem;">
-                        <button
-                            id="change-team-btn"
-                            style="
-                                backdrop-filter: ${glassEffectLight.backdropFilter};
-                                -webkit-backdrop-filter: ${glassEffectLight.WebkitBackdropFilter};
-                                background: ${glassEffectLight.background};
-                                border: ${glassEffectLight.border};
-                                border-radius: ${borderRadius};
-                                padding: 0.2rem 0.35rem;
-                                color: var(--text-secondary);
-                                cursor: pointer;
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                                transition: all ${animationDuration} ${springCurve};
-                                box-shadow: ${shadowLow};
-                            "
-                            title="Change Team"
-                        >
-                            <i class="fas fa-exchange-alt" style="font-size: 0.7rem;"></i>
-                        </button>
-                        <div style="font-size: 1rem; font-weight: 700; color: var(--text-primary); line-height: 1.2; flex: 1;">
-                            ${escapeHtml(team.name)}
-                        </div>
+                    <div style="font-size: 0.7rem; color: var(--text-secondary); line-height: 1.4;">
+                        Overall Rank: <span style="color: ${rankIndicator.color};">${overallRank} ${rankIndicator.chevron}</span>
                     </div>
 
                     <div style="font-size: 0.7rem; color: var(--text-secondary); line-height: 1.4;">
-                        GW FDR: ${gwFDR !== null ? gwFDR.toFixed(1) : 'N/A'}
+                        GW Rank: <span style="color: ${gwIndicator.color};">${gwRank} ${gwIndicator.chevron}</span>
                     </div>
 
-                    <div style="font-size: 0.7rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.3rem; line-height: 1.4;">
-                        <span>GW Expected Pts: ${expectedPoints !== null ? Math.round(expectedPoints) : 'N/A'}</span>
-                        ${expectedBadge.text ? `<span style="display: inline-block; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem; background: ${expectedBadge.background}; color: ${expectedBadge.color};">${expectedBadge.text}</span>` : ''}
-                    </div>
-
-                    <div style="font-size: 0.7rem; color: var(--text-secondary); line-height: 1.4;">
-                        No. of Players Played: ${playersPlayed}
-                    </div>
-
-                    <div style="font-size: 0.7rem; color: var(--text-secondary); line-height: 1.4;">
-                        Squad Value: £${squadValue}m + £${bank}m
-                    </div>
+                    ${leagueInfo}
 
                     <div
                         id="transfers-row"
@@ -350,31 +327,30 @@ export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = fa
                         transition: all ${animationDuration} ${animationCurve};
                     ">
                         <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
-                            <div style="font-size: 2rem; font-weight: 800; color: ${pointsColor}; line-height: 1;">
+                            <div style="font-size: 1.5rem; font-weight: 800; color: ${pointsColor}; line-height: 1;">
                                 ${gwPoints}
                             </div>
                             <span style="color: var(--text-secondary);">•</span>
-                            <div style="font-size: 1.5rem; font-weight: 800; color: var(--text-secondary); line-height: 1;">
+                            <div style="font-size: 1rem; font-weight: 800; color: var(--text-secondary); line-height: 1;">
                                 ${totalPoints.toLocaleString()}
                             </div>
                         </div>
                         <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-top: 0.1rem;">
+                            ${isLive ? `
+                                <div style="font-size: 0.6rem; color: #ef4444; animation: pulse 2s infinite; font-weight: 600;">
+                                    ⚽ LIVE
+                                </div>
+                            ` : ''}
                             <div style="font-size: 0.6rem; color: var(--text-secondary); font-weight: 600;">
                                 GW ${gwNumber}
                             </div>
                             ${gwAverage > 0 ? `
-                                <div style="font-size: 0.55rem; color: var(--text-secondary);">
+                                <div style="font-size: 0.6rem; color: var(--text-secondary);">
                                     Avg: ${gwAverage}
                                 </div>
                             ` : ''}
                         </div>
-                        ${isLive ? `
-                            <div style="font-size: 0.6rem; color: #ef4444; margin-top: 0.1rem; animation: pulse 2s infinite; font-weight: 600;">
-                                ⚽ LIVE
-                            </div>
-                            <style>@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }</style>
-                        ` : ''}
-                        ${leagueInfo}
+                        ${isLive ? `<style>@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }</style>` : ''}
                     </div>
                 </div>
             </div>

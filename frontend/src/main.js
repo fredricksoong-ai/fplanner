@@ -519,19 +519,27 @@ function calculatePointsColor(points, average) {
  * Update the navigation team widget with team data
  * @param {Object} teamData - Team data with picks and team info
  */
-export function updateNavTeamWidget(teamData) {
+export async function updateNavTeamWidget(teamData) {
     const widget = document.getElementById('nav-team-widget');
-    if (!widget) return;
-
+    const teamInfo = document.getElementById('nav-team-info');
+    
     // Only show on mobile
     const isMobile = window.innerWidth <= 767;
-    if (!isMobile) {
+    
+    // Hide old widget
+    if (widget) {
         widget.style.display = 'none';
+    }
+    
+    if (!teamInfo) return;
+    
+    if (!isMobile) {
+        teamInfo.style.display = 'none';
         return;
     }
 
     if (!teamData || !teamData.team || !teamData.picks) {
-        widget.style.display = 'none';
+        teamInfo.style.display = 'none';
         return;
     }
 
@@ -540,45 +548,66 @@ export function updateNavTeamWidget(teamData) {
 
     // Get data
     const teamName = team.name || 'My Team';
-    const totalPoints = team.summary_overall_points || 0;
-    const overallRankNum = team.summary_overall_rank || 0;
-    const gwRankNum = team.summary_event_rank || 0;
-    const overallRank = overallRankNum ? overallRankNum.toLocaleString() : 'N/A';
-    const gwRank = gwRankNum ? gwRankNum.toLocaleString() : 'N/A';
+    const squadValue = ((entry.value || 0) / 10 - (entry.bank || 0) / 10).toFixed(1);
+    const bank = ((entry.bank || 0) / 10).toFixed(1);
 
-    // Calculate GW points
-    let gwPoints = entry?.points ?? 0;
+    // Get glassmorphism for button
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const { getGlassmorphism, getShadow, getMobileBorderRadius, getAnimationCurve, getAnimationDuration } = await import('./styles/mobileDesignSystem.js');
+    const glassEffect = getGlassmorphism(isDark, 'light');
+    const shadow = getShadow('low');
+    const radius = getMobileBorderRadius('medium');
+    const animationDuration = getAnimationDuration('fast');
+    const springCurve = getAnimationCurve('spring');
 
-    // Get current gameweek
-    const gwNumber = teamData.gameweek || currentGW || getActiveGW();
-
-    // Get GW average for color coding
-    const gwEvent = getGameweekEvent(gwNumber);
-    const gwAverage = gwEvent?.average_entry_score || 0;
-    const pointsColor = calculatePointsColor(gwPoints, gwAverage);
-
-    // Calculate rank indicators
-    const previousGWRank = entry?.previous_gw_rank || null;
-    const rankIndicator = calculateRankIndicator(team.id, overallRankNum, previousGWRank);
-    const gwIndicator = calculateGWIndicator(gwRankNum, overallRankNum);
-
-    // Build widget HTML - simple single line matching countdown timer style exactly
-    widget.innerHTML = `
-        <div style="
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 0.5rem;
-            background: rgba(255,255,255,0.1);
-            border-radius: 0.5rem;
-            font-size: 0.75rem;
-            white-space: nowrap;
-        ">
-            <span><span style="color: ${rankIndicator.color};">${overallRank} ${rankIndicator.chevron}</span> • <span style="color: ${gwIndicator.color};">${gwRank} ${gwIndicator.chevron}</span></span>
+    // Build team info HTML
+    teamInfo.innerHTML = `
+        <button
+            id="nav-change-team-btn"
+            style="
+                backdrop-filter: ${glassEffect.backdropFilter};
+                -webkit-backdrop-filter: ${glassEffect.WebkitBackdropFilter};
+                background: ${glassEffect.background};
+                border: ${glassEffect.border};
+                border-radius: ${radius};
+                padding: 0.2rem 0.35rem;
+                color: white;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: all ${animationDuration} ${springCurve};
+                box-shadow: ${shadow};
+            "
+            title="Change Team"
+        >
+            <i class="fas fa-exchange-alt" style="font-size: 0.7rem;"></i>
+        </button>
+        <div style="display: flex; flex-direction: column; gap: 0.1rem;">
+            <div style="font-size: 1rem; font-weight: 700; color: white; line-height: 1.2;">
+                ${escapeHtml(teamName)}
+            </div>
+            <div style="font-size: 0.7rem; color: rgba(255, 255, 255, 0.8); line-height: 1.2;">
+                (£${squadValue}m + £${bank}m)
+            </div>
         </div>
     `;
 
-    widget.style.display = 'flex';
+    teamInfo.style.display = 'flex';
+    
+    // Add click handler for change team button
+    const changeTeamBtn = document.getElementById('nav-change-team-btn');
+    if (changeTeamBtn) {
+        // Remove existing listeners
+        const newBtn = changeTeamBtn.cloneNode(true);
+        changeTeamBtn.parentNode.replaceChild(newBtn, changeTeamBtn);
+        
+        newBtn.addEventListener('click', () => {
+            if (window.resetMyTeam) {
+                window.resetMyTeam();
+            }
+        });
+    }
 }
 
 // ============================================================================

@@ -416,15 +416,19 @@ body {
     min-width: 0;
   }
 
-  /* Team widget styling - matches countdown timer exactly */
+  /* Team widget styling - deprecated, hide it */
   #nav-team-widget {
+    display: none !important;
+  }
+
+  /* Team info (new) - show on mobile */
+  #nav-team-info {
     display: flex !important;
     align-items: center;
     z-index: 2;
   }
 
-  /* Ensure both widgets have same height */
-  #nav-team-widget > div,
+  /* Ensure countdown has proper height */
   #gw-countdown {
     min-height: 32px;
     display: flex;
@@ -439,11 +443,11 @@ body {
     min-width: 0;
   }
 
-  /* Center the logo */
+  /* Logo positioned at top left */
   #nav-brand {
-    position: absolute !important;
-    left: 50% !important;
-    transform: translateX(-50%) !important;
+    position: relative !important;
+    left: auto !important;
+    transform: none !important;
     z-index: 1;
     /* Container for circular crop */
     width: 40px !important;
@@ -470,6 +474,15 @@ body {
   }
 
 
+  /* Countdown timer - smaller font on mobile */
+  #gw-countdown {
+    font-size: 0.65rem !important;
+  }
+
+  #countdown-text {
+    font-size: 0.65rem !important;
+  }
+
   /* Hide full countdown text on very small screens */
   @media (max-width: 380px) {
     #gw-countdown {
@@ -478,7 +491,7 @@ body {
     }
 
     #countdown-text {
-      font-size: 0.75rem !important;
+      font-size: 0.6rem !important;
     }
   }
 }
