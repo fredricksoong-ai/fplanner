@@ -140,20 +140,12 @@ function renderFixtureCard(fixture, fplBootstrap, isLast = false, isEven = false
     const isLive = isStarted && !isFinished;
     const canShowStats = isFinished || isLive;
 
-    // Apply alternating background only for non-live fixtures
-    // Live fixtures keep their red background
-    let finalBgColor = state.bgColor;
-    if (state.bgColor === 'transparent') {
-        // Apply alternating background for non-live fixtures (increased visibility)
-        finalBgColor = isEven ? 'rgba(255, 255, 255, 0.05)' : 'transparent';
-    }
-
     // Apply state-based background - use base for upcoming, keep live red, alternating for finished
-    let cardBackground = 'rgba(255, 255, 255, 0.1)'; // Base background
+    let cardBackground = 'rgba(255, 255, 255, 0.1)'; // Base background for upcoming
     if (state.state === 'LIVE') {
         cardBackground = 'rgba(239, 68, 68, 0.1)';
-    } else if (state.state === 'FINISHED' || state.state === 'POSTPONED') {
-        // Apply alternating for finished/postponed
+    } else {
+        // Apply alternating for all non-live fixtures (upcoming, finished, postponed)
         cardBackground = isEven ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.1)';
     }
 
@@ -166,7 +158,7 @@ function renderFixtureCard(fixture, fplBootstrap, isLast = false, isEven = false
                 min-width: 45px;
                 flex-shrink: 0;
                 background: ${cardBackground};
-                border-radius: 0.4rem;
+                border-radius: 0;
                 padding: 0.1rem 0.2rem;
                 display: grid;
                 grid-template-columns: auto 1fr;
