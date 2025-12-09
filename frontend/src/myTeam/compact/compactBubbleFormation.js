@@ -601,15 +601,8 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
         rowIndex++;
     });
     
-    // Calculate separator line Y position (between FWD row and bench row)
-    let separatorY = null;
-    if (bench.length > 0) {
-        // Position the separator line with gap after FWD row
-        // After processing FWD, rowIndex is 4, so separator is below FWD with gap
-        separatorY = topOffset + rowIndex * rowHeight + separatorGap;
-    }
-    
     // Add bench players as a single row (left to right by position)
+    let separatorY = null;
     if (bench.length > 0) {
         const benchCircles = bench.map(pick => {
             const player = getPlayerById(pick.element);
@@ -646,12 +639,14 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
             };
         }).filter(Boolean);
 
-        if (benchCircles.length === 0) {
-            return;
-        }
+        if (benchCircles.length > 0) {
+            // Calculate separator line Y position (between FWD row and bench row)
+            // Position the separator line with gap after FWD row
+            // After processing FWD, rowIndex is 4, so separator is below FWD with gap
+            separatorY = topOffset + rowIndex * rowHeight + separatorGap;
 
-        // Position bench row below separator with gap
-        const benchRowCenterY = separatorY + benchGap + rowHeight / 2;
+            // Position bench row below separator with gap
+            const benchRowCenterY = separatorY + benchGap + rowHeight / 2;
         packCirclesInRow(benchCircles, rowWidth, benchRowCenterY);
 
         benchCircles.forEach(circle => {
