@@ -141,12 +141,12 @@ function renderFixtureCard(fixture, fplBootstrap, isLast = false, isEven = false
     const canShowStats = isFinished || isLive;
 
     // Apply state-based background - use base for upcoming, keep live red, alternating for finished
-    let cardBackground = 'rgba(255, 255, 255, 0.1)'; // Base background for upcoming
+    let cardBackground;
     if (state.state === 'LIVE') {
         cardBackground = 'rgba(239, 68, 68, 0.1)';
     } else {
         // Apply alternating for all non-live fixtures (upcoming, finished, postponed)
-        cardBackground = isEven ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.1)';
+        cardBackground = isEven ? 'rgba(255, 255, 255, 1)' : 'rgba(255, 255, 255, 0.2)';
     }
 
     return `
@@ -509,56 +509,63 @@ export function showFixtureStatsModal(fixtureId) {
  * Attach click listeners to fixture cards in the ticker
  */
 export function attachFixtureTickerListeners() {
-    const container = document.querySelector('.fixtures-ticker-container');
-    if (!container) {
-        return;
-    }
-
-    // Check if listeners already attached
-    if (container.hasAttribute('data-ticker-listeners-attached')) {
-        return;
-    }
-
-    container.setAttribute('data-ticker-listeners-attached', 'true');
-
-    container.addEventListener('click', (e) => {
-        const fixtureCard = e.target.closest('.fixture-card-ticker');
-        if (!fixtureCard) return;
-
-        const canExpand = fixtureCard.getAttribute('data-can-expand') === 'true';
-        if (!canExpand) return;
-
-        const fixtureId = fixtureCard.getAttribute('data-fixture-id');
-        if (!fixtureId) return;
-
-        showFixtureStatsModal(parseInt(fixtureId));
-    });
-
-    // Add hover effect for clickable fixtures
-    container.addEventListener('mouseover', (e) => {
-        const fixtureCard = e.target.closest('.fixture-card-ticker');
-        if (!fixtureCard) return;
-
-        const canExpand = fixtureCard.getAttribute('data-can-expand') === 'true';
-        if (canExpand) {
-            fixtureCard.style.background = 'rgba(255, 255, 255, 0.08)';
+    // Retry mechanism in case DOM isn't ready yet
+    const tryAttach = (attempt = 0) => {
+        const container = document.querySelector('.fixtures-ticker-container');
+        if (!container) {
+            if (attempt < 5) {
+                // Retry after a short delay
+                setTimeout(() => tryAttach(attempt + 1), 100);
+            } else {
+                console.warn('Fixture ticker container not found after retries');
+            }
+            return;
         }
-    });
 
-    container.addEventListener('mouseout', (e) => {
-        const fixtureCard = e.target.closest('.fixture-card-ticker');
-        if (!fixtureCard) return;
+        // Check if listeners already attached
+        if (container.hasAttribute('data-ticker-listeners-attached')) {
+            return;
+        }
 
-        const canExpand = fixtureCard.getAttribute('data-can-expand') === 'true';
-        if (canExpand) {
-            // Reset to original background - check computed style or use default
-            const currentBg = window.getComputedStyle(fixtureCard).backgroundColor;
-            // If it's the hover color, reset based on whether it's live or not
-            // For simplicity, just remove the inline style to revert to original
-            if (currentBg.includes('rgba(255, 255, 255, 0.08)')) {
+        container.setAttribute('data-ticker-listeners-attached', 'true');
+
+        container.addEventListener('click', (e) => {
+            const fixtureCard = e.target.closest('.fixture-card-ticker');
+            if (!fixtureCard) return;
+
+            const canExpand = fixtureCard.getAttribute('data-can-expand') === 'true';
+            if (!canExpand) return;
+
+            const fixtureId = fixtureCard.getAttribute('data-fixture-id');
+            if (!fixtureId) return;
+
+            console.log('Opening fixture modal for:', fixtureId);
+            showFixtureStatsModal(parseInt(fixtureId));
+        });
+
+        // Add hover effect for clickable fixtures
+        container.addEventListener('mouseover', (e) => {
+            const fixtureCard = e.target.closest('.fixture-card-ticker');
+            if (!fixtureCard) return;
+
+            const canExpand = fixtureCard.getAttribute('data-can-expand') === 'true';
+            if (canExpand) {
+                fixtureCard.style.background = 'rgba(255, 255, 255, 0.08)';
+            }
+        });
+
+        container.addEventListener('mouseout', (e) => {
+            const fixtureCard = e.target.closest('.fixture-card-ticker');
+            if (!fixtureCard) return;
+
+            const canExpand = fixtureCard.getAttribute('data-can-expand') === 'true';
+            if (canExpand) {
+                // Reset to original background
                 fixtureCard.style.background = '';
             }
-        }
-    });
+        });
+    };
+
+    tryAttach();
 }
 
