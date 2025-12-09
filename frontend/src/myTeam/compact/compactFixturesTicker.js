@@ -136,10 +136,10 @@ function renderFixtureCard(fixture, fplBootstrap, isLast = false) {
             background: ${state.bgColor};
             border-radius: 0.4rem;
             padding: 0.25rem 0.2rem;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 0.1rem;
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 0.2rem 0.3rem;
+            align-items: center;
             ${!isLast ? 'border-right: 1px solid var(--border-color);' : ''}
         ">
             <div style="
@@ -149,9 +149,18 @@ function renderFixtureCard(fixture, fplBootstrap, isLast = false) {
                 opacity: ${state.opacity};
                 text-align: left;
                 line-height: 1.1;
-                width: 100%;
             ">
-                ${homeShort} ${state.homeDisplay}
+                ${homeShort}
+            </div>
+            <div style="
+                font-size: 0.5rem;
+                font-weight: ${state.fontWeight || '600'};
+                color: ${state.textColor};
+                opacity: ${state.opacity};
+                text-align: right;
+                line-height: 1.1;
+            ">
+                ${state.homeDisplay}
             </div>
             <div style="
                 font-size: 0.5rem;
@@ -160,9 +169,18 @@ function renderFixtureCard(fixture, fplBootstrap, isLast = false) {
                 opacity: ${state.opacity};
                 text-align: left;
                 line-height: 1.1;
-                width: 100%;
             ">
-                ${awayShort} ${state.awayDisplay}
+                ${awayShort}
+            </div>
+            <div style="
+                font-size: 0.5rem;
+                font-weight: ${state.fontWeight || '600'};
+                color: ${state.textColor};
+                opacity: ${state.opacity};
+                text-align: right;
+                line-height: 1.1;
+            ">
+                ${state.awayDisplay}
             </div>
         </div>
     `;
