@@ -164,7 +164,7 @@ function renderFixtureCard(fixture, fplBootstrap, isLast = false, isEven = false
                 grid-template-columns: auto 1fr;
                 gap: 0rem 0.2rem;
                 align-items: center;
-                ${canShowStats ? 'cursor: pointer;' : ''}
+                cursor: pointer;
                 transition: background 0.2s ease;
                 border-right: 0px solid var(--border-color);
             "
@@ -679,18 +679,33 @@ export function attachFixtureTickerListeners() {
         container.setAttribute('data-ticker-listeners-attached', 'true');
 
         container.addEventListener('click', (e) => {
+            console.log('🔍 Click event triggered on:', e.target);
+            
             const fixtureCard = e.target.closest('.fixture-card-ticker');
-            if (!fixtureCard) return;
+            console.log('🔍 Fixture card found:', fixtureCard);
+            
+            if (!fixtureCard) {
+                console.log('❌ No fixture card found');
+                return;
+            }
 
             const fixtureId = fixtureCard.getAttribute('data-fixture-id');
-            if (!fixtureId) return;
+            console.log('🔍 Fixture ID:', fixtureId);
+            
+            if (!fixtureId) {
+                console.log('❌ No fixture ID');
+                return;
+            }
 
             const canExpand = fixtureCard.getAttribute('data-can-expand') === 'true';
+            console.log('🔍 Can expand:', canExpand);
             
             // Allow clicking on all fixtures, but only show stats for live/finished
             if (canExpand) {
+                console.log('✅ Opening stats modal for fixture:', fixtureId);
                 showFixtureStatsModal(parseInt(fixtureId));
             } else {
+                console.log('✅ Opening info modal for fixture:', fixtureId);
                 // For upcoming fixtures, show fixture info modal
                 showFixtureInfoModal(parseInt(fixtureId));
             }
