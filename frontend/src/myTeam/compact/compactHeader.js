@@ -286,6 +286,38 @@ export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = fa
         >
             <div style="display: flex; justify-content: space-between; align-items: stretch; gap: 0.5rem;">
                 <div style="flex: 1; display: flex; flex-direction: column; gap: 0.2rem;">
+                    <div style="display: flex; align-items: center; gap: 0.4rem;">
+                        <button
+                            id="change-team-btn"
+                            style="
+                                backdrop-filter: ${glassEffectLight.backdropFilter};
+                                -webkit-backdrop-filter: ${glassEffectLight.WebkitBackdropFilter};
+                                background: ${glassEffectLight.background};
+                                border: ${glassEffectLight.border};
+                                border-radius: ${borderRadius};
+                                padding: 0.2rem 0.35rem;
+                                color: var(--text-secondary);
+                                cursor: pointer;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                transition: all ${animationDuration} ${springCurve};
+                                box-shadow: ${shadowLow};
+                            "
+                            title="Change Team"
+                        >
+                            <i class="fas fa-exchange-alt" style="font-size: 0.7rem;"></i>
+                        </button>
+                        <div style="display: flex; flex-direction: column; gap: 0.1rem; flex: 1;">
+                            <div style="font-size: 1rem; font-weight: 700; color: var(--text-primary); line-height: 1.2;">
+                                ${escapeHtml(team.name)}
+                            </div>
+                            <div style="font-size: 0.7rem; color: var(--text-secondary); line-height: 1.2;">
+                                (£${squadValue}m + £${bank}m)
+                            </div>
+                        </div>
+                    </div>
+
                     <div style="font-size: 0.7rem; color: var(--text-secondary); line-height: 1.4;">
                         Overall Rank: <span style="color: ${rankIndicator.color};">${overallRank} ${rankIndicator.chevron}</span>
                     </div>
@@ -293,8 +325,6 @@ export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = fa
                     <div style="font-size: 0.7rem; color: var(--text-secondary); line-height: 1.4;">
                         GW Rank: <span style="color: ${gwIndicator.color};">${gwRank} ${gwIndicator.chevron}</span>
                     </div>
-
-                    ${leagueInfo}
 
                     <div
                         id="transfers-row"
@@ -351,6 +381,7 @@ export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = fa
                             ` : ''}
                         </div>
                         ${isLive ? `<style>@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }</style>` : ''}
+                        ${leagueInfo}
                     </div>
                 </div>
             </div>
