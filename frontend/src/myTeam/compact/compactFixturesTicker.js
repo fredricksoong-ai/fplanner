@@ -10,6 +10,10 @@ import {
     getActiveGW
 } from '../../data.js';
 
+import { renderFixturePlayerStats } from '../fixturesTab.js';
+import { escapeHtml } from '../../utils.js';
+import { getGlassmorphism, getShadow, getMobileBorderRadius } from '../../styles/mobileDesignSystem.js';
+
 /**
  * Get team short name (3-letter code)
  * @param {Object} team - Team object from bootstrap
@@ -130,27 +134,49 @@ function renderFixtureCard(fixture, fplBootstrap, isLast = false, isEven = false
     const awayShort = getTeamShortName(awayTeam);
     const state = getFixtureState(fixture);
 
+    // Check if fixture has stats (live or finished)
+    const isFinished = fixture.finished === true;
+    const isStarted = fixture.started === true;
+    const isLive = isStarted && !isFinished;
+    const canShowStats = isFinished || isLive;
+
     // Apply alternating background only for non-live fixtures
     // Live fixtures keep their red background
     let finalBgColor = state.bgColor;
     if (state.bgColor === 'transparent') {
-        // Apply subtle alternating background for non-live fixtures
-        finalBgColor = isEven ? 'rgba(255, 255, 255, 0.02)' : 'transparent';
+        // Apply alternating background for non-live fixtures (increased visibility)
+        finalBgColor = isEven ? 'rgba(255, 255, 255, 0.05)' : 'transparent';
+    }
+
+    // Apply state-based background - use base for upcoming, keep live red, alternating for finished
+    let cardBackground = 'rgba(255, 255, 255, 0.1)'; // Base background
+    if (state.state === 'LIVE') {
+        cardBackground = 'rgba(239, 68, 68, 0.1)';
+    } else if (state.state === 'FINISHED' || state.state === 'POSTPONED') {
+        // Apply alternating for finished/postponed
+        cardBackground = isEven ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.1)';
     }
 
     return `
-        <div class="fixture-card" style="
-            min-width: 55px;
-            flex-shrink: 0;
-            background: ${finalBgColor};
-            border-radius: 0.4rem;
-            padding: 0.25rem 0.2rem;
-            display: grid;
-            grid-template-columns: auto 1fr;
-            gap: 0.2rem 0.3rem;
-            align-items: center;
-            ${!isLast ? 'border-right: 1px solid var(--border-color);' : ''}
-        ">
+        <div 
+            class="fixture-card-ticker" 
+            data-fixture-id="${fixture.id}"
+            data-can-expand="${canShowStats}"
+            style="
+                min-width: 45px;
+                flex-shrink: 0;
+                background: ${cardBackground};
+                border-radius: 0.4rem;
+                padding: 0.1rem 0.2rem;
+                display: grid;
+                grid-template-columns: auto 1fr;
+                gap: 0rem 0.2rem;
+                align-items: center;
+                ${canShowStats ? 'cursor: pointer;' : ''}
+                transition: background 0.2s ease;
+                border-right: 0px solid var(--border-color);
+            "
+        >
             <div style="
                 font-size: 0.5rem;
                 font-weight: 600;
@@ -295,12 +321,252 @@ export function renderFixturesTicker() {
             .fixtures-ticker-container::-webkit-scrollbar {
                 display: none; /* Chrome/Safari */
             }
-            </style>
+        </style>
     `;
     } catch (error) {
         console.error('Error rendering fixtures ticker:', error);
         // Return empty string on error to prevent breaking the page
         return '';
     }
+}
+
+/**
+ * Show fixture stats in a modal
+ * @param {number} fixtureId - Fixture ID
+ */
+export function showFixtureStatsModal(fixtureId) {
+    const fplFixtures = getFixturesData;
+    const fplBootstrap = getBootstrapData();
+    const currentGW = getActiveGW();
+
+    if (!fplFixtures || !fplBootstrap || !currentGW) {
+        console.warn('Cannot show fixture modal: data not available');
+        return;
+    }
+
+    // Find the fixture
+    const fixture = fplFixtures.find(f => f.id === fixtureId);
+    if (!fixture) {
+        console.warn(`Fixture ${fixtureId} not found`);
+        return;
+    }
+
+    const homeTeam = fplBootstrap.teams.find(t => t.id === fixture.team_h);
+    const awayTeam = fplBootstrap.teams.find(t => t.id === fixture.team_a);
+
+    if (!homeTeam || !awayTeam) {
+        console.warn('Teams not found for fixture');
+        return;
+    }
+
+    const isFinished = fixture.finished === true;
+    const isStarted = fixture.started === true;
+    const isLive = isStarted && !isFinished;
+    const canShowStats = isFinished || isLive;
+
+    if (!canShowStats) {
+        console.warn('Fixture stats not available (not live or finished)');
+        return;
+    }
+
+    const homeScore = fixture.team_h_score !== null ? fixture.team_h_score : '-';
+    const awayScore = fixture.team_a_score !== null ? fixture.team_a_score : '-';
+
+    // Get glassmorphism effects
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const glassEffect = getGlassmorphism(isDark, 'heavy');
+    const shadow = getShadow('modal');
+    const radius = getMobileBorderRadius('xlarge');
+
+    // Render fixture stats
+    const statsHTML = renderFixturePlayerStats(fixture, fixture.event || currentGW, isLive, isFinished, false, fplBootstrap);
+
+    // Extract the inner content from the stats div (remove wrapper div with hidden styles)
+    // The function returns a div with id="fixture-stats-{id}" that has display:none
+    // We want to extract just the inner grid content
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = statsHTML;
+    const statsDiv = tempDiv.querySelector(`#fixture-stats-${fixture.id}`);
+    const statsContent = statsDiv ? statsDiv.innerHTML : statsHTML;
+
+    // Create or get modal
+    let modal = document.getElementById('fixture-stats-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'fixture-stats-modal';
+        document.body.appendChild(modal);
+    }
+
+    const homeShort = getTeamShortName(homeTeam);
+    const awayShort = getTeamShortName(awayTeam);
+
+    let statusBadge = '';
+    if (isFinished) {
+        const fixtureMinutes = typeof fixture.minutes === 'number' && fixture.minutes > 0
+            ? fixture.minutes
+            : null;
+        statusBadge = `<span style="display: inline-block; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem; background: rgba(34, 197, 94, 0.2); color: #22c55e;">FT${fixtureMinutes ? ` (${fixtureMinutes})` : ''}</span>`;
+    } else if (isLive) {
+        statusBadge = '<span style="display: inline-block; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem; background: rgba(239, 68, 68, 0.2); color: #ef4444;">LIVE</span>';
+    }
+
+    modal.style.display = 'block';
+    modal.innerHTML = `
+        <div class="fixture-modal-overlay" style="
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            z-index: 2000;
+            overflow-y: auto;
+        ">
+            <div style="
+                max-width: 600px;
+                margin: 0 auto;
+                padding: 1rem;
+                min-height: 100%;
+                display: flex;
+                flex-direction: column;
+            ">
+                <!-- Header -->
+                <div style="
+                    backdrop-filter: ${glassEffect.backdropFilter};
+                    -webkit-backdrop-filter: ${glassEffect.WebkitBackdropFilter};
+                    background: ${glassEffect.background};
+                    border: ${glassEffect.border};
+                    padding: 1rem;
+                    border-radius: ${radius} ${radius} 0 0;
+                    border-bottom: ${glassEffect.border};
+                    box-shadow: ${shadow};
+                ">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <h3 style="
+                            font-size: 1rem;
+                            font-weight: 700;
+                            color: var(--text-primary);
+                            margin: 0;
+                        ">
+                            ${escapeHtml(homeTeam.name)} vs ${escapeHtml(awayTeam.name)}
+                        </h3>
+                        <button class="close-fixture-modal-btn" style="
+                            background: transparent;
+                            border: none;
+                            color: var(--text-secondary);
+                            font-size: 1.5rem;
+                            cursor: pointer;
+                            padding: 0;
+                            width: 2rem;
+                            height: 2rem;
+                            line-height: 1;
+                        ">
+                            ×
+                        </button>
+                    </div>
+                    <div style="
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 1rem;
+                        font-size: 1.25rem;
+                        font-weight: 700;
+                        color: var(--text-primary);
+                    ">
+                        <span>${homeShort}</span>
+                        <span>${homeScore} - ${awayScore}</span>
+                        <span>${awayShort}</span>
+                    </div>
+                    ${statusBadge ? `<div style="text-align: center; margin-top: 0.5rem;">${statusBadge}</div>` : ''}
+                </div>
+                <!-- Stats Content -->
+                <div style="
+                    backdrop-filter: ${glassEffect.backdropFilter};
+                    -webkit-backdrop-filter: ${glassEffect.WebkitBackdropFilter};
+                    background: ${glassEffect.background};
+                    border: ${glassEffect.border};
+                    padding: 1rem;
+                    border-radius: 0 0 ${radius} ${radius};
+                    box-shadow: ${shadow};
+                    flex: 1;
+                ">
+                    ${statsContent}
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Add close handlers
+    const closeBtn = modal.querySelector('.close-fixture-modal-btn');
+    const overlay = modal.querySelector('.fixture-modal-overlay');
+
+    const closeModal = () => {
+        modal.style.display = 'none';
+        modal.innerHTML = '';
+    };
+
+    if (closeBtn) closeBtn.addEventListener('click', closeModal);
+    if (overlay) overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) closeModal();
+    });
+}
+
+/**
+ * Attach click listeners to fixture cards in the ticker
+ */
+export function attachFixtureTickerListeners() {
+    const container = document.querySelector('.fixtures-ticker-container');
+    if (!container) {
+        return;
+    }
+
+    // Check if listeners already attached
+    if (container.hasAttribute('data-ticker-listeners-attached')) {
+        return;
+    }
+
+    container.setAttribute('data-ticker-listeners-attached', 'true');
+
+    container.addEventListener('click', (e) => {
+        const fixtureCard = e.target.closest('.fixture-card-ticker');
+        if (!fixtureCard) return;
+
+        const canExpand = fixtureCard.getAttribute('data-can-expand') === 'true';
+        if (!canExpand) return;
+
+        const fixtureId = fixtureCard.getAttribute('data-fixture-id');
+        if (!fixtureId) return;
+
+        showFixtureStatsModal(parseInt(fixtureId));
+    });
+
+    // Add hover effect for clickable fixtures
+    container.addEventListener('mouseover', (e) => {
+        const fixtureCard = e.target.closest('.fixture-card-ticker');
+        if (!fixtureCard) return;
+
+        const canExpand = fixtureCard.getAttribute('data-can-expand') === 'true';
+        if (canExpand) {
+            fixtureCard.style.background = 'rgba(255, 255, 255, 0.08)';
+        }
+    });
+
+    container.addEventListener('mouseout', (e) => {
+        const fixtureCard = e.target.closest('.fixture-card-ticker');
+        if (!fixtureCard) return;
+
+        const canExpand = fixtureCard.getAttribute('data-can-expand') === 'true';
+        if (canExpand) {
+            // Reset to original background - check computed style or use default
+            const currentBg = window.getComputedStyle(fixtureCard).backgroundColor;
+            // If it's the hover color, reset based on whether it's live or not
+            // For simplicity, just remove the inline style to revert to original
+            if (currentBg.includes('rgba(255, 255, 255, 0.08)')) {
+                fixtureCard.style.background = '';
+            }
+        }
+    });
 }
 
