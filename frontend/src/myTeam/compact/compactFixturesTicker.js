@@ -138,7 +138,7 @@ function renderFixtureCard(fixture, fplBootstrap, isLast = false) {
             padding: 0.25rem 0.2rem;
             display: flex;
             flex-direction: column;
-            align-items: center;
+            align-items: flex-start;
             gap: 0.1rem;
             ${!isLast ? 'border-right: 1px solid var(--border-color);' : ''}
         ">
@@ -147,8 +147,9 @@ function renderFixtureCard(fixture, fplBootstrap, isLast = false) {
                 font-weight: 600;
                 color: ${state.textColor};
                 opacity: ${state.opacity};
-                text-align: center;
+                text-align: left;
                 line-height: 1.1;
+                width: 100%;
             ">
                 ${homeShort} ${state.homeDisplay}
             </div>
@@ -157,8 +158,9 @@ function renderFixtureCard(fixture, fplBootstrap, isLast = false) {
                 font-weight: 600;
                 color: ${state.textColor};
                 opacity: ${state.opacity};
-                text-align: center;
+                text-align: left;
                 line-height: 1.1;
+                width: 100%;
             ">
                 ${awayShort} ${state.awayDisplay}
             </div>
