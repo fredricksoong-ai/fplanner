@@ -852,8 +852,8 @@ async function renderTeamOverviewTab(teamData) {
         const bubbleFormationHTML = await renderCompactBubbleFormation(allPlayers, gameweek, isLive, myTeamState);
         
         return `
-            ${renderCompactHeader(teamData, gameweek, isAutoRefreshActive())}
             ${renderFixturesTicker()}
+            ${renderCompactHeader(teamData, gameweek, isAutoRefreshActive())}
             <div style="padding: 0.75rem;">
                 ${bubbleFormationHTML}
                 ${renderCompactTeamList(allPlayers, gameweek, isLive)}
