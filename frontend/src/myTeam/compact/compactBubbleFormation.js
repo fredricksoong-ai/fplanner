@@ -601,8 +601,14 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
         rowIndex++;
     });
     
-    // Add bench players as a single row (left to right by position)
+    // Calculate separator line Y position (between FWD row and bench row)
     let separatorY = null;
+    if (bench.length > 0) {
+        // Position the separator line with gap after FWD row
+        separatorY = topOffset + rowIndex * rowHeight + separatorGap;
+    }
+    
+    // Add bench players as a single row (left to right by position)
     if (bench.length > 0) {
         const benchCircles = bench.map(pick => {
             const player = getPlayerById(pick.element);
@@ -640,59 +646,54 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
         }).filter(Boolean);
 
         if (benchCircles.length > 0) {
-            // Calculate separator line Y position (between FWD row and bench row)
-            // Position the separator line with gap after FWD row
-            // After processing FWD, rowIndex is 4, so separator is below FWD with gap
-            separatorY = topOffset + rowIndex * rowHeight + separatorGap;
-
             // Position bench row below separator with gap
             const benchRowCenterY = separatorY + benchGap + rowHeight / 2;
             packCirclesInRow(benchCircles, rowWidth, benchRowCenterY);
 
             benchCircles.forEach(circle => {
-            const { pick, player, liveStats, gwStats, gwPoints, minutes, ownership, size } = circle;
-            const fontSize = getFontSize(size);
-            const colors = getPointsColors(gwPoints, minutes);
+                const { pick, player, liveStats, gwStats, gwPoints, minutes, ownership, size } = circle;
+                const fontSize = getFontSize(size);
+                const colors = getPointsColors(gwPoints, minutes);
 
-            // Just the player name, no (C) or (VC) labels
-            const labelText = escapeHtml(player.web_name);
+                // Just the player name, no (C) or (VC) labels
+                const labelText = escapeHtml(player.web_name);
 
-            allNodes.push({
-                name: player.web_name,
-                value: [circle.x, circle.y, size], // [x, y, size] format for scatter plot
-                symbol: 'circle',
-                itemStyle: {
-                    color: colors.bgColor,
-                    opacity: 0.7, // Lower opacity for bench players
-                    // Softer borders for bench
-                    borderColor: 'rgba(255, 255, 255, 0.2)',
-                    borderWidth: 1.5,
-                    shadowBlur: 3,
-                    shadowColor: 'rgba(0, 0, 0, 0.1)',
-                    shadowOffsetY: 1
-                },
-                label: {
-                    show: true,
-                    formatter: labelText,
-                    fontSize: fontSize,
-                    fontWeight: 'bold',
-                    color: colors.textColor,
-                    textBorderColor: 'rgba(0, 0, 0, 0.4)',
-                    textBorderWidth: 1
-                },
-                playerData: {
-                    player,
-                    pick,
-                    liveStats,
-                    gwStats,
-                    gwPoints,
-                    minutes,
-                    ownership,
-                    gwNumber,
-                    activeGW
-                }
+                allNodes.push({
+                    name: player.web_name,
+                    value: [circle.x, circle.y, size], // [x, y, size] format for scatter plot
+                    symbol: 'circle',
+                    itemStyle: {
+                        color: colors.bgColor,
+                        opacity: 0.7, // Lower opacity for bench players
+                        // Softer borders for bench
+                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                        borderWidth: 1.5,
+                        shadowBlur: 3,
+                        shadowColor: 'rgba(0, 0, 0, 0.1)',
+                        shadowOffsetY: 1
+                    },
+                    label: {
+                        show: true,
+                        formatter: labelText,
+                        fontSize: fontSize,
+                        fontWeight: 'bold',
+                        color: colors.textColor,
+                        textBorderColor: 'rgba(0, 0, 0, 0.4)',
+                        textBorderWidth: 1
+                    },
+                    playerData: {
+                        player,
+                        pick,
+                        liveStats,
+                        gwStats,
+                        gwPoints,
+                        minutes,
+                        ownership,
+                        gwNumber,
+                        activeGW
+                    }
+                });
             });
-        });
         }
     }
 
