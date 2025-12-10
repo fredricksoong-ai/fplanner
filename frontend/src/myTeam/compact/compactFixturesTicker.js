@@ -333,14 +333,13 @@ export function renderFixturesTicker() {
  */
 export function showFixtureModal(fixtureId) {
     console.log('🔍 showFixtureModal called with fixtureId:', fixtureId);
-    
-    // Make function globally available for onclick handlers
-    if (typeof window !== 'undefined') {
-        window.showFixtureModal = showFixtureModal;
-    }
+    console.log('🔍 Function is defined:', typeof showFixtureModal);
     
     const fplFixtures = getFixturesData;
     const fplBootstrap = getBootstrapData();
+    
+    console.log('🔍 fplFixtures available:', !!fplFixtures);
+    console.log('🔍 fplBootstrap available:', !!fplBootstrap);
 
     if (!fplFixtures || !fplBootstrap) {
         console.warn('Cannot show fixture modal: data not available');
@@ -795,16 +794,21 @@ export function showFixtureStatsModal(fixtureId) {
  * Follows the same pattern as attachPlayerRowListeners
  */
 export function attachFixtureTickerListeners() {
+    console.log('🔍 attachFixtureTickerListeners called');
+    console.log('🔍 showFixtureModal available:', typeof showFixtureModal);
+    
     // Retry mechanism in case DOM isn't ready yet
     const tryAttach = (attempt = 0) => {
         const fixtureCards = document.querySelectorAll('.fixture-card-ticker');
+        
+        console.log(`🔍 Attempt ${attempt + 1}: Found ${fixtureCards.length} fixture cards`);
         
         if (fixtureCards.length === 0) {
             if (attempt < 10) {
                 // Retry after a short delay
                 setTimeout(() => tryAttach(attempt + 1), 100);
             } else {
-                console.warn('Fixture cards not found after retries');
+                console.warn('❌ Fixture cards not found after retries');
             }
             return;
         }
@@ -812,15 +816,51 @@ export function attachFixtureTickerListeners() {
         console.log(`✅ Found ${fixtureCards.length} fixture cards, attaching listeners...`);
 
         // Attach click listener to each fixture card (same pattern as player rows)
-        fixtureCards.forEach(card => {
+        fixtureCards.forEach((card, index) => {
+            const fixtureIdAttr = card.getAttribute('data-fixture-id');
+            const fixtureIdDataset = card.dataset.fixtureId;
+            console.log(`🔍 Card ${index}:`);
+            console.log(`   - data-fixture-id attribute: ${fixtureIdAttr}`);
+            console.log(`   - dataset.fixtureId: ${fixtureIdDataset}`);
+            console.log(`   - All dataset:`, card.dataset);
+            
+            // Test: Add a simple visual feedback first
+            card.style.border = '2px solid red';
+            
             card.addEventListener('click', (e) => {
-                const fixtureId = parseInt(card.dataset.fixtureId);
-                console.log('✅ Fixture card clicked, ID:', fixtureId);
+                console.log('🔍 ===== CLICK EVENT FIRED =====');
+                console.log('🔍 Click event fired on card:', card);
+                console.log('🔍 Event target:', e.target);
+                console.log('🔍 Event currentTarget:', e.currentTarget);
+                console.log('🔍 Card element:', card);
+                console.log('🔍 Card dataset:', card.dataset);
+                console.log('🔍 Card attributes:', Array.from(card.attributes).map(a => `${a.name}=${a.value}`));
                 
-                if (fixtureId) {
-                    showFixtureModal(fixtureId);
+                // Try both methods to get fixture ID
+                const fixtureId1 = parseInt(card.getAttribute('data-fixture-id'));
+                const fixtureId2 = parseInt(card.dataset.fixtureId);
+                console.log('🔍 FixtureId from getAttribute:', fixtureId1);
+                console.log('🔍 FixtureId from dataset:', fixtureId2);
+                
+                const fixtureId = fixtureId1 || fixtureId2;
+                console.log('🔍 Using fixtureId:', fixtureId);
+                
+                if (fixtureId && !isNaN(fixtureId)) {
+                    console.log('✅ Calling showFixtureModal with:', fixtureId);
+                    console.log('✅ showFixtureModal type:', typeof showFixtureModal);
+                    try {
+                        showFixtureModal(fixtureId);
+                        console.log('✅ showFixtureModal called successfully');
+                    } catch (error) {
+                        console.error('❌ Error calling showFixtureModal:', error);
+                        console.error('❌ Error stack:', error.stack);
+                    }
+                } else {
+                    console.warn('❌ Invalid fixtureId:', fixtureId);
                 }
-            });
+                
+                e.stopPropagation();
+            }, true); // Use capture phase
         });
 
         console.log('✅ Fixture ticker listeners attached successfully');
