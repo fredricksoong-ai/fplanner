@@ -154,6 +154,7 @@ function renderFixtureCard(fixture, fplBootstrap, isLast = false, isEven = false
             class="fixture-card-ticker" 
             data-fixture-id="${fixture.id}"
             data-can-expand="${canShowStats}"
+            onclick="window.showFixtureModal(${fixture.id})"
             style="
                 min-width: 45px;
                 flex-shrink: 0;
@@ -288,6 +289,11 @@ export function renderFixturesTicker() {
         })
         .join('');
 
+    // Make showFixtureModal globally available
+    if (typeof window !== 'undefined') {
+        window.showFixtureModal = showFixtureModal;
+    }
+
     return `
         <div class="fixtures-ticker-container" style="
             width: 100%;
@@ -328,6 +334,11 @@ export function renderFixturesTicker() {
  */
 export function showFixtureModal(fixtureId) {
     console.log('🔍 showFixtureModal called with fixtureId:', fixtureId);
+    
+    // Make function globally available for onclick handlers
+    if (typeof window !== 'undefined') {
+        window.showFixtureModal = showFixtureModal;
+    }
     
     const fplFixtures = getFixturesData;
     const fplBootstrap = getBootstrapData();
@@ -784,94 +795,31 @@ export function showFixtureStatsModal(fixtureId) {
  * Attach click listeners to fixture cards in the ticker
  */
 export function attachFixtureTickerListeners() {
-    // Retry mechanism in case DOM isn't ready yet
-    const tryAttach = (attempt = 0) => {
-        const container = document.querySelector('.fixtures-ticker-container');
-        if (!container) {
-            if (attempt < 5) {
-                // Retry after a short delay
-                setTimeout(() => tryAttach(attempt + 1), 100);
-            } else {
-                console.warn('Fixture ticker container not found after retries');
-            }
-            return;
-        }
+    // Make function globally available first
+    if (typeof window !== 'undefined') {
+        window.showFixtureModal = showFixtureModal;
+    }
 
-        // Check if listeners already attached
-        if (container.hasAttribute('data-ticker-listeners-attached')) {
-            return;
-        }
+    // Use document-level event delegation to catch all clicks
+    const handleClick = (e) => {
+        const fixtureCard = e.target.closest('.fixture-card-ticker');
+        if (!fixtureCard) return;
 
-        container.setAttribute('data-ticker-listeners-attached', 'true');
+        const fixtureId = fixtureCard.getAttribute('data-fixture-id');
+        if (!fixtureId) return;
 
-        // Use capture phase to ensure we catch the event
-        container.addEventListener('click', (e) => {
-            console.log('🔍 Click event triggered on:', e.target);
-            console.log('🔍 Event target classes:', e.target.className);
-            console.log('🔍 Event target tag:', e.target.tagName);
-            
-            const fixtureCard = e.target.closest('.fixture-card-ticker');
-            console.log('🔍 Fixture card found:', fixtureCard);
-            
-            if (!fixtureCard) {
-                console.log('❌ No fixture card found - checking parent');
-                // Try finding parent
-                let parent = e.target.parentElement;
-                let attempts = 0;
-                while (parent && attempts < 5) {
-                    if (parent.classList && parent.classList.contains('fixture-card-ticker')) {
-                        console.log('✅ Found fixture card in parent:', parent);
-                        const fixtureId = parent.getAttribute('data-fixture-id');
-                        if (fixtureId) {
-                            console.log('✅ Opening modal for fixture:', fixtureId);
-                            showFixtureModal(parseInt(fixtureId));
-                            e.stopPropagation();
-                            return;
-                        }
-                    }
-                    parent = parent.parentElement;
-                    attempts++;
-                }
-                return;
-            }
-
-            const fixtureId = fixtureCard.getAttribute('data-fixture-id');
-            console.log('🔍 Fixture ID:', fixtureId);
-            
-            if (!fixtureId) {
-                console.log('❌ No fixture ID');
-                return;
-            }
-
-            // For now, just show basic modal for all fixtures
-            console.log('✅ Opening modal for fixture:', fixtureId);
-            e.stopPropagation();
-            showFixtureModal(parseInt(fixtureId));
-        }, true); // Use capture phase
-
-        // Add hover effect for clickable fixtures
-        container.addEventListener('mouseover', (e) => {
-            const fixtureCard = e.target.closest('.fixture-card-ticker');
-            if (!fixtureCard) return;
-
-            const canExpand = fixtureCard.getAttribute('data-can-expand') === 'true';
-            if (canExpand) {
-                fixtureCard.style.background = 'rgba(255, 255, 255, 0.08)';
-            }
-        });
-
-        container.addEventListener('mouseout', (e) => {
-            const fixtureCard = e.target.closest('.fixture-card-ticker');
-            if (!fixtureCard) return;
-
-            const canExpand = fixtureCard.getAttribute('data-can-expand') === 'true';
-            if (canExpand) {
-                // Reset to original background
-                fixtureCard.style.background = '';
-            }
-        });
+        console.log('✅ Click detected on fixture card:', fixtureId);
+        e.stopPropagation();
+        e.preventDefault();
+        showFixtureModal(parseInt(fixtureId));
     };
 
-    tryAttach();
+    // Remove existing listener if any
+    if (document.hasAttribute('data-fixture-ticker-global-listener')) {
+        return;
+    }
+
+    document.setAttribute('data-fixture-ticker-global-listener', 'true');
+    document.addEventListener('click', handleClick, true); // Use capture phase
 }
 

@@ -479,6 +479,9 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
     const rowWidth = containerWidth;
     // Adjust starting position to reduce top gap further
     const topOffset = 0.5; // Start much closer to top
+    // Gaps for separator line
+    const separatorGap = rowHeight * 0.3; // Gap between FWD row and separator line
+    const benchGap = rowHeight * 0.3; // Gap between separator line and bench row
     
     const allNodes = [];
     let rowIndex = 0;
@@ -601,9 +604,9 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
     // Add separator line after FWD row (before bench)
     let separatorY = null;
     if (bench.length > 0) {
-        // Position the separator line at the boundary between FWD row and bench row
-        // After processing FWD, rowIndex is 4, so separator is at the top of bench row
-        separatorY = topOffset + rowIndex * rowHeight;
+        // Position the separator line with gap after FWD row
+        // After processing FWD, rowIndex is 4, so separator is below FWD with gap
+        separatorY = topOffset + rowIndex * rowHeight + separatorGap;
     }
     
     // Add bench players as a single row (left to right by position)
@@ -644,7 +647,8 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
         }).filter(Boolean);
 
         if (benchCircles.length > 0) {
-            const benchRowCenterY = topOffset + (rowIndex + 0.5) * rowHeight;
+            // Position bench row below separator with gap
+            const benchRowCenterY = separatorY + benchGap + rowHeight / 2;
             packCirclesInRow(benchCircles, rowWidth, benchRowCenterY);
 
             benchCircles.forEach(circle => {
