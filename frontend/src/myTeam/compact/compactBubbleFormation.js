@@ -473,16 +473,16 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
 
     const containerWidth = 100;
     // Increase container height to account for gaps and prevent cutoff
-    const containerHeight = 150; // Significantly increased to accommodate gaps, bubble sizes, and prevent cutoff
+    const containerHeight = 160; // Slightly increased to fully accommodate bench bubbles
     const numRows = 5; // 4 for starters + 1 for bench
     // Tighter spacing: use more of the container height, less wasted space
     const rowHeight = containerHeight / (numRows + 0.2); // Even tighter spacing
     const rowWidth = containerWidth;
     // Adjust starting position to reduce top gap further
     const topOffset = 0.5; // Start much closer to top
-    // Gaps for separator line
-    const separatorGap = rowHeight * 0.3; // Gap between FWD row and separator line
-    const benchGap = rowHeight * 0.3; // Gap between separator line and bench row
+    // Gaps for separator line (reduced for tighter spacing)
+    const separatorGap = rowHeight * 0.15; // Gap between FWD row and separator line
+    const benchGap = rowHeight * 0.15; // Gap between separator line and bench row
     
     const allNodes = [];
     let rowIndex = 0;
@@ -724,7 +724,7 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
             type: 'value',
             show: false,
             min: 0,
-            max: 150, // Increased to match containerHeight to prevent cutoff
+            max: 160, // Increased to match containerHeight to prevent cutoff
             inverse: true
         },
         tooltip: {
@@ -751,6 +751,9 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
             markLine: separatorY !== null ? {
                 silent: true,
                 symbol: 'none',
+                label: {
+                    show: false // Explicitly hide any labels on the separator line
+                },
                 lineStyle: {
                     color: 'rgba(255, 255, 255, 0.15)',
                     width: 1,
