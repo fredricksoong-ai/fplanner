@@ -420,7 +420,7 @@ export async function renderCompactBubbleFormation(players, gwNumber, isLive, my
                     </div>
                 </div>
                 
-                <div id="bubble-formation-chart" style="width: 100%; height: 350px;"></div>
+                <div id="bubble-formation-chart" style="width: 100%; height: 400px;"></div>
             </div>
         </div>
     `;
