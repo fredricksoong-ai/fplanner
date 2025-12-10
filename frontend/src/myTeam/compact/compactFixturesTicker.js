@@ -154,7 +154,6 @@ function renderFixtureCard(fixture, fplBootstrap, isLast = false, isEven = false
             class="fixture-card-ticker" 
             data-fixture-id="${fixture.id}"
             data-can-expand="${canShowStats}"
-            onclick="window.showFixtureModal(${fixture.id})"
             style="
                 min-width: 45px;
                 flex-shrink: 0;
@@ -793,33 +792,40 @@ export function showFixtureStatsModal(fixtureId) {
 
 /**
  * Attach click listeners to fixture cards in the ticker
+ * Follows the same pattern as attachPlayerRowListeners
  */
 export function attachFixtureTickerListeners() {
-    // Make function globally available first
-    if (typeof window !== 'undefined') {
-        window.showFixtureModal = showFixtureModal;
-    }
+    // Retry mechanism in case DOM isn't ready yet
+    const tryAttach = (attempt = 0) => {
+        const fixtureCards = document.querySelectorAll('.fixture-card-ticker');
+        
+        if (fixtureCards.length === 0) {
+            if (attempt < 10) {
+                // Retry after a short delay
+                setTimeout(() => tryAttach(attempt + 1), 100);
+            } else {
+                console.warn('Fixture cards not found after retries');
+            }
+            return;
+        }
 
-    // Use document-level event delegation to catch all clicks
-    const handleClick = (e) => {
-        const fixtureCard = e.target.closest('.fixture-card-ticker');
-        if (!fixtureCard) return;
+        console.log(`✅ Found ${fixtureCards.length} fixture cards, attaching listeners...`);
 
-        const fixtureId = fixtureCard.getAttribute('data-fixture-id');
-        if (!fixtureId) return;
+        // Attach click listener to each fixture card (same pattern as player rows)
+        fixtureCards.forEach(card => {
+            card.addEventListener('click', (e) => {
+                const fixtureId = parseInt(card.dataset.fixtureId);
+                console.log('✅ Fixture card clicked, ID:', fixtureId);
+                
+                if (fixtureId) {
+                    showFixtureModal(fixtureId);
+                }
+            });
+        });
 
-        console.log('✅ Click detected on fixture card:', fixtureId);
-        e.stopPropagation();
-        e.preventDefault();
-        showFixtureModal(parseInt(fixtureId));
+        console.log('✅ Fixture ticker listeners attached successfully');
     };
 
-    // Remove existing listener if any
-    if (document.hasAttribute('data-fixture-ticker-global-listener')) {
-        return;
-    }
-
-    document.setAttribute('data-fixture-ticker-global-listener', 'true');
-    document.addEventListener('click', handleClick, true); // Use capture phase
+    tryAttach();
 }
 

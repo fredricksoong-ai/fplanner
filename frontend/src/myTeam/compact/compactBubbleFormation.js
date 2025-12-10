@@ -648,7 +648,9 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
 
         if (benchCircles.length > 0) {
             // Position bench row below separator with gap
-            const benchRowCenterY = separatorY + benchGap + rowHeight / 2;
+            // separatorY is at: topOffset + rowIndex * rowHeight + separatorGap
+            // bench row center should be: separatorY + benchGap + rowHeight / 2
+            const benchRowCenterY = topOffset + rowIndex * rowHeight + separatorGap + benchGap + rowHeight / 2;
             packCirclesInRow(benchCircles, rowWidth, benchRowCenterY);
 
             benchCircles.forEach(circle => {
