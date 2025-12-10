@@ -332,32 +332,53 @@ export function renderFixturesTicker() {
  * @param {number} fixtureId - Fixture ID
  */
 export function showFixtureModal(fixtureId) {
-    console.log('🔍 showFixtureModal called with fixtureId:', fixtureId);
-    console.log('🔍 Function is defined:', typeof showFixtureModal);
-    
-    const fplFixtures = getFixturesData;
-    const fplBootstrap = getBootstrapData();
-    
-    console.log('🔍 fplFixtures available:', !!fplFixtures);
-    console.log('🔍 fplBootstrap available:', !!fplBootstrap);
+    try {
+        console.log('🔍 showFixtureModal called with fixtureId:', fixtureId);
+        console.log('🔍 Function is defined:', typeof showFixtureModal);
+        
+        console.log('🔍 Getting data...');
+        const fplFixtures = getFixturesData;
+        console.log('🔍 getFixturesData accessed:', typeof fplFixtures, fplFixtures ? 'has data' : 'null/undefined');
+        
+        const fplBootstrap = getBootstrapData;
+        console.log('🔍 getBootstrapData accessed:', typeof fplBootstrap, fplBootstrap ? 'has data' : 'null/undefined');
+        
+        console.log('🔍 fplFixtures available:', !!fplFixtures);
+        console.log('🔍 fplBootstrap available:', !!fplBootstrap);
+        console.log('🔍 fplFixtures type:', typeof fplFixtures);
+        console.log('🔍 fplBootstrap type:', typeof fplBootstrap);
 
     if (!fplFixtures || !fplBootstrap) {
-        console.warn('Cannot show fixture modal: data not available');
+        console.warn('❌ Cannot show fixture modal: data not available');
+        console.warn('❌ fplFixtures:', fplFixtures);
+        console.warn('❌ fplBootstrap:', fplBootstrap);
         return;
     }
 
+    console.log('🔍 fplFixtures length:', Array.isArray(fplFixtures) ? fplFixtures.length : 'not array');
+    console.log('🔍 Looking for fixture with id:', fixtureId);
+
     // Find the fixture
     const fixture = fplFixtures.find(f => f.id === fixtureId);
+    console.log('🔍 Fixture found:', !!fixture);
+    console.log('🔍 Fixture:', fixture);
+    
     if (!fixture) {
-        console.warn(`Fixture ${fixtureId} not found`);
+        console.warn(`❌ Fixture ${fixtureId} not found`);
+        console.warn('❌ Available fixture IDs:', fplFixtures.slice(0, 5).map(f => f.id));
         return;
     }
 
     const homeTeam = fplBootstrap.teams.find(t => t.id === fixture.team_h);
     const awayTeam = fplBootstrap.teams.find(t => t.id === fixture.team_a);
 
+    console.log('🔍 Home team found:', !!homeTeam);
+    console.log('🔍 Away team found:', !!awayTeam);
+
     if (!homeTeam || !awayTeam) {
-        console.warn('Teams not found for fixture');
+        console.warn('❌ Teams not found for fixture');
+        console.warn('❌ Home team ID:', fixture.team_h);
+        console.warn('❌ Away team ID:', fixture.team_a);
         return;
     }
 
@@ -369,13 +390,20 @@ export function showFixtureModal(fixtureId) {
 
     // Create or get modal
     let modal = document.getElementById('fixture-modal');
+    console.log('🔍 Existing modal found:', !!modal);
+    
     if (!modal) {
+        console.log('🔍 Creating new modal element');
         modal = document.createElement('div');
         modal.id = 'fixture-modal';
         document.body.appendChild(modal);
+        console.log('✅ Modal element created and appended to body');
     }
 
+    console.log('🔍 Setting modal display to block');
     modal.style.display = 'block';
+    console.log('🔍 Modal display set. Modal element:', modal);
+    console.log('🔍 Modal innerHTML length:', modal.innerHTML.length);
     modal.innerHTML = `
         <div class="fixture-modal-overlay" style="
             position: fixed;
@@ -451,10 +479,30 @@ export function showFixtureModal(fixtureId) {
         modal.innerHTML = '';
     };
 
-    if (closeBtn) closeBtn.addEventListener('click', closeModal);
-    if (overlay) overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) closeModal();
-    });
+    if (closeBtn) {
+        console.log('✅ Close button found, attaching listener');
+        closeBtn.addEventListener('click', closeModal);
+    } else {
+        console.warn('❌ Close button not found');
+    }
+    
+    if (overlay) {
+        console.log('✅ Overlay found, attaching listener');
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) closeModal();
+        });
+    } else {
+        console.warn('❌ Overlay not found');
+    }
+    
+    console.log('✅ Modal setup complete. Modal should be visible now.');
+    console.log('🔍 Modal element:', modal);
+    console.log('🔍 Modal display style:', modal.style.display);
+    console.log('🔍 Modal computed display:', window.getComputedStyle(modal).display);
+    } catch (error) {
+        console.error('❌ Error in showFixtureModal:', error);
+        console.error('❌ Error stack:', error.stack);
+    }
 }
 
 /**
@@ -463,7 +511,7 @@ export function showFixtureModal(fixtureId) {
  */
 function showFixtureInfoModal(fixtureId) {
     const fplFixtures = getFixturesData;
-    const fplBootstrap = getBootstrapData();
+    const fplBootstrap = getBootstrapData;
 
     if (!fplFixtures || !fplBootstrap) {
         console.warn('Cannot show fixture modal: data not available');
@@ -611,7 +659,7 @@ function showFixtureInfoModal(fixtureId) {
  */
 export function showFixtureStatsModal(fixtureId) {
     const fplFixtures = getFixturesData;
-    const fplBootstrap = getBootstrapData();
+    const fplBootstrap = getBootstrapData;
     const currentGW = getActiveGW();
 
     if (!fplFixtures || !fplBootstrap || !currentGW) {
