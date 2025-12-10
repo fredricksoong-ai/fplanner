@@ -7,12 +7,15 @@
 import {
     fplFixtures as getFixturesData,
     fplBootstrap as getBootstrapData,
-    getActiveGW
+    getActiveGW,
+    getAllPlayers,
+    isGameweekLive
 } from '../../data.js';
 
 import { renderFixturePlayerStats } from '../fixturesTab.js';
-import { escapeHtml } from '../../utils.js';
+import { escapeHtml, getDifficultyClass } from '../../utils.js';
 import { getGlassmorphism, getShadow, getMobileBorderRadius } from '../../styles/mobileDesignSystem.js';
+import { getMatchStatus } from '../../fixtures.js';
 
 /**
  * Get team short name (3-letter code)
@@ -333,54 +336,37 @@ export function renderFixturesTicker() {
  */
 export function showFixtureModal(fixtureId) {
     try {
-        console.log('🔍 showFixtureModal called with fixtureId:', fixtureId);
-        console.log('🔍 Function is defined:', typeof showFixtureModal);
-        
-        console.log('🔍 Getting data...');
         const fplFixtures = getFixturesData;
-        console.log('🔍 getFixturesData accessed:', typeof fplFixtures, fplFixtures ? 'has data' : 'null/undefined');
-        
         const fplBootstrap = getBootstrapData;
-        console.log('🔍 getBootstrapData accessed:', typeof fplBootstrap, fplBootstrap ? 'has data' : 'null/undefined');
+
+        if (!fplFixtures || !fplBootstrap) {
+            console.warn('Cannot show fixture modal: data not available');
+            return;
+        }
+
+        // Find the fixture
+        const fixture = fplFixtures.find(f => f.id === fixtureId);
         
-        console.log('🔍 fplFixtures available:', !!fplFixtures);
-        console.log('🔍 fplBootstrap available:', !!fplBootstrap);
-        console.log('🔍 fplFixtures type:', typeof fplFixtures);
-        console.log('🔍 fplBootstrap type:', typeof fplBootstrap);
+        if (!fixture) {
+            console.warn(`Fixture ${fixtureId} not found`);
+            return;
+        }
 
-    if (!fplFixtures || !fplBootstrap) {
-        console.warn('❌ Cannot show fixture modal: data not available');
-        console.warn('❌ fplFixtures:', fplFixtures);
-        console.warn('❌ fplBootstrap:', fplBootstrap);
-        return;
-    }
+        const homeTeam = fplBootstrap.teams.find(t => t.id === fixture.team_h);
+        const awayTeam = fplBootstrap.teams.find(t => t.id === fixture.team_a);
 
-    console.log('🔍 fplFixtures length:', Array.isArray(fplFixtures) ? fplFixtures.length : 'not array');
-    console.log('🔍 Looking for fixture with id:', fixtureId);
+        if (!homeTeam || !awayTeam) {
+            console.warn('Teams not found for fixture');
+            return;
+        }
 
-    // Find the fixture
-    const fixture = fplFixtures.find(f => f.id === fixtureId);
-    console.log('🔍 Fixture found:', !!fixture);
-    console.log('🔍 Fixture:', fixture);
-    
-    if (!fixture) {
-        console.warn(`❌ Fixture ${fixtureId} not found`);
-        console.warn('❌ Available fixture IDs:', fplFixtures.slice(0, 5).map(f => f.id));
-        return;
-    }
-
-    const homeTeam = fplBootstrap.teams.find(t => t.id === fixture.team_h);
-    const awayTeam = fplBootstrap.teams.find(t => t.id === fixture.team_a);
-
-    console.log('🔍 Home team found:', !!homeTeam);
-    console.log('🔍 Away team found:', !!awayTeam);
-
-    if (!homeTeam || !awayTeam) {
-        console.warn('❌ Teams not found for fixture');
-        console.warn('❌ Home team ID:', fixture.team_h);
-        console.warn('❌ Away team ID:', fixture.team_a);
-        return;
-    }
+    // Determine fixture state
+    const isFinished = fixture.finished === true;
+    const isStarted = fixture.started === true;
+    const isLive = isStarted && !isFinished;
+    const isPostponed = !fixture.event || !fixture.kickoff_time;
+    const gameweek = fixture.event || getActiveGW();
+    const isGWLive = isGameweekLive(gameweek);
 
     // Get glassmorphism effects
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
@@ -388,22 +374,148 @@ export function showFixtureModal(fixtureId) {
     const shadow = getShadow('modal');
     const radius = getMobileBorderRadius('xlarge');
 
+    // Build header content based on state
+    let headerContent = '';
+    let mainContent = '';
+
+    if (isPostponed) {
+        // Postponed fixture
+        headerContent = `
+            <div style="text-align: center; margin-bottom: 1rem;">
+                <div style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem;">
+                    ${escapeHtml(homeTeam.name)} vs ${escapeHtml(awayTeam.name)}
+                </div>
+                <div style="color: var(--text-secondary); font-size: 0.875rem;">
+                    Postponed
+                </div>
+            </div>
+        `;
+        mainContent = `
+            <div style="text-align: center; color: var(--text-secondary); font-size: 0.875rem; padding: 2rem 0;">
+                This fixture has been postponed.
+            </div>
+        `;
+    } else if (isLive || isFinished) {
+        // Live or finished fixture - show score and stats
+        const homeScore = fixture.team_h_score !== null ? fixture.team_h_score : '-';
+        const awayScore = fixture.team_a_score !== null ? fixture.team_a_score : '-';
+        
+        // Get live status (minutes played)
+        let statusBadge = '';
+        if (isLive) {
+            const allPlayers = getAllPlayers();
+            const samplePlayer = allPlayers.find(p => p.team === fixture.team_h);
+            if (samplePlayer) {
+                const matchStatus = getMatchStatus(fixture.team_h, gameweek, samplePlayer);
+                statusBadge = `<span style="color: #ef4444; font-weight: 600; font-size: 0.75rem;">${matchStatus}</span>`;
+            } else {
+                statusBadge = '<span style="color: #ef4444; font-weight: 600; font-size: 0.75rem;">LIVE</span>';
+            }
+        } else if (isFinished) {
+            statusBadge = '<span style="color: #22c55e; font-weight: 600; font-size: 0.75rem;">FT</span>';
+        }
+
+        headerContent = `
+            <div style="text-align: center; margin-bottom: 1rem;">
+                <div style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
+                    ${escapeHtml(homeTeam.name)} vs ${escapeHtml(awayTeam.name)}
+                </div>
+                <div style="display: flex; align-items: center; justify-content: center; gap: 1rem; margin-bottom: 0.5rem;">
+                    <div style="font-size: 2rem; font-weight: 700; color: var(--text-primary);">
+                        ${homeScore}
+                    </div>
+                    <div style="font-size: 1rem; color: var(--text-secondary);">-</div>
+                    <div style="font-size: 2rem; font-weight: 700; color: var(--text-primary);">
+                        ${awayScore}
+                    </div>
+                </div>
+                ${statusBadge ? `<div style="margin-top: 0.5rem;">${statusBadge}</div>` : ''}
+            </div>
+        `;
+
+        // Get player stats
+        const playerStatsHTML = renderFixturePlayerStats(fixture, gameweek, isGWLive, isFinished, false, fplBootstrap);
+        // Remove the display:none and transition styles from the stats section since we're showing it directly
+        const statsContent = playerStatsHTML.replace(/display:\s*none[^;]*;?/g, '').replace(/opacity:\s*0[^;]*;?/g, '').replace(/max-height:\s*0[^;]*;?/g, '').replace(/transition:[^;]*;?/g, '');
+        
+        mainContent = statsContent || `
+            <div style="text-align: center; color: var(--text-secondary); font-size: 0.875rem; padding: 2rem 0;">
+                Stats will be available after the match starts.
+            </div>
+        `;
+    } else {
+        // Upcoming fixture - show kickoff time and difficulty
+        const kickoffDate = new Date(fixture.kickoff_time);
+        const now = new Date();
+        const isToday = kickoffDate.toDateString() === now.toDateString();
+        
+        const timeStr = kickoffDate.toLocaleString('en-GB', {
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        });
+
+        const homeDifficulty = fixture.team_h_difficulty || 3;
+        const awayDifficulty = fixture.team_a_difficulty || 3;
+
+        headerContent = `
+            <div style="text-align: center; margin-bottom: 1rem;">
+                <div style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem;">
+                    ${escapeHtml(homeTeam.name)} vs ${escapeHtml(awayTeam.name)}
+                </div>
+                <div style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 0.75rem;">
+                    ${isToday ? 'Today' : timeStr}
+                </div>
+            </div>
+        `;
+
+        mainContent = `
+            <div style="background: var(--bg-secondary); border-radius: 0.5rem; padding: 1rem;">
+                <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 0.75rem; text-transform: uppercase;">
+                    Fixture Difficulty
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                    <span style="color: var(--text-primary); font-size: 0.875rem;">${escapeHtml(homeTeam.name)} (H)</span>
+                    <span class="${getDifficultyClass(homeDifficulty)}" style="
+                        display: inline-block;
+                        width: 1.5rem;
+                        height: 1.5rem;
+                        border-radius: 0.25rem;
+                        text-align: center;
+                        line-height: 1.5rem;
+                        font-weight: 700;
+                        font-size: 0.75rem;
+                    ">${homeDifficulty}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color: var(--text-primary); font-size: 0.875rem;">${escapeHtml(awayTeam.name)} (A)</span>
+                    <span class="${getDifficultyClass(awayDifficulty)}" style="
+                        display: inline-block;
+                        width: 1.5rem;
+                        height: 1.5rem;
+                        border-radius: 0.25rem;
+                        text-align: center;
+                        line-height: 1.5rem;
+                        font-weight: 700;
+                        font-size: 0.75rem;
+                    ">${awayDifficulty}</span>
+                </div>
+            </div>
+        `;
+    }
+
     // Create or get modal
     let modal = document.getElementById('fixture-modal');
-    console.log('🔍 Existing modal found:', !!modal);
     
     if (!modal) {
-        console.log('🔍 Creating new modal element');
         modal = document.createElement('div');
         modal.id = 'fixture-modal';
         document.body.appendChild(modal);
-        console.log('✅ Modal element created and appended to body');
     }
 
-    console.log('🔍 Setting modal display to block');
     modal.style.display = 'block';
-    console.log('🔍 Modal display set. Modal element:', modal);
-    console.log('🔍 Modal innerHTML length:', modal.innerHTML.length);
     modal.innerHTML = `
         <div class="fixture-modal-overlay" style="
             position: fixed;
@@ -435,15 +547,10 @@ export function showFixtureModal(fixtureId) {
                     border-radius: ${radius};
                     box-shadow: ${shadow};
                 ">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                        <h3 style="
-                            font-size: 1rem;
-                            font-weight: 700;
-                            color: var(--text-primary);
-                            margin: 0;
-                        ">
-                            ${escapeHtml(homeTeam.name)} vs ${escapeHtml(awayTeam.name)}
-                        </h3>
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                        <div style="flex: 1;">
+                            ${headerContent}
+                        </div>
                         <button class="close-fixture-modal-btn" style="
                             background: transparent;
                             border: none;
@@ -454,17 +561,12 @@ export function showFixtureModal(fixtureId) {
                             width: 2rem;
                             height: 2rem;
                             line-height: 1;
+                            flex-shrink: 0;
                         ">
                             ×
                         </button>
                     </div>
-                    <div style="
-                        color: var(--text-secondary);
-                        font-size: 0.875rem;
-                        text-align: center;
-                    ">
-                        Fixture ID: ${fixtureId}
-                    </div>
+                    ${mainContent}
                 </div>
             </div>
         </div>
@@ -479,29 +581,12 @@ export function showFixtureModal(fixtureId) {
         modal.innerHTML = '';
     };
 
-    if (closeBtn) {
-        console.log('✅ Close button found, attaching listener');
-        closeBtn.addEventListener('click', closeModal);
-    } else {
-        console.warn('❌ Close button not found');
-    }
-    
-    if (overlay) {
-        console.log('✅ Overlay found, attaching listener');
-        overlay.addEventListener('click', (e) => {
-            if (e.target === overlay) closeModal();
-        });
-    } else {
-        console.warn('❌ Overlay not found');
-    }
-    
-    console.log('✅ Modal setup complete. Modal should be visible now.');
-    console.log('🔍 Modal element:', modal);
-    console.log('🔍 Modal display style:', modal.style.display);
-    console.log('🔍 Modal computed display:', window.getComputedStyle(modal).display);
+    if (closeBtn) closeBtn.addEventListener('click', closeModal);
+    if (overlay) overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) closeModal();
+    });
     } catch (error) {
-        console.error('❌ Error in showFixtureModal:', error);
-        console.error('❌ Error stack:', error.stack);
+        console.error('Error in showFixtureModal:', error);
     }
 }
 
@@ -842,76 +927,30 @@ export function showFixtureStatsModal(fixtureId) {
  * Follows the same pattern as attachPlayerRowListeners
  */
 export function attachFixtureTickerListeners() {
-    console.log('🔍 attachFixtureTickerListeners called');
-    console.log('🔍 showFixtureModal available:', typeof showFixtureModal);
-    
     // Retry mechanism in case DOM isn't ready yet
     const tryAttach = (attempt = 0) => {
         const fixtureCards = document.querySelectorAll('.fixture-card-ticker');
-        
-        console.log(`🔍 Attempt ${attempt + 1}: Found ${fixtureCards.length} fixture cards`);
         
         if (fixtureCards.length === 0) {
             if (attempt < 10) {
                 // Retry after a short delay
                 setTimeout(() => tryAttach(attempt + 1), 100);
-            } else {
-                console.warn('❌ Fixture cards not found after retries');
             }
             return;
         }
 
-        console.log(`✅ Found ${fixtureCards.length} fixture cards, attaching listeners...`);
-
-        // Attach click listener to each fixture card (same pattern as player rows)
-        fixtureCards.forEach((card, index) => {
-            const fixtureIdAttr = card.getAttribute('data-fixture-id');
-            const fixtureIdDataset = card.dataset.fixtureId;
-            console.log(`🔍 Card ${index}:`);
-            console.log(`   - data-fixture-id attribute: ${fixtureIdAttr}`);
-            console.log(`   - dataset.fixtureId: ${fixtureIdDataset}`);
-            console.log(`   - All dataset:`, card.dataset);
-            
-            // Test: Add a simple visual feedback first
-            card.style.border = '2px solid red';
-            
+        // Attach click listener to each fixture card
+        fixtureCards.forEach((card) => {
             card.addEventListener('click', (e) => {
-                console.log('🔍 ===== CLICK EVENT FIRED =====');
-                console.log('🔍 Click event fired on card:', card);
-                console.log('🔍 Event target:', e.target);
-                console.log('🔍 Event currentTarget:', e.currentTarget);
-                console.log('🔍 Card element:', card);
-                console.log('🔍 Card dataset:', card.dataset);
-                console.log('🔍 Card attributes:', Array.from(card.attributes).map(a => `${a.name}=${a.value}`));
-                
-                // Try both methods to get fixture ID
-                const fixtureId1 = parseInt(card.getAttribute('data-fixture-id'));
-                const fixtureId2 = parseInt(card.dataset.fixtureId);
-                console.log('🔍 FixtureId from getAttribute:', fixtureId1);
-                console.log('🔍 FixtureId from dataset:', fixtureId2);
-                
-                const fixtureId = fixtureId1 || fixtureId2;
-                console.log('🔍 Using fixtureId:', fixtureId);
+                const fixtureId = parseInt(card.dataset.fixtureId);
                 
                 if (fixtureId && !isNaN(fixtureId)) {
-                    console.log('✅ Calling showFixtureModal with:', fixtureId);
-                    console.log('✅ showFixtureModal type:', typeof showFixtureModal);
-                    try {
-                        showFixtureModal(fixtureId);
-                        console.log('✅ showFixtureModal called successfully');
-                    } catch (error) {
-                        console.error('❌ Error calling showFixtureModal:', error);
-                        console.error('❌ Error stack:', error.stack);
-                    }
-                } else {
-                    console.warn('❌ Invalid fixtureId:', fixtureId);
+                    showFixtureModal(fixtureId);
                 }
                 
                 e.stopPropagation();
-            }, true); // Use capture phase
+            });
         });
-
-        console.log('✅ Fixture ticker listeners attached successfully');
     };
 
     tryAttach();
