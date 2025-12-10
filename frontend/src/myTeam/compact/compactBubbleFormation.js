@@ -473,7 +473,7 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
 
     const containerWidth = 100;
     // Increase container height to account for gaps and prevent cutoff
-    const containerHeight = 120; // Increased from 100 to accommodate gaps and bubble sizes
+    const containerHeight = 150; // Significantly increased to accommodate gaps, bubble sizes, and prevent cutoff
     const numRows = 5; // 4 for starters + 1 for bench
     // Tighter spacing: use more of the container height, less wasted space
     const rowHeight = containerHeight / (numRows + 0.2); // Even tighter spacing
@@ -712,7 +712,7 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
             left: '2%',
             right: '2%',
             top: '1%', // Reduced top margin
-            bottom: '1%' // Reduced bottom margin
+            bottom: '5%' // Increased bottom margin to prevent bubble cutoff
         },
         xAxis: {
             type: 'value',
@@ -724,7 +724,7 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
             type: 'value',
             show: false,
             min: 0,
-            max: 120, // Increased to match containerHeight to prevent cutoff
+            max: 150, // Increased to match containerHeight to prevent cutoff
             inverse: true
         },
         tooltip: {
