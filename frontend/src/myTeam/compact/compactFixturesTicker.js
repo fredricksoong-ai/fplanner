@@ -323,6 +323,132 @@ export function renderFixturesTicker() {
 }
 
 /**
+ * Show fixture modal (basic structure)
+ * @param {number} fixtureId - Fixture ID
+ */
+export function showFixtureModal(fixtureId) {
+    console.log('🔍 showFixtureModal called with fixtureId:', fixtureId);
+    
+    const fplFixtures = getFixturesData;
+    const fplBootstrap = getBootstrapData();
+
+    if (!fplFixtures || !fplBootstrap) {
+        console.warn('Cannot show fixture modal: data not available');
+        return;
+    }
+
+    // Find the fixture
+    const fixture = fplFixtures.find(f => f.id === fixtureId);
+    if (!fixture) {
+        console.warn(`Fixture ${fixtureId} not found`);
+        return;
+    }
+
+    const homeTeam = fplBootstrap.teams.find(t => t.id === fixture.team_h);
+    const awayTeam = fplBootstrap.teams.find(t => t.id === fixture.team_a);
+
+    if (!homeTeam || !awayTeam) {
+        console.warn('Teams not found for fixture');
+        return;
+    }
+
+    // Get glassmorphism effects
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const glassEffect = getGlassmorphism(isDark, 'heavy');
+    const shadow = getShadow('modal');
+    const radius = getMobileBorderRadius('xlarge');
+
+    // Create or get modal
+    let modal = document.getElementById('fixture-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'fixture-modal';
+        document.body.appendChild(modal);
+    }
+
+    modal.style.display = 'block';
+    modal.innerHTML = `
+        <div class="fixture-modal-overlay" style="
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            z-index: 2000;
+            overflow-y: auto;
+        ">
+            <div style="
+                max-width: 600px;
+                margin: 0 auto;
+                padding: 1rem;
+                min-height: 100%;
+                display: flex;
+                flex-direction: column;
+            ">
+                <!-- Modal Content -->
+                <div style="
+                    backdrop-filter: ${glassEffect.backdropFilter};
+                    -webkit-backdrop-filter: ${glassEffect.WebkitBackdropFilter};
+                    background: ${glassEffect.background};
+                    border: ${glassEffect.border};
+                    padding: 1rem;
+                    border-radius: ${radius};
+                    box-shadow: ${shadow};
+                ">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3 style="
+                            font-size: 1rem;
+                            font-weight: 700;
+                            color: var(--text-primary);
+                            margin: 0;
+                        ">
+                            ${escapeHtml(homeTeam.name)} vs ${escapeHtml(awayTeam.name)}
+                        </h3>
+                        <button class="close-fixture-modal-btn" style="
+                            background: transparent;
+                            border: none;
+                            color: var(--text-secondary);
+                            font-size: 1.5rem;
+                            cursor: pointer;
+                            padding: 0;
+                            width: 2rem;
+                            height: 2rem;
+                            line-height: 1;
+                        ">
+                            ×
+                        </button>
+                    </div>
+                    <div style="
+                        color: var(--text-secondary);
+                        font-size: 0.875rem;
+                        text-align: center;
+                    ">
+                        Fixture ID: ${fixtureId}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Add close handlers
+    const closeBtn = modal.querySelector('.close-fixture-modal-btn');
+    const overlay = modal.querySelector('.fixture-modal-overlay');
+
+    const closeModal = () => {
+        modal.style.display = 'none';
+        modal.innerHTML = '';
+    };
+
+    if (closeBtn) closeBtn.addEventListener('click', closeModal);
+    if (overlay) overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) closeModal();
+    });
+}
+
+/**
  * Show fixture info modal for upcoming fixtures
  * @param {number} fixtureId - Fixture ID
  */
@@ -678,14 +804,34 @@ export function attachFixtureTickerListeners() {
 
         container.setAttribute('data-ticker-listeners-attached', 'true');
 
+        // Use capture phase to ensure we catch the event
         container.addEventListener('click', (e) => {
             console.log('🔍 Click event triggered on:', e.target);
+            console.log('🔍 Event target classes:', e.target.className);
+            console.log('🔍 Event target tag:', e.target.tagName);
             
             const fixtureCard = e.target.closest('.fixture-card-ticker');
             console.log('🔍 Fixture card found:', fixtureCard);
             
             if (!fixtureCard) {
-                console.log('❌ No fixture card found');
+                console.log('❌ No fixture card found - checking parent');
+                // Try finding parent
+                let parent = e.target.parentElement;
+                let attempts = 0;
+                while (parent && attempts < 5) {
+                    if (parent.classList && parent.classList.contains('fixture-card-ticker')) {
+                        console.log('✅ Found fixture card in parent:', parent);
+                        const fixtureId = parent.getAttribute('data-fixture-id');
+                        if (fixtureId) {
+                            console.log('✅ Opening modal for fixture:', fixtureId);
+                            showFixtureModal(parseInt(fixtureId));
+                            e.stopPropagation();
+                            return;
+                        }
+                    }
+                    parent = parent.parentElement;
+                    attempts++;
+                }
                 return;
             }
 
@@ -697,19 +843,11 @@ export function attachFixtureTickerListeners() {
                 return;
             }
 
-            const canExpand = fixtureCard.getAttribute('data-can-expand') === 'true';
-            console.log('🔍 Can expand:', canExpand);
-            
-            // Allow clicking on all fixtures, but only show stats for live/finished
-            if (canExpand) {
-                console.log('✅ Opening stats modal for fixture:', fixtureId);
-                showFixtureStatsModal(parseInt(fixtureId));
-            } else {
-                console.log('✅ Opening info modal for fixture:', fixtureId);
-                // For upcoming fixtures, show fixture info modal
-                showFixtureInfoModal(parseInt(fixtureId));
-            }
-        });
+            // For now, just show basic modal for all fixtures
+            console.log('✅ Opening modal for fixture:', fixtureId);
+            e.stopPropagation();
+            showFixtureModal(parseInt(fixtureId));
+        }, true); // Use capture phase
 
         // Add hover effect for clickable fixtures
         container.addEventListener('mouseover', (e) => {

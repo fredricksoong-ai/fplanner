@@ -473,15 +473,12 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
 
     const containerWidth = 100;
     const containerHeight = 100;
-    const numRows = 4; // 4 for starters (bench will be positioned separately)
+    const numRows = 5; // 4 for starters + 1 for bench
     // Tighter spacing: use more of the container height, less wasted space
     const rowHeight = containerHeight / (numRows + 0.2); // Even tighter spacing
     const rowWidth = containerWidth;
     // Adjust starting position to reduce top gap further
     const topOffset = 0.5; // Start much closer to top
-    // Extra spacing for separator and bench
-    const separatorGap = rowHeight * 0.3; // Gap between FWD and separator
-    const benchGap = rowHeight * 0.3; // Gap between separator and bench
     
     const allNodes = [];
     let rowIndex = 0;
@@ -601,11 +598,12 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
         rowIndex++;
     });
     
-    // Calculate separator line Y position (between FWD row and bench row)
+    // Add separator line after FWD row (before bench)
     let separatorY = null;
     if (bench.length > 0) {
-        // Position the separator line with gap after FWD row
-        separatorY = topOffset + rowIndex * rowHeight + separatorGap;
+        // Position the separator line at the boundary between FWD row and bench row
+        // After processing FWD, rowIndex is 4, so separator is at the top of bench row
+        separatorY = topOffset + rowIndex * rowHeight;
     }
     
     // Add bench players as a single row (left to right by position)
@@ -646,8 +644,7 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
         }).filter(Boolean);
 
         if (benchCircles.length > 0) {
-            // Position bench row below separator with gap
-            const benchRowCenterY = separatorY + benchGap + rowHeight / 2;
+            const benchRowCenterY = topOffset + (rowIndex + 0.5) * rowHeight;
             packCirclesInRow(benchCircles, rowWidth, benchRowCenterY);
 
             benchCircles.forEach(circle => {
