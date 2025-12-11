@@ -611,15 +611,18 @@ export async function updateNavTeamWidget(teamData) {
                     ${escapeHtml(teamName)}
                 </div>
                 <span style="color: ${squadValueColor}; font-size: 0.5rem;">•</span>
-                <div style="font-size: 0.6rem; color: ${rankIndicator.color}; line-height: 1.2; white-space: nowrap;">
-                    ${overallRankFormatted} ${rankIndicator.chevron}
-                </div>
-                <span style="color: ${squadValueColor}; font-size: 0.5rem;">•</span>
                 <div style="font-size: 0.6rem; font-weight: 700; color: ${squadValueColor}; line-height: 1.2; white-space: nowrap;">
                     ${totalPoints.toLocaleString()}
                 </div>
+                <span style="color: ${squadValueColor}; font-size: 0.5rem;">•</span>
+                <div style="font-size: 0.6rem; color: ${rankIndicator.color}; line-height: 1.2; white-space: nowrap;">
+                    ${overallRankFormatted} ${rankIndicator.chevron}
+                </div>
             </div>
             <div style="display: flex; align-items: center; gap: 0.4rem; line-height: 1.2; flex-wrap: wrap;">
+                <div style="font-size: 0.6rem; font-weight: 600; color: ${squadValueColor}; line-height: 1.2; white-space: nowrap;">
+                    GW ${gwNumber}
+                </div>
                 <div style="font-size: 0.6rem; font-weight: 800; color: ${pointsColor}; line-height: 1.2; white-space: nowrap;">
                     ${gwPoints}${gwAverage > 0 ? ` <span style="font-weight: 400; color: ${squadValueColor}; font-size: 0.55rem;">(${gwAverage})</span>` : ''}
                 </div>
@@ -627,13 +630,7 @@ export async function updateNavTeamWidget(teamData) {
                 <div style="font-size: 0.6rem; color: ${gwIndicator.color}; line-height: 1.2; white-space: nowrap;">
                     ${gwRankFormatted} ${gwIndicator.chevron}
                 </div>
-                ${isLive ? `
-                    <div style="font-size: 0.5rem; color: #ef4444; animation: pulse 2s infinite; font-weight: 600; margin-left: 0.2rem;">
-                        ⚽ LIVE
-                    </div>
-                ` : ''}
             </div>
-            ${isLive ? `<style>@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }</style>` : ''}
         </div>
     `;
 
