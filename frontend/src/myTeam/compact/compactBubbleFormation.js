@@ -104,8 +104,8 @@ function getPointsColors(gwPoints, minutes) {
  * @returns {number} Bubble size in pixels
  */
 function calculateBubbleSize(ownership) {
-    const minSize = 30;
-    const maxSize = 70;
+    const minSize = 60; // Increased to accommodate name + pts + opp
+    const maxSize = 80; // Slightly increased for better visibility
     // Inverse: lower ownership = bigger bubble
     const size = maxSize - (ownership / 100) * (maxSize - minSize);
     return Math.max(minSize, Math.min(maxSize, size));
@@ -558,8 +558,16 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
             const fontSize = getFontSize(size);
             const colors = getPointsColors(gwPoints, minutes);
 
-            // Just the player name, no (C) or (VC) labels
-            const labelText = escapeHtml(player.web_name);
+            // Get opponent data
+            const opponent = getGWOpponent(player.team, gwNumber);
+            const opponentText = opponent ? `${opponent.name} (${opponent.isHome ? 'H' : 'A'})` : 'TBD';
+
+            // Calculate font sizes for rich text
+            const nameFontSize = fontSize; // Base size for name
+            const statsFontSize = Math.max(6, Math.floor(fontSize * 0.7)); // 70% of base, minimum 6px
+
+            // Create rich text formatter
+            const labelFormatter = `{name|${escapeHtml(player.web_name)}}\n{stats|${gwPoints} • vs. ${escapeHtml(opponentText)}}`;
 
             allNodes.push({
                 name: player.web_name,
@@ -578,12 +586,25 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
                 },
                 label: {
                     show: true,
-                    formatter: labelText,
-                    fontSize: fontSize,
-                    fontWeight: 'bold',
-                    color: colors.textColor, // Use matching text color from heatmap
-                    textBorderColor: 'rgba(0, 0, 0, 0.4)', // Subtle border for readability
-                    textBorderWidth: 1
+                    formatter: labelFormatter,
+                    rich: {
+                        name: {
+                            fontSize: nameFontSize,
+                            fontWeight: 'bold',
+                            color: colors.textColor,
+                            textBorderColor: 'rgba(0, 0, 0, 0.4)',
+                            textBorderWidth: 1,
+                            lineHeight: nameFontSize * 1.2
+                        },
+                        stats: {
+                            fontSize: statsFontSize,
+                            fontWeight: 'normal',
+                            color: colors.textColor,
+                            textBorderColor: 'rgba(0, 0, 0, 0.3)',
+                            textBorderWidth: 0.5,
+                            lineHeight: statsFontSize * 1.1
+                        }
+                    }
                 },
                 playerData: {
                     player,
@@ -659,8 +680,16 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
                 const fontSize = getFontSize(size);
                 const colors = getPointsColors(gwPoints, minutes);
 
-                // Just the player name, no (C) or (VC) labels
-                const labelText = escapeHtml(player.web_name);
+                // Get opponent data
+                const opponent = getGWOpponent(player.team, gwNumber);
+                const opponentText = opponent ? `${opponent.name} (${opponent.isHome ? 'H' : 'A'})` : 'TBD';
+
+                // Calculate font sizes for rich text
+                const nameFontSize = fontSize; // Base size for name
+                const statsFontSize = Math.max(6, Math.floor(fontSize * 0.7)); // 70% of base, minimum 6px
+
+                // Create rich text formatter
+                const labelFormatter = `{name|${escapeHtml(player.web_name)}}\n{stats|${gwPoints} • vs. ${escapeHtml(opponentText)}}`;
 
                 allNodes.push({
                     name: player.web_name,
@@ -668,7 +697,7 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
                     symbol: 'circle',
                     itemStyle: {
                         color: colors.bgColor,
-                        opacity: 0.7, // Lower opacity for bench players
+                        opacity: 1.0, // Full opacity for bench players
                         // Softer borders for bench
                         borderColor: 'rgba(255, 255, 255, 0.2)',
                         borderWidth: 1.5,
@@ -678,12 +707,25 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
                     },
                     label: {
                         show: true,
-                        formatter: labelText,
-                        fontSize: fontSize,
-                        fontWeight: 'bold',
-                        color: colors.textColor,
-                        textBorderColor: 'rgba(0, 0, 0, 0.4)',
-                        textBorderWidth: 1
+                        formatter: labelFormatter,
+                        rich: {
+                            name: {
+                                fontSize: nameFontSize,
+                                fontWeight: 'bold',
+                                color: colors.textColor,
+                                textBorderColor: 'rgba(0, 0, 0, 0.4)',
+                                textBorderWidth: 1,
+                                lineHeight: nameFontSize * 1.2
+                            },
+                            stats: {
+                                fontSize: statsFontSize,
+                                fontWeight: 'normal',
+                                color: colors.textColor,
+                                textBorderColor: 'rgba(0, 0, 0, 0.3)',
+                                textBorderWidth: 0.5,
+                                lineHeight: statsFontSize * 1.1
+                            }
+                        }
                     },
                     playerData: {
                         player,
