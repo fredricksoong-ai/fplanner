@@ -16,6 +16,7 @@ import { renderFixturePlayerStats } from '../fixturesTab.js';
 import { escapeHtml, getDifficultyClass } from '../../utils.js';
 import { getGlassmorphism, getShadow, getMobileBorderRadius } from '../../styles/mobileDesignSystem.js';
 import { getMatchStatus } from '../../fixtures.js';
+import { renderTeamLogo } from '../../utils/teamLogos.js';
 
 /**
  * Get team short name (3-letter code)
@@ -133,8 +134,6 @@ function renderFixtureCard(fixture, fplBootstrap, isLast = false, isEven = false
         return '';
     }
 
-    const homeShort = getTeamShortName(homeTeam);
-    const awayShort = getTeamShortName(awayTeam);
     const state = getFixtureState(fixture);
 
     // Check if fixture has stats (live or finished)
@@ -151,6 +150,10 @@ function renderFixtureCard(fixture, fplBootstrap, isLast = false, isEven = false
         // Apply alternating for all non-live fixtures (upcoming, finished, postponed)
         cardBackground = isEven ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.2)';
     }
+
+    // Render team logos (fallback to short names if logos not available)
+    const homeLogo = renderTeamLogo(homeTeam, { size: 12 });
+    const awayLogo = renderTeamLogo(awayTeam, { size: 12 });
 
     return `
         <div 
@@ -173,14 +176,14 @@ function renderFixtureCard(fixture, fplBootstrap, isLast = false, isEven = false
             "
         >
             <div style="
-                font-size: 0.5rem;
-                font-weight: 600;
+                display: flex;
+                align-items: center;
+                justify-content: flex-start;
                 color: ${state.textColor};
                 opacity: ${state.opacity};
-                text-align: left;
                 line-height: 1.1;
             ">
-                ${homeShort}
+                ${homeLogo}
             </div>
             <div style="
                 font-size: 0.5rem;
@@ -193,14 +196,14 @@ function renderFixtureCard(fixture, fplBootstrap, isLast = false, isEven = false
                 ${state.homeDisplay}
             </div>
             <div style="
-                font-size: 0.5rem;
-                font-weight: 600;
+                display: flex;
+                align-items: center;
+                justify-content: flex-start;
                 color: ${state.textColor};
                 opacity: ${state.opacity};
-                text-align: left;
                 line-height: 1.1;
             ">
-                ${awayShort}
+                ${awayLogo}
             </div>
             <div style="
                 font-size: 0.5rem;
