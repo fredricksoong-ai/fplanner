@@ -412,20 +412,23 @@ body {
     display: flex;
     justify-content: flex-start;
     align-items: center;
+    gap: 0.75rem;
     padding-right: 0.75rem;
     min-width: 0;
   }
 
-  /* Team widget styling - deprecated, hide it */
+  /* Team widget styling - show on mobile */
   #nav-team-widget {
-    display: none !important;
-  }
-
-  /* Team info (new) - show on mobile */
-  #nav-team-info {
     display: flex !important;
     align-items: center;
     z-index: 2;
+    flex: 1;
+    justify-content: flex-start;
+  }
+
+  /* Team info (deprecated) - hide it */
+  #nav-team-info {
+    display: none !important;
   }
 
   /* Ensure countdown has proper height */
