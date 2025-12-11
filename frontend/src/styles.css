@@ -405,6 +405,7 @@ body {
     position: relative;
     min-height: 40px;
     align-items: center !important;
+    gap: 0.75rem; /* Equal spacing between all children */
   }
 
   nav > div > div:first-child {
@@ -412,8 +413,8 @@ body {
     display: flex;
     justify-content: flex-start;
     align-items: center;
-    gap: 0.75rem;
-    padding-right: 0.75rem;
+    gap: 0.75rem; /* Equal spacing between logo, widget, etc. */
+    padding-right: 0;
     min-width: 0;
   }
 
@@ -424,6 +425,7 @@ body {
     z-index: 2;
     flex: 1;
     justify-content: flex-start;
+    min-width: 0; /* Allow shrinking */
   }
 
   /* Team info (deprecated) - hide it */
@@ -439,10 +441,10 @@ body {
   }
 
   nav > div > div:last-child {
-    flex: 1;
+    flex: 0 0 auto; /* Don't grow, don't shrink, auto size */
     display: flex;
     justify-content: flex-end;
-    padding-left: 0.75rem;
+    padding-left: 0;
     min-width: 0;
   }
 
@@ -460,6 +462,7 @@ body {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
+    flex-shrink: 0; /* Don't shrink */
   }
 
   /* Show logo image on mobile, hide text */
