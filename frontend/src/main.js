@@ -549,14 +549,21 @@ export async function updateNavTeamWidget(teamData) {
 
     // Get data
     const teamName = team.name || 'My Team';
-    const squadValue = ((entry.value || 0) / 10 - (entry.bank || 0) / 10).toFixed(1);
-    const bank = ((entry.bank || 0) / 10).toFixed(1);
+    const totalPoints = team.summary_overall_points || 0;
     
     // Get ranks
     const overallRankNum = team.summary_overall_rank || 0;
     const gwRankNum = team.summary_event_rank || 0;
     const overallRankFormatted = formatRank(overallRankNum);
     const gwRankFormatted = formatRank(gwRankNum);
+    
+    // Get GW data
+    const gwPoints = entry?.points ?? 0;
+    const isLive = teamData.isLive || false;
+    const gwNumber = getActiveGW();
+    const gwEvent = getGameweekEvent(gwNumber);
+    const gwAverage = gwEvent?.average_entry_score || 0;
+    const pointsColor = calculatePointsColor(gwPoints, gwAverage);
     
     // Calculate rank indicators
     const previousGWRank = entry?.previous_gw_rank || null;
@@ -595,26 +602,38 @@ export async function updateNavTeamWidget(teamData) {
                 flex-direction: column;
                 gap: 0.2rem;
                 min-width: 100px;
-                max-width: 200px;
+                flex: 1;
                 flex-shrink: 1;
             "
         >
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.4rem; line-height: 1.2; flex-wrap: wrap;">
                 <div style="font-size: 0.75rem; font-weight: 800; color: ${textColor}; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                     ${escapeHtml(teamName)}
                 </div>
+                <span style="color: ${squadValueColor}; font-size: 0.5rem;">•</span>
                 <div style="font-size: 0.6rem; color: ${rankIndicator.color}; line-height: 1.2; white-space: nowrap;">
                     ${overallRankFormatted} ${rankIndicator.chevron}
                 </div>
-            </div>
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.1rem;">
-                <div style="font-size: 0.4rem; color: ${squadValueColor}; line-height: 1.2;">
-                    (£${squadValue}m + £${bank}m)
+                <span style="color: ${squadValueColor}; font-size: 0.5rem;">•</span>
+                <div style="font-size: 0.6rem; font-weight: 700; color: ${squadValueColor}; line-height: 1.2; white-space: nowrap;">
+                    ${totalPoints.toLocaleString()}
                 </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.4rem; line-height: 1.2; flex-wrap: wrap;">
+                <div style="font-size: 0.6rem; font-weight: 800; color: ${pointsColor}; line-height: 1.2; white-space: nowrap;">
+                    ${gwPoints}${gwAverage > 0 ? ` <span style="font-weight: 400; color: ${squadValueColor}; font-size: 0.55rem;">(${gwAverage})</span>` : ''}
+                </div>
+                <span style="color: ${squadValueColor}; font-size: 0.5rem;">•</span>
                 <div style="font-size: 0.6rem; color: ${gwIndicator.color}; line-height: 1.2; white-space: nowrap;">
                     ${gwRankFormatted} ${gwIndicator.chevron}
                 </div>
+                ${isLive ? `
+                    <div style="font-size: 0.5rem; color: #ef4444; animation: pulse 2s infinite; font-weight: 600; margin-left: 0.2rem;">
+                        ⚽ LIVE
+                    </div>
+                ` : ''}
             </div>
+            ${isLive ? `<style>@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }</style>` : ''}
         </div>
     `;
 
@@ -631,6 +650,7 @@ export async function updateNavTeamWidget(teamData) {
             showManagerModal(teamData);
         });
     }
+
 }
 
 // ============================================================================
