@@ -310,7 +310,7 @@ export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = fa
                         </button>
                         <div style="display: flex; align-items: center; gap: 0.3rem; flex: 1; flex-wrap: wrap;">
                             <div style="font-size: 1rem; font-weight: 700; color: var(--text-primary); line-height: 1.2;">
-                                ${escapeHtml(team.name)}
+                            ${escapeHtml(team.name)}
                             </div>
                             <div style="font-size: 0.7rem; color: var(--text-secondary); line-height: 1.2;">
                                 (£${squadValue}m + £${bank}m)
