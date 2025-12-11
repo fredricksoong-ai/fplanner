@@ -5,7 +5,7 @@
 
 import './styles.css';
 import { loadFPLData, loadMyTeam, refreshData, currentGW, loadEnrichedBootstrap, getGameweekEvent, getActiveGW } from './data.js';
-import { escapeHtml } from './utils.js';
+import { escapeHtml, formatRank } from './utils.js';
 import {
     updateOwnershipThreshold as updateAnalysisOwnership,
     setFixtureFilter,
@@ -15,6 +15,7 @@ import {
 import { initMobileNav, updateMobileNav } from './mobileNav.js';
 import { calculateRankIndicator, calculateGWIndicator } from './myTeam/compact/compactStyleHelpers.js';
 import { sharedState } from './sharedState.js';
+import { showManagerModal } from './myTeam/managerModal.js';
 
 // ============================================================================
 // STATE MANAGEMENT
@@ -526,20 +527,20 @@ export async function updateNavTeamWidget(teamData) {
     // Only show on mobile
     const isMobile = window.innerWidth <= 767;
     
-    // Hide old widget
-    if (widget) {
-        widget.style.display = 'none';
+    // Hide old team info
+    if (teamInfo) {
+        teamInfo.style.display = 'none';
     }
     
-    if (!teamInfo) return;
+    if (!widget) return;
     
     if (!isMobile) {
-        teamInfo.style.display = 'none';
+        widget.style.display = 'none';
         return;
     }
 
     if (!teamData || !teamData.team || !teamData.picks) {
-        teamInfo.style.display = 'none';
+        widget.style.display = 'none';
         return;
     }
 
@@ -550,8 +551,19 @@ export async function updateNavTeamWidget(teamData) {
     const teamName = team.name || 'My Team';
     const squadValue = ((entry.value || 0) / 10 - (entry.bank || 0) / 10).toFixed(1);
     const bank = ((entry.bank || 0) / 10).toFixed(1);
+    
+    // Get ranks
+    const overallRankNum = team.summary_overall_rank || 0;
+    const gwRankNum = team.summary_event_rank || 0;
+    const overallRankFormatted = formatRank(overallRankNum);
+    const gwRankFormatted = formatRank(gwRankNum);
+    
+    // Calculate rank indicators
+    const previousGWRank = entry?.previous_gw_rank || null;
+    const rankIndicator = calculateRankIndicator(team.id, overallRankNum, previousGWRank);
+    const gwIndicator = calculateGWIndicator(gwRankNum, overallRankNum);
 
-    // Get glassmorphism for button
+    // Get glassmorphism for widget
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     const { getGlassmorphism, getShadow, getMobileBorderRadius, getAnimationCurve, getAnimationDuration } = await import('./styles/mobileDesignSystem.js');
     const glassEffect = getGlassmorphism(isDark, 'light');
@@ -560,8 +572,60 @@ export async function updateNavTeamWidget(teamData) {
     const animationDuration = getAnimationDuration('fast');
     const springCurve = getAnimationCurve('spring');
 
-    // Hide team info in app header (moved to compact header)
-    teamInfo.style.display = 'none';
+    // Build widget HTML
+    widget.innerHTML = `
+        <div
+            id="nav-team-widget-content"
+            style="
+                backdrop-filter: ${glassEffect.backdropFilter};
+                -webkit-backdrop-filter: ${glassEffect.WebkitBackdropFilter};
+                background: ${glassEffect.background};
+                border: ${glassEffect.border};
+                border-radius: ${radius};
+                padding: 0.4rem 0.6rem;
+                cursor: pointer;
+                transition: all ${animationDuration} ${springCurve};
+                box-shadow: ${shadow};
+                display: flex;
+                flex-direction: column;
+                gap: 0.2rem;
+                min-width: 140px;
+                max-width: 200px;
+                flex-shrink: 1;
+            "
+        >
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
+                <div style="font-size: 0.75rem; font-weight: 700; color: white; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    ${escapeHtml(teamName)}
+                </div>
+                <div style="font-size: 0.7rem; color: ${rankIndicator.color}; line-height: 1.2; white-space: nowrap;">
+                    ${overallRankFormatted} ${rankIndicator.chevron}
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
+                <div style="font-size: 0.65rem; color: rgba(255, 255, 255, 0.8); line-height: 1.2;">
+                    (£${squadValue}m + £${bank}m)
+                </div>
+                <div style="font-size: 0.7rem; color: ${gwIndicator.color}; line-height: 1.2; white-space: nowrap;">
+                    ${gwRankFormatted} ${gwIndicator.chevron}
+                </div>
+            </div>
+        </div>
+    `;
+
+    widget.style.display = 'flex';
+    
+    // Add click handler to open Manager Modal
+    const widgetContent = document.getElementById('nav-team-widget-content');
+    if (widgetContent) {
+        // Remove existing listeners
+        const newContent = widgetContent.cloneNode(true);
+        widgetContent.parentNode.replaceChild(newContent, widgetContent);
+        
+        newContent.addEventListener('click', () => {
+            showManagerModal(teamData);
+        });
+    }
 }
 
 // ============================================================================

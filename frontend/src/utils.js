@@ -121,6 +121,31 @@ export function formatDecimal(value) {
 }
 
 /**
+ * Format rank number to compact format (479k, 3.9M)
+ * @param {number} rank - Rank number
+ * @returns {string} Formatted rank string
+ * @example
+ * formatRank(479343) // Returns '479k'
+ * formatRank(3955171) // Returns '3.9M'
+ * formatRank(123) // Returns '123'
+ */
+export function formatRank(rank) {
+    if (!rank || rank === 0 || isNaN(rank)) return 'N/A';
+    
+    if (rank >= 1000000) {
+        // Format as millions (e.g., 3.9M)
+        const millions = rank / 1000000;
+        return millions % 1 === 0 ? `${millions}M` : `${millions.toFixed(1)}M`;
+    } else if (rank >= 1000) {
+        // Format as thousands (e.g., 479k)
+        const thousands = rank / 1000;
+        return thousands % 1 === 0 ? `${thousands}k` : `${thousands.toFixed(0)}k`;
+    }
+    
+    return rank.toString();
+}
+
+/**
  * Format minutes played
  * @param {number} minutes - Total minutes
  * @param {number} gw - Current gameweek (optional)

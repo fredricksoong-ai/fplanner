@@ -155,6 +155,14 @@ function renderFixtureCard(fixture, fplBootstrap, isLast = false, isEven = false
     const homeLogo = renderTeamLogo(homeTeam, { size: 20 });
     const awayLogo = renderTeamLogo(awayTeam, { size: 20 });
 
+    // Determine if this is a live/finished fixture (shows scores)
+    const isLiveOrFinished = state.state === 'LIVE' || state.state === 'FINISHED';
+    
+    // Gap between logos (larger)
+    const logoGap = '0.3rem';
+    // Gap between date/time text (smaller, unless live/finished)
+    const textGap = isLiveOrFinished ? logoGap : '0.1rem';
+
     return `
         <div 
             class="fixture-card-ticker" 
@@ -182,6 +190,7 @@ function renderFixtureCard(fixture, fplBootstrap, isLast = false, isEven = false
                 color: ${state.textColor};
                 opacity: ${state.opacity};
                 line-height: 1.1;
+                margin-bottom: ${logoGap};
             ">
                 ${homeLogo}
             </div>
@@ -192,6 +201,7 @@ function renderFixtureCard(fixture, fplBootstrap, isLast = false, isEven = false
                 opacity: ${state.opacity};
                 text-align: left;
                 line-height: 1.1;
+                margin-bottom: ${textGap};
             ">
                 ${state.homeDisplay}
             </div>
@@ -254,16 +264,38 @@ export function renderFixturesTicker() {
         // Include postponed fixtures (event === null) if they're for the target GW
         let fixtures = fplFixtures.filter(f => f.event === targetGW);
 
-    // Sort chronologically (postponed fixtures without kickoff_time go to end)
+    // Sort by state priority, then chronologically within each state
+    // Priority: UPCOMING < LIVE < FINISHED < POSTPONED
     fixtures.sort((a, b) => {
-        // If both have kickoff_time, sort by time
+        const stateA = getFixtureState(a);
+        const stateB = getFixtureState(b);
+        
+        // Define state priority: UPCOMING < LIVE < FINISHED < POSTPONED
+        const statePriority = {
+            'UPCOMING': 1,
+            'LIVE': 2,
+            'FINISHED': 3,
+            'POSTPONED': 4
+        };
+        
+        const priorityA = statePriority[stateA.state] || 99;
+        const priorityB = statePriority[stateB.state] || 99;
+        
+        // If different states, sort by priority
+        if (priorityA !== priorityB) {
+            return priorityA - priorityB;
+        }
+        
+        // Same state - sort chronologically by kickoff_time
         if (a.kickoff_time && b.kickoff_time) {
             return new Date(a.kickoff_time) - new Date(b.kickoff_time);
         }
+        
         // Fixtures with kickoff_time come before those without
         if (a.kickoff_time && !b.kickoff_time) return -1;
         if (!a.kickoff_time && b.kickoff_time) return 1;
-        // Both postponed, maintain original order
+        
+        // Both postponed/no time, maintain original order
         return 0;
     });
 
@@ -271,11 +303,35 @@ export function renderFixturesTicker() {
     if (fixtures.length === 0 && targetGW !== currentGW) {
         fixtures = fplFixtures.filter(f => f.event === currentGW);
         fixtures.sort((a, b) => {
+            const stateA = getFixtureState(a);
+            const stateB = getFixtureState(b);
+            
+            // Define state priority: UPCOMING < LIVE < FINISHED < POSTPONED
+            const statePriority = {
+                'UPCOMING': 1,
+                'LIVE': 2,
+                'FINISHED': 3,
+                'POSTPONED': 4
+            };
+            
+            const priorityA = statePriority[stateA.state] || 99;
+            const priorityB = statePriority[stateB.state] || 99;
+            
+            // If different states, sort by priority
+            if (priorityA !== priorityB) {
+                return priorityA - priorityB;
+            }
+            
+            // Same state - sort chronologically by kickoff_time
             if (a.kickoff_time && b.kickoff_time) {
                 return new Date(a.kickoff_time) - new Date(b.kickoff_time);
             }
+            
+            // Fixtures with kickoff_time come before those without
             if (a.kickoff_time && !b.kickoff_time) return -1;
             if (!a.kickoff_time && b.kickoff_time) return 1;
+            
+            // Both postponed/no time, maintain original order
             return 0;
         });
     }
