@@ -1,0 +1,253 @@
+/* ============================================================================
+   FPLANNER DESIGN SYSTEM - EXTRACTED COLORS & TYPOGRAPHY
+   ============================================================================
+   This file contains the complete color palette and typography system
+   extracted from the FPLanner application.
+   ============================================================================ */
+
+/* ============================================================================
+   COLOR SYSTEM
+   ============================================================================ */
+:root {
+    /* Light Mode Colors */
+    --bg-primary: #f6f4f6;
+    --bg-secondary: #edeaed;
+    --bg-tertiary: #e4e1e4;
+    --text-primary: #110d12;
+    --text-secondary: #52505a;
+    --text-tertiary: #7a7882;
+    --border-color: #d4d1d4;
+    --border-dark: #bfbcc0;
+    --primary-color: #37003c;
+    --primary-hover: #2a002e;
+    --secondary-color: #00ff88;
+    --secondary-hover: #00d970;
+    --accent-color: #6b1970;
+    --shadow: rgba(17, 13, 18, 0.08);
+    
+    /* Success/Alert Colors */
+    --success-color: #00ff88;
+    --danger-color: #dc2626;
+    --warning-color: #f59e0b;
+    
+    /* Soft Heatmap Colors - Light Mode */
+    --heat-red-bg: #fee2e2;
+    --heat-red-text: #991b1b;
+    --heat-yellow-bg: #fef9c3;
+    --heat-yellow-text: #854d0e;
+    --heat-light-green-bg: #dcfce7;
+    --heat-light-green-text: #166534;
+    --heat-dark-green-bg: #bbf7d0;
+    --heat-dark-green-text: #14532d;
+    --heat-gray-bg: #edeaed;
+    --heat-gray-text: #52505a;
+}
+
+[data-theme="dark"] {
+    /* Dark Mode Colors - Soft Claude-style */
+    --bg-primary: #1a1815;
+    --bg-secondary: #2a2522;
+    --bg-tertiary: #352f2c;
+    --text-primary: #d4d0c8;
+    --text-secondary: #9b968e;
+    --text-tertiary: #6e6a64;
+    --border-color: #3a3530;
+    --border-dark: #4a4540;
+    --primary-color: #4a1a4f;
+    --primary-hover: #5a2a5f;
+    --secondary-color: #00d97e;
+    --secondary-hover: #00b968;
+    --accent-color: #7a4a7f;
+    --shadow: rgba(0, 0, 0, 0.3);
+
+    /* Success/Alert Colors - Softer */
+    --success-color: #00d97e;
+    --danger-color: #e85d5d;
+    --warning-color: #f0b449;
+
+    /* Soft Heatmap Colors - Dark Mode */
+    --heat-red-bg: #4a2828;
+    --heat-red-text: #e89999;
+    --heat-yellow-bg: #4a3f28;
+    --heat-yellow-text: #e8cf88;
+    --heat-light-green-bg: #2a4035;
+    --heat-light-green-text: #88d9a8;
+    --heat-dark-green-bg: #2e4a3a;
+    --heat-dark-green-text: #a8e8b8;
+    --heat-gray-bg: #2a2522;
+    --heat-gray-text: #9b968e;
+}
+
+/* ============================================================================
+   TYPOGRAPHY SYSTEM
+   ============================================================================ */
+
+/* Base Typography */
+body {
+    font-family: 'Figtree', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 1rem;
+    line-height: 1.5;
+    color: var(--text-primary);
+}
+
+/* Font Weights Available */
+/* 400 - Regular */
+/* 500 - Medium */
+/* 600 - Semi-bold */
+/* 700 - Bold */
+/* 800 - Extra-bold */
+
+/* Heading Styles */
+h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+    line-height: 1.2;
+}
+
+h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.2;
+}
+
+h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.2;
+}
+
+/* Navigation Typography */
+.nav-brand h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.nav-link {
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+/* Mobile Typography */
+@media (max-width: 767px) {
+    .mobile-h1 {
+        font-size: 1.25rem;
+        font-weight: 700;
+        line-height: 1.2;
+    }
+
+    .mobile-h2 {
+        font-size: 1rem;
+        font-weight: 700;
+        line-height: 1.2;
+    }
+
+    .mobile-h3 {
+        font-size: 0.875rem;
+        font-weight: 600;
+        line-height: 1.2;
+    }
+
+    .mobile-body {
+        font-size: 0.75rem;
+        font-weight: 400;
+        line-height: 1.4;
+    }
+
+    .mobile-text-secondary {
+        font-size: 0.7rem;
+        color: var(--text-secondary);
+    }
+
+    .mobile-text-tertiary {
+        font-size: 0.65rem;
+        color: var(--text-tertiary);
+    }
+
+    .nav-brand h1 {
+        font-size: 1.25rem;
+    }
+
+    .countdown {
+        font-size: 0.65rem;
+    }
+}
+
+/* Body Text */
+p {
+    font-size: 0.875rem;
+    font-weight: 400;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+/* Small Text */
+small {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+/* ============================================================================
+   BACKGROUND PATTERNS
+   ============================================================================ */
+body {
+    background: var(--bg-primary);
+    /* Subtle background pattern for frosted glass effect visibility */
+    background-image: 
+        radial-gradient(circle at 20% 30%, rgba(168, 85, 247, 0.03) 0%, transparent 50%),
+        radial-gradient(circle at 80% 70%, rgba(34, 197, 94, 0.03) 0%, transparent 50%),
+        radial-gradient(circle at 40% 80%, rgba(251, 191, 36, 0.02) 0%, transparent 50%);
+    background-attachment: fixed;
+}
+
+/* ============================================================================
+   SPACING SYSTEM
+   ============================================================================ */
+/* Padding */
+.p-xs { padding: 0.25rem; }
+.p-sm { padding: 0.5rem; }
+.p-md { padding: 0.75rem; }
+.p-lg { padding: 1rem; }
+.p-xl { padding: 1.5rem; }
+.p-2xl { padding: 2rem; }
+
+/* Margin */
+.m-xs { margin: 0.25rem; }
+.m-sm { margin: 0.5rem; }
+.m-md { margin: 0.75rem; }
+.m-lg { margin: 1rem; }
+.m-xl { margin: 1.5rem; }
+.m-2xl { margin: 2rem; }
+
+/* Gap */
+.gap-xs { gap: 0.25rem; }
+.gap-sm { gap: 0.5rem; }
+.gap-md { gap: 0.75rem; }
+.gap-lg { gap: 1rem; }
+
+/* ============================================================================
+   BORDER RADIUS
+   ============================================================================ */
+.rounded-sm { border-radius: 0.25rem; }
+.rounded-md { border-radius: 0.5rem; }
+.rounded-lg { border-radius: 0.75rem; }
+
+/* ============================================================================
+   SHADOWS
+   ============================================================================ */
+.shadow-sm {
+    box-shadow: 0 1px 3px var(--shadow);
+}
+
+.shadow-md {
+    box-shadow: 0 2px 8px var(--shadow);
+}
+
+.shadow-lg {
+    box-shadow: 0 4px 16px var(--shadow);
+}
+

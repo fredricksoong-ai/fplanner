@@ -523,7 +523,7 @@ function calculatePointsColor(points, average) {
 export async function updateNavTeamWidget(teamData) {
     const widget = document.getElementById('nav-team-widget');
     const teamInfo = document.getElementById('nav-team-info');
-    
+
     // Only show on mobile
     const isMobile = window.innerWidth <= 767;
     
@@ -556,7 +556,7 @@ export async function updateNavTeamWidget(teamData) {
     const gwRankNum = team.summary_event_rank || 0;
     const overallRankFormatted = formatRank(overallRankNum);
     const gwRankFormatted = formatRank(gwRankNum);
-    
+
     // Get GW data
     const gwPoints = entry?.points ?? 0;
     const isLive = teamData.isLive || false;
@@ -564,7 +564,7 @@ export async function updateNavTeamWidget(teamData) {
     const gwEvent = getGameweekEvent(gwNumber);
     const gwAverage = gwEvent?.average_entry_score || 0;
     const pointsColor = calculatePointsColor(gwPoints, gwAverage);
-    
+
     // Calculate rank indicators
     const previousGWRank = entry?.previous_gw_rank || null;
     const rankIndicator = calculateRankIndicator(team.id, overallRankNum, previousGWRank);
@@ -598,7 +598,7 @@ export async function updateNavTeamWidget(teamData) {
                 cursor: pointer;
                 transition: all 200ms cubic-bezier(0.175, 0.885, 0.32, 1.275);
                 box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08);
-                display: flex;
+            display: flex;
                 flex-direction: column;
                 gap: 0.2rem;
                 min-width: 100px;
@@ -621,10 +621,10 @@ export async function updateNavTeamWidget(teamData) {
             </div>
             <div style="display: flex; align-items: center; gap: 0.4rem; line-height: 1.2; flex-wrap: wrap;">
                 <div style="font-size: 0.6rem; font-weight: 600; color: ${squadValueColor}; line-height: 1.2; white-space: nowrap;">
-                    GW ${gwNumber}
+                    GW${gwNumber}:
                 </div>
                 <div style="font-size: 0.6rem; font-weight: 800; color: ${pointsColor}; line-height: 1.2; white-space: nowrap;">
-                    ${gwPoints}${gwAverage > 0 ? ` <span style="font-weight: 400; color: ${squadValueColor}; font-size: 0.55rem;">(${gwAverage})</span>` : ''}
+                    ${gwPoints}${gwAverage > 0 ? ` <span style="font-weight: 400; color: ${squadValueColor}; font-size: 0.55rem;">(Avg: ${gwAverage})</span>` : ''}
                 </div>
                 <span style="color: ${squadValueColor}; font-size: 0.5rem;">•</span>
                 <div style="font-size: 0.6rem; color: ${gwIndicator.color}; line-height: 1.2; white-space: nowrap;">
