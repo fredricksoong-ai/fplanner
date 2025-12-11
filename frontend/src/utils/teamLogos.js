@@ -5,7 +5,6 @@
 // ============================================================================
 
 // Import SVG files as text (Vite handles ?raw imports)
-// Team ID mapping: 1=Arsenal, 2=Aston Villa, etc.
 import arsenalLogo from '../assets/logos/1.svg?raw';
 import astonVillaLogo from '../assets/logos/2.svg?raw';
 import bournemouthLogo from '../assets/logos/3.svg?raw';
@@ -15,69 +14,123 @@ import chelseaLogo from '../assets/logos/6.svg?raw';
 import crystalPalaceLogo from '../assets/logos/7.svg?raw';
 import evertonLogo from '../assets/logos/8.svg?raw';
 import fulhamLogo from '../assets/logos/9.svg?raw';
-import ipswichLogo from '../assets/logos/10.svg?raw';
-import leicesterLogo from '../assets/logos/11.svg?raw';
+import burnleyLogo from '../assets/logos/10.svg?raw';
+import leedsLogo from '../assets/logos/11.svg?raw';
 import liverpoolLogo from '../assets/logos/12.svg?raw';
 import manCityLogo from '../assets/logos/13.svg?raw';
 import manUnitedLogo from '../assets/logos/14.svg?raw';
 import newcastleLogo from '../assets/logos/15.svg?raw';
 import nottinghamForestLogo from '../assets/logos/16.svg?raw';
-import southamptonLogo from '../assets/logos/17.svg?raw';
+import sunderlandLogo from '../assets/logos/17.svg?raw';
 import tottenhamLogo from '../assets/logos/18.svg?raw';
 import westHamLogo from '../assets/logos/19.svg?raw';
 import wolvesLogo from '../assets/logos/20.svg?raw';
 
+// Import fplBootstrap to look up teams by ID
+import { fplBootstrap } from '../data.js';
+
 /**
- * Team logo SVG mapping by team ID
- * Team ID Reference (2024-25 season):
- * 1: Arsenal (ARS), 2: Aston Villa (AVL), 3: Bournemouth (BOU), 4: Brentford (BRE)
- * 5: Brighton (BHA), 6: Chelsea (CHE), 7: Crystal Palace (CRY), 8: Everton (EVE)
- * 9: Fulham (FUL), 10: Ipswich (IPS), 11: Leicester (LEI), 12: Liverpool (LIV)
- * 13: Manchester City (MCI), 14: Manchester United (MUN), 15: Newcastle (NEW)
- * 16: Nottingham Forest (NFO), 17: Southampton (SOU), 18: Tottenham (TOT)
- * 19: West Ham (WHU), 20: Wolves (WOL)
+ * Team logo mapping by team name and short name
+ * This maps team names/short names from FPL API to the correct logo files
+ * 
+ * Comprehensive mapping of all Premier League teams (past and present):
+ * - Uses both full name and short_name for matching
+ * - Handles variations in naming (e.g., "Brighton & Hove Albion" vs "Brighton")
+ * - Only includes teams for which we have actual logo files
+ * - Teams without logos will fall back to displaying their short name as text
  */
-const teamLogos = {
-    1: arsenalLogo,
-    2: astonVillaLogo,
-    3: bournemouthLogo,
-    4: brentfordLogo,
-    5: brightonLogo,
-    6: chelseaLogo,
-    7: crystalPalaceLogo,
-    8: evertonLogo,
-    9: fulhamLogo,
-    10: ipswichLogo,
-    11: leicesterLogo,
-    12: liverpoolLogo,
-    13: manCityLogo,
-    14: manUnitedLogo,
-    15: newcastleLogo,
-    16: nottinghamForestLogo,
-    17: southamptonLogo,
-    18: tottenhamLogo,
-    19: westHamLogo,
-    20: wolvesLogo,
+const teamNameToLogoMap = {
+    // Full team names (from FPL API team.name)
+    'Arsenal': arsenalLogo,
+    'Aston Villa': astonVillaLogo,
+    'Bournemouth': bournemouthLogo,
+    'Brentford': brentfordLogo,
+    'Brighton': brightonLogo,
+    'Brighton & Hove Albion': brightonLogo,
+    'Burnley': burnleyLogo,
+    'Chelsea': chelseaLogo,
+    'Crystal Palace': crystalPalaceLogo,
+    'Everton': evertonLogo,
+    'Fulham': fulhamLogo,
+    'Leeds': leedsLogo,
+    'Leeds United': leedsLogo,
+    'Leeds United F.C.': leedsLogo,
+    'Liverpool': liverpoolLogo,
+    'Manchester City': manCityLogo,
+    'Man City': manCityLogo,
+    'Manchester United': manUnitedLogo,
+    'Man United': manUnitedLogo,
+    'Newcastle': newcastleLogo,
+    'Newcastle United': newcastleLogo,
+    'Nottingham Forest': nottinghamForestLogo,
+    'Nott\'m Forest': nottinghamForestLogo,
+    'Sunderland': sunderlandLogo,
+    'Tottenham': tottenhamLogo,
+    'Tottenham Hotspur': tottenhamLogo,
+    'West Ham': westHamLogo,
+    'West Ham United': westHamLogo,
+    'Wolves': wolvesLogo,
+    'Wolverhampton Wanderers': wolvesLogo,
+    'Wolverhampton': wolvesLogo,
+    
+    // Short names (from FPL API team.short_name)
+    'ARS': arsenalLogo,
+    'AVL': astonVillaLogo,
+    'BOU': bournemouthLogo,
+    'BRE': brentfordLogo,
+    'BHA': brightonLogo,
+    'BUR': burnleyLogo,
+    'CHE': chelseaLogo,
+    'CRY': crystalPalaceLogo,
+    'EVE': evertonLogo,
+    'FUL': fulhamLogo,
+    'LEE': leedsLogo,
+    'LIV': liverpoolLogo,
+    'MCI': manCityLogo,
+    'MUN': manUnitedLogo,
+    'NEW': newcastleLogo,
+    'NFO': nottinghamForestLogo,
+    'SUN': sunderlandLogo,
+    'TOT': tottenhamLogo,
+    'WHU': westHamLogo,
+    'WOL': wolvesLogo,
 };
 
 /**
- * Get team logo SVG by team ID
+ * Get team logo SVG by team object (name-based lookup)
+ * @param {Object} team - Team object from bootstrap with {id, name, short_name}
+ * @returns {string|null} SVG content or null if not available
+ */
+export function getTeamLogoByTeam(team) {
+    if (!team) return null;
+    
+    // Try full name first
+    if (team.name && teamNameToLogoMap[team.name]) {
+        return teamNameToLogoMap[team.name];
+    }
+    
+    // Try short name
+    if (team.short_name && teamNameToLogoMap[team.short_name]) {
+        return teamNameToLogoMap[team.short_name];
+    }
+    
+    return null;
+}
+
+/**
+ * Get team logo SVG by team ID (legacy support - looks up team first)
  * @param {number} teamId - Team ID (1-20)
  * @returns {string|null} SVG content or null if not available
  */
 export function getTeamLogo(teamId) {
-    const logo = teamLogos[teamId];
-    return logo && logo !== null ? logo : null;
-}
-
-/**
- * Get team logo SVG by team object
- * @param {Object} team - Team object from bootstrap
- * @returns {string|null} SVG content or null if not available
- */
-export function getTeamLogoByTeam(team) {
-    if (!team || !team.id) return null;
-    return getTeamLogo(team.id);
+    if (!fplBootstrap?.teams) return null;
+    
+    const team = fplBootstrap.teams.find(t => t.id === teamId);
+    if (team) {
+        return getTeamLogoByTeam(team);
+    }
+    
+    return null;
 }
 
 /**
@@ -91,19 +144,25 @@ export function getTeamLogoByTeam(team) {
 export function renderTeamLogo(teamIdOrTeam, options = {}) {
     const { size = 20, className = '' } = options;
     
-    let teamId;
     let team;
+    let logo = null;
     
     if (typeof teamIdOrTeam === 'number') {
-        teamId = teamIdOrTeam;
+        // Team ID provided - need to look up team object
+        if (fplBootstrap?.teams) {
+            team = fplBootstrap.teams.find(t => t.id === teamIdOrTeam);
+        }
+        
+        if (team) {
+            logo = getTeamLogoByTeam(team);
+        }
     } else if (teamIdOrTeam && typeof teamIdOrTeam === 'object') {
+        // Team object provided - use directly
         team = teamIdOrTeam;
-        teamId = team.id;
+        logo = getTeamLogoByTeam(team);
     } else {
         return '';
     }
-    
-    const logo = getTeamLogo(teamId);
     
     if (logo) {
         // Parse and resize SVG
@@ -130,15 +189,17 @@ export function renderTeamLogo(teamIdOrTeam, options = {}) {
  * @returns {boolean} True if logo is available
  */
 export function hasTeamLogo(teamIdOrTeam) {
-    let teamId;
+    let team = null;
     
     if (typeof teamIdOrTeam === 'number') {
-        teamId = teamIdOrTeam;
+        if (fplBootstrap?.teams) {
+            team = fplBootstrap.teams.find(t => t.id === teamIdOrTeam);
+        }
     } else if (teamIdOrTeam && typeof teamIdOrTeam === 'object') {
-        teamId = teamIdOrTeam.id;
-    } else {
-        return false;
+        team = teamIdOrTeam;
     }
     
-    return !!getTeamLogo(teamId);
+    if (!team) return false;
+    
+    return !!getTeamLogoByTeam(team);
 }
