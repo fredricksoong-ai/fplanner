@@ -231,60 +231,39 @@ function renderOpponentBadgeForTooltip(opponent) {
  * @returns {Array} Circles with x, y positions
  */
 function packCirclesInRow(circles, rowWidth, rowCenterY) {
-    const totalDiameter = circles.reduce((sum, c) => sum + c.radius * 2, 0);
-    const availableWidth = rowWidth * 0.95;
-    
-    let scale = 1;
-    if (totalDiameter > availableWidth) {
-        scale = availableWidth / totalDiameter;
-    }
-    
-    // Calculate total width after scaling
-    const scaledTotalWidth = totalDiameter * scale;
-    
-    // Center point is always at x = 50 (middle of container)
-    const centerX = 50;
-    
-    // For odd number of bubbles: center the middle bubble at x=50
-    // For even number of bubbles: center the touch point between the two middle bubbles at x=50
     const numCircles = circles.length;
-    const isOdd = numCircles % 2 === 1;
+    if (numCircles === 0) return circles;
     
-    let startX;
-    if (isOdd) {
-        // Odd (1, 3, 5 bubbles): center the middle bubble at centerX
-        const middleIndex = Math.floor(numCircles / 2);
-        let xOffset = 0;
-        
-        // Calculate offset to position middle bubble's center at centerX
-        for (let i = 0; i < middleIndex; i++) {
-            xOffset += circles[i].radius * 2 * scale;
-        }
-        // Add half the middle bubble's diameter to get to its center
-        xOffset += circles[middleIndex].radius * scale;
-        
-        startX = centerX - xOffset;
-    } else {
-        // Even (2, 4 bubbles): center the touch point between the two middle bubbles at centerX
-        const leftMiddleIndex = numCircles / 2 - 1;
-        let xOffset = 0;
-        
-        // Calculate offset to position the right edge of left middle bubble at centerX
-        // (This is where it touches the right middle bubble)
-        for (let i = 0; i <= leftMiddleIndex; i++) {
-            xOffset += circles[i].radius * 2 * scale;
-        }
-        
-        startX = centerX - xOffset;
+    // Use more of the container width and add gaps between bubbles
+    const availableWidth = rowWidth * 0.98; // Use 98% of width (push to edges)
+    const gapBetweenBubbles = rowWidth * 0.02; // 2% gap between bubbles (scales with container)
+    
+    // Calculate total width needed: sum of diameters + gaps between them
+    const totalDiameter = circles.reduce((sum, c) => sum + c.radius * 2, 0);
+    const totalGaps = (numCircles - 1) * gapBetweenBubbles;
+    const totalWidthNeeded = totalDiameter + totalGaps;
+    
+    // Scale down if needed to fit
+    let scale = 1;
+    if (totalWidthNeeded > availableWidth) {
+        // Scale bubbles to fit: (availableWidth - totalGaps) / totalDiameter
+        scale = (availableWidth - totalGaps) / totalDiameter;
     }
     
-    // Position all bubbles starting from startX
-    let currentX = startX;
-    circles.forEach(circle => {
+    // Calculate actual width after scaling
+    const scaledTotalWidth = totalDiameter * scale + totalGaps;
+    
+    // Start from left edge (with small margin)
+    const leftMargin = (rowWidth - scaledTotalWidth) / 2;
+    let currentX = leftMargin;
+    
+    // Position all bubbles with gaps
+    circles.forEach((circle, index) => {
         const scaledRadius = circle.radius * scale;
         circle.x = currentX + scaledRadius;
         circle.y = rowCenterY;
-        currentX += scaledRadius * 2; // No spacing - bubbles touch
+        // Move to next position: current bubble's right edge + gap
+        currentX += scaledRadius * 2 + gapBetweenBubbles;
     });
     
     return circles;
@@ -567,7 +546,7 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
             const statsFontSize = Math.max(6, Math.floor(fontSize * 0.7)); // 70% of base, minimum 6px
 
             // Create rich text formatter
-            const labelFormatter = `{name|${escapeHtml(player.web_name)}}\n{stats|${gwPoints} • vs. ${escapeHtml(opponentText)}}`;
+            const labelFormatter = `{name|${escapeHtml(player.web_name)}}\n{stats|${gwPoints} vs. ${escapeHtml(opponentText)}}`;
 
             allNodes.push({
                 name: player.web_name,
@@ -689,7 +668,7 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
                 const statsFontSize = Math.max(6, Math.floor(fontSize * 0.7)); // 70% of base, minimum 6px
 
                 // Create rich text formatter
-                const labelFormatter = `{name|${escapeHtml(player.web_name)}}\n{stats|${gwPoints} • vs. ${escapeHtml(opponentText)}}`;
+                const labelFormatter = `{name|${escapeHtml(player.web_name)}}\n{stats|${gwPoints} vs. ${escapeHtml(opponentText)}}`;
 
                 allNodes.push({
                     name: player.web_name,

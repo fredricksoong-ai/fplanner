@@ -3,7 +3,7 @@
 // Detailed player stats modal with 4-quadrant layout
 // ============================================================================
 
-import { getPlayerById, fplFixtures, getActiveGW, getAllPlayers } from '../../data.js';
+import { getPlayerById, fplFixtures, getActiveGW, getAllPlayers, fplBootstrap as getBootstrapData } from '../../data.js';
 import { getGlassmorphism, getShadow, getAnimationCurve, getAnimationDuration, getMobileBorderRadius, getSegmentedControlStyles } from '../../styles/mobileDesignSystem.js';
 import {
     getPositionShort,
@@ -12,6 +12,7 @@ import {
     getCurrentGW,
     formatDecimal
 } from '../../utils.js';
+import { renderTeamLogo } from '../../utils/teamLogos.js';
 import { getMatchStatus } from '../../fixtures.js';
 import { analyzePlayerRisks } from '../../risk.js';
 import { renderOpponentBadge } from './compactStyleHelpers.js';
@@ -28,60 +29,7 @@ function isDarkMode() {
     return document.documentElement.getAttribute('data-theme') === 'dark';
 }
 
-// Team primary colors for styling
-const TEAM_COLORS = {
-    1: '#EF0107',   // Arsenal
-    2: '#95BFE5',   // Aston Villa
-    3: '#DA291C',   // Bournemouth
-    4: '#E30613',   // Brentford
-    5: '#0057B8',   // Brighton
-    6: '#6C1D45',   // Burnley
-    7: '#034694',   // Chelsea
-    8: '#1B458F',   // Crystal Palace
-    9: '#003399',   // Everton
-    10: '#000000',  // Fulham
-    11: '#FFCD00',  // Leeds (if in league)
-    12: '#C8102E',  // Liverpool
-    13: '#6CABDD',  // Man City
-    14: '#DA291C',  // Man United
-    15: '#241F20',  // Newcastle
-    16: '#DD0000',  // Nottingham Forest
-    17: '#EB172B',  // Southampton/Sunderland
-    18: '#132257',  // Tottenham
-    19: '#7A263A',  // West Ham
-    20: '#FDB913', // Wolves
-    21: '#0057B8',  // Ipswich (placeholder)
-    22: '#C8102E',  // Leicester (placeholder)
-};
-
-/**
- * Get team primary color
- * @param {number} teamId - Team ID
- * @returns {string} Hex color code
- */
-function getTeamColor(teamId) {
-    return TEAM_COLORS[teamId] || '#666666';
-}
-
-/**
- * Check if a hex color is dark (needs light background)
- * @param {string} hex - Hex color code
- * @returns {boolean} True if color is dark
- */
-function isColorDark(hex) {
-    // Remove # if present
-    hex = hex.replace('#', '');
-
-    // Convert to RGB
-    const r = parseInt(hex.substr(0, 2), 16);
-    const g = parseInt(hex.substr(2, 2), 16);
-    const b = parseInt(hex.substr(4, 2), 16);
-
-    // Calculate luminance (perceived brightness)
-    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-
-    return luminance < 0.5;
-}
+// Team color functions removed - now using team logos instead
 
 /**
  * Get inline styles for FDR difficulty
@@ -572,12 +520,13 @@ export async function showPlayerModal(playerId, myTeamState = null, options = {}
 
     const currentGW = getCurrentGW();
     const activeGW = getActiveGW(); // For UI display (Past/Upcoming)
-    const team = getTeamShortName(player.team);
+    const fplBootstrap = getBootstrapData;
+    const teamObj = fplBootstrap?.teams?.find(t => t.id === player.team);
     const position = getPositionShort(player);
     const price = (player.now_cost / 10).toFixed(1);
 
     // Show loading modal first
-    showLoadingModal(player, team, position, price);
+    showLoadingModal(player, teamObj, position, price);
 
     // Fetch player history
     const playerSummary = await fetchPlayerHistory(playerId);
@@ -687,7 +636,7 @@ export async function showPlayerModal(playerId, myTeamState = null, options = {}
     // Build modal HTML
     const modalHTML = buildModalHTML({
         player,
-        team,
+        teamObj,
         position,
         price,
         currentGW: activeGW,  // Use activeGW for display
@@ -731,7 +680,7 @@ export async function showPlayerModal(playerId, myTeamState = null, options = {}
 /**
  * Show loading state modal
  */
-function showLoadingModal(player, team, position, price) {
+function showLoadingModal(player, teamObj, position, price) {
     // Remove existing modal
     const existingModal = document.getElementById('player-modal');
     if (existingModal) {
@@ -785,8 +734,9 @@ function showLoadingModal(player, team, position, price) {
                     justify-content: space-between;
                     align-items: center;
                 ">
-                    <div style="font-size: 0.9rem; font-weight: 600; color: var(--text-primary);">
-                        ${escapeHtml(player.web_name)} <span style="color: var(--text-secondary); font-weight: 400;">• ${team} • ${position} • £${price}m</span>
+                    <div style="font-size: 0.9rem; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 0.4rem;">
+                        ${teamObj ? renderTeamLogo(teamObj, { size: 20 }) : ''}
+                        <span>${escapeHtml(player.web_name)} <span style="color: var(--text-secondary); font-weight: 400;">• ${position} • £${price}m</span></span>
                     </div>
                     <button
                         id="close-player-modal"
@@ -824,7 +774,7 @@ function showLoadingModal(player, team, position, price) {
  */
 function buildModalHTML(data) {
     const {
-        player, team, position, price, currentGW,
+        player, teamObj, position, price, currentGW,
         gwPoints, minutes, bps, goalsCount, assistsCount, xG, xA,
         pointsBreakdown,
         ownership, leagueOwnership, past3GW, upcomingFixtures, isLive,
@@ -1214,15 +1164,9 @@ function buildModalHTML(data) {
                     gap: 0.65rem;
                 ">
                     <div>
-                        <div style="font-size: 0.9rem; font-weight: 600; color: var(--text-primary);">
-                            ${escapeHtml(player.web_name)} <span style="font-weight: 400;">• </span><span style="
-                                background: ${isColorDark(getTeamColor(player.team)) ? 'rgba(255, 255, 255, 0.9)' : 'rgba(255, 255, 255, 0.1)'};
-                                color: ${getTeamColor(player.team)};
-                                padding: 0.1rem 0.35rem;
-                                border-radius: 0.2rem;
-                                font-weight: 700;
-                                font-size: 0.75rem;
-                            ">${team}</span><span style="color: var(--text-secondary); font-weight: 400;"> • ${position} • £${price}m</span>
+                        <div style="font-size: 0.9rem; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 0.4rem;">
+                            ${teamObj ? renderTeamLogo(teamObj, { size: 20 }) : ''}
+                            <span>${escapeHtml(player.web_name)} <span style="color: var(--text-secondary); font-weight: 400;">• ${position} • £${price}m</span></span>
                         </div>
                         ${riskHTML}
                     </div>

@@ -152,8 +152,8 @@ function renderFixtureCard(fixture, fplBootstrap, isLast = false, isEven = false
     }
 
     // Render team logos (fallback to short names if logos not available)
-    const homeLogo = renderTeamLogo(homeTeam, { size: 12 });
-    const awayLogo = renderTeamLogo(awayTeam, { size: 12 });
+    const homeLogo = renderTeamLogo(homeTeam, { size: 20 });
+    const awayLogo = renderTeamLogo(awayTeam, { size: 20 });
 
     return `
         <div 
@@ -161,14 +161,14 @@ function renderFixtureCard(fixture, fplBootstrap, isLast = false, isEven = false
             data-fixture-id="${fixture.id}"
             data-can-expand="${canShowStats}"
             style="
-                min-width: 45px;
+                min-width: 60px;
                 flex-shrink: 0;
                 background: ${cardBackground};
                 border-radius: 0;
-                padding: 0.1rem 0.2rem;
+                padding: 0.2rem 0.4rem;
                 display: grid;
                 grid-template-columns: auto 1fr;
-                gap: 0rem 0.2rem;
+                gap: 0rem 0.4rem;
                 align-items: center;
                 cursor: pointer;
                 transition: background 0.2s ease;
@@ -383,10 +383,17 @@ export function showFixtureModal(fixtureId) {
 
     if (isPostponed) {
         // Postponed fixture
+        const homeLogo = renderTeamLogo(homeTeam, { size: 32 });
+        const awayLogo = renderTeamLogo(awayTeam, { size: 32 });
+        
         headerContent = `
             <div style="text-align: center; margin-bottom: 1rem;">
-                <div style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem;">
-                    ${escapeHtml(homeTeam.name)} vs ${escapeHtml(awayTeam.name)}
+                <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                    ${homeLogo}
+                    <div style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary);">
+                        ${escapeHtml(homeTeam.name)} vs ${escapeHtml(awayTeam.name)}
+                    </div>
+                    ${awayLogo}
                 </div>
                 <div style="color: var(--text-secondary); font-size: 0.875rem;">
                     Postponed
@@ -418,10 +425,17 @@ export function showFixtureModal(fixtureId) {
             statusBadge = '<span style="color: #22c55e; font-weight: 600; font-size: 0.75rem;">FT</span>';
         }
 
+        const homeLogo = renderTeamLogo(homeTeam, { size: 32 });
+        const awayLogo = renderTeamLogo(awayTeam, { size: 32 });
+
         headerContent = `
             <div style="text-align: center; margin-bottom: 1rem;">
-                <div style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
-                    ${escapeHtml(homeTeam.name)} vs ${escapeHtml(awayTeam.name)}
+                <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                    ${homeLogo}
+                    <div style="font-size: 0.875rem; color: var(--text-secondary);">
+                        ${escapeHtml(homeTeam.name)} vs ${escapeHtml(awayTeam.name)}
+                    </div>
+                    ${awayLogo}
                 </div>
                 <div style="display: flex; align-items: center; justify-content: center; gap: 1rem; margin-bottom: 0.5rem;">
                     <div style="font-size: 2rem; font-weight: 700; color: var(--text-primary);">
@@ -462,11 +476,18 @@ export function showFixtureModal(fixtureId) {
 
         const homeDifficulty = fixture.team_h_difficulty || 3;
         const awayDifficulty = fixture.team_a_difficulty || 3;
+        
+        const homeLogo = renderTeamLogo(homeTeam, { size: 32 });
+        const awayLogo = renderTeamLogo(awayTeam, { size: 32 });
 
         headerContent = `
             <div style="text-align: center; margin-bottom: 1rem;">
-                <div style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem;">
-                    ${escapeHtml(homeTeam.name)} vs ${escapeHtml(awayTeam.name)}
+                <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                    ${homeLogo}
+                    <div style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary);">
+                        ${escapeHtml(homeTeam.name)} vs ${escapeHtml(awayTeam.name)}
+                    </div>
+                    ${awayLogo}
                 </div>
                 <div style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 0.75rem;">
                     ${isToday ? 'Today' : timeStr}
