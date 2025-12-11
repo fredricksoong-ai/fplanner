@@ -572,41 +572,46 @@ export async function updateNavTeamWidget(teamData) {
     const animationDuration = getAnimationDuration('fast');
     const springCurve = getAnimationCurve('spring');
 
-    // Build widget HTML
+    // Build widget HTML with user's preferred styling
+    const widgetBg = isDark ? 'rgba(28, 28, 30, 0.72)' : 'rgba(255, 255, 255, 0.72)';
+    const widgetBorder = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)';
+    const textColor = isDark ? 'white' : 'var(--text-primary)';
+    const squadValueColor = isDark ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.7)';
+    
     widget.innerHTML = `
         <div
             id="nav-team-widget-content"
             style="
-                backdrop-filter: ${glassEffect.backdropFilter};
-                -webkit-backdrop-filter: ${glassEffect.WebkitBackdropFilter};
-                background: ${glassEffect.background};
-                border: ${glassEffect.border};
-                border-radius: ${radius};
-                padding: 0.4rem 0.6rem;
+                backdrop-filter: blur(10px) saturate(180%);
+                -webkit-backdrop-filter: blur(10px) saturate(180%);
+                background: ${widgetBg};
+                border: 1px solid ${widgetBorder};
+                border-radius: 0.5rem;
+                padding: 0.2rem 0.6rem;
                 cursor: pointer;
-                transition: all ${animationDuration} ${springCurve};
-                box-shadow: ${shadow};
+                transition: all 200ms cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08);
                 display: flex;
                 flex-direction: column;
                 gap: 0.2rem;
-                min-width: 140px;
+                min-width: 100px;
                 max-width: 200px;
                 flex-shrink: 1;
             "
         >
             <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
-                <div style="font-size: 0.75rem; font-weight: 700; color: white; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                <div style="font-size: 0.75rem; font-weight: 800; color: ${textColor}; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                     ${escapeHtml(teamName)}
                 </div>
-                <div style="font-size: 0.7rem; color: ${rankIndicator.color}; line-height: 1.2; white-space: nowrap;">
+                <div style="font-size: 0.6rem; color: ${rankIndicator.color}; line-height: 1.2; white-space: nowrap;">
                     ${overallRankFormatted} ${rankIndicator.chevron}
                 </div>
             </div>
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
-                <div style="font-size: 0.65rem; color: rgba(255, 255, 255, 0.8); line-height: 1.2;">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.1rem;">
+                <div style="font-size: 0.4rem; color: ${squadValueColor}; line-height: 1.2;">
                     (£${squadValue}m + £${bank}m)
                 </div>
-                <div style="font-size: 0.7rem; color: ${gwIndicator.color}; line-height: 1.2; white-space: nowrap;">
+                <div style="font-size: 0.6rem; color: ${gwIndicator.color}; line-height: 1.2; white-space: nowrap;">
                     ${gwRankFormatted} ${gwIndicator.chevron}
                 </div>
             </div>
