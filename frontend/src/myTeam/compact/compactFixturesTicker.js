@@ -158,10 +158,14 @@ function renderFixtureCard(fixture, fplBootstrap, isLast = false, isEven = false
     // Determine if this is a live/finished fixture (shows scores)
     const isLiveOrFinished = state.state === 'LIVE' || state.state === 'FINISHED';
     
-    // Gap between logos (larger)
+    // Gap between logos (consistent spacing)
     const logoGap = '0.3rem';
-    // Gap between date/time text (smaller, unless live/finished)
-    const textGap = isLiveOrFinished ? logoGap : '0.1rem';
+    
+    // Alignment for text column
+    // For upcoming: day bottom-aligned, time top-aligned (brings them closer)
+    // For live/finished: scores center-aligned (matches logo alignment)
+    const homeTextAlignSelf = isLiveOrFinished ? 'center' : 'flex-end';  // bottom-aligned for upcoming
+    const awayTextAlignSelf = isLiveOrFinished ? 'center' : 'flex-start'; // top-aligned for upcoming
 
     return `
         <div 
@@ -201,7 +205,7 @@ function renderFixtureCard(fixture, fplBootstrap, isLast = false, isEven = false
                 opacity: ${state.opacity};
                 text-align: left;
                 line-height: 1.1;
-                margin-bottom: ${textGap};
+                align-self: ${homeTextAlignSelf};
             ">
                 ${state.homeDisplay}
             </div>
@@ -222,6 +226,7 @@ function renderFixtureCard(fixture, fplBootstrap, isLast = false, isEven = false
                 opacity: ${state.opacity};
                 text-align: left;
                 line-height: 1.1;
+                align-self: ${awayTextAlignSelf};
             ">
                 ${state.awayDisplay}
             </div>
