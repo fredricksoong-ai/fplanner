@@ -156,9 +156,9 @@ function renderFixtureCard(fixture, fplBootstrap, isLast = false, isEven = false
     const awayLogo = renderTeamLogo(awayTeam, { size: 20 });
 
     // Set width based on fixture state
-    // Upcoming needs more space for "SAT 2300" format
+    // Upcoming needs space for "SAT 2300" format
     // Live/Finished/Postponed are shorter (scores like "1-1" or "PP")
-    const cardWidth = state.state === 'UPCOMING' ? '130px' : '100px';
+    const cardWidth = state.state === 'UPCOMING' ? '100px' : '80px';
 
     return `
         <div 
@@ -427,19 +427,31 @@ export function showFixtureModal(fixtureId) {
 
     if (isPostponed) {
         // Postponed fixture
-        const homeLogo = renderTeamLogo(homeTeam, { size: 32 });
-        const awayLogo = renderTeamLogo(awayTeam, { size: 32 });
+        const homeLogo = renderTeamLogo(homeTeam, { size: 40 });
+        const awayLogo = renderTeamLogo(awayTeam, { size: 40 });
         
         headerContent = `
-            <div style="text-align: center; margin-bottom: 1rem;">
-                <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <div style="text-align: center; padding: 1rem 0;">
+                <div style="display: flex; align-items: center; justify-content: center; gap: 0.75rem; margin-bottom: 1rem;">
                     ${homeLogo}
-                    <div style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary);">
-                        ${escapeHtml(homeTeam.name)} vs ${escapeHtml(awayTeam.name)}
+                    <div style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">
+                        ${escapeHtml(homeTeam.name)}
+                    </div>
+                    <div style="color: var(--text-secondary); font-size: 0.875rem; font-weight: 600;">vs</div>
+                    <div style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">
+                        ${escapeHtml(awayTeam.name)}
                     </div>
                     ${awayLogo}
                 </div>
-                <div style="color: var(--text-secondary); font-size: 0.875rem;">
+                <div style="
+                    display: inline-block;
+                    padding: 0.4rem 0.8rem;
+                    border-radius: 6px;
+                    background: rgba(239, 68, 68, 0.1);
+                    color: #ef4444;
+                    font-size: 0.875rem;
+                    font-weight: 600;
+                ">
                     Postponed
                 </div>
             </div>
@@ -461,43 +473,92 @@ export function showFixtureModal(fixtureId) {
             const samplePlayer = allPlayers.find(p => p.team === fixture.team_h);
             if (samplePlayer) {
                 const matchStatus = getMatchStatus(fixture.team_h, gameweek, samplePlayer);
-                statusBadge = `<span style="color: #ef4444; font-weight: 600; font-size: 0.75rem;">${matchStatus}</span>`;
+                statusBadge = `
+                    <span style="
+                        display: inline-block;
+                        padding: 0.3rem 0.6rem;
+                        border-radius: 6px;
+                        background: rgba(239, 68, 68, 0.2);
+                        color: #ef4444;
+                        font-weight: 600;
+                        font-size: 0.75rem;
+                    ">${matchStatus}</span>
+                `;
             } else {
-                statusBadge = '<span style="color: #ef4444; font-weight: 600; font-size: 0.75rem;">LIVE</span>';
+                statusBadge = `
+                    <span style="
+                        display: inline-block;
+                        padding: 0.3rem 0.6rem;
+                        border-radius: 6px;
+                        background: rgba(239, 68, 68, 0.2);
+                        color: #ef4444;
+                        font-weight: 600;
+                        font-size: 0.75rem;
+                    ">LIVE</span>
+                `;
             }
         } else if (isFinished) {
-            statusBadge = '<span style="color: #22c55e; font-weight: 600; font-size: 0.75rem;">FT</span>';
+            const fixtureMinutes = typeof fixture.minutes === 'number' && fixture.minutes > 0
+                ? fixture.minutes
+                : null;
+            statusBadge = `
+                <span style="
+                    display: inline-block;
+                    padding: 0.3rem 0.6rem;
+                    border-radius: 6px;
+                    background: rgba(34, 197, 94, 0.2);
+                    color: #22c55e;
+                    font-weight: 600;
+                    font-size: 0.75rem;
+                ">FT${fixtureMinutes ? ` (${fixtureMinutes})` : ''}</span>
+            `;
         }
 
-        const homeLogo = renderTeamLogo(homeTeam, { size: 32 });
-        const awayLogo = renderTeamLogo(awayTeam, { size: 32 });
+        const homeLogo = renderTeamLogo(homeTeam, { size: 40 });
+        const awayLogo = renderTeamLogo(awayTeam, { size: 40 });
 
         headerContent = `
-            <div style="text-align: center; margin-bottom: 1rem;">
-                <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <div style="text-align: center; padding: 1rem 0; border-bottom: 1px solid var(--border-color); margin-bottom: 1rem;">
+                <div style="display: flex; align-items: center; justify-content: center; gap: 0.75rem; margin-bottom: 1rem;">
                     ${homeLogo}
-                    <div style="font-size: 0.875rem; color: var(--text-secondary);">
-                        ${escapeHtml(homeTeam.name)} vs ${escapeHtml(awayTeam.name)}
+                    <div style="font-size: 1rem; font-weight: 700; color: var(--text-primary);">
+                        ${escapeHtml(homeTeam.name)}
+                    </div>
+                    <div style="font-size: 2.5rem; font-weight: 700; color: var(--text-primary);">
+                        ${homeScore}
+                    </div>
+                    <div style="font-size: 1.25rem; color: var(--text-secondary); font-weight: 600;">-</div>
+                    <div style="font-size: 2.5rem; font-weight: 700; color: var(--text-primary);">
+                        ${awayScore}
+                    </div>
+                    <div style="font-size: 1rem; font-weight: 700; color: var(--text-primary);">
+                        ${escapeHtml(awayTeam.name)}
                     </div>
                     ${awayLogo}
                 </div>
-                <div style="display: flex; align-items: center; justify-content: center; gap: 1rem; margin-bottom: 0.5rem;">
-                    <div style="font-size: 2rem; font-weight: 700; color: var(--text-primary);">
-                        ${homeScore}
-                    </div>
-                    <div style="font-size: 1rem; color: var(--text-secondary);">-</div>
-                    <div style="font-size: 2rem; font-weight: 700; color: var(--text-primary);">
-                        ${awayScore}
-                    </div>
-                </div>
-                ${statusBadge ? `<div style="margin-top: 0.5rem;">${statusBadge}</div>` : ''}
+                ${statusBadge ? `<div>${statusBadge}</div>` : ''}
             </div>
         `;
 
-        // Get player stats
+        // Get player stats - extract the inner grid content properly
         const playerStatsHTML = renderFixturePlayerStats(fixture, gameweek, isGWLive, isFinished, false, fplBootstrap);
-        // Remove the display:none and transition styles from the stats section since we're showing it directly
-        const statsContent = playerStatsHTML.replace(/display:\s*none[^;]*;?/g, '').replace(/opacity:\s*0[^;]*;?/g, '').replace(/max-height:\s*0[^;]*;?/g, '').replace(/transition:[^;]*;?/g, '');
+        
+        // Extract the inner grid div using DOM parsing
+        let statsContent = '';
+        if (playerStatsHTML) {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = playerStatsHTML;
+            const statsWrapper = tempDiv.querySelector(`#fixture-stats-${fixture.id}`);
+            if (statsWrapper) {
+                // Get the inner grid div
+                const gridDiv = statsWrapper.querySelector('div[style*="grid-template-columns"]');
+                if (gridDiv) {
+                    statsContent = gridDiv.outerHTML;
+                } else {
+                    statsContent = statsWrapper.innerHTML;
+                }
+            }
+        }
         
         mainContent = statsContent || `
             <div style="text-align: center; color: var(--text-secondary); font-size: 0.875rem; padding: 2rem 0;">
@@ -510,9 +571,13 @@ export function showFixtureModal(fixtureId) {
         const now = new Date();
         const isToday = kickoffDate.toDateString() === now.toDateString();
         
-        const timeStr = kickoffDate.toLocaleString('en-GB', {
-            month: 'short',
+        const dateStr = kickoffDate.toLocaleDateString('en-GB', {
+            weekday: 'long',
             day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        });
+        const timeStr = kickoffDate.toLocaleTimeString('en-GB', {
             hour: '2-digit',
             minute: '2-digit',
             hour12: false
@@ -521,53 +586,68 @@ export function showFixtureModal(fixtureId) {
         const homeDifficulty = fixture.team_h_difficulty || 3;
         const awayDifficulty = fixture.team_a_difficulty || 3;
         
-        const homeLogo = renderTeamLogo(homeTeam, { size: 32 });
-        const awayLogo = renderTeamLogo(awayTeam, { size: 32 });
+        const homeLogo = renderTeamLogo(homeTeam, { size: 40 });
+        const awayLogo = renderTeamLogo(awayTeam, { size: 40 });
 
         headerContent = `
-            <div style="text-align: center; margin-bottom: 1rem;">
-                <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <div style="text-align: center; padding: 1rem 0; border-bottom: 1px solid var(--border-color); margin-bottom: 1rem;">
+                <div style="display: flex; align-items: center; justify-content: center; gap: 0.75rem; margin-bottom: 1rem;">
                     ${homeLogo}
-                    <div style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary);">
-                        ${escapeHtml(homeTeam.name)} vs ${escapeHtml(awayTeam.name)}
+                    <div style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">
+                        ${escapeHtml(homeTeam.name)}
+                    </div>
+                    <div style="color: var(--text-secondary); font-size: 0.875rem; font-weight: 600;">vs</div>
+                    <div style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">
+                        ${escapeHtml(awayTeam.name)}
                     </div>
                     ${awayLogo}
                 </div>
-                <div style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 0.75rem;">
-                    ${isToday ? 'Today' : timeStr}
+                <div style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 0.5rem;">
+                    ${isToday ? 'Today' : dateStr}
+                </div>
+                <div style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary);">
+                    ${timeStr}
                 </div>
             </div>
         `;
 
         mainContent = `
             <div style="background: var(--bg-secondary); border-radius: 0.5rem; padding: 1rem;">
-                <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 0.75rem; text-transform: uppercase;">
+                <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;">
                     Fixture Difficulty
                 </div>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                    <span style="color: var(--text-primary); font-size: 0.875rem;">${escapeHtml(homeTeam.name)} (H)</span>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; padding: 0.5rem 0;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        ${renderTeamLogo(homeTeam, { size: 24 })}
+                        <span style="color: var(--text-primary); font-size: 0.875rem; font-weight: 600;">${escapeHtml(homeTeam.name)}</span>
+                        <span style="color: var(--text-secondary); font-size: 0.75rem;">(H)</span>
+                    </div>
                     <span class="${getDifficultyClass(homeDifficulty)}" style="
                         display: inline-block;
-                        width: 1.5rem;
-                        height: 1.5rem;
+                        width: 2rem;
+                        height: 2rem;
                         border-radius: 0.25rem;
                         text-align: center;
-                        line-height: 1.5rem;
+                        line-height: 2rem;
                         font-weight: 700;
-                        font-size: 0.75rem;
+                        font-size: 0.875rem;
                     ">${homeDifficulty}</span>
                 </div>
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span style="color: var(--text-primary); font-size: 0.875rem;">${escapeHtml(awayTeam.name)} (A)</span>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        ${renderTeamLogo(awayTeam, { size: 24 })}
+                        <span style="color: var(--text-primary); font-size: 0.875rem; font-weight: 600;">${escapeHtml(awayTeam.name)}</span>
+                        <span style="color: var(--text-secondary); font-size: 0.75rem;">(A)</span>
+                    </div>
                     <span class="${getDifficultyClass(awayDifficulty)}" style="
                         display: inline-block;
-                        width: 1.5rem;
-                        height: 1.5rem;
+                        width: 2rem;
+                        height: 2rem;
                         border-radius: 0.25rem;
                         text-align: center;
-                        line-height: 1.5rem;
+                        line-height: 2rem;
                         font-weight: 700;
-                        font-size: 0.75rem;
+                        font-size: 0.875rem;
                     ">${awayDifficulty}</span>
                 </div>
             </div>
@@ -611,30 +691,44 @@ export function showFixtureModal(fixtureId) {
                     -webkit-backdrop-filter: ${glassEffect.WebkitBackdropFilter};
                     background: ${glassEffect.background};
                     border: ${glassEffect.border};
-                    padding: 1rem;
+                    padding: 0;
                     border-radius: ${radius};
                     box-shadow: ${shadow};
+                    position: relative;
                 ">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
-                        <div style="flex: 1;">
-                            ${headerContent}
-                        </div>
-                        <button class="close-fixture-modal-btn" style="
-                            background: transparent;
-                            border: none;
-                            color: var(--text-secondary);
-                            font-size: 1.5rem;
-                            cursor: pointer;
-                            padding: 0;
-                            width: 2rem;
-                            height: 2rem;
-                            line-height: 1;
-                            flex-shrink: 0;
-                        ">
-                            ×
-                        </button>
+                    <!-- Close Button -->
+                    <button class="close-fixture-modal-btn" style="
+                        position: absolute;
+                        top: 0.75rem;
+                        right: 0.75rem;
+                        background: rgba(0, 0, 0, 0.3);
+                        border: none;
+                        color: var(--text-secondary);
+                        font-size: 1.5rem;
+                        cursor: pointer;
+                        padding: 0;
+                        width: 2rem;
+                        height: 2rem;
+                        line-height: 1;
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        z-index: 10;
+                        transition: all 0.2s ease;
+                    " onmouseover="this.style.background = 'rgba(0, 0, 0, 0.5)'; this.style.color = 'var(--text-primary)'" onmouseout="this.style.background = 'rgba(0, 0, 0, 0.3)'; this.style.color = 'var(--text-secondary)'">
+                        ×
+                    </button>
+                    
+                    <!-- Header -->
+                    <div style="padding: 1.5rem 1rem 1rem 1rem;">
+                        ${headerContent}
                     </div>
-                    ${mainContent}
+                    
+                    <!-- Content -->
+                    <div style="padding: 0 1rem 1rem 1rem;">
+                        ${mainContent}
+                    </div>
                 </div>
             </div>
         </div>
