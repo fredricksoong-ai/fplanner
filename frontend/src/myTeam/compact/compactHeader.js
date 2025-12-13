@@ -254,18 +254,7 @@ export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = fa
     const springCurve = getAnimationCurve('spring');
     const borderRadius = getMobileBorderRadius('medium');
 
-    // Get selected league info
-    const selectedLeagueId = localStorage.getItem(`fpl_selected_league_${team.id}`);
-    let leagueInfo = '';
-
-    if (selectedLeagueId && selectedLeagueId !== 'null') {
-        // Store league data in a data attribute for later rendering
-        leagueInfo = `
-            <div id="league-info-placeholder" data-team-id="${team.id}" data-league-id="${selectedLeagueId}" style="margin-top: 0.35rem; padding-top: 0.35rem; border-top: 1px solid var(--border-color);">
-                <div style="font-size: 0.65rem; color: var(--text-secondary);">Loading league...</div>
-            </div>
-        `;
-    }
+    // League info is now in manager modal, not in compact header
 
     return `
         <div
@@ -306,20 +295,7 @@ export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = fa
                             "
                             title="Change Team"
                         >
-                            <i class="fas fa-exchange-alt" style="font-size: 0.7rem;"></i>
                         </button>
-                        <div style="display: flex; align-items: center; gap: 0.3rem; flex: 1; flex-wrap: wrap;">
-                            <div style="font-size: 1rem; font-weight: 700; color: var(--text-primary); line-height: 1.2;">
-                            ${escapeHtml(team.name)}
-                            </div>
-                            <div style="font-size: 0.7rem; color: var(--text-secondary); line-height: 1.2;">
-                                (£${squadValue}m + £${bank}m)
-                            </div>
-                        </div>
-                    </div>
-
-                    <div style="font-size: 0.7rem; color: var(--text-secondary); line-height: 1.4;">
-                        Overall Rank: <span style="color: ${rankIndicator.color};">${overallRank} ${rankIndicator.chevron}</span>
                     </div>
 
                     <div style="font-size: 0.7rem; color: var(--text-secondary); line-height: 1.4;">
@@ -381,7 +357,6 @@ export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = fa
                             ` : ''}
                         </div>
                         ${isLive ? `<style>@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }</style>` : ''}
-                        ${leagueInfo}
                     </div>
                 </div>
             </div>

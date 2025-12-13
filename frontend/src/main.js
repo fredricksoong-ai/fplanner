@@ -294,7 +294,7 @@ function updateCountdown() {
             timeString = `${seconds}s`;
         }
 
-        countdownText.innerHTML = `<span style="color: ${urgencyColor};">GW${gwNumber}: ${timeString}</span>`;
+        countdownText.innerHTML = `<span style="color: ${urgencyColor}; font-size: 9px;">GW${gwNumber}: ${timeString}</span>`;
     });
 }
 

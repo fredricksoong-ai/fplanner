@@ -697,12 +697,7 @@ export async function renderMyTeam(teamData, subTab = 'overview') {
         });
     }
 
-    // Initialize league info for mobile (shows league position in GW card)
-    if (useMobile) {
-        requestAnimationFrame(async () => {
-            await loadAndRenderLeagueInfo();
-        });
-    }
+    // League info is now in manager modal, not in compact header
 
     // Add event listener for Refresh button (mobile only)
     const refreshBtn = document.getElementById('refresh-team-btn');

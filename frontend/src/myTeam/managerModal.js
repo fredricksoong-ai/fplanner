@@ -5,6 +5,7 @@
 
 import { escapeHtml } from '../utils.js';
 import { getGlassmorphism, getShadow, getMobileBorderRadius, getAnimationCurve, getAnimationDuration } from '../styles/mobileDesignSystem.js';
+import { loadAndRenderLeagueInfo } from '../leagueInfo.js';
 
 /**
  * Check if dark mode is active
@@ -77,8 +78,17 @@ export function showManagerModal(teamData = null) {
 
     // Get team info if available
     let teamName = 'My Team';
+    let leagueInfoHTML = '';
     if (teamData && teamData.team) {
         teamName = teamData.team.name || 'My Team';
+        const selectedLeagueId = localStorage.getItem(`fpl_selected_league_${teamData.team.id}`);
+        if (selectedLeagueId && selectedLeagueId !== 'null') {
+            leagueInfoHTML = `
+                <div id="league-info-placeholder" data-team-id="${teamData.team.id}" data-league-id="${selectedLeagueId}" style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-color);">
+                    <div style="font-size: 9px; color: var(--text-secondary);">Loading league...</div>
+                </div>
+            `;
+        }
     }
 
     const modalHTML = `
@@ -144,6 +154,7 @@ export function showManagerModal(teamData = null) {
                 
                 <!-- Content -->
                 <div style="padding: 1rem;">
+                    ${leagueInfoHTML}
                     <button
                         id="manager-switch-team-btn"
                         style="
@@ -173,6 +184,14 @@ export function showManagerModal(teamData = null) {
 
     document.body.insertAdjacentHTML('beforeend', modalHTML);
     attachManagerModalListeners();
+    
+    // Load league info if placeholder exists
+    requestAnimationFrame(() => {
+        const placeholder = document.getElementById('league-info-placeholder');
+        if (placeholder) {
+            loadAndRenderLeagueInfo();
+        }
+    });
 }
 
 /**
