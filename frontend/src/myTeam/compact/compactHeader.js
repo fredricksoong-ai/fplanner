@@ -301,19 +301,6 @@ export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = fa
                     <div style="font-size: 0.7rem; color: var(--text-secondary); line-height: 1.4;">
                         GW Rank: <span style="color: ${gwIndicator.color};">${gwRank} ${gwIndicator.chevron}</span>
                     </div>
-
-                    <div
-                        id="transfers-row"
-                        data-team-id="${team.id}"
-                        data-transfer-cost="${transferCost}"
-                        style="font-size: 0.7rem; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; gap: 0.25rem; user-select: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation; line-height: 1.4;"
-                    >
-                        <span>Transfers: ${freeTransfers}${transferCost > 0 ? ` <span style="color: #ef4444;">(-${transferCost} pts)</span>` : ''}</span>
-                        <i class="fas fa-chevron-down" id="transfers-chevron" style="font-size: 0.55rem; transition: transform 0.2s; pointer-events: none;"></i>
-                    </div>
-                    <div id="transfers-details" style="display: none; font-size: 0.65rem; padding-top: 0.25rem; margin-top: 0.25rem; border-top: 1px dashed var(--border-color);">
-                        <div style="color: var(--text-secondary); text-align: center;">Loading transfers...</div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -441,7 +428,7 @@ function renderTransferDetails(container, transfers, transferCost = 0) {
     const gwTransfers = transfers.filter(t => t.event === currentGW);
 
     if (gwTransfers.length === 0) {
-        container.innerHTML = '<div style="color: var(--text-secondary); text-align: center;">No transfers this GW</div>';
+        container.innerHTML = '<div style="font-size: 9px; color: var(--text-secondary); text-align: center;">No transfers this GW</div>';
         return;
     }
 
@@ -474,7 +461,7 @@ function renderTransferDetails(container, transfers, transferCost = 0) {
     const netSymbol = netWithCost > 0 ? '+' : '';
 
     container.innerHTML = `
-        <div style="display: grid; grid-template-columns: 1fr auto 1fr auto; gap: 0.25rem; padding-bottom: 0.25rem; margin-bottom: 0.25rem; border-bottom: 1px solid var(--border-color); font-size: 0.55rem; color: var(--text-secondary); text-transform: uppercase;">
+        <div style="display: grid; grid-template-columns: 1fr auto 1fr auto; gap: 0.25rem; padding-bottom: 0.25rem; margin-bottom: 0.25rem; border-bottom: 1px solid var(--border-color); font-size: 9px; color: var(--text-secondary); text-transform: uppercase;">
             <div>Out</div>
             <div style="text-align: right;">Pts</div>
             <div>In</div>
@@ -483,14 +470,14 @@ function renderTransferDetails(container, transfers, transferCost = 0) {
         ${transferRows}
         <div style="margin-top: 0.35rem; padding-top: 0.35rem; border-top: 1px solid var(--border-color);">
             ${transferCost > 0 ? `
-                <div style="display: flex; justify-content: space-between; color: var(--text-secondary); font-size: 0.6rem;">
+                <div style="display: flex; justify-content: space-between; color: var(--text-secondary); font-size: 9px;">
                     <span>Transfer Cost:</span>
                     <span style="color: #ef4444; font-weight: 600;">-${transferCost}</span>
                 </div>
             ` : ''}
             <div style="display: flex; justify-content: space-between; font-weight: 700;">
-                <span style="color: var(--text-secondary); font-size: 0.6rem;">Net Points:</span>
-                <span style="color: ${netColor};">${netSymbol}${netWithCost}</span>
+                <span style="color: var(--text-secondary); font-size: 9px;">Net Points:</span>
+                <span style="color: ${netColor}; font-size: 9px;">${netSymbol}${netWithCost}</span>
             </div>
         </div>
     `;
