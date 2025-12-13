@@ -172,8 +172,16 @@ function setupTeamAutoRefresh() {
             if (stillLive) {
                 teamDataRefreshCount = 0;
                 startAutoRefresh(async () => {
+                    // #region agent log
+                    fetch('http://127.0.0.1:7242/ingest/f0cf0c26-f8c1-4bff-8dcd-6a0e660bef29',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'renderMyTeam.js:174',message:'Team page auto-refresh callback started',data:{teamDataRefreshCount,cycleNumber:teamDataRefreshCount + 1},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+                    // #endregion
+
                     // Refresh enriched bootstrap every 2 min
                     await loadEnrichedBootstrap(true);
+
+                    // #region agent log
+                    fetch('http://127.0.0.1:7242/ingest/f0cf0c26-f8c1-4bff-8dcd-6a0e660bef29',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'renderMyTeam.js:177',message:'Enriched bootstrap refreshed in team auto-refresh',data:{teamDataRefreshCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+                    // #endregion
 
                     // Refresh team data every 3rd cycle (every 6 min)
                     teamDataRefreshCount++;
@@ -185,6 +193,9 @@ function setupTeamAutoRefresh() {
                             try {
                                 const teamData = await loadMyTeam(teamId, { forceRefresh: true });
                                 myTeamState.teamData = teamData;
+                                // #region agent log
+                                fetch('http://127.0.0.1:7242/ingest/f0cf0c26-f8c1-4bff-8dcd-6a0e660bef29',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'renderMyTeam.js:187',message:'Team data refreshed in auto-refresh',data:{teamId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+                                // #endregion
                             } catch (err) {
                                 console.error('Failed to refresh team data:', err);
                                 // Show warning toast for 503 errors
@@ -197,6 +208,9 @@ function setupTeamAutoRefresh() {
 
                     // Re-render current tab
                     if (myTeamState.teamData) {
+                        // #region agent log
+                        fetch('http://127.0.0.1:7242/ingest/f0cf0c26-f8c1-4bff-8dcd-6a0e660bef29',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'renderMyTeam.js:200',message:'Re-rendering team page after auto-refresh',data:{currentTab:myTeamState.currentTab},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+                        // #endregion
                         renderMyTeam(myTeamState.teamData, myTeamState.currentTab);
                     }
                 });
