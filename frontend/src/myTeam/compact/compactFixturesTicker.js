@@ -155,13 +155,19 @@ function renderFixtureCard(fixture, fplBootstrap, isLast = false, isEven = false
     const homeLogo = renderTeamLogo(homeTeam, { size: 20 });
     const awayLogo = renderTeamLogo(awayTeam, { size: 20 });
 
+    // Set width based on fixture state
+    // Upcoming needs more space for "SAT 2300" format
+    // Live/Finished/Postponed are shorter (scores like "1-1" or "PP")
+    const cardWidth = state.state === 'UPCOMING' ? '130px' : '100px';
+
     return `
         <div 
             class="fixture-card-ticker" 
             data-fixture-id="${fixture.id}"
             data-can-expand="${canShowStats}"
             style="
-                min-width: 80px;
+                width: ${cardWidth};
+                min-width: ${cardWidth};
                 flex-shrink: 0;
                 background: ${cardBackground};
                 border-radius: 0;
