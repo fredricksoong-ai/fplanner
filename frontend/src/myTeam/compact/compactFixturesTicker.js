@@ -56,8 +56,7 @@ function getFixtureState(fixture) {
     if (!fixture.event || !fixture.kickoff_time) {
         return {
             state: 'POSTPONED',
-            homeDisplay: 'PP',
-            awayDisplay: 'PP',
+            middleDisplay: 'PP',
             homeScore: null,
             awayScore: null,
             bgColor: 'transparent',
@@ -72,10 +71,11 @@ function getFixtureState(fixture) {
 
     if (isLive) {
         // LIVE state
+        const homeScore = fixture.team_h_score !== null ? fixture.team_h_score : '-';
+        const awayScore = fixture.team_a_score !== null ? fixture.team_a_score : '-';
         return {
             state: 'LIVE',
-            homeDisplay: fixture.team_h_score !== null ? fixture.team_h_score : '-',
-            awayDisplay: fixture.team_a_score !== null ? fixture.team_a_score : '-',
+            middleDisplay: `${homeScore}-${awayScore}`,
             homeScore: fixture.team_h_score,
             awayScore: fixture.team_a_score,
             bgColor: 'rgba(239, 68, 68, 0.1)',
@@ -85,10 +85,11 @@ function getFixtureState(fixture) {
         };
     } else if (isFinished) {
         // FINISHED state
+        const homeScore = fixture.team_h_score !== null ? fixture.team_h_score : '-';
+        const awayScore = fixture.team_a_score !== null ? fixture.team_a_score : '-';
         return {
             state: 'FINISHED',
-            homeDisplay: fixture.team_h_score !== null ? fixture.team_h_score : '-',
-            awayDisplay: fixture.team_a_score !== null ? fixture.team_a_score : '-',
+            middleDisplay: `${homeScore}-${awayScore}`,
             homeScore: fixture.team_h_score,
             awayScore: fixture.team_a_score,
             bgColor: 'transparent',
@@ -102,8 +103,7 @@ function getFixtureState(fixture) {
         
         return {
             state: 'UPCOMING',
-            homeDisplay: day,  // Day on home team line
-            awayDisplay: time,  // Time on away team line
+            middleDisplay: `${day} ${time}`,  // Combined day and time
             homeScore: null,
             awayScore: null,
             bgColor: 'transparent',
@@ -155,80 +155,57 @@ function renderFixtureCard(fixture, fplBootstrap, isLast = false, isEven = false
     const homeLogo = renderTeamLogo(homeTeam, { size: 20 });
     const awayLogo = renderTeamLogo(awayTeam, { size: 20 });
 
-    // Determine if this is a live/finished fixture (shows scores)
-    const isLiveOrFinished = state.state === 'LIVE' || state.state === 'FINISHED';
-    
-    // Gap between logos (consistent spacing)
-    const logoGap = '0.3rem';
-    
-    // Alignment for text column
-    // For upcoming: day bottom-aligned, time top-aligned (brings them closer)
-    // For live/finished: scores center-aligned (matches logo alignment)
-    const homeTextAlignSelf = isLiveOrFinished ? 'center' : 'flex-end';  // bottom-aligned for upcoming
-    const awayTextAlignSelf = isLiveOrFinished ? 'center' : 'flex-start'; // top-aligned for upcoming
-
     return `
         <div 
             class="fixture-card-ticker" 
             data-fixture-id="${fixture.id}"
             data-can-expand="${canShowStats}"
             style="
-                min-width: 60px;
+                min-width: 80px;
                 flex-shrink: 0;
                 background: ${cardBackground};
                 border-radius: 0;
-                padding: 0.2rem 0.4rem;
-                display: grid;
-                grid-template-columns: auto 1fr;
-                gap: 0rem 0.4rem;
+                padding: 0.3rem 0.5rem;
+                display: flex;
                 align-items: center;
+                justify-content: center;
+                gap: 0.5rem;
                 cursor: pointer;
                 transition: background 0.2s ease;
                 border-right: 0px solid var(--border-color);
             "
         >
+            <!-- Home Logo -->
             <div style="
                 display: flex;
                 align-items: center;
-                justify-content: flex-start;
-                color: ${state.textColor};
-                opacity: ${state.opacity};
-                line-height: 1.1;
-                margin-bottom: ${logoGap};
+                justify-content: center;
+                flex-shrink: 0;
             ">
                 ${homeLogo}
             </div>
+            
+            <!-- Middle Display (Date/Time, Score, or PP) -->
             <div style="
                 font-size: 0.5rem;
                 font-weight: ${state.fontWeight || '600'};
                 color: ${state.textColor};
                 opacity: ${state.opacity};
-                text-align: left;
-                line-height: 1.1;
-                align-self: ${homeTextAlignSelf};
+                text-align: center;
+                white-space: nowrap;
+                flex-shrink: 0;
             ">
-                ${state.homeDisplay}
+                ${state.middleDisplay}
             </div>
+            
+            <!-- Away Logo -->
             <div style="
                 display: flex;
                 align-items: center;
-                justify-content: flex-start;
-                color: ${state.textColor};
-                opacity: ${state.opacity};
-                line-height: 1.1;
+                justify-content: center;
+                flex-shrink: 0;
             ">
                 ${awayLogo}
-            </div>
-            <div style="
-                font-size: 0.5rem;
-                font-weight: ${state.fontWeight || '600'};
-                color: ${state.textColor};
-                opacity: ${state.opacity};
-                text-align: left;
-                line-height: 1.1;
-                align-self: ${awayTextAlignSelf};
-            ">
-                ${state.awayDisplay}
             </div>
         </div>
     `;
