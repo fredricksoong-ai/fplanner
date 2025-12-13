@@ -6,6 +6,7 @@
 import { escapeHtml } from '../utils.js';
 import { getGlassmorphism, getShadow, getMobileBorderRadius, getAnimationCurve, getAnimationDuration } from '../styles/mobileDesignSystem.js';
 import { loadAndRenderLeagueInfo } from '../leagueInfo.js';
+import { attachTransferListeners } from './compact/compactHeader.js';
 
 /**
  * Check if dark mode is active
@@ -79,8 +80,29 @@ export function showManagerModal(teamData = null) {
     // Get team info if available
     let teamName = 'My Team';
     let leagueInfoHTML = '';
-    if (teamData && teamData.team) {
+    let transfersHTML = '';
+    if (teamData && teamData.team && teamData.picks) {
         teamName = teamData.team.name || 'My Team';
+        const entry = teamData.picks.entry_history;
+        const freeTransfers = entry?.event_transfers || 0;
+        const transferCost = entry?.event_transfers_cost || 0;
+        
+        // Add transfers row
+        transfersHTML = `
+            <div
+                id="transfers-row"
+                data-team-id="${teamData.team.id}"
+                data-transfer-cost="${transferCost}"
+                style="font-size: 9px; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; gap: 0.25rem; user-select: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation; line-height: 1.4; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-color);"
+            >
+                <span>Transfers: ${freeTransfers}${transferCost > 0 ? ` <span style="color: #ef4444;">(-${transferCost} pts)</span>` : ''}</span>
+                <i class="fas fa-chevron-down" id="transfers-chevron" style="font-size: 0.55rem; transition: transform 0.2s; pointer-events: none;"></i>
+            </div>
+            <div id="transfers-details" style="display: none; font-size: 9px; padding-top: 0.25rem; margin-top: 0.25rem; border-top: 1px dashed var(--border-color);">
+                <div style="color: var(--text-secondary); text-align: center;">Loading transfers...</div>
+            </div>
+        `;
+        
         const selectedLeagueId = localStorage.getItem(`fpl_selected_league_${teamData.team.id}`);
         if (selectedLeagueId && selectedLeagueId !== 'null') {
             leagueInfoHTML = `
@@ -154,6 +176,7 @@ export function showManagerModal(teamData = null) {
                 
                 <!-- Content -->
                 <div style="padding: 1rem;">
+                    ${transfersHTML}
                     ${leagueInfoHTML}
                     <button
                         id="manager-switch-team-btn"
@@ -185,12 +208,15 @@ export function showManagerModal(teamData = null) {
     document.body.insertAdjacentHTML('beforeend', modalHTML);
     attachManagerModalListeners();
     
-    // Load league info if placeholder exists
+    // Load league info and attach transfer listeners if placeholders exist
     requestAnimationFrame(() => {
         const placeholder = document.getElementById('league-info-placeholder');
         if (placeholder) {
             loadAndRenderLeagueInfo();
         }
+        
+        // Attach transfer listeners
+        attachTransferListeners();
     });
 }
 
