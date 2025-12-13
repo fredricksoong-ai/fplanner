@@ -482,7 +482,7 @@ body {
 
   /* Countdown timer - smaller font on mobile */
   #gw-countdown {
-    font-size: 0.65rem !important;
+    font-size: 9px !important;
   }
 
   #countdown-text {

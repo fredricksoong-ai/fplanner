@@ -115,12 +115,10 @@ import {
 } from './renderMyTeamMobile.js';
 
 import {
-    renderCompactHeader,
     renderCompactTeamList,
     renderMatchSchedule,
     attachPlayerRowListeners,
     attachTransferListeners,
-    attachHeaderScrollEffect,
     showPlayerModal,
     renderCompactBubbleFormation,
     initBubbleFormationChart
@@ -523,7 +521,6 @@ export async function renderMyTeam(teamData, subTab = 'overview') {
             if (subTab === 'overview') {
                 attachPlayerRowListeners(myTeamState);
                 attachTransferListeners();
-                attachHeaderScrollEffect(); // Apply frosted glass on scroll
                 
                 // Attach fixture ticker listeners
                 attachFixtureTickerListeners();
@@ -535,7 +532,6 @@ export async function renderMyTeam(teamData, subTab = 'overview') {
                 await initBubbleFormationChart(allPlayers, gameweek, isLive, myTeamState);
             } else if (subTab === 'fixtures') {
                 attachMobileFixtureRowListeners();
-                attachHeaderScrollEffect(); // Apply frosted glass on scroll
             }
         });
     } else {
@@ -750,19 +746,10 @@ export async function renderMyTeam(teamData, subTab = 'overview') {
 
     // Removed: expand stats button event listener (expandable section removed from compact header)
 
-    // Set sticky table header position dynamically on mobile
+    // Add event listener for change team button (if exists in desktop layout)
     if (shouldUseMobileLayout()) {
-        requestAnimationFrame(() => {
-            const compactHeader = document.getElementById('compact-header');
-            if (compactHeader) {
-                const headerHeight = compactHeader.offsetHeight;
-                const pwaHeaderHeight = 56; // 3.5rem = 56px
-                const totalTop = pwaHeaderHeight + headerHeight;
-                document.documentElement.style.setProperty('--compact-header-height', `${totalTop}px`);
-            }
-        });
-
-        // Add event listener for change team button
+        // Mobile layout - compact header removed
+    } else {
         const changeTeamBtn = document.getElementById('change-team-btn');
         if (changeTeamBtn) {
             changeTeamBtn.addEventListener('click', () => {
@@ -851,7 +838,6 @@ async function renderTeamOverviewTab(teamData) {
         
         return `
             ${renderFixturesTicker()}
-            ${renderCompactHeader(teamData, gameweek, isAutoRefreshActive())}
             <div style="padding: 0.75rem;">
                 ${bubbleFormationHTML}
                 ${renderCompactTeamList(allPlayers, gameweek, isLive)}
