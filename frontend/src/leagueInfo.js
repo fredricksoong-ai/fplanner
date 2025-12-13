@@ -26,7 +26,7 @@ export async function loadAndRenderLeagueInfo() {
 
         if (!userEntry) {
             placeholder.innerHTML = `
-                <div style="font-size: 0.65rem; color: var(--text-secondary);">
+                <div style="font-size: 9px; color: var(--text-secondary);">
                     Not good enough bro
                 </div>
             `;
@@ -73,7 +73,7 @@ export async function loadAndRenderLeagueInfo() {
 
         // Render league info
         placeholder.innerHTML = `
-            <div style="font-size: 0.65rem; color: var(--text-secondary); line-height: 1.4;">
+            <div style="font-size: 9px; color: var(--text-secondary); line-height: 1.4;">
                 <div style="margin-bottom: 0.15rem; font-weight: 600; color: var(--text-primary);">
                     League Position: ${positionDisplay} out of ${totalEntries}
                 </div>
@@ -85,7 +85,7 @@ export async function loadAndRenderLeagueInfo() {
     } catch (error) {
         console.error('Failed to load league info:', error);
         placeholder.innerHTML = `
-            <div style="font-size: 0.65rem; color: var(--text-secondary);">
+            <div style="font-size: 9px; color: var(--text-secondary);">
                 Failed to load
             </div>
         `;

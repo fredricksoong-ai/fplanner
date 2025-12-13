@@ -494,10 +494,11 @@ body {
     #gw-countdown {
       padding: 0.5rem !important;
       gap: 0.25rem !important;
+      font-size: 9px !important;
     }
 
     #countdown-text {
-      font-size: 0.6rem !important;
+      font-size: 9px !important;
     }
   }
 }
