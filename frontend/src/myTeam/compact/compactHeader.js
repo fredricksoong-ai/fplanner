@@ -315,50 +315,6 @@ export function renderCompactHeader(teamData, gwNumber, isAutoRefreshActive = fa
                         <div style="color: var(--text-secondary); text-align: center;">Loading transfers...</div>
                     </div>
                 </div>
-
-                <div style="display: flex; align-items: stretch;">
-                    <div id="gw-points-card" style="
-                        backdrop-filter: ${glassEffectLight.backdropFilter};
-                        -webkit-backdrop-filter: ${glassEffectLight.WebkitBackdropFilter};
-                        background: ${glassEffectLight.background};
-                        border: ${glassEffectLight.border};
-                        border-radius: ${borderRadius};
-                        padding: 0.3rem 0.6rem;
-                        text-align: center;
-                        min-width: 175px;
-                        display: flex;
-                        flex-direction: column;
-                        justify-content: right;
-                        box-shadow: ${shadowLow};
-                        transition: all ${animationDuration} ${animationCurve};
-                    ">
-                        <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
-                            <div style="font-size: 1.5rem; font-weight: 800; color: ${pointsColor}; line-height: 1;">
-                                ${gwPoints}
-                            </div>
-                            <span style="color: var(--text-secondary);">•</span>
-                            <div style="font-size: 1rem; font-weight: 800; color: var(--text-secondary); line-height: 1;">
-                                ${totalPoints.toLocaleString()}
-                            </div>
-                        </div>
-                        <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-top: 0.1rem;">
-                            ${isLive ? `
-                                <div style="font-size: 0.6rem; color: #ef4444; animation: pulse 2s infinite; font-weight: 600;">
-                                    ⚽ LIVE
-                                </div>
-                            ` : ''}
-                            <div style="font-size: 0.6rem; color: var(--text-secondary); font-weight: 600;">
-                                GW ${gwNumber}
-                            </div>
-                            ${gwAverage > 0 ? `
-                                <div style="font-size: 0.6rem; color: var(--text-secondary);">
-                                    Avg: ${gwAverage}
-                                </div>
-                            ` : ''}
-                        </div>
-                        ${isLive ? `<style>@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }</style>` : ''}
-                    </div>
-                </div>
             </div>
         </div>
     `;
