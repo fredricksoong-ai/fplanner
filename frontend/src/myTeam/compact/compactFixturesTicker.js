@@ -65,7 +65,16 @@ function getFixtureState(fixture) {
         };
     }
 
-    const isFinished = fixture.finished === true;
+    // Use improved detection logic (same as getMatchStatus)
+    // Check if match is finished using multiple indicators
+    const kickoffTime = fixture.kickoff_time ? new Date(fixture.kickoff_time) : null;
+    const now = new Date();
+    const timeSinceKickoff = kickoffTime ? (now - kickoffTime) / (1000 * 60) : null; // minutes
+    const likelyFinishedByTime = kickoffTime && timeSinceKickoff > 100; // 100 minutes (covers 90min + stoppage)
+    
+    // Determine if match is finished with improved detection
+    const isFinished = fixture.finished === true ||
+                      (fixture.started === true && likelyFinishedByTime && !fixture.finished);
     const isStarted = fixture.started === true;
     const isLive = isStarted && !isFinished;
 
@@ -119,9 +128,10 @@ function getFixtureState(fixture) {
  * @param {Object} fplBootstrap - Bootstrap data
  * @param {boolean} isLast - Whether this is the last fixture card
  * @param {boolean} isEven - Whether this is an even-indexed fixture (for alternating backgrounds)
+ * @param {Object|null} nextFixture - Next fixture in the list (for border detection)
  * @returns {string} HTML for fixture card
  */
-function renderFixtureCard(fixture, fplBootstrap, isLast = false, isEven = false) {
+function renderFixtureCard(fixture, fplBootstrap, isLast = false, isEven = false, nextFixture = null) {
     // Safety check for teams array
     if (!fplBootstrap?.teams || !Array.isArray(fplBootstrap.teams)) {
         return '';
@@ -137,7 +147,13 @@ function renderFixtureCard(fixture, fplBootstrap, isLast = false, isEven = false
     const state = getFixtureState(fixture);
 
     // Check if fixture has stats (live or finished)
-    const isFinished = fixture.finished === true;
+    // Use the same improved detection as getFixtureState
+    const kickoffTime = fixture.kickoff_time ? new Date(fixture.kickoff_time) : null;
+    const now = new Date();
+    const timeSinceKickoff = kickoffTime ? (now - kickoffTime) / (1000 * 60) : null;
+    const likelyFinishedByTime = kickoffTime && timeSinceKickoff > 100;
+    const isFinished = fixture.finished === true ||
+                      (fixture.started === true && likelyFinishedByTime && !fixture.finished);
     const isStarted = fixture.started === true;
     const isLive = isStarted && !isFinished;
     const canShowStats = isFinished || isLive;
@@ -149,6 +165,24 @@ function renderFixtureCard(fixture, fplBootstrap, isLast = false, isEven = false
     } else {
         // Apply alternating for all non-live fixtures (upcoming, finished, postponed)
         cardBackground = isEven ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.2)';
+    }
+
+    // Determine if we need a border (when next card has same background)
+    let borderRight = '0px solid var(--border-color)';
+    if (!isLast && nextFixture) {
+        const nextState = getFixtureState(nextFixture);
+        const nextIsEven = !isEven; // Next card will have opposite even/odd
+        let nextBackground;
+        if (nextState.state === 'LIVE') {
+            nextBackground = 'rgba(239, 68, 68, 0.1)';
+        } else {
+            nextBackground = nextIsEven ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.2)';
+        }
+        
+        // If backgrounds match, add a visible border
+        if (cardBackground === nextBackground) {
+            borderRight = '1px solid rgba(255, 255, 255, 0.15)';
+        }
     }
 
     // Render team logos (fallback to short names if logos not available)
@@ -178,7 +212,7 @@ function renderFixtureCard(fixture, fplBootstrap, isLast = false, isEven = false
                 gap: 0.5rem;
                 cursor: pointer;
                 transition: background 0.2s ease;
-                border-right: 0px solid var(--border-color);
+                border-right: ${borderRight};
             "
         >
             <!-- Home Logo -->
@@ -252,36 +286,16 @@ export function renderFixturesTicker() {
         // Include postponed fixtures (event === null) if they're for the target GW
         let fixtures = fplFixtures.filter(f => f.event === targetGW);
 
-    // Sort by state priority, then chronologically within each state
-    // Priority: UPCOMING < LIVE < FINISHED < POSTPONED
+    // Sort chronologically by kickoff_time (left to right)
     fixtures.sort((a, b) => {
-        const stateA = getFixtureState(a);
-        const stateB = getFixtureState(b);
-        
-        // Define state priority: UPCOMING < LIVE < FINISHED < POSTPONED
-        const statePriority = {
-            'UPCOMING': 1,
-            'LIVE': 2,
-            'FINISHED': 3,
-            'POSTPONED': 4
-        };
-        
-        const priorityA = statePriority[stateA.state] || 99;
-        const priorityB = statePriority[stateB.state] || 99;
-        
-        // If different states, sort by priority
-        if (priorityA !== priorityB) {
-            return priorityA - priorityB;
-        }
-        
-        // Same state - sort chronologically by kickoff_time
-        if (a.kickoff_time && b.kickoff_time) {
-            return new Date(a.kickoff_time) - new Date(b.kickoff_time);
-        }
-        
         // Fixtures with kickoff_time come before those without
         if (a.kickoff_time && !b.kickoff_time) return -1;
         if (!a.kickoff_time && b.kickoff_time) return 1;
+        
+        // Both have kickoff_time - sort chronologically
+        if (a.kickoff_time && b.kickoff_time) {
+            return new Date(a.kickoff_time) - new Date(b.kickoff_time);
+        }
         
         // Both postponed/no time, maintain original order
         return 0;
@@ -291,33 +305,14 @@ export function renderFixturesTicker() {
     if (fixtures.length === 0 && targetGW !== currentGW) {
         fixtures = fplFixtures.filter(f => f.event === currentGW);
         fixtures.sort((a, b) => {
-            const stateA = getFixtureState(a);
-            const stateB = getFixtureState(b);
-            
-            // Define state priority: UPCOMING < LIVE < FINISHED < POSTPONED
-            const statePriority = {
-                'UPCOMING': 1,
-                'LIVE': 2,
-                'FINISHED': 3,
-                'POSTPONED': 4
-            };
-            
-            const priorityA = statePriority[stateA.state] || 99;
-            const priorityB = statePriority[stateB.state] || 99;
-            
-            // If different states, sort by priority
-            if (priorityA !== priorityB) {
-                return priorityA - priorityB;
-            }
-            
-            // Same state - sort chronologically by kickoff_time
-            if (a.kickoff_time && b.kickoff_time) {
-                return new Date(a.kickoff_time) - new Date(b.kickoff_time);
-            }
-            
             // Fixtures with kickoff_time come before those without
             if (a.kickoff_time && !b.kickoff_time) return -1;
             if (!a.kickoff_time && b.kickoff_time) return 1;
+            
+            // Both have kickoff_time - sort chronologically
+            if (a.kickoff_time && b.kickoff_time) {
+                return new Date(a.kickoff_time) - new Date(b.kickoff_time);
+            }
             
             // Both postponed/no time, maintain original order
             return 0;
@@ -334,7 +329,8 @@ export function renderFixturesTicker() {
         .map((fixture, index) => {
             const isLast = index === fixtures.length - 1;
             const isEven = index % 2 === 0;
-            return renderFixtureCard(fixture, fplBootstrap, isLast, isEven);
+            const nextFixture = !isLast ? fixtures[index + 1] : null;
+            return renderFixtureCard(fixture, fplBootstrap, isLast, isEven, nextFixture);
         })
         .join('');
 
@@ -407,8 +403,13 @@ export function showFixtureModal(fixtureId) {
             return;
         }
 
-    // Determine fixture state
-    const isFinished = fixture.finished === true;
+    // Determine fixture state (using improved detection)
+    const kickoffTime = fixture.kickoff_time ? new Date(fixture.kickoff_time) : null;
+    const now = new Date();
+    const timeSinceKickoff = kickoffTime ? (now - kickoffTime) / (1000 * 60) : null;
+    const likelyFinishedByTime = kickoffTime && timeSinceKickoff > 100;
+    const isFinished = fixture.finished === true ||
+                      (fixture.started === true && likelyFinishedByTime && !fixture.finished);
     const isStarted = fixture.started === true;
     const isLive = isStarted && !isFinished;
     const isPostponed = !fixture.event || !fixture.kickoff_time;
@@ -929,7 +930,13 @@ export function showFixtureStatsModal(fixtureId) {
         return;
     }
 
-    const isFinished = fixture.finished === true;
+    // Use improved detection logic
+    const kickoffTime = fixture.kickoff_time ? new Date(fixture.kickoff_time) : null;
+    const now = new Date();
+    const timeSinceKickoff = kickoffTime ? (now - kickoffTime) / (1000 * 60) : null;
+    const likelyFinishedByTime = kickoffTime && timeSinceKickoff > 100;
+    const isFinished = fixture.finished === true ||
+                      (fixture.started === true && likelyFinishedByTime && !fixture.finished);
     const isStarted = fixture.started === true;
     const isLive = isStarted && !isFinished;
     const canShowStats = isFinished || isLive;
