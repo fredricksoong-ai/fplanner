@@ -13,6 +13,8 @@ import { getGlassmorphism, getShadow, getMobileBorderRadius } from '../styles/mo
 
 /**
  * Calculate live team points from cached team data
+ * NOTE: This function is no longer used for league standings - points now come directly from API
+ * to maintain consistency with other pages. Kept for potential future use.
  * @param {Object} teamData - Team data with picks and live_stats
  * @returns {number} Total calculated points
  */
@@ -685,39 +687,16 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
             const captainName = captainNames[index];
             const isUser = entry.entry === userTeamId;
 
-            // Get GW points - use live points if available, otherwise event_total
-            let gwPoints = entry.event_total || 0;
-            let totalPoints = entry.total; // Season total
+            // Get GW points and total points directly from API (aligned with other pages)
+            const gwPoints = entry.event_total || 0;
+            const totalPoints = entry.total; // Season total
             const cachedTeamData = myTeamState.rivalTeamCache?.get(entry.entry);
-            if (isLive && cachedTeamData && cachedTeamData.isLive) {
-                const livePoints = calculateLiveTeamPoints(cachedTeamData);
-                if (livePoints !== null) {
-                    gwPoints = livePoints;
-                }
-                // Use live_total_points if available (backend calculates this)
-                const liveTotal = cachedTeamData.picks?.entry_history?.live_total_points;
-                if (liveTotal !== null && liveTotal !== undefined) {
-                    totalPoints = liveTotal;
-                }
-            }
 
-            // Get user's live total points for gap calculation
-            let userTotalPoints = userPoints;
-            if (isLive && userEntry) {
-                const userCachedData = myTeamState.rivalTeamCache?.get(userTeamId);
-                if (userCachedData && userCachedData.isLive) {
-                    const userLiveTotal = userCachedData.picks?.entry_history?.live_total_points;
-                    if (userLiveTotal !== null && userLiveTotal !== undefined) {
-                        userTotalPoints = userLiveTotal;
-                    }
-                }
-            }
-
-            // Calculate gap to user - use live total points if available, otherwise regular total
+            // Calculate gap to user using API values
             let gapText = '—';
             let gapColor = 'var(--text-secondary)';
             if (!isUser && userEntry) {
-                const gap = userTotalPoints - totalPoints;
+                const gap = userPoints - totalPoints;
                 if (gap > 0) {
                     gapText = `+${gap}`;
                     gapColor = '#22c55e'; // Green when user is ahead
@@ -925,39 +904,16 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
                             const fromLeader = entry.total - leaderPoints;
                             const fromLeaderText = fromLeader === 0 ? '—' : fromLeader.toLocaleString();
 
-                            // Get GW points - use live points if available, otherwise event_total
-                            let gwPoints = entry.event_total || 0;
-                            let totalPoints = entry.total; // Season total
+                            // Get GW points and total points directly from API (aligned with other pages)
+                            const gwPoints = entry.event_total || 0;
+                            const totalPoints = entry.total; // Season total
                             const cachedTeamData = myTeamState.rivalTeamCache?.get(entry.entry);
-                            if (isLive && cachedTeamData && cachedTeamData.isLive) {
-                                const livePoints = calculateLiveTeamPoints(cachedTeamData);
-                                if (livePoints !== null) {
-                                    gwPoints = livePoints;
-                                }
-                                // Use live_total_points if available (backend calculates this)
-                                const liveTotal = cachedTeamData.picks?.entry_history?.live_total_points;
-                                if (liveTotal !== null && liveTotal !== undefined) {
-                                    totalPoints = liveTotal;
-                                }
-                            }
-                            
-                            // Get user's live total points for gap calculation
-                            let userTotalPoints = userPoints;
-                            if (isLive && userEntry) {
-                                const userCachedData = myTeamState.rivalTeamCache?.get(userTeamId);
-                                if (userCachedData && userCachedData.isLive) {
-                                    const userLiveTotal = userCachedData.picks?.entry_history?.live_total_points;
-                                    if (userLiveTotal !== null && userLiveTotal !== undefined) {
-                                        userTotalPoints = userLiveTotal;
-                                    }
-                                }
-                            }
 
-                            // Calculate gap to user - use live total points if available, otherwise regular total
+                            // Calculate gap to user using API values
                             let gapText = '—';
                             let gapColor = 'var(--text-secondary)';
                             if (!isUser && userEntry) {
-                                const gap = userTotalPoints - totalPoints;
+                                const gap = userPoints - totalPoints;
                                 if (gap > 0) {
                                     gapText = `+${gap}`;
                                     gapColor = '#ef4444';
