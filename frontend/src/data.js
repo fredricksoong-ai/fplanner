@@ -411,6 +411,11 @@ export function startAutoRefresh(onRefresh = null) {
             if (fixturesResponse.ok) {
                 const data = await fixturesResponse.json();
                 if (data.fixtures) {
+                    // #region agent log
+                    const finishedCount = data.fixtures.filter(f => f.finished === true).length;
+                    const startedCount = data.fixtures.filter(f => f.started === true && !f.finished).length;
+                    fetch('http://127.0.0.1:7242/ingest/f0cf0c26-f8c1-4bff-8dcd-6a0e660bef29',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'data.js:414',message:'Fixtures refreshed - checking finished/started counts',data:{totalFixtures:data.fixtures.length,finishedCount,startedCount,activeGW:getActiveGW()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+                    // #endregion
                     fplFixtures = data.fixtures;
                     console.log('✅ Fixtures refreshed');
                 }

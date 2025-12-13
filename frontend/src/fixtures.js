@@ -172,6 +172,16 @@ export function getMatchStatus(teamId, gameweek, player) {
     const isMatchFinished = fixture.finished ||
                            (hasGWStats && gwMinutes !== null && gwMinutes !== undefined);
 
+    // #region agent log
+    if (player && player.id) {
+        fetch('http://127.0.0.1:7242/ingest/f0cf0c26-f8c1-4bff-8dcd-6a0e660bef29',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'fixtures.js:173',message:'getMatchStatus - fixture flags and player data',data:{playerId:player.id,teamId,gameweek,fixtureStarted:fixture.started,fixtureFinished:fixture.finished,hasLiveStats,liveMinutes,hasGWStats,gwMinutes,isMatchFinished,fixtureId:fixture.id,kickoffTime:fixture.kickoff_time},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        fetch('http://127.0.0.1:7242/ingest/f0cf0c26-f8c1-4bff-8dcd-6a0e660bef29',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'fixtures.js:173',message:'getMatchStatus - fixture flags and player data',data:{playerId:player.id,teamId,gameweek,fixtureStarted:fixture.started,fixtureFinished:fixture.finished,hasLiveStats,liveMinutes,hasGWStats,gwMinutes,isMatchFinished,fixtureId:fixture.id,kickoffTime:fixture.kickoff_time},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+        fetch('http://127.0.0.1:7242/ingest/f0cf0c26-f8c1-4bff-8dcd-6a0e660bef29',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'fixtures.js:173',message:'getMatchStatus - fixture flags and player data',data:{playerId:player.id,teamId,gameweek,fixtureStarted:fixture.started,fixtureFinished:fixture.finished,hasLiveStats,liveMinutes,hasGWStats,gwMinutes,isMatchFinished,fixtureId:fixture.id,kickoffTime:fixture.kickoff_time},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        fetch('http://127.0.0.1:7242/ingest/f0cf0c26-f8c1-4bff-8dcd-6a0e660bef29',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'fixtures.js:173',message:'getMatchStatus - fixture flags and player data',data:{playerId:player.id,teamId,gameweek,fixtureStarted:fixture.started,fixtureFinished:fixture.finished,hasLiveStats,liveMinutes,hasGWStats,gwMinutes,isMatchFinished,fixtureId:fixture.id,kickoffTime:fixture.kickoff_time},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+        fetch('http://127.0.0.1:7242/ingest/f0cf0c26-f8c1-4bff-8dcd-6a0e660bef29',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'fixtures.js:173',message:'getMatchStatus - fixture flags and player data',data:{playerId:player.id,teamId,gameweek,fixtureStarted:fixture.started,fixtureFinished:fixture.finished,hasLiveStats,liveMinutes,hasGWStats,gwMinutes,isMatchFinished,fixtureId:fixture.id,kickoffTime:fixture.kickoff_time},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+    }
+    // #endregion
+
     // 1. Match FINISHED
     if (isMatchFinished) {
         // Priority: live_stats > github_gw > explain
@@ -188,6 +198,14 @@ export function getMatchStatus(teamId, gameweek, player) {
             }
         }
 
+        // #region agent log
+        if (player && player.id) {
+            const statusResult = minutes !== null && minutes !== undefined ? `FT (${minutes})` : 'FT';
+            fetch('http://127.0.0.1:7242/ingest/f0cf0c26-f8c1-4bff-8dcd-6a0e660bef29',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'fixtures.js:195',message:'getMatchStatus - returning FT status',data:{playerId:player.id,statusResult,fixtureFinished:fixture.finished,hasGWStats,gwMinutes,liveMinutes,minutes},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+            fetch('http://127.0.0.1:7242/ingest/f0cf0c26-f8c1-4bff-8dcd-6a0e660bef29',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'fixtures.js:195',message:'getMatchStatus - returning FT status',data:{playerId:player.id,statusResult,fixtureFinished:fixture.finished,hasGWStats,gwMinutes,liveMinutes,minutes},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        }
+        // #endregion
+
         if (minutes !== null && minutes !== undefined) {
             return `FT (${minutes})`;
         }
@@ -196,6 +214,13 @@ export function getMatchStatus(teamId, gameweek, player) {
 
     // 2. Match LIVE (started but not finished)
     if (fixture.started && !isMatchFinished) {
+        // #region agent log
+        if (player && player.id) {
+            const statusResult = liveMinutes !== null ? `LIVE (${liveMinutes})` : 'LIVE';
+            fetch('http://127.0.0.1:7242/ingest/f0cf0c26-f8c1-4bff-8dcd-6a0e660bef29',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'fixtures.js:198',message:'getMatchStatus - returning LIVE status',data:{playerId:player.id,statusResult,fixtureStarted:fixture.started,fixtureFinished:fixture.finished,isMatchFinished,liveMinutes},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+            fetch('http://127.0.0.1:7242/ingest/f0cf0c26-f8c1-4bff-8dcd-6a0e660bef29',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'fixtures.js:198',message:'getMatchStatus - returning LIVE status',data:{playerId:player.id,statusResult,fixtureStarted:fixture.started,fixtureFinished:fixture.finished,isMatchFinished,liveMinutes},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+        }
+        // #endregion
         if (liveMinutes !== null) {
             return `LIVE (${liveMinutes})`;
         }
