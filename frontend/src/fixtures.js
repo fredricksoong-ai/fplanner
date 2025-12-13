@@ -169,12 +169,29 @@ export function getMatchStatus(teamId, gameweek, player) {
     const gwMinutes = hasGWStats ? player.github_gw.minutes : null;
 
     // Determine if match is finished
+    // Multiple indicators:
+    // 1. fixture.finished flag (primary - most reliable)
+    // 2. github_gw.minutes exists (match finished, data available)
+    // 3. Match started, kickoff was >100 minutes ago, and fixture.finished not set yet (API delay - covers 90min + stoppage)
+    // 4. Match started, live_stats.minutes is 0 (cleared after match ends), kickoff was >90min ago
+    const kickoffTime = fixture.kickoff_time ? new Date(fixture.kickoff_time) : null;
+    const now = new Date();
+    const timeSinceKickoff = kickoffTime ? (now - kickoffTime) / (1000 * 60) : null; // minutes
+    const likelyFinishedByTime = kickoffTime && timeSinceKickoff > 100; // 100 minutes (covers 90min + stoppage)
+    const likelyFinishedByLiveStats = fixture.started && 
+                                      liveMinutes === 0 && 
+                                      hasLiveStats && 
+                                      kickoffTime && 
+                                      timeSinceKickoff > 90; // If minutes cleared to 0 and it's been >90min, match likely finished
+    
     const isMatchFinished = fixture.finished ||
-                           (hasGWStats && gwMinutes !== null && gwMinutes !== undefined);
+                           (hasGWStats && gwMinutes !== null && gwMinutes !== undefined) ||
+                           (fixture.started && likelyFinishedByTime && !fixture.finished) ||
+                           (likelyFinishedByLiveStats && !fixture.finished);
 
     // #region agent log
     if (player && player.id) {
-        fetch('http://127.0.0.1:7242/ingest/f0cf0c26-f8c1-4bff-8dcd-6a0e660bef29',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'fixtures.js:173',message:'getMatchStatus - fixture flags and player data',data:{playerId:player.id,teamId,gameweek,fixtureStarted:fixture.started,fixtureFinished:fixture.finished,hasLiveStats,liveMinutes,hasGWStats,gwMinutes,isMatchFinished,fixtureId:fixture.id,kickoffTime:fixture.kickoff_time},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        fetch('http://127.0.0.1:7242/ingest/f0cf0c26-f8c1-4bff-8dcd-6a0e660bef29',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'fixtures.js:183',message:'getMatchStatus - fixture flags and player data',data:{playerId:player.id,teamId,gameweek,fixtureStarted:fixture.started,fixtureFinished:fixture.finished,hasLiveStats,liveMinutes,hasGWStats,gwMinutes,isMatchFinished,likelyFinishedByTime,timeSinceKickoff,fixtureId:fixture.id,kickoffTime:fixture.kickoff_time},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'A'})}).catch(()=>{});
         fetch('http://127.0.0.1:7242/ingest/f0cf0c26-f8c1-4bff-8dcd-6a0e660bef29',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'fixtures.js:173',message:'getMatchStatus - fixture flags and player data',data:{playerId:player.id,teamId,gameweek,fixtureStarted:fixture.started,fixtureFinished:fixture.finished,hasLiveStats,liveMinutes,hasGWStats,gwMinutes,isMatchFinished,fixtureId:fixture.id,kickoffTime:fixture.kickoff_time},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
         fetch('http://127.0.0.1:7242/ingest/f0cf0c26-f8c1-4bff-8dcd-6a0e660bef29',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'fixtures.js:173',message:'getMatchStatus - fixture flags and player data',data:{playerId:player.id,teamId,gameweek,fixtureStarted:fixture.started,fixtureFinished:fixture.finished,hasLiveStats,liveMinutes,hasGWStats,gwMinutes,isMatchFinished,fixtureId:fixture.id,kickoffTime:fixture.kickoff_time},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
         fetch('http://127.0.0.1:7242/ingest/f0cf0c26-f8c1-4bff-8dcd-6a0e660bef29',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'fixtures.js:173',message:'getMatchStatus - fixture flags and player data',data:{playerId:player.id,teamId,gameweek,fixtureStarted:fixture.started,fixtureFinished:fixture.finished,hasLiveStats,liveMinutes,hasGWStats,gwMinutes,isMatchFinished,fixtureId:fixture.id,kickoffTime:fixture.kickoff_time},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
