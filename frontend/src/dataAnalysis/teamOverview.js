@@ -12,11 +12,6 @@ import {
     calculateBenchPoints,
     calculateSquadAverages
 } from '../myTeam/teamSummaryHelpers.js';
-import { initializeTeamPointsChart, disposeTeamPointsChart } from './teamPointsChart.js';
-import { initializePlayerPerformanceTrellis, disposePlayerPerformanceTrellis } from './playerPerformanceTrellis.js';
-
-let teamPointsChartInstance = null;
-let playerPerformanceTrellisInstance = null;
 
 /**
  * Render Team Overview tab - personalized stats for user's team
@@ -89,67 +84,8 @@ export function renderTeamOverview(
     // Differentials in squad (< 15% owned)
     const differentials = filteredPlayers.filter(p => parseFloat(p.selected_by_percent || 0) < 15);
 
-    // Get team history for chart
-    const teamHistory = teamData?.teamHistory?.current || [];
-
     return `
         <div>
-            <!-- Team Points Chart (replaces Summary Cards) -->
-            ${teamHistory.length > 0 ? `
-            <div style="margin-bottom: 2rem;">
-                <div style="
-                    background: var(--bg-secondary);
-                    border-radius: 0.75rem;
-                    padding: 1rem;
-                    margin-bottom: 1rem;
-                ">
-                    <h3 style="
-                        font-size: 0.85rem;
-                        font-weight: 700;
-                        color: var(--text-primary);
-                        margin: 0 0 0.75rem 0;
-                    ">
-                        Season Progress
-                    </h3>
-                    <div id="team-points-chart" style="width: 100%; height: 350px;"></div>
-                </div>
-            </div>
-            ` : `
-            <div style="
-                background: var(--bg-secondary);
-                border-radius: 0.75rem;
-                padding: 1.5rem;
-                margin-bottom: 2rem;
-                text-align: center;
-                color: var(--text-secondary);
-            ">
-                <i class="fas fa-chart-line" style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5;"></i>
-                <p style="font-size: 0.85rem; margin: 0;">Team history data not available</p>
-            </div>
-            `}
-
-            <!-- Player Performance Trellis Chart -->
-            ${myPlayers.length > 0 ? `
-            <div style="margin-bottom: 2rem;">
-                <div style="
-                    background: var(--bg-secondary);
-                    border-radius: 0.75rem;
-                    padding: 1rem;
-                    margin-bottom: 1rem;
-                ">
-                    <h3 style="
-                        font-size: 0.85rem;
-                        font-weight: 700;
-                        color: var(--text-primary);
-                        margin: 0 0 0.75rem 0;
-                    ">
-                        Player Performance Tracker
-                    </h3>
-                    <div id="player-performance-trellis-chart" style="width: 100%; height: 800px;"></div>
-                </div>
-            </div>
-            ` : ''}
-
             <!-- Section 1: Top Performers This GW -->
             <div style="margin-bottom: 3rem;">
                 ${renderSectionHeader('⭐', 'Top Performers This GW', `Your best ${topPerformers.length} players in GW${gameweek}`)}
@@ -361,76 +297,17 @@ function renderSquadHealthCards(benchPoints, avgPPM, avgOwnership, avgFDR, highR
 }
 
 /**
- * Initialize chart after render
+ * Initialize chart after render (no longer needed - charts moved to manager modal)
  */
 export function initializeTeamOverviewChart() {
-    const teamData = sharedState?.myTeamData;
-    const teamHistory = teamData?.teamHistory?.current || [];
-    const currentPicks = teamData?.picks?.picks || null;
-    const currentGW = getCurrentGW();
-    
-    if (teamHistory.length > 0) {
-        // Dispose existing chart
-        if (teamPointsChartInstance) {
-            disposeTeamPointsChart(teamPointsChartInstance);
-            teamPointsChartInstance = null;
-        }
-        
-        // Initialize new chart with current picks for expected points calculation
-        setTimeout(async () => {
-            try {
-                teamPointsChartInstance = await initializeTeamPointsChart('team-points-chart', teamHistory, currentPicks);
-            } catch (err) {
-                console.error('Failed to initialize team points chart:', err);
-            }
-        }, 100);
-    }
-
-    // Initialize Player Performance Trellis Chart
-    if (currentPicks && currentPicks.length > 0) {
-        // Dispose existing trellis chart
-        if (playerPerformanceTrellisInstance) {
-            disposePlayerPerformanceTrellis(playerPerformanceTrellisInstance);
-            playerPerformanceTrellisInstance = null;
-        }
-
-        // Get full player data for all 15 players
-        const allPlayers = currentPicks.map(pick => {
-            const player = getPlayerById(pick.element);
-            return player ? {
-                ...player,
-                position: pick.position,
-                is_captain: pick.is_captain,
-                is_vice_captain: pick.is_vice_captain
-            } : null;
-        }).filter(p => p && p.id);
-
-        if (allPlayers.length > 0) {
-            setTimeout(async () => {
-                try {
-                    playerPerformanceTrellisInstance = await initializePlayerPerformanceTrellis(
-                        'player-performance-trellis-chart',
-                        allPlayers,
-                        currentGW
-                    );
-                } catch (err) {
-                    console.error('Failed to initialize player performance trellis chart:', err);
-                }
-            }, 200);
-        }
-    }
+    // Charts have been moved to the manager modal
+    // This function is kept for API compatibility but does nothing
 }
 
 /**
- * Cleanup chart on unmount
+ * Cleanup chart on unmount (no longer needed)
  */
 export function cleanupTeamOverviewChart() {
-    if (teamPointsChartInstance) {
-        disposeTeamPointsChart(teamPointsChartInstance);
-        teamPointsChartInstance = null;
-    }
-    if (playerPerformanceTrellisInstance) {
-        disposePlayerPerformanceTrellis(playerPerformanceTrellisInstance);
-        playerPerformanceTrellisInstance = null;
-    }
+    // Charts have been moved to the manager modal
+    // This function is kept for API compatibility but does nothing
 }
