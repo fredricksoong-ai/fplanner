@@ -225,15 +225,14 @@ router.get('/api/bootstrap/enriched', async (req, res) => {
       });
     }
 
-    // Clone bootstrap data
-    const enrichedData = JSON.parse(JSON.stringify(cache.bootstrap.data));
+    const bootstrapData = cache.bootstrap.data;
 
     // Get current GW status
     const currentGW = getCurrentGameweek();
     const gwStatus = getGameweekStatus(currentGW);
 
-    let liveStats = null;
-    let provisionalBonus = new Map();
+    // Start with original elements — only create new objects for enriched ones
+    let elements = bootstrapData.elements;
 
     // Only enrich with live data if GW is live
     if (gwStatus === GW_STATUS.LIVE && currentGW) {
@@ -246,20 +245,19 @@ router.get('/api/bootstrap/enriched', async (req, res) => {
 
       if (liveData && liveData.elements) {
         // Create lookup map for live stats
-        liveStats = new Map();
+        const liveStats = new Map();
         liveData.elements.forEach(el => {
           liveStats.set(el.id, el.stats);
         });
 
         // Calculate provisional bonus from BPS rankings per fixture
-        provisionalBonus = calculateProvisionalBonus(liveData.elements, cache.fixtures.data);
+        const provisionalBonus = calculateProvisionalBonus(liveData.elements, cache.fixtures.data);
 
-        // Merge live_stats into each element
-        enrichedData.elements = enrichedData.elements.map(element => {
+        // Build new elements array, only spreading elements that have live stats
+        elements = bootstrapData.elements.map(element => {
           const stats = liveStats.get(element.id);
-          const bonus = provisionalBonus.get(element.id) || 0;
-
           if (stats) {
+            const bonus = provisionalBonus.get(element.id) || 0;
             return {
               ...element,
               live_stats: {
@@ -276,8 +274,16 @@ router.get('/api/bootstrap/enriched', async (req, res) => {
     const duration = Date.now() - startTime;
     logger.log(`✅ Enriched bootstrap ready (${duration}ms, GW${currentGW} ${gwStatus})`);
 
+    // Build response referencing original data — avoids deep-cloning the entire bootstrap
     res.json({
-      ...enrichedData,
+      events: bootstrapData.events,
+      game_settings: bootstrapData.game_settings,
+      phases: bootstrapData.phases,
+      teams: bootstrapData.teams,
+      total_players: bootstrapData.total_players,
+      elements,
+      element_stats: bootstrapData.element_stats,
+      element_types: bootstrapData.element_types,
       meta: {
         gameweek: currentGW,
         gwStatus: gwStatus,

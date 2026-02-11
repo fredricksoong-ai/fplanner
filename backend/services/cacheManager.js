@@ -50,6 +50,10 @@ export const LIVE_CACHE_TTL = 2 * 60 * 1000;  // 2 minutes
 export const TEAM_CACHE_TTL_LIVE = 2 * 60 * 1000;      // 2 minutes during live GW
 export const TEAM_CACHE_TTL_FINISHED = 12 * 60 * 60 * 1000;  // 12 hours when GW finished
 
+// Max entries for team caches to prevent unbounded memory growth
+const MAX_TEAM_ENTRIES = 200;
+const MAX_TEAM_PICKS_ENTRIES = 400;
+
 /**
  * Get appropriate team cache TTL based on current GW status
  * @returns {number} TTL in milliseconds
@@ -303,6 +307,11 @@ export function getCachedTeamData(teamId) {
  * @param {Object} data - Team data
  */
 export function updateTeamCache(teamId, data) {
+  // Evict oldest entries if at capacity
+  if (cache.teams.entries.size >= MAX_TEAM_ENTRIES && !cache.teams.entries.has(String(teamId))) {
+    const oldest = cache.teams.entries.keys().next().value;
+    cache.teams.entries.delete(oldest);
+  }
   cache.teams.entries.set(String(teamId), {
     data,
     timestamp: Date.now()
@@ -339,6 +348,11 @@ export function getCachedTeamPicks(teamId, gameweek) {
  */
 export function updateTeamPicksCache(teamId, gameweek, data) {
   const key = `${teamId}-${gameweek}`;
+  // Evict oldest entries if at capacity
+  if (cache.teams.picks.size >= MAX_TEAM_PICKS_ENTRIES && !cache.teams.picks.has(key)) {
+    const oldest = cache.teams.picks.keys().next().value;
+    cache.teams.picks.delete(oldest);
+  }
   cache.teams.picks.set(key, {
     data,
     timestamp: Date.now()
@@ -352,6 +366,39 @@ export function clearTeamCaches() {
   cache.teams.entries.clear();
   cache.teams.picks.clear();
   logger.log('🗑️ Team caches cleared');
+}
+
+/**
+ * Prune expired entries from all transient caches
+ * Removes stale entries that would otherwise sit in memory until accessed
+ */
+export function pruneExpiredCaches() {
+  const now = Date.now();
+  let pruned = 0;
+
+  const teamTTL = getTeamCacheTTL();
+  for (const [key, entry] of cache.teams.entries) {
+    if (now - entry.timestamp > teamTTL) {
+      cache.teams.entries.delete(key);
+      pruned++;
+    }
+  }
+  for (const [key, entry] of cache.teams.picks) {
+    if (now - entry.timestamp > teamTTL) {
+      cache.teams.picks.delete(key);
+      pruned++;
+    }
+  }
+  for (const [key, entry] of cache.live.entries) {
+    if (now - entry.timestamp > LIVE_CACHE_TTL) {
+      cache.live.entries.delete(key);
+      pruned++;
+    }
+  }
+
+  if (pruned > 0) {
+    logger.log(`🧹 Pruned ${pruned} expired cache entries (teams: ${cache.teams.entries.size}, picks: ${cache.teams.picks.size}, live: ${cache.live.entries.size})`);
+  }
 }
 
 // ============================================================================
@@ -526,45 +573,45 @@ export async function loadCacheFromDisk() {
 }
 
 /**
- * Save cache to disk (async)
- * Only saves essential data to avoid memory issues - excludes large transient caches
+ * Save cache to disk (async) by streaming JSON to avoid large in-memory string copies.
+ * Only saves essential data — excludes large transient caches (teams, live).
  */
 export async function saveCacheToDisk() {
+  const tmpPath = SERVER.CACHE_BACKUP_PATH + '.tmp';
+
   try {
-    // Only save essential, non-transient data to avoid memory issues
-    // Exclude: teams, live (these are transient and can be refetched)
-    const serializable = {
-      bootstrap: cache.bootstrap,
-      fixtures: cache.fixtures,
-      github: cache.github,
-      stats: cache.stats
-      // NOTE: Excluding teams and live caches to prevent OOM
-      // - teams: Can be refetched from API
-      // - live: Transient data, not needed on restart
-    };
+    // Stream each section to disk individually to avoid building one giant string
+    const ws = fs.createWriteStream(tmpPath);
+    const write = (str) => new Promise((resolve, reject) => {
+      if (!ws.write(str)) {
+        ws.once('drain', resolve);
+      } else {
+        resolve();
+      }
+    });
 
-    // Estimate size before serialization to avoid OOM
-    const estimatedSize = JSON.stringify(serializable).length;
-    const maxSize = 50 * 1024 * 1024; // 50MB limit
-    
-    if (estimatedSize > maxSize) {
-      logger.warn(`⚠️ Cache too large (${(estimatedSize / 1024 / 1024).toFixed(2)}MB), skipping backup to prevent OOM`);
-      return;
-    }
+    await write('{\n');
+    await write(`"bootstrap":${JSON.stringify(cache.bootstrap)},\n`);
+    await write(`"fixtures":${JSON.stringify(cache.fixtures)},\n`);
+    await write(`"github":${JSON.stringify(cache.github)},\n`);
+    await write(`"stats":${JSON.stringify(cache.stats)}\n`);
+    await write('}\n');
 
-    // Save to local file
-    try {
-      fs.writeFileSync(SERVER.CACHE_BACKUP_PATH, JSON.stringify(serializable, null, 2));
-      logger.log('💾 Cache backed up to local disk');
-    } catch (err) {
-      logger.error('❌ Failed to backup cache to local disk:', err.message);
-    }
+    await new Promise((resolve, reject) => {
+      ws.end(() => resolve());
+      ws.on('error', reject);
+    });
+
+    // Atomically rename tmp file to actual path
+    fs.renameSync(tmpPath, SERVER.CACHE_BACKUP_PATH);
+    logger.log('💾 Cache backed up to local disk');
   } catch (err) {
     logger.error('❌ Failed to backup cache:', err.message);
-    // If it's a memory error, log it specifically
     if (err.message.includes('memory') || err.message.includes('allocation')) {
       logger.error('💥 Memory error during cache backup - consider reducing cache size');
     }
+    // Clean up tmp file if it exists
+    try { fs.unlinkSync(tmpPath); } catch { /* ignore */ }
   }
 }
 
@@ -572,12 +619,15 @@ export async function saveCacheToDisk() {
  * Initialize cache persistence (auto-save and graceful shutdown)
  */
 export function initializeCachePersistence() {
-  // Save cache every 5 minutes (async, fire-and-forget)
+  // Prune expired cache entries every 5 minutes
+  setInterval(pruneExpiredCaches, 5 * 60 * 1000);
+
+  // Save cache every 15 minutes (async, fire-and-forget)
   setInterval(() => {
     saveCacheToDisk().catch(err => {
       logger.error('❌ Auto-save failed:', err.message);
     });
-  }, 5 * 60 * 1000);
+  }, 15 * 60 * 1000);
 
   // Save cache on graceful shutdown (await to ensure completion)
   process.on('SIGTERM', async () => {
