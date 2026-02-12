@@ -21,9 +21,7 @@ import {
   getCacheStats,
   getCachedLiveData,
   updateLiveCache,
-  getLiveCacheAge,
-  getCachedFplDataResponse,
-  setCachedFplDataResponse
+  getLiveCacheAge
 } from '../services/cacheManager.js';
 import {
   getGameweekStatus,
@@ -79,19 +77,9 @@ router.get('/api/fpl-data', async (req, res) => {
     const needsFixtures = forceRefresh || shouldRefreshFixtures();
     const needsGithub = forceRefresh || shouldRefreshGithub();
 
-    // Track cache performance — serve pre-serialized response on full cache hit
+    // Track cache performance
     if (!needsBootstrap && !needsFixtures && !needsGithub) {
-      logger.log('✨ Full cache hit - returning immediately');
-      const cachedJson = getCachedFplDataResponse();
-      if (cachedJson) {
-        const duration = Date.now() - startTime;
-        const stats = getCacheStats();
-        logger.log(`✅ Serving pre-serialized response (${duration}ms)`);
-        logger.log(`   Cache hits: ${stats.cacheHits}, misses: ${stats.cacheMisses}`);
-        logger.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        res.setHeader('Content-Type', 'application/json');
-        return res.send(cachedJson);
-      }
+      logger.log('✨ Full cache hit');
     }
 
     // Fetch data in parallel
@@ -137,18 +125,13 @@ router.get('/api/fpl-data', async (req, res) => {
       }
     };
 
-    // Serialize once and cache the string to avoid re-serializing on next request
-    const jsonStr = JSON.stringify(response);
-    setCachedFplDataResponse(jsonStr);
-
     const duration = Date.now() - startTime;
     const stats = getCacheStats();
-    logger.log(`✅ Response ready (${duration}ms, serialized & cached)`);
+    logger.log(`✅ Response ready (${duration}ms)`);
     logger.log(`   Cache hits: ${stats.cacheHits}, misses: ${stats.cacheMisses}`);
     logger.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
-    res.setHeader('Content-Type', 'application/json');
-    res.send(jsonStr);
+    res.json(response);
   } catch (err) {
     logger.error('❌ Error in /api/fpl-data:', err.message);
 
