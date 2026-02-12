@@ -15,7 +15,7 @@ import {
 import { renderFixturePlayerStats } from '../fixturesTab.js';
 import { escapeHtml, getDifficultyClass } from '../../utils.js';
 import { getGlassmorphism, getShadow, getMobileBorderRadius } from '../../styles/mobileDesignSystem.js';
-import { getMatchStatus } from '../../fixtures.js';
+import { getMatchStatus, isDoubleGameweek } from '../../fixtures.js';
 import { renderTeamLogo } from '../../utils/teamLogos.js';
 
 /**
@@ -339,6 +339,18 @@ export function renderFixturesTicker() {
         window.showFixtureModal = showFixtureModal;
     }
 
+    const isDGW = isDoubleGameweek(targetGW);
+    const dgwBadge = isDGW ? `<span style="
+        background: rgba(147, 51, 234, 0.15);
+        color: #a855f6;
+        font-weight: 700;
+        font-size: 0.6rem;
+        padding: 0.2rem 0.4rem;
+        border-radius: 4px;
+        white-space: nowrap;
+        flex-shrink: 0;
+    ">DGW${targetGW}</span>` : '';
+
     return `
         <div class="fixtures-ticker-container" style="
             width: 100%;
@@ -354,9 +366,11 @@ export function renderFixturesTicker() {
             <div class="fixtures-ticker" style="
                 display: flex;
                 flex-direction: row;
+                align-items: center;
                 gap: 0;
                 min-width: max-content;
             ">
+                ${dgwBadge ? `<div style="padding: 0 0.4rem; flex-shrink: 0;">${dgwBadge}</div>` : ''}
                 ${fixtureCards}
             </div>
         </div>

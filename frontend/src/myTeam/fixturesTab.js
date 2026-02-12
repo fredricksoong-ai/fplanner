@@ -16,7 +16,7 @@ import {
     getPositionShort,
     formatDecimal
 } from '../utils.js';
-import { getMatchStatus } from '../fixtures.js';
+import { getMatchStatus, isDoubleGameweek } from '../fixtures.js';
 
 /**
  * Get top performers for a fixture (both teams)
@@ -510,6 +510,7 @@ export function renderFixturesTab() {
                     ">
                         <i class="fas fa-calendar-alt" style="color: var(--primary-color);"></i>
                         <span>Gameweek ${gw}</span>
+                        ${isDoubleGameweek(parseInt(gw)) ? '<span style="background: rgba(147, 51, 234, 0.15); color: #a855f6; font-weight: 700; font-size: 0.7rem; padding: 0.15rem 0.4rem; border-radius: 4px;">DGW</span>' : ''}
                     </h3>
                     <div style="overflow-x: auto;">
                         <table style="width: 100%; font-size: 0.875rem; border-collapse: collapse;">
@@ -827,6 +828,7 @@ export function renderMobileFixturesTab() {
                         ">
                             <i class="fas fa-calendar-alt" style="color: var(--primary-color);"></i>
                             <span>Gameweek ${gw}</span>
+                            ${isDoubleGameweek(parseInt(gw)) ? '<span style="background: rgba(147, 51, 234, 0.15); color: #a855f6; font-weight: 700; font-size: 0.7rem; padding: 0.15rem 0.4rem; border-radius: 4px;">DGW</span>' : ''}
                         </h4>
                     </div>
                     ${dateSections}

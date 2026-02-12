@@ -3,8 +3,7 @@
 // Match schedule section (collapsible) for GW fixtures
 // ============================================================================
 
-import { getPlayerById } from '../../data.js';
-import { getFixtures } from '../../fixtures.js';
+import { getPlayerById, fplFixtures } from '../../data.js';
 import { getTeamShortName } from '../../utils.js';
 import { getGlassmorphism, getShadow, getMobileBorderRadius } from '../../styles/mobileDesignSystem.js';
 
@@ -15,8 +14,8 @@ import { getGlassmorphism, getShadow, getMobileBorderRadius } from '../../styles
  * @returns {string} HTML for match schedule
  */
 export function renderMatchSchedule(players, gwNumber) {
-    const fixtures = getFixtures();
-    const gwFixtures = fixtures.filter(f => f.event === gwNumber);
+    if (!fplFixtures) return '';
+    const gwFixtures = fplFixtures.filter(f => f.event === gwNumber);
 
     // Get unique team IDs from player squad
     const teamIds = new Set(players.map(p => {

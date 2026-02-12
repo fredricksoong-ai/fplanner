@@ -16,8 +16,8 @@ import {
     calculatePPM,
     getTeamShortName
 } from '../../utils.js';
-import { getFixtures, getGWOpponent, getMatchStatus } from '../../fixtures.js';
-import { calculateStatusColor } from './compactStyleHelpers.js';
+import { getFixtures, getGWOpponents, getMatchStatuses } from '../../fixtures.js';
+import { calculateStatusColor, renderOpponentBadges, renderStatusBadges } from './compactStyleHelpers.js';
 import { isWishlisted } from '../../wishlist/store.js';
 import { isGuillotined } from '../../guillotine/store.js';
 import { getGlassmorphism, getShadow, getMobileBorderRadius } from '../../styles/mobileDesignSystem.js';
@@ -107,8 +107,8 @@ function renderTeamSection(players, gwNumber, isLive, next5GWs, activeGW, sectio
             }
         }
 
-        // Current GW opponent for Opp column (use active GW, not gwNumber)
-        const opponent = getGWOpponent(player.team, activeGW);
+        // Current GW opponents for Opp column (use active GW, not gwNumber)
+        const opponents = getGWOpponents(player.team, activeGW);
 
         // Calculate GW points with captain doubling (use gwNumber for points data)
         const hasGWStats = player.github_gw && player.github_gw.gw === gwNumber;
@@ -152,9 +152,8 @@ function renderTeamSection(players, gwNumber, isLive, next5GWs, activeGW, sectio
         // Next 5 fixtures
         const next5Fixtures = getFixtures(player.team, 5, false);
 
-        // Match status display with color coding
-        const matchStatus = getMatchStatus(player.team, gwNumber, player);
-        const statusColors = calculateStatusColor(matchStatus);
+        // Match status display with color coding (DGW-aware)
+        const matchStatuses = getMatchStatuses(player.team, gwNumber, player);
 
         // Row styling
         const rowBg = idx % 2 === 0 ? 'var(--bg-primary)' : 'var(--bg-secondary)';
@@ -204,12 +203,10 @@ function renderTeamSection(players, gwNumber, isLive, next5GWs, activeGW, sectio
                     </div>
                 </td>
                 <td style="text-align: center; padding: 0.5rem;">
-                    <span class="${getDifficultyClass(opponent.difficulty)}" style="display: inline-block; width: 52px; padding: 0.2rem 0.3rem; border-radius: 3px; font-weight: 600; font-size: 0.6rem; text-align: center;">
-                        ${opponent.name} (${opponent.isHome ? 'H' : 'A'})
-                    </span>
+                    ${renderOpponentBadges(opponents, 'small')}
                 </td>
                 <td style="text-align: center; padding: 0.5rem;">
-                    <span style="display: inline-block; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem; background: ${statusColors.statusBgColor}; color: ${statusColors.statusColor}; white-space: nowrap;">${matchStatus}</span>
+                    ${renderStatusBadges(matchStatuses, calculateStatusColor)}
                 </td>
                 <td style="text-align: center; padding: 0.5rem;">
                     <span style="display: inline-block; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem; background: ${ptsStyle.background}; color: ${ptsStyle.color};">${displayPoints}</span>

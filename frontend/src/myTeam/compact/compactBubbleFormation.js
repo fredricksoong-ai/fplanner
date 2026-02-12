@@ -5,7 +5,7 @@
 
 import { getPlayerById, getActiveGW } from '../../data.js';
 import { getPositionShort, escapeHtml } from '../../utils.js';
-import { getGWOpponent } from '../../fixtures.js';
+import { getGWOpponents } from '../../fixtures.js';
 import { calculateGWPointsBreakdown, showPlayerModal } from './playerModal.js';
 import { getGlassmorphism, getShadow, getMobileBorderRadius } from '../../styles/mobileDesignSystem.js';
 
@@ -537,9 +537,9 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
             const fontSize = getFontSize(size);
             const colors = getPointsColors(gwPoints, minutes);
 
-            // Get opponent data
-            const opponent = getGWOpponent(player.team, gwNumber);
-            const opponentText = opponent ? `${opponent.name} (${opponent.isHome ? 'H' : 'A'})` : 'TBD';
+            // Get opponent data (DGW-aware)
+            const opponents = getGWOpponents(player.team, gwNumber);
+            const opponentText = opponents.map(o => `${o.name}(${o.isHome ? 'H' : 'A'})`).join(', ');
 
             // Calculate font sizes for rich text
             const nameFontSize = fontSize; // Base size for name
@@ -659,9 +659,9 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
                 const fontSize = getFontSize(size);
                 const colors = getPointsColors(gwPoints, minutes);
 
-                // Get opponent data
-                const opponent = getGWOpponent(player.team, gwNumber);
-                const opponentText = opponent ? `${opponent.name} (${opponent.isHome ? 'H' : 'A'})` : 'TBD';
+                // Get opponent data (DGW-aware)
+                const opponents = getGWOpponents(player.team, gwNumber);
+                const opponentText = opponents.map(o => `${o.name}(${o.isHome ? 'H' : 'A'})`).join(', ');
 
                 // Calculate font sizes for rich text
                 const nameFontSize = fontSize; // Base size for name

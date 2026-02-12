@@ -19,6 +19,44 @@ export function renderOpponentBadge(opponent, size = 'normal') {
 }
 
 /**
+ * Render one or more opponent badges (handles DGW with stacked display)
+ * @param {OpponentInfo[]} opponents - Array from getGWOpponents()
+ * @param {string} size - 'small' or 'normal'
+ * @returns {string} HTML - single badge for SGW, vertically stacked for DGW
+ */
+export function renderOpponentBadges(opponents, size = 'normal') {
+    if (!opponents || opponents.length === 0) {
+        return renderOpponentBadge({ name: 'TBD', difficulty: 3, isHome: false }, size);
+    }
+    if (opponents.length === 1) {
+        return renderOpponentBadge(opponents[0], size);
+    }
+    return `<div style="display: flex; flex-direction: column; gap: 1px; align-items: center;">
+        ${opponents.map(opp => renderOpponentBadge(opp, size)).join('')}
+    </div>`;
+}
+
+/**
+ * Render one or more match status badges (handles DGW with stacked display)
+ * @param {string[]} statuses - Array of status strings from getMatchStatuses()
+ * @param {Function} calculateStatusColorFn - The calculateStatusColor function
+ * @returns {string} HTML - single badge for SGW, vertically stacked for DGW
+ */
+export function renderStatusBadges(statuses, calculateStatusColorFn) {
+    if (!statuses || statuses.length === 0) return '';
+    if (statuses.length === 1) {
+        const colors = calculateStatusColorFn(statuses[0]);
+        return `<span style="display: inline-block; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem; background: ${colors.statusBgColor}; color: ${colors.statusColor}; white-space: nowrap;">${statuses[0]}</span>`;
+    }
+    return `<div style="display: flex; flex-direction: column; gap: 1px; align-items: center;">
+        ${statuses.map(status => {
+            const colors = calculateStatusColorFn(status);
+            return `<span style="display: inline-block; padding: 0.15rem 0.3rem; border-radius: 3px; font-weight: 600; font-size: 0.55rem; background: ${colors.statusBgColor}; color: ${colors.statusColor}; white-space: nowrap;">${status}</span>`;
+        }).join('')}
+    </div>`;
+}
+
+/**
  * Render stat card for modal
  * @param {string|number} value - Stat value
  * @param {string} label - Stat label

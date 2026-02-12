@@ -13,9 +13,10 @@ import {
     formatCurrency,
     getPositionShort
 } from '../../utils.js';
-import { getGWOpponent, getMatchStatus } from '../../fixtures.js';
+import { getGWOpponents, getMatchStatuses } from '../../fixtures.js';
 import {
-    renderOpponentBadge,
+    renderOpponentBadges,
+    renderStatusBadges,
     calculateStatusColor,
     calculatePlayerBgColor
 } from './compactStyleHelpers.js';
@@ -47,11 +48,10 @@ export function renderCompactPlayerRow(pick, player, gwNumber) {
     if (isGuillotinedPlayer) badges.push('🔪');
     const badgeMarkup = badges.length > 0 ? ` <span style="font-size: 0.65rem;">${badges.join(' ')}</span>` : '';
 
-    const gwOpp = getGWOpponent(player.team, gwNumber);
+    const gwOpps = getGWOpponents(player.team, gwNumber);
 
-    // Get match status display with color coding
-    const matchStatus = getMatchStatus(player.team, gwNumber, player);
-    const statusColors = calculateStatusColor(matchStatus);
+    // Get match status display with color coding (DGW-aware)
+    const matchStatuses = getMatchStatuses(player.team, gwNumber, player);
 
     // Get GW-specific stats - prioritize live_stats from enriched bootstrap
     const hasGWStats = player.github_gw && player.github_gw.gw === gwNumber;
@@ -132,10 +132,10 @@ export function renderCompactPlayerRow(pick, player, gwNumber) {
                 ${riskContextMessage ? `<div style="font-size: 0.6rem; color: ${riskContextColor}; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(riskContextMessage)}</div>` : '<div style="height: 0.8rem;"></div>'}
             </div>
             <div style="text-align: center;">
-                ${renderOpponentBadge(gwOpp, 'small')}
+                ${renderOpponentBadges(gwOpps, 'small')}
             </div>
             <div style="text-align: center; padding: 0.5rem;">
-                <span style="display: inline-block; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem; background: ${statusColors.statusBgColor}; color: ${statusColors.statusColor}; white-space: nowrap;">${matchStatus}</span>
+                ${renderStatusBadges(matchStatuses, calculateStatusColor)}
             </div>
             <div style="text-align: center; padding: 0.5rem;">
                 <span style="display: inline-block; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem; background: ${ptsStyle.background}; color: ${ptsStyle.color};">${displayPoints}</span>
