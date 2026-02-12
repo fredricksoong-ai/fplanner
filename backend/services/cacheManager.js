@@ -40,11 +40,6 @@ export let cache = {
     cacheHits: 0,
     cacheMisses: 0,
     lastFetch: null
-  },
-  // Pre-serialized JSON strings to avoid repeated JSON.stringify on large responses
-  serialized: {
-    fplData: null,
-    fplDataTimestamp: 0
   }
 };
 
@@ -459,40 +454,6 @@ export function clearLiveCaches() {
   logger.log('🗑️ Live data caches cleared');
 }
 
-// ============================================================================
-// SERIALIZED RESPONSE CACHE
-// ============================================================================
-
-/**
- * Get pre-serialized /api/fpl-data response if still valid
- * Valid only when all three source caches haven't changed since serialization
- * @returns {string|null} Pre-serialized JSON string or null
- */
-export function getCachedFplDataResponse() {
-  if (!cache.serialized.fplData) return null;
-  if (cache.serialized.fplDataTimestamp < (cache.bootstrap.timestamp || 0)) return null;
-  if (cache.serialized.fplDataTimestamp < (cache.fixtures.timestamp || 0)) return null;
-  if (cache.serialized.fplDataTimestamp < (cache.github.timestamp || 0)) return null;
-  return cache.serialized.fplData;
-}
-
-/**
- * Store pre-serialized /api/fpl-data response
- * @param {string} jsonString - Pre-serialized JSON string
- */
-export function setCachedFplDataResponse(jsonString) {
-  cache.serialized.fplData = jsonString;
-  cache.serialized.fplDataTimestamp = Date.now();
-}
-
-/**
- * Invalidate pre-serialized /api/fpl-data response
- */
-export function clearFplDataResponseCache() {
-  cache.serialized.fplData = null;
-  cache.serialized.fplDataTimestamp = 0;
-}
-
 /**
  * Record cache hit
  */
@@ -614,8 +575,18 @@ export async function loadCacheFromDisk() {
 /**
  * Save cache to disk (async) by streaming JSON to avoid large in-memory string copies.
  * Only saves essential data — excludes large transient caches (teams, live).
+ * Includes memory guard — skips save if heap usage is too high to avoid OOM.
  */
 export async function saveCacheToDisk() {
+  // Memory guard — JSON.stringify creates large temporary strings (~3MB+)
+  // Skip save if heap is already above 280MB to avoid triggering OOM on 512MB instances
+  const heapUsed = process.memoryUsage().heapUsed;
+  const heapLimitMB = 280;
+  if (heapUsed > heapLimitMB * 1024 * 1024) {
+    logger.warn(`⚠️ Skipping cache save — heap usage ${Math.round(heapUsed / 1024 / 1024)}MB exceeds ${heapLimitMB}MB safety limit`);
+    return;
+  }
+
   const tmpPath = SERVER.CACHE_BACKUP_PATH + '.tmp';
 
   try {
@@ -661,12 +632,11 @@ export function initializeCachePersistence() {
   // Prune expired cache entries every 5 minutes
   setInterval(pruneExpiredCaches, 5 * 60 * 1000);
 
-  // Save cache every 15 minutes (async, fire-and-forget)
-  setInterval(() => {
-    saveCacheToDisk().catch(err => {
-      logger.error('❌ Auto-save failed:', err.message);
-    });
-  }, 15 * 60 * 1000);
+  // NOTE: Periodic disk save disabled — it triggered OOM on 512MB Render instances.
+  // JSON.stringify on bootstrap (~1.8MB) + fixtures (~685KB) + github creates ~3MB+
+  // of temporary strings that push heap past the limit.
+  // Cache is still saved on graceful shutdown (SIGTERM/SIGINT) with a memory guard.
+  // On cold start, warmCachesOnStartup() re-fetches all data anyway.
 
   // Save cache on graceful shutdown (await to ensure completion)
   process.on('SIGTERM', async () => {
