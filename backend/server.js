@@ -7,6 +7,7 @@
 import 'dotenv/config';
 
 import express from 'express';
+import compression from 'compression';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
@@ -48,6 +49,13 @@ const app = express();
 // ============================================================================
 // SECURITY MIDDLEWARE
 // ============================================================================
+
+// Compression — reduces ~2MB JSON responses to ~200-300KB gzipped
+// Critical for staying within Render's 512MB memory limit
+app.use(compression({
+  threshold: 1024,  // Only compress responses > 1KB
+  level: 6          // Balanced speed vs compression ratio
+}));
 
 // Helmet - Security headers
 app.use(helmet({

@@ -40,6 +40,11 @@ export let cache = {
     cacheHits: 0,
     cacheMisses: 0,
     lastFetch: null
+  },
+  // Pre-serialized JSON strings to avoid repeated JSON.stringify on large responses
+  serialized: {
+    fplData: null,
+    fplDataTimestamp: 0
   }
 };
 
@@ -452,6 +457,40 @@ export function getLiveCacheAge(gameweek) {
 export function clearLiveCaches() {
   cache.live.entries.clear();
   logger.log('🗑️ Live data caches cleared');
+}
+
+// ============================================================================
+// SERIALIZED RESPONSE CACHE
+// ============================================================================
+
+/**
+ * Get pre-serialized /api/fpl-data response if still valid
+ * Valid only when all three source caches haven't changed since serialization
+ * @returns {string|null} Pre-serialized JSON string or null
+ */
+export function getCachedFplDataResponse() {
+  if (!cache.serialized.fplData) return null;
+  if (cache.serialized.fplDataTimestamp < (cache.bootstrap.timestamp || 0)) return null;
+  if (cache.serialized.fplDataTimestamp < (cache.fixtures.timestamp || 0)) return null;
+  if (cache.serialized.fplDataTimestamp < (cache.github.timestamp || 0)) return null;
+  return cache.serialized.fplData;
+}
+
+/**
+ * Store pre-serialized /api/fpl-data response
+ * @param {string} jsonString - Pre-serialized JSON string
+ */
+export function setCachedFplDataResponse(jsonString) {
+  cache.serialized.fplData = jsonString;
+  cache.serialized.fplDataTimestamp = Date.now();
+}
+
+/**
+ * Invalidate pre-serialized /api/fpl-data response
+ */
+export function clearFplDataResponseCache() {
+  cache.serialized.fplData = null;
+  cache.serialized.fplDataTimestamp = 0;
 }
 
 /**
