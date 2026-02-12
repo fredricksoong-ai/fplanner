@@ -5,9 +5,9 @@
 
 import { getPlayerById, loadTransferHistory, getActiveGW, getGameweekEvent, getAllPlayers } from '../../data.js';
 import { escapeHtml } from '../../utils.js';
-import { getGWOpponent } from '../../fixtures.js';
+import { getGWOpponents } from '../../fixtures.js';
 import {
-    renderOpponentBadge,
+    renderOpponentBadges,
     calculateRankIndicator,
     calculateGWIndicator
 } from './compactStyleHelpers.js';
@@ -130,11 +130,13 @@ function calculateGWFDR(teamData, gwNumber) {
     let count = 0;
 
     starting11.forEach(player => {
-        const oppInfo = getGWOpponent(player.team, gwNumber);
-        if (oppInfo && oppInfo.difficulty) {
-            totalFDR += oppInfo.difficulty;
-            count++;
-        }
+        const opps = getGWOpponents(player.team, gwNumber);
+        opps.forEach(oppInfo => {
+            if (oppInfo && oppInfo.difficulty) {
+                totalFDR += oppInfo.difficulty;
+                count++;
+            }
+        });
     });
 
     return count > 0 ? totalFDR / count : null;
@@ -323,18 +325,18 @@ function getCaptainViceInfo(picks, gwNumber) {
     if (captainPick) {
         const captainPlayer = getPlayerById(captainPick.element);
         if (captainPlayer) {
-            const captainOpp = getGWOpponent(captainPlayer.team, gwNumber);
-            const oppBadge = renderOpponentBadge(captainOpp, 'normal');
-            captainInfo = `${captainPlayer.web_name} vs. ${oppBadge}`;
+            const captainOpps = getGWOpponents(captainPlayer.team, gwNumber);
+            const oppBadges = renderOpponentBadges(captainOpps, 'normal');
+            captainInfo = `${captainPlayer.web_name} vs. ${oppBadges}`;
         }
     }
 
     if (vicePick) {
         const vicePlayer = getPlayerById(vicePick.element);
         if (vicePlayer) {
-            const viceOpp = getGWOpponent(vicePlayer.team, gwNumber);
-            const oppBadge = renderOpponentBadge(viceOpp, 'normal');
-            viceInfo = `${vicePlayer.web_name} vs. ${oppBadge}`;
+            const viceOpps = getGWOpponents(vicePlayer.team, gwNumber);
+            const oppBadges = renderOpponentBadges(viceOpps, 'normal');
+            viceInfo = `${vicePlayer.web_name} vs. ${oppBadges}`;
         }
     }
 

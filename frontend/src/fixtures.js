@@ -146,6 +146,122 @@ export function getGWOpponent(teamId, gameweek) {
 }
 
 /**
+ * Get ALL opponents for a specific gameweek (handles DGW)
+ * @param {number} teamId - Team ID
+ * @param {number} gameweek - Gameweek number
+ * @returns {OpponentInfo[]} Array of opponent info objects (1 for normal GW, 2+ for DGW)
+ */
+export function getGWOpponents(teamId, gameweek) {
+    if (!fplFixtures || !fplBootstrap || !teamId || !gameweek) {
+        return [{ name: 'TBD', difficulty: 3, isHome: false }];
+    }
+
+    const fixtures = fplFixtures.filter(f =>
+        f.event === gameweek && (f.team_h === teamId || f.team_a === teamId)
+    );
+
+    if (fixtures.length === 0) {
+        return [{ name: 'TBD', difficulty: 3, isHome: false }];
+    }
+
+    return fixtures.map(fixture => {
+        const isHome = fixture.team_h === teamId;
+        const opponentId = isHome ? fixture.team_a : fixture.team_h;
+        const opponent = fplBootstrap.teams.find(t => t.id === opponentId);
+        const difficulty = isHome ? fixture.team_h_difficulty : fixture.team_a_difficulty;
+
+        return {
+            name: opponent ? opponent.short_name : 'TBD',
+            difficulty: difficulty || 3,
+            isHome: isHome,
+            fixture: fixture
+        };
+    });
+}
+
+/**
+ * Check if the given gameweek is a DGW (any team has multiple fixtures)
+ * @param {number} gameweek - Gameweek number
+ * @returns {boolean} True if any team has multiple fixtures
+ */
+export function isDoubleGameweek(gameweek) {
+    if (!fplFixtures) return false;
+    const gwFixtures = fplFixtures.filter(f => f.event === gameweek);
+    return gwFixtures.length > 10;
+}
+
+/**
+ * Get match status for a specific fixture (internal helper)
+ * @param {Object} fixture - Raw fixture object
+ * @param {Object} player - Player object
+ * @returns {string} Status display string
+ */
+function getMatchStatusForFixture(fixture, player) {
+    if (!fixture) return '—';
+
+    const hasLiveStats = player && player.live_stats && player.live_stats.minutes !== null && player.live_stats.minutes !== undefined;
+    const liveMinutes = hasLiveStats ? player.live_stats.minutes : null;
+
+    const hasGWStats = player && player.github_gw && player.github_gw.gw === fixture.event;
+    const gwMinutes = hasGWStats ? player.github_gw.minutes : null;
+
+    const kickoffTime = fixture.kickoff_time ? new Date(fixture.kickoff_time) : null;
+    const now = new Date();
+    const timeSinceKickoff = kickoffTime ? (now - kickoffTime) / (1000 * 60) : null;
+    const likelyFinishedByTime = kickoffTime && timeSinceKickoff > 100;
+    const likelyFinishedByLiveStats = fixture.started &&
+                                      liveMinutes === 0 &&
+                                      hasLiveStats &&
+                                      kickoffTime &&
+                                      timeSinceKickoff > 90;
+
+    const isMatchFinished = fixture.finished ||
+                           (hasGWStats && gwMinutes !== null && gwMinutes !== undefined) ||
+                           (fixture.started && likelyFinishedByTime && !fixture.finished) ||
+                           (likelyFinishedByLiveStats && !fixture.finished);
+
+    if (isMatchFinished) {
+        let minutes = liveMinutes ?? gwMinutes;
+        if (minutes === null && player && player.explain) {
+            const eventExplain = player.explain.find(e => e.event === fixture.event);
+            if (eventExplain && eventExplain.stats && eventExplain.stats.length > 0) {
+                const minutesStat = eventExplain.stats.find(s => s.identifier === 'minutes');
+                if (minutesStat) minutes = minutesStat.value;
+            }
+        }
+        if (minutes !== null && minutes !== undefined) return `FT (${minutes})`;
+        return 'FT';
+    }
+
+    if (fixture.started && !isMatchFinished) {
+        if (liveMinutes !== null) return `LIVE (${liveMinutes})`;
+        return 'LIVE';
+    }
+
+    const kickoffDate = new Date(fixture.kickoff_time);
+    const dayStr = kickoffDate.toLocaleString('en-GB', { weekday: 'short' });
+    const timeStr = kickoffDate.toLocaleString('en-GB', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+    }).replace(':', '');
+
+    return `${dayStr} ${timeStr}`;
+}
+
+/**
+ * Get match statuses for all fixtures in a GW for a team (handles DGW)
+ * @param {number} teamId - Player's team ID
+ * @param {number} gameweek - Gameweek number
+ * @param {Object} player - Player object
+ * @returns {string[]} Array of status strings (1 for normal GW, 2+ for DGW)
+ */
+export function getMatchStatuses(teamId, gameweek, player) {
+    const opponents = getGWOpponents(teamId, gameweek);
+    return opponents.map(opp => getMatchStatusForFixture(opp.fixture, player));
+}
+
+/**
  * Get match status display for a player
  * @param {number} teamId - Player's team ID
  * @param {number} gameweek - Gameweek number
