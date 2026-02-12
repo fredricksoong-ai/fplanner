@@ -539,14 +539,21 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
 
             // Get opponent data (DGW-aware)
             const opponents = getGWOpponents(player.team, gwNumber);
-            const opponentText = opponents.map(o => `${o.name}(${o.isHome ? 'H' : 'A'})`).join(', ');
 
             // Calculate font sizes for rich text
             const nameFontSize = fontSize; // Base size for name
             const statsFontSize = Math.max(6, Math.floor(fontSize * 0.7)); // 70% of base, minimum 6px
 
-            // Create rich text formatter
-            const labelFormatter = `{name|${escapeHtml(player.web_name)}}\n{stats|${gwPoints} vs. ${escapeHtml(opponentText)}}`;
+            // Create rich text formatter — split DGW opponents onto separate lines
+            let labelFormatter;
+            if (opponents.length > 1) {
+                const opp1 = `${opponents[0].name}(${opponents[0].isHome ? 'H' : 'A'})`;
+                const opp2 = `${opponents[1].name}(${opponents[1].isHome ? 'H' : 'A'})`;
+                labelFormatter = `{name|${escapeHtml(player.web_name)}}\n{stats|${gwPoints} vs ${escapeHtml(opp1)}}\n{stats2|& ${escapeHtml(opp2)}}`;
+            } else {
+                const opponentText = opponents.map(o => `${o.name}(${o.isHome ? 'H' : 'A'})`).join('');
+                labelFormatter = `{name|${escapeHtml(player.web_name)}}\n{stats|${gwPoints} vs. ${escapeHtml(opponentText)}}`;
+            }
 
             allNodes.push({
                 name: player.web_name,
@@ -576,6 +583,14 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
                             lineHeight: nameFontSize * 1.2
                         },
                         stats: {
+                            fontSize: statsFontSize,
+                            fontWeight: 'normal',
+                            color: colors.textColor,
+                            textBorderColor: 'rgba(0, 0, 0, 0.3)',
+                            textBorderWidth: 0.5,
+                            lineHeight: statsFontSize * 1.1
+                        },
+                        stats2: {
                             fontSize: statsFontSize,
                             fontWeight: 'normal',
                             color: colors.textColor,
@@ -661,14 +676,21 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
 
                 // Get opponent data (DGW-aware)
                 const opponents = getGWOpponents(player.team, gwNumber);
-                const opponentText = opponents.map(o => `${o.name}(${o.isHome ? 'H' : 'A'})`).join(', ');
 
                 // Calculate font sizes for rich text
                 const nameFontSize = fontSize; // Base size for name
                 const statsFontSize = Math.max(6, Math.floor(fontSize * 0.7)); // 70% of base, minimum 6px
 
-                // Create rich text formatter
-                const labelFormatter = `{name|${escapeHtml(player.web_name)}}\n{stats|${gwPoints} vs. ${escapeHtml(opponentText)}}`;
+                // Create rich text formatter — split DGW opponents onto separate lines
+                let labelFormatter;
+                if (opponents.length > 1) {
+                    const opp1 = `${opponents[0].name}(${opponents[0].isHome ? 'H' : 'A'})`;
+                    const opp2 = `${opponents[1].name}(${opponents[1].isHome ? 'H' : 'A'})`;
+                    labelFormatter = `{name|${escapeHtml(player.web_name)}}\n{stats|${gwPoints} vs ${escapeHtml(opp1)}}\n{stats2|& ${escapeHtml(opp2)}}`;
+                } else {
+                    const opponentText = opponents.map(o => `${o.name}(${o.isHome ? 'H' : 'A'})`).join('');
+                    labelFormatter = `{name|${escapeHtml(player.web_name)}}\n{stats|${gwPoints} vs. ${escapeHtml(opponentText)}}`;
+                }
 
                 allNodes.push({
                     name: player.web_name,
@@ -697,6 +719,14 @@ export async function initBubbleFormationChart(players, gwNumber, isLive, myTeam
                                 lineHeight: nameFontSize * 1.2
                             },
                             stats: {
+                                fontSize: statsFontSize,
+                                fontWeight: 'normal',
+                                color: colors.textColor,
+                                textBorderColor: 'rgba(0, 0, 0, 0.3)',
+                                textBorderWidth: 0.5,
+                                lineHeight: statsFontSize * 1.1
+                            },
+                            stats2: {
                                 fontSize: statsFontSize,
                                 fontWeight: 'normal',
                                 color: colors.textColor,

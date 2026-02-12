@@ -20,7 +20,7 @@ import {
 
 import {
     getFixtures,
-    getGWOpponent
+    getGWOpponents
 } from '../fixtures.js';
 
 import {
@@ -115,7 +115,7 @@ function renderTeamRows(players, gameweek, next5GWs) {
         if (isCaptain) captainBadge = ' <span style="color: var(--primary-color); font-weight: 700;">(C)</span>';
         if (isVice) captainBadge = ' <span style="color: var(--text-secondary); font-weight: 700;">(VC)</span>';
 
-        const gwOpp = getGWOpponent(player.team, gameweek);
+        const gwOpps = getGWOpponents(player.team, gameweek);
         const posType = getPositionType(player);
         const risks = analyzePlayerRisks(player);
         const riskTooltip = renderRiskTooltip(risks);
@@ -185,9 +185,7 @@ function renderTeamRows(players, gameweek, next5GWs) {
                 </td>
                 <td style="padding: 0.75rem 0.5rem;">${getTeamShortName(player.team)}</td>
                 <td style="padding: 0.75rem 0.5rem; text-align: center;">
-                    <span class="${getDifficultyClass(gwOpp.difficulty)}" style="padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.75rem; min-width: 5rem; display: inline-block; text-align: center;">
-                        ${gwOpp.name}${gwOpp.isHome ? ' (H)' : ' (A)'}
-                    </span>
+                    ${gwOpps.map(opp => `<span class="${getDifficultyClass(opp.difficulty)}" style="padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.75rem; min-width: 5rem; display: inline-block; text-align: center;">${opp.name}${opp.isHome ? ' (H)' : ' (A)'}</span>`).join(' ')}
                 </td>
                 <td style="padding: 0.75rem 0.5rem; text-align: center; font-size: 0.8rem;">
                     ${gwMinutes}
