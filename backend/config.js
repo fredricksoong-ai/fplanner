@@ -32,7 +32,7 @@ export const GITHUB_BASE_URL = 'https://raw.githubusercontent.com/olbauday/FPL-E
 // Gemini AI API
 export const GEMINI = {
   API_KEY: process.env.GEMINI_API_KEY || '',
-  API_URL: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
+  API_URL: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent',
 };
 
 /**
