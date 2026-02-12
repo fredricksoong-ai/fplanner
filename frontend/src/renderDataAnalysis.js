@@ -33,8 +33,8 @@ import {
     calculateFixtureDifficulty,
     getTeamsWithBestFixtures,
     getTeamsWithWorstFixtures,
-    getGWOpponent,
-    getMatchStatus
+    getGWOpponents,
+    getMatchStatuses
 } from './fixtures.js';
 
 import {
@@ -55,7 +55,7 @@ import {
     attachPlayerRowListeners
 } from './renderMyTeamCompact.js';
 
-import { calculateStatusColor } from './myTeam/compact/compactStyleHelpers.js';
+import { calculateStatusColor, renderOpponentBadges, renderStatusBadges } from './myTeam/compact/compactStyleHelpers.js';
 
 import { renderAnalysisOverview as renderAnalysisOverviewModule } from './dataAnalysis/overview.js';
 import { renderHiddenGems as renderHiddenGemsModule } from './dataAnalysis/hiddenGems.js';
@@ -888,8 +888,8 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
 
     // Render rows
     mobilePlayers.forEach((player, idx) => {
-        const gwOpp = getGWOpponent(player.team, currentGW);
-        const matchStatus = getMatchStatus(player.team, currentGW, player);
+        const gwOpps = getGWOpponents(player.team, currentGW);
+        const matchStatuses = getMatchStatuses(player.team, currentGW, player);
         const isMyPlayer = Boolean(player.__isMine || myPlayerIds.has(player.id));
 
         // Use FPL news for Line 3 display
@@ -929,7 +929,7 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
         const formStyle = getHeatmapStyle(formHeatmap);
 
         // Status styling - use calculateStatusColor for consistency
-        const statusColors = calculateStatusColor(matchStatus);
+        const statusColors = calculateStatusColor(matchStatuses[0] || '');
 
         // Context column value and styling
         const contextValue = config.getValue(player);
@@ -998,12 +998,10 @@ function renderPositionSpecificTableMobile(players, contextColumn = 'total') {
                     </div>
                 </td>
                 <td style="text-align: center; padding: 0.5rem;">
-                    <span class="${getDifficultyClass(gwOpp.difficulty)}" style="display: inline-block; width: 52px; padding: 0.2rem 0.3rem; border-radius: 0.25rem; font-weight: 600; font-size: 0.6rem; text-align: center;">
-                        ${gwOpp.name} (${gwOpp.isHome ? 'H' : 'A'})
-                    </span>
+                    ${renderOpponentBadges(gwOpps, 'small')}
                 </td>
                 <td style="text-align: center; padding: 0.5rem;">
-                    <span style="display: inline-block; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem; background: ${statusColors.statusBgColor}; color: ${statusColors.statusColor}; white-space: nowrap;">${matchStatus}</span>
+                    ${renderStatusBadges(matchStatuses, calculateStatusColor)}
                 </td>
                 <td style="text-align: center; padding: 0.5rem;">
                     <span style="display: inline-block; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem; background: ${ptsStyle.background}; color: ${ptsStyle.color};">${gwPoints}</span>
