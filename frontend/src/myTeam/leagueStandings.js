@@ -7,8 +7,8 @@ import { loadLeagueStandings, loadMyTeam, getPlayerById, getActiveGW, isGameweek
 import { escapeHtml, formatDecimal, getPtsHeatmap, getFormHeatmap, getHeatmapStyle, calculatePPM } from '../utils.js';
 import { renderTeamComparison } from './teamComparison.js';
 import { shouldUseMobileLayout } from '../renderMyTeamMobile.js';
-import { getGWOpponent, getMatchStatus, calculateFixtureDifficulty } from '../fixtures.js';
-import { renderOpponentBadge, calculateStatusColor, calculatePlayerBgColor } from './compact/compactStyleHelpers.js';
+import { getGWOpponents, getMatchStatuses, calculateFixtureDifficulty } from '../fixtures.js';
+import { renderOpponentBadges, renderStatusBadges, calculateStatusColor, calculatePlayerBgColor } from './compact/compactStyleHelpers.js';
 import { getGlassmorphism, getShadow, getMobileBorderRadius } from '../styles/mobileDesignSystem.js';
 
 /**
@@ -1193,10 +1193,9 @@ function renderMobileRivalModal(rivalTeamData, myTeamState = null) {
         if (isMyPlayer) badges.push('👤');
         const badgeMarkup = badges.length > 0 ? ` <span style="font-size: 0.65rem;">${badges.join(' ')}</span>` : '';
 
-        // Get opponent and match status
-        const gwOpp = getGWOpponent(player.team, gwNumber);
-        const matchStatus = getMatchStatus(player.team, gwNumber, player);
-        const statusColors = calculateStatusColor(matchStatus);
+        // Get opponent and match status (DGW-aware)
+        const gwOpps = getGWOpponents(player.team, gwNumber);
+        const matchStatuses = getMatchStatuses(player.team, gwNumber, player);
 
         // Calculate points with captain multiplier
         const gwPoints = player.event_points || 0;
@@ -1227,10 +1226,10 @@ function renderMobileRivalModal(rivalTeamData, myTeamState = null) {
                     ${escapeHtml(player.web_name)}${captainBadge}${badgeMarkup}
                 </div>
                 <div style="text-align: center;">
-                    ${renderOpponentBadge(gwOpp, 'small')}
+                    ${renderOpponentBadges(gwOpps, 'small')}
                 </div>
                 <div style="text-align: center; padding: 0.5rem;">
-                    <span style="display: inline-block; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem; background: ${statusColors.statusBgColor}; color: ${statusColors.statusColor}; white-space: nowrap;">${matchStatus}</span>
+                    ${renderStatusBadges(matchStatuses, calculateStatusColor)}
                 </div>
                 <div style="text-align: center; padding: 0.5rem;">
                     <span style="display: inline-block; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: 600; font-size: 0.65rem; background: ${ptsStyle.background}; color: ${ptsStyle.color};">${displayPoints}</span>
