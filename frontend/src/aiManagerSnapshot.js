@@ -5,7 +5,8 @@
 
 import { sharedState } from './sharedState.js';
 import { getPlayerById } from './data.js';
-import { getPositionShort, getTeamShortName } from './utils.js';
+import { getPositionShort, getTeamShortName, calculatePPM } from './utils.js';
+import { getFixtures } from './fixtures.js';
 import { analyzePlayerRisks } from './risk.js';
 
 /**
@@ -85,6 +86,106 @@ export function buildManagerSnapshot(teamData = sharedState.myTeamData) {
             benchPoints: entry.points_on_bench || 0,
             benchPlayers: squad.filter(player => !player.isStarter).map(player => player.name)
         }
+    };
+}
+
+// ============================================================================
+// MY TEAM AI INSIGHTS CONTEXT BUILDER
+// Assembles enriched squad data for the Squad Doctor prompt
+// ============================================================================
+
+/**
+ * Build context data for My Team AI insights (Squad Doctor).
+ * Enriches the manager snapshot with fixtures, performance metrics,
+ * drop candidates, chip availability, and season trajectory.
+ * @param {Object} teamData - Full team data from loadMyTeam
+ * @returns {Object|null} Context data for AI insights or null if data missing
+ */
+export function buildMyTeamInsightsContext(teamData) {
+    const managerSnapshot = buildManagerSnapshot(teamData);
+    if (!managerSnapshot) return null;
+
+    const { team } = teamData;
+
+    // 1. Enrich squad with fixtures + performance metrics
+    const enrichedSquad = managerSnapshot.squad.map(player => {
+        const fullPlayer = getPlayerById(player.id);
+        // Get next 3 fixtures for this player's club
+        const nextFixtures = fullPlayer
+            ? getFixtures(fullPlayer.team, 3, false).map(f => ({
+                opponent: f.opponent,
+                difficulty: f.difficulty,
+                gw: f.event
+            }))
+            : [];
+
+        return {
+            ...player,
+            nextFixtures,
+            totalPoints: fullPlayer?.total_points || 0,
+            minutesPlayed: fullPlayer?.minutes || 0,
+            xG: fullPlayer?.expected_goals ? Number(parseFloat(fullPlayer.expected_goals).toFixed(2)) : null,
+            xA: fullPlayer?.expected_assists ? Number(parseFloat(fullPlayer.expected_assists).toFixed(2)) : null,
+            ppm: fullPlayer ? calculatePPM(fullPlayer) : null
+        };
+    });
+
+    // 2. Pre-filter drop candidates (gives AI a strong signal)
+    const dropCandidates = enrichedSquad
+        .filter(p => {
+            const hasRisks = p.problemFlags && p.problemFlags.length > 0;
+            const lowForm = p.form !== null && p.form < 3;
+            const lowPPM = p.ppm !== null && p.ppm < 1.2;
+            return hasRisks || lowForm || lowPPM;
+        })
+        .map(p => ({
+            name: p.name,
+            position: p.position,
+            club: p.club,
+            form: p.form,
+            ppm: p.ppm,
+            priceMillions: p.priceMillions,
+            flags: p.problemFlags || [],
+            nextFixtures: p.nextFixtures
+        }));
+
+    // 3. Chips available (not yet used)
+    const usedChipNames = (managerSnapshot.chips.used || []).map(c => c.name);
+    const allChips = ['wildcard', 'freehit', 'bboost', '3xc'];
+    const chipsAvailable = allChips.filter(c => !usedChipNames.includes(c));
+
+    // 4. Season trajectory (compact) from teamHistory
+    let trajectory = null;
+    if (teamData.teamHistory?.current?.length > 0) {
+        const history = teamData.teamHistory.current;
+        const recent5 = history.slice(-5);
+        trajectory = {
+            totalGWs: history.length,
+            recentGWPoints: recent5.map(gw => gw.points),
+            recentRanks: recent5.map(gw => gw.overall_rank),
+            currentOverallRank: history[history.length - 1]?.overall_rank || null,
+            bestRank: Math.min(...history.map(gw => gw.overall_rank).filter(Boolean)),
+            worstRank: Math.max(...history.map(gw => gw.overall_rank).filter(Boolean))
+        };
+    }
+
+    // 5. League context from team.leagues (no extra API call)
+    let leagueContext = null;
+    if (team.leagues?.classic?.length > 0) {
+        leagueContext = team.leagues.classic.slice(0, 3).map(l => ({
+            name: l.name,
+            rank: l.entry_rank,
+            lastRank: l.entry_last_rank
+        }));
+    }
+
+    return {
+        squad: enrichedSquad,
+        dropCandidates,
+        chipsAvailable,
+        trajectory,
+        leagueContext,
+        managerSnapshot
     };
 }
 

@@ -92,6 +92,51 @@ OUTPUT JSON SCHEMA:
 Return only valid JSON that matches the schema.`;
   }
 
+  if (page === 'my-team') {
+    return `You are a concise, data-driven Fantasy Premier League squad doctor.
+
+${baseContext}
+
+${managerSnapshotBlock}
+
+SQUAD ANALYSIS DATA:
+${dataSnapshot}
+
+INSTRUCTIONS:
+- Produce exactly three bullet-style insights for each of the four categories below (12 total statements).
+- Every insight MUST reference a specific player name, fixture, stat, or price from the data provided. Never invent data.
+- Keep each insight to 1-2 sentences (max 40 words). Be decisive—say "sell", "bench", "captain", not "consider" or "monitor".
+- When identifying drop candidates, compare the player's form, fixtures, and price to cheaper alternatives available in the data.
+- For captain picks, weigh form (last 4 GW average), fixture difficulty, home/away, and double gameweek potential.
+- If transfer or league data is provided, factor in recent moves (don't re-recommend), budget constraints, and competitive urgency.
+
+OUTPUT JSON SCHEMA:
+{
+  "Squad Health": [
+    "Insight about injury/suspension risks or bench cover gaps",
+    "Insight about rotation-prone or low-minutes players in starting XI",
+    "Insight about deadwood or players not returning value for price"
+  ],
+  "Transfer Priorities": [
+    "Highest-priority player to sell/drop with specific reasoning",
+    "Best replacement target given budget and position needs",
+    "Second transfer priority or hold recommendation with justification"
+  ],
+  "Captain Pick": [
+    "Recommended captain for next GW with form + fixture reasoning",
+    "Alternative captain option (differential or safer pick)",
+    "Vice-captain recommendation and reasoning"
+  ],
+  "Chip Strategy": [
+    "Recommended chip timing based on fixture swings and DGW calendar",
+    "Current squad readiness for bench boost or free hit",
+    "Wildcard trigger conditions based on squad problems"
+  ]
+}
+
+Return only valid JSON that matches the schema.`;
+  }
+
   if (page === 'data-analysis' && tab === 'overview') {
     return `You are a sharp Fantasy Premier League analyst that writes market-ready scouting blurbs.
 
@@ -233,6 +278,8 @@ export function parseGeminiResponse(geminiData, gameweek, page) {
     let expectedCategories;
     if (page === 'planner') {
       expectedCategories = ['Planner'];
+    } else if (page === 'my-team') {
+      expectedCategories = ['Squad Health', 'Transfer Priorities', 'Captain Pick', 'Chip Strategy'];
     } else {
       expectedCategories = ['Overview', 'Hidden Gems', 'Differentials', 'Transfer Targets', 'Team Analysis'];
     }
@@ -312,7 +359,9 @@ export function parseGeminiResponse(geminiData, gameweek, page) {
     const fallbackCategories = {};
     const fallbackKeys = page === 'planner'
       ? ['Planner']
-      : ['Overview', 'Hidden Gems', 'Differentials', 'Transfer Targets', 'Team Analysis'];
+      : page === 'my-team'
+        ? ['Squad Health', 'Transfer Priorities', 'Captain Pick', 'Chip Strategy']
+        : ['Overview', 'Hidden Gems', 'Differentials', 'Transfer Targets', 'Team Analysis'];
 
     for (const category of fallbackKeys) {
       fallbackCategories[category] = [
