@@ -161,9 +161,14 @@ export function buildMyTeamInsightsContext(teamData) {
         }));
 
     // 3. Chips available (not yet used)
+    // All chips refresh mid-season, so each can be used up to 2 times total.
+    // A chip is available if it's been used fewer than 2 times.
     const usedChipNames = (managerSnapshot.chips.used || []).map(c => c.name);
     const allChips = ['wildcard', 'freehit', 'bboost', '3xc'];
-    const chipsAvailable = allChips.filter(c => !usedChipNames.includes(c));
+    const chipsAvailable = allChips.filter(c => {
+        const timesUsed = usedChipNames.filter(name => name === c).length;
+        return timesUsed < 2;
+    });
 
     // 4. Season trajectory (compact) from teamHistory
     let trajectory = null;
