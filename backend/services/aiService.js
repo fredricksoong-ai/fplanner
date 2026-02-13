@@ -103,15 +103,22 @@ SQUAD ANALYSIS DATA:
 ${dataSnapshot}
 
 INSTRUCTIONS:
-- Produce exactly three bullet-style insights for each of the four categories below (12 total statements).
+- Produce exactly three bullet-style insights for each of the five categories below (15 total statements).
 - Every insight MUST reference a specific player name, fixture, stat, or price from the data provided. Never invent data.
 - Keep each insight to 1-2 sentences (max 40 words). Be decisive—say "sell", "bench", "captain", not "consider" or "monitor".
 - When identifying drop candidates, compare the player's form, fixtures, and price to cheaper alternatives available in the data.
+- The captain shown in the data is ALREADY LOCKED for the current gameweek. Do NOT recommend changing captain for the current gameweek. Instead, recommend the best captain for NEXT gameweek based on upcoming fixtures.
 - For captain picks, weigh form (last 4 GW average), fixture difficulty, home/away, and double gameweek potential.
 - If transfer or league data is provided, factor in recent moves (don't re-recommend), budget constraints, and competitive urgency.
+- For the "Current GW" category: if currentGWData.isLive is true, review how the squad is performing (who returned points, who blanked, captain result, auto-sub implications). If isLive is false, preview opponents and difficulty for the upcoming deadline — suggest last-minute bench order or transfer targets.
 
 OUTPUT JSON SCHEMA:
 {
+  "Current GW": [
+    "Captain performance or opponent preview for current gameweek",
+    "Key starter result or bench decision review",
+    "Auto-sub implication or points projection"
+  ],
   "Squad Health": [
     "Insight about injury/suspension risks or bench cover gaps",
     "Insight about rotation-prone or low-minutes players in starting XI",
@@ -123,9 +130,9 @@ OUTPUT JSON SCHEMA:
     "Second transfer priority or hold recommendation with justification"
   ],
   "Captain Pick": [
-    "Recommended captain for next GW with form + fixture reasoning",
-    "Alternative captain option (differential or safer pick)",
-    "Vice-captain recommendation and reasoning"
+    "Best captain choice for NEXT GW with form + fixture reasoning",
+    "Differential captain option for next GW",
+    "Vice-captain recommendation for next GW"
   ],
   "Chip Strategy": [
     "Recommended chip timing based on fixture swings and DGW calendar",
@@ -279,7 +286,7 @@ export function parseGeminiResponse(geminiData, gameweek, page) {
     if (page === 'planner') {
       expectedCategories = ['Planner'];
     } else if (page === 'my-team') {
-      expectedCategories = ['Squad Health', 'Transfer Priorities', 'Captain Pick', 'Chip Strategy'];
+      expectedCategories = ['Current GW', 'Squad Health', 'Transfer Priorities', 'Captain Pick', 'Chip Strategy'];
     } else {
       expectedCategories = ['Overview', 'Hidden Gems', 'Differentials', 'Transfer Targets', 'Team Analysis'];
     }
@@ -360,7 +367,7 @@ export function parseGeminiResponse(geminiData, gameweek, page) {
     const fallbackKeys = page === 'planner'
       ? ['Planner']
       : page === 'my-team'
-        ? ['Squad Health', 'Transfer Priorities', 'Captain Pick', 'Chip Strategy']
+        ? ['Current GW', 'Squad Health', 'Transfer Priorities', 'Captain Pick', 'Chip Strategy']
         : ['Overview', 'Hidden Gems', 'Differentials', 'Transfer Targets', 'Team Analysis'];
 
     for (const category of fallbackKeys) {

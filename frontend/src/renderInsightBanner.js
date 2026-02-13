@@ -211,7 +211,7 @@ function renderCategoryInsights(insights, isMobile = false) {
  * @returns {string} HTML string
  */
 export function renderInsightBanner(insights, contextId, isMobile = false, options = {}) {
-    const { hideTabs = false, customTitle, customSubtitle, preferredCategory, hideRegenerateButton = false } = options;
+    const { hideTabs = false, customTitle, customSubtitle, preferredCategory, hideRegenerateButton = false, hideTitle = false } = options;
 
     // Handle error state (including parse errors from backend)
     if (insights.error || insights.parseError || !insights.categories || Object.keys(insights.categories).length === 0) {
@@ -260,7 +260,7 @@ export function renderInsightBanner(insights, contextId, isMobile = false, optio
                     flex-wrap: wrap;
                     align-items: flex-start;
                 ">
-                    <div style="flex: 1 1 auto; min-width: 150px;">
+                    ${hideTitle ? '' : `<div style="flex: 1 1 auto; min-width: 150px;">
                         <h3 style="
                             color: var(--accent-color);
                             font-weight: 700;
@@ -278,7 +278,7 @@ export function renderInsightBanner(insights, contextId, isMobile = false, optio
                                 ${customSubtitle}
                             </p>
                         ` : ''}
-                    </div>
+                    </div>`}
                     ${hideRegenerateButton ? '' : `
                         <button
                             class="ai-insights-regenerate-btn"

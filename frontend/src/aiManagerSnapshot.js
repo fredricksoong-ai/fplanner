@@ -4,9 +4,9 @@
 // ============================================================================
 
 import { sharedState } from './sharedState.js';
-import { getPlayerById } from './data.js';
+import { getPlayerById, isGameweekLive, getActiveGW } from './data.js';
 import { getPositionShort, getTeamShortName, calculatePPM } from './utils.js';
-import { getFixtures } from './fixtures.js';
+import { getFixtures, getGWOpponents } from './fixtures.js';
 import { analyzePlayerRisks } from './risk.js';
 
 /**
@@ -190,6 +190,28 @@ export function buildMyTeamInsightsContext(teamData) {
         }));
     }
 
+    // 6. Current GW context (opponents + live points if available)
+    const activeGW = getActiveGW();
+    const gwIsLive = isGameweekLive(activeGW);
+    const currentGWData = {
+        gameweek: activeGW,
+        isLive: gwIsLive,
+        players: enrichedSquad.map(p => {
+            const fullPlayer = getPlayerById(p.id);
+            const opponents = getGWOpponents(fullPlayer?.team, activeGW);
+            return {
+                name: p.name,
+                position: p.position,
+                isStarter: p.isStarter,
+                isCaptain: p.isCaptain,
+                currentGWPoints: fullPlayer?.event_points || 0,
+                opponents: opponents.map(o => ({
+                    name: o.name, difficulty: o.difficulty, isHome: o.isHome
+                }))
+            };
+        })
+    };
+
     // Strip squad, problemPlayers, benchStrength from snapshot to avoid duplication —
     // enrichedSquad already contains all player data plus fixtures/xG/PPM.
     // Snapshot now carries only meta, budget, and chips for the AI prompt.
@@ -201,6 +223,7 @@ export function buildMyTeamInsightsContext(teamData) {
         chipsAvailable,
         trajectory,
         leagueContext,
+        currentGWData,
         managerSnapshot: snapshotWithoutSquad
     };
 }
