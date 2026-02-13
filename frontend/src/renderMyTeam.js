@@ -550,6 +550,18 @@ export async function renderMyTeam(teamData, subTab = 'overview') {
 
                 // Load AI insights (non-blocking, renders into container when ready)
                 loadMyTeamAIInsights(teamData);
+
+                // Attach collapse/expand toggle for Squad Doctor
+                const aiHeader = document.getElementById('my-team-ai-insights-header');
+                const aiContainer = document.getElementById('my-team-ai-insights-container');
+                const aiChevron = document.getElementById('my-team-ai-chevron');
+                if (aiHeader && aiContainer && aiChevron) {
+                    aiHeader.addEventListener('click', () => {
+                        const isOpen = aiContainer.style.display !== 'none';
+                        aiContainer.style.display = isOpen ? 'none' : 'block';
+                        aiChevron.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+                    });
+                }
             } else if (subTab === 'fixtures') {
                 attachMobileFixtureRowListeners();
             }
@@ -866,8 +878,8 @@ async function loadMyTeamAIInsights(teamData) {
         };
 
         await loadAndRenderInsights(context, 'my-team-ai-insights-container', isMobile, {
-            customTitle: '🩺 Squad Doctor',
-            preferredCategory: 'Transfer Priorities'
+            hideTitle: true,
+            preferredCategory: 'Current GW'
         });
     } catch (error) {
         console.error('Failed to load My Team AI insights:', error);
@@ -900,7 +912,23 @@ async function renderTeamOverviewTab(teamData) {
         return `
             ${renderFixturesTicker()}
             <div style="padding: 0.75rem;">
-                <div id="my-team-ai-insights-container"></div>
+                <div id="my-team-ai-insights-wrapper" style="margin-bottom: 0.75rem;">
+                    <div id="my-team-ai-insights-header" style="
+                        display: flex; align-items: center; justify-content: space-between;
+                        padding: 0.6rem 0.75rem; cursor: pointer;
+                        background: var(--bg-secondary); border-radius: 12px;
+                        border: 1px solid var(--border-color);
+                    ">
+                        <span style="font-size: 0.875rem; font-weight: 700; color: var(--text-primary);">
+                            🩺 Squad Doctor
+                        </span>
+                        <i id="my-team-ai-chevron" class="fas fa-chevron-down" style="
+                            font-size: 0.7rem; color: var(--text-secondary);
+                            transition: transform 0.3s ease;
+                        "></i>
+                    </div>
+                    <div id="my-team-ai-insights-container" style="display: none; margin-top: 0.5rem;"></div>
+                </div>
                 ${bubbleFormationHTML}
                 ${renderCompactTeamList(allPlayers, gameweek, isLive)}
                 ${renderMatchSchedule(allPlayers, gameweek)}
