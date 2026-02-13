@@ -135,6 +135,9 @@ import {
     addSkeletonStyles
 } from './mobileLoadingStates.js';
 
+import { loadAndRenderInsights } from './renderInsightBanner.js';
+import { buildMyTeamInsightsContext } from './aiManagerSnapshot.js';
+
 // ============================================================================
 // MY TEAM PAGE
 // ============================================================================
@@ -544,6 +547,9 @@ export async function renderMyTeam(teamData, subTab = 'overview') {
                 const allPlayers = picks.picks.sort((a, b) => a.position - b.position);
                 const isLive = isGameweekLive(gameweek);
                 await initBubbleFormationChart(allPlayers, gameweek, isLive, myTeamState);
+
+                // Load AI insights (non-blocking, renders into container when ready)
+                loadMyTeamAIInsights(teamData);
             } else if (subTab === 'fixtures') {
                 attachMobileFixtureRowListeners();
             }
@@ -828,6 +834,47 @@ export async function renderMyTeam(teamData, subTab = 'overview') {
     });
 }
 
+// ============================================================================
+// AI INSIGHTS (SQUAD DOCTOR)
+// ============================================================================
+
+/**
+ * Load and render AI insights for the mobile Team page.
+ * Non-blocking — renders into container when ready, hides on failure.
+ * Uses era-based caching (5am/5pm UTC) to avoid redundant Gemini calls.
+ */
+async function loadMyTeamAIInsights(teamData) {
+    const container = document.getElementById('my-team-ai-insights-container');
+    if (!container) return;
+
+    const isMobile = shouldUseMobileLayout();
+    const currentGW = getActiveGW();
+
+    try {
+        const contextData = buildMyTeamInsightsContext(teamData);
+        if (!contextData) {
+            container.style.display = 'none';
+            return;
+        }
+
+        const context = {
+            page: 'my-team',
+            tab: 'overview',
+            position: 'all',
+            gameweek: currentGW,
+            data: contextData
+        };
+
+        await loadAndRenderInsights(context, 'my-team-ai-insights-container', isMobile, {
+            customTitle: '🩺 Squad Doctor',
+            preferredCategory: 'Transfer Priorities'
+        });
+    } catch (error) {
+        console.error('Failed to load My Team AI insights:', error);
+        container.style.display = 'none';
+    }
+}
+
 /**
  * Render Team Overview tab content
  */
@@ -853,6 +900,7 @@ async function renderTeamOverviewTab(teamData) {
         return `
             ${renderFixturesTicker()}
             <div style="padding: 0.75rem;">
+                <div id="my-team-ai-insights-container"></div>
                 ${bubbleFormationHTML}
                 ${renderCompactTeamList(allPlayers, gameweek, isLive)}
                 ${renderMatchSchedule(allPlayers, gameweek)}
