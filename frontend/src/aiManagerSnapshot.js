@@ -108,6 +108,10 @@ export function buildMyTeamInsightsContext(teamData) {
     const { team } = teamData;
 
     // 1. Enrich squad with fixtures + performance metrics
+    // Filter problemFlags to FPL-official statuses only (injury, active suspension, deadwood).
+    // Exclude self-computed flags (yellow card count, rotation, form, value, price drop)
+    // so Gemini doesn't treat them as official FPL statuses.
+    const FPL_OFFICIAL_PREFIXES = ['injury:', 'deadwood:'];
     const enrichedSquad = managerSnapshot.squad.map(player => {
         const fullPlayer = getPlayerById(player.id);
         // Get next 3 fixtures for this player's club
@@ -119,8 +123,15 @@ export function buildMyTeamInsightsContext(teamData) {
             }))
             : [];
 
+        // Keep only FPL-official flags for the AI prompt
+        const officialFlags = (player.problemFlags || []).filter(flag =>
+            FPL_OFFICIAL_PREFIXES.some(prefix => flag.startsWith(prefix)) ||
+            flag === 'suspension: Suspended'
+        );
+
         return {
             ...player,
+            problemFlags: officialFlags.length > 0 ? officialFlags : undefined,
             nextFixtures,
             totalPoints: fullPlayer?.total_points || 0,
             minutesPlayed: fullPlayer?.minutes || 0,
@@ -179,13 +190,18 @@ export function buildMyTeamInsightsContext(teamData) {
         }));
     }
 
+    // Strip squad, problemPlayers, benchStrength from snapshot to avoid duplication —
+    // enrichedSquad already contains all player data plus fixtures/xG/PPM.
+    // Snapshot now carries only meta, budget, and chips for the AI prompt.
+    const { squad: _sq, problemPlayers: _pp, benchStrength: _bs, ...snapshotWithoutSquad } = managerSnapshot;
+
     return {
         squad: enrichedSquad,
         dropCandidates,
         chipsAvailable,
         trajectory,
         leagueContext,
-        managerSnapshot
+        managerSnapshot: snapshotWithoutSquad
     };
 }
 
