@@ -454,35 +454,29 @@ export async function renderLeagueStandings(leagueData, myTeamState) {
     }
 
     // Helper function to get chips used abbreviations (excluding active chip)
+    // Returns HTML — bold abbreviation if a chip was used twice (mid-season refresh)
     function getChipsUsedAbbreviations(teamData) {
-        if (!teamData || !teamData.picks || !teamData.picks.chips) {
-            console.log('No chips data available:', teamData?.picks?.chips);
-            return '';
-        }
+        if (!teamData?.picks?.chips) return '';
 
-        console.log('Chips array:', teamData.picks.chips);
+        const chipMap = {
+            'freehit': 'FH', 'wildcard': 'WC',
+            'bboost': 'BB', 'benchboost': 'BB',
+            'triplecaptain': 'TC', '3xc': 'TC'
+        };
 
-        const chipsUsed = teamData.picks.chips
-            .filter(chip => {
-                const isPlayed = chip.event !== null && chip.event !== undefined;
-                console.log(`Chip ${chip.name}: event=${chip.event}, played=${isPlayed}`);
-                return isPlayed;
-            })
-            .map(chip => {
-                const chipMap = {
-                    'freehit': 'FH',
-                    'wildcard': 'WC',
-                    'bboost': 'BB',
-                    'benchboost': 'BB',
-                    'triplecaptain': 'TC',
-                    '3xc': 'TC'
-                };
-                return chipMap[chip.name] || '';
-            })
-            .filter(abbr => abbr !== '');
+        // Count how many times each chip abbreviation was used
+        const usedCounts = {};
+        teamData.picks.chips
+            .filter(chip => chip.event !== null && chip.event !== undefined)
+            .forEach(chip => {
+                const abbr = chipMap[chip.name] || '';
+                if (abbr) usedCounts[abbr] = (usedCounts[abbr] || 0) + 1;
+            });
 
-        console.log('Chips used abbreviations:', chipsUsed.join(' '));
-        return chipsUsed.join(' ');
+        // Build display: bold if used 2+ times (mid-season chip refresh)
+        return Object.entries(usedCounts)
+            .map(([abbr, count]) => count >= 2 ? `<b>${abbr}</b>` : abbr)
+            .join(' ');
     }
 
     // Helper function to count players played

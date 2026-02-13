@@ -246,7 +246,7 @@ function updateCountdown() {
     if (!countdownText) return;
 
     // Import from data.js module (use centralized GW functions)
-    import('./data.js').then(({ fplBootstrap, getActiveGW, getGameweekEvent, isGameweekLive }) => {
+    import('./data.js').then(({ fplBootstrap, getActiveGW, getGameweekEvent, isGameweekLive, getLastRefreshTime }) => {
         if (!fplBootstrap) {
             countdownText.textContent = 'Loading...';
             return;
@@ -300,6 +300,20 @@ function updateCountdown() {
         }
 
         countdownText.innerHTML = `<span style="color: ${urgencyColor}; font-size: 9px;">GW${gwNumber}: ${timeString}</span>`;
+
+        // Update data freshness indicator
+        const freshnessEl = document.getElementById('data-freshness');
+        if (freshnessEl) {
+            const lastRefresh = getLastRefreshTime();
+            if (!lastRefresh) {
+                freshnessEl.textContent = '';
+            } else {
+                const ageMins = Math.floor((Date.now() - lastRefresh) / 60000);
+                if (ageMins < 1) freshnessEl.textContent = '• Just now';
+                else if (ageMins < 60) freshnessEl.textContent = `• ${ageMins}m ago`;
+                else freshnessEl.textContent = `• ${Math.floor(ageMins / 60)}h ago`;
+            }
+        }
     });
 }
 

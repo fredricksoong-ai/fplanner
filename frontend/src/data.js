@@ -174,6 +174,14 @@ export function getNextGameweek() {
 }
 
 /**
+ * Get timestamp of last successful data refresh
+ * @returns {number} Unix timestamp (ms) or 0 if never refreshed
+ */
+export function getLastRefreshTime() {
+    return lastRefreshTime;
+}
+
+/**
  * Get gameweek event data
  * @param {number} gameweek - Gameweek number
  * @returns {Object|null} Event object or null
