@@ -226,6 +226,15 @@ function setupTeamAutoRefresh() {
 }
 
 /**
+ * Clean up team page resources when navigating away.
+ * Stops auto-refresh interval and resets state so it can restart on return.
+ */
+export function cleanupTeamPage() {
+    stopAutoRefresh();
+    myTeamState.autoRefreshStarted = false;
+}
+
+/**
  * Render My Team input form
  */
 export function renderMyTeamForm() {

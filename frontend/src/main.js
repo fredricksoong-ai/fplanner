@@ -58,6 +58,11 @@ export async function navigate(page, subTab = 'overview') {
 
     console.log(`🧭 Navigating to: ${page}${subTab !== 'overview' ? `/${subTab}` : ''}`);
 
+    // Clean up team page resources (auto-refresh) when navigating away
+    if (page !== 'my-team') {
+        import('./renderMyTeam.js').then(m => m.cleanupTeamPage?.());
+    }
+
     currentPage = page;
     currentSubTab = subTab;
 
